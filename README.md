@@ -1,5 +1,5 @@
 Flex: A Decentralized Cryptocurrency Exchange
-=============================
+=============================================
 
 Copyleft (c) 2015 Flex Developers
 
@@ -78,14 +78,6 @@ its rpc port in the configuration file.
 
 Test currencies, CBF (cyberfarthings) and EGT (electrogroats) are included.
 
-To install:
-
-    cd src
-    tar zxvf testcurrencies-1.1.tar.gz
-    cd testcurrencies-1.1
-    python setup.py install
-
-This will add three new commands: `cbf`, `egt` and `daemonize`. 
 `cbf` and `egt` have a similar interface to other currencies, e.g.:
 
     cbf getbalance
@@ -106,6 +98,13 @@ You can then add the currencies to Flex with the configuration lines:
     CBF-decimalplaces=0
     EGT-rpcport=8182
     EGT-decimalplaces=0
+
+Or by doing:
+
+    flexcontrol configure CBF-rpcport 8181
+    flexcontrol configure CBF-decimalplaces 0
+    flexcontrol configure EGT-rpcport 8182
+    flexcontrol configure EGT-decimalplaces 0    
 
 For most currencies, the number of decimal places will be 8. CBF and EGT
 are not divisible below 1 unit.
