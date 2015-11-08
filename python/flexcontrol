@@ -104,8 +104,6 @@ def configure(key, value):
     set_config_value(key, value)
 
 def autoconfigure():
-    if not os.path.exists(flexdir()):
-        os.mkdir(flexdir())
     config_file = get_config_file()
     if exists(config_file):
         move(config_file, 
@@ -178,6 +176,8 @@ if __name__ == '__main__':
         exit()
 
     old_stdout = sys.stdout
+    if not os.path.exists(flexdir()):
+        os.mkdir(flexdir())
     log = open(join(flexdir(), "flexcontrol.log"), "a+")
     sys.stdout = log
 
