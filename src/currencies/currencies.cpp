@@ -1302,6 +1302,7 @@ vch_t PrefixFromBase58Data(string base58string)
         string list_address_output = rpc.ExecuteCommand(command).get_str();
         vector<string> addresses;
         string address, rest;
+
         while (Contains(list_address_output, ","))
         {
             split_string(list_address_output, address, rest, ",");
@@ -1310,7 +1311,7 @@ vch_t PrefixFromBase58Data(string base58string)
                 addresses.push_back(address);
             list_address_output = rest;
         }
-        address = GetStringBetweenQuotes(rest);
+        address = GetStringBetweenQuotes(list_address_output);
         if (address.size() > 0 and !Contains(address, " "))
             addresses.push_back(address);
         log_ << "addresses are " << addresses << "\n";
