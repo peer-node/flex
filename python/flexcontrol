@@ -104,6 +104,8 @@ def configure(key, value):
     set_config_value(key, value)
 
 def autoconfigure():
+    if not os.path.exists(flexdir()):
+        os.mkdir(flexdir())
     config_file = get_config_file()
     if exists(config_file):
         move(config_file, config_file + now().strftime("%Y%m%d-%H:%M:%S"))
