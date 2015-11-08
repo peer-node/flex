@@ -1,0 +1,101 @@
+<html>
+<head>
+<style>
+table, th {
+    border: 1px solid lightgrey;
+    text-align: right;
+    font-family: "Courier New", monospace;
+}
+td {
+    border: 1px solid lightgrey;
+    font-family: "Courier New", monospace;
+    text-align: left;
+}
+</style>
+</head>
+<body>
+<a href="/">calendar</a>
+
+<table>
+    <tr>
+        <th>
+            transaction hash
+        </th>
+        <th colspan="2">
+            {{ transaction.hash }}
+        </th>
+    </tr>
+    <tr>
+        <td colspan="2">
+            <b>inputs</b>
+        </td>
+        <th>
+            position
+        </th>
+    </tr>
+    {% for input in transaction.inputs %}
+    <tr>
+        <th>
+            <a href='{{ link("credits", input.keyhash) }}'>{{ input.keyhash }}</a>
+        </th>
+        <td>
+            {{ input.amount }}
+        </td>
+        <td>
+            {{ input.position }}
+        </td>
+    </tr>
+    {% endfor %}
+    <tr>
+        <td colspan="3">
+            <b>outputs</b>
+        </td>
+    </tr>
+    {% for output in transaction.outputs %}
+    <tr>
+        <th>
+            <a href='{{ link("credits", output.keyhash) }}'>
+                {{ output.keyhash }}
+            </a>
+        </th>
+        <td>
+            {{ output.amount }}</a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+<p>
+
+<table>
+    <tr>
+        <th>
+            signature
+        </th>
+        <td>
+            <table>
+                <tr>
+                    <td>
+                        exhibit
+                    </td>
+                    <td>
+                        {{ transaction.signature.exhibit }}
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        signature
+                    </td>
+                    <td>
+                        {{ transaction.signature.signature }}
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+
+<p>
+
+</body>
+</html>

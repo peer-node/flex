@@ -1,0 +1,52 @@
+<html>
+<head>Example Bank - Your Transaction is Complete</head>
+
+<table>
+    <tr>
+        <td>
+            Sender:
+        </td>
+        <td>
+            {{ payer }}
+        </td>
+    </tr>
+    <tr>
+        <td>
+            Recipient:
+        </td>
+        <td>
+            {{ payee }}
+        </td>
+    </tr>
+    <tr>
+        <td>
+            Amount:
+        </td>
+        <td>
+            {{ amount }}
+        </td>
+    </tr>
+    <tr>
+        <td colspan=2>
+            <a href="/account/{{payer}}">Return to Your Account</a>
+        </td>
+    </tr>
+</table>
+
+<p>
+
+<form action="http://{{ host }}:{{ proofport }}" method=POST>
+<textarea name=proof readonly>
+---------- BEGIN PAYMENT PROOF ------------
+sender: {{ payer }}
+recipient: {{ payee }}
+amount: {{ amount }}
+code: {{ code }}
+----------- END PAYMENT PROOF -------------
+</textarea>
+<br>
+<input type=hidden name=details value="{{ payer }} {{ payee }} {{ amount }}">
+<input type=submit>
+</form>
+
+</html>

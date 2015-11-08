@@ -1,0 +1,41 @@
+#!/usr/bin/python
+
+from subprocess import Popen as popen, PIPE as pipe
+from os.path import join, expanduser
+import pyjsonrpc
+import inspect
+import logging
+import sys
+
+
+try:
+    program, port = sys.argv[1], int(sys.argv[2])
+except:
+    print """Usage: %s <program> <port>""" % sys.argv[0]
+    sys.exit()
+
+class RequestHandler(pyjsonrpc.HttpRequestHandler):
+
+  @pyjsonrpc.rpcmethod
+  def _stop(self):
+      sys.exit()
+
+  def __getattr__(self, command):
+    @pyjsonrpc.rpcmethod
+    def rpccommand(*args):
+        process = popen([program, command] + map(str, list(args)), stdout=pipe)
+        return process.stdout.read()
+    return rpccommand
+
+log = open(join(expanduser("~"), ".flex", program + ".log"), "a+")
+sys.stdout = log
+sys.stderr = log
+
+# Threading HTTP-Server
+http_server = pyjsonrpc.ThreadingHttpServer(
+    server_address = ('localhost', port),
+    RequestHandlerClass = RequestHandler
+)
+print "Starting rpc server for " + program
+print "URL: http://localhost:" + str(port)
+http_server.serve_forever()

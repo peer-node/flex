@@ -1,0 +1,157 @@
+<html>
+<head>
+<style>
+table, th {
+    border: 1px solid lightgrey;
+    text-align: right;
+    font-family: "Courier New", monospace;
+}
+td {
+    border: 1px solid lightgrey;
+    font-family: "Courier New", monospace;
+    text-align: left;
+}
+</style>
+</head>
+<body>
+<a href="/">calendar</a>
+
+<table>
+    <tr>
+        <th>
+            credit hash
+        </th>
+        <th>
+            {{ mined_credit.hash }}
+        </th>
+    </tr>
+    {% for key, value in mined_credit.items() %}
+    <tr>
+        <th>
+            {{ key }}
+        </th>
+        <td>
+            {{ value }}
+        </td>
+    </tr>
+    {% endfor %}
+    <tr>
+        <th>
+            previous
+        </th>
+        <td>
+            <a href="/{{ mined_credit.previous_mined_credit_hash }}">
+                {{ mined_credit.previous_mined_credit_hash }}
+            </a>
+        </td>
+    </tr>
+</table>
+
+<p>
+
+<table>
+    <tr>
+        <th>
+            mined credit message
+        </th>
+        <th>
+            {{ mined_credit.hash }}
+        </th>
+    </tr>
+    <tr>
+        <th>
+            timestamp
+        </th>
+        <td>
+            {{ mined_credit_msg.timestamp }}
+        </td>
+    </tr>
+    <tr>
+        <th>
+            contents
+        </th>
+        <td>
+            <table>
+                {% for item in mined_credit_msg.contents %}
+                    <tr>
+                        <th>
+                            {{ item.type }}
+                        </th>
+                        <td>
+                            <a href="{{ link(item.type, item.hash) }}">
+                                {{ item.hash }}
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </table>
+        </td>
+    <tr>
+</table>
+
+<p>
+
+<table>
+    <tr>
+        <th>
+            batch
+        </th>
+        <th>
+            {{ mined_credit.hash }}
+        </th>
+    </tr>
+    <tr>
+        <th>
+            root
+        </th>
+        <td>
+            {{ batch.batch_root }}
+        </td>
+    </tr>
+    <tr>
+        <th>
+            offset
+        </th>
+        <td>
+            {{ batch.offset }}
+        </td>
+    </tr>
+    <tr>
+        <th>
+            credits
+        </th>
+        <td>
+            <table>
+                <tr>
+                    <th>
+                        amount
+                    </th>
+                    <td>
+                        <b>keyhash</b>
+                    </td>
+                    <td>
+                        <b>position</b>
+                    </td>
+                </tr>
+                {% for credit in batch.credits %}
+                    <tr>
+                        <td>
+                            {{ credit.amount }}
+                        </td>
+                        <td>
+                            <a href='{{ link("credits", credit.keyhash) }}'>
+                                {{ credit.keyhash }}
+                            </a>
+                        </td>
+                        <td>
+                            {{ credit.position }}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </table>
+        </td>
+    <tr>
+</table>
+
+</body>
+</html>

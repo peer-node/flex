@@ -1,0 +1,13 @@
+{{ _("Please select a language:") }}
+
+<form action="/configfile" method=POST>
+
+{% for code, language in languages %}
+<input type=radio 
+       name=language 
+       value={{code}} {{ "checked" if code == default else "" }}
+       > {{language}} <br>
+{% endfor %}
+
+<input type=submit>
+</form>

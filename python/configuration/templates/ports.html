@@ -1,0 +1,30 @@
+{{ _("Select the ports to which each service should be assigned:") }}
+
+<form action="/finish" method=POST>
+
+<table>
+    <tr>
+        <th>
+            {{ _("Service") }}
+        </th>
+        <th>    
+            {{ _("Port") }}
+        </th>
+    </tr>
+{% for service, port in assigned_ports %}
+    <tr>
+        <td>    
+            {{ service }}
+        </td>
+        <td>    
+            <input type=text name={{ service }} value={{ port }}>
+        </td>
+    </tr>
+{% endfor %}
+</table>
+
+<p>
+    {{ warning }}
+<p>
+<input type=submit>
+</form>

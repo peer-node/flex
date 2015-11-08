@@ -1,0 +1,10 @@
+{{ _("You have been configured.") }}
+
+<p>
+
+{% for key, message in messages %}
+    <p>
+        {{ message }}
+
+    <p>
+{% endfor %}

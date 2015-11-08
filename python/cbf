@@ -1,0 +1,266 @@
+#!/usr/bin/python
+
+import os
+import sys
+import json
+import ecdsa
+import ripemd
+import random
+import cPickle
+import hashlib
+import datetime
+from lockfile import FileLock
+from collections import defaultdict
+from base58 import b58encode, b58decode
+
+
+def sha256(x):
+    return hashlib.sha256(x).digest()
+
+def Hash(x):
+    if type(x) is unicode: x=x.encode('utf-8')
+    return sha256(sha256(x))
+
+def hash_160(public_key):
+    try:
+        md = hashlib.new('ripemd160')
+        md.update(sha256(public_key))
+        return md.digest()
+    except Exception:
+        import ripemd
+        md = ripemd.new(sha256(public_key))
+        return md.digest()
+
+def hash_160_to_address(h160, addrtype = 0):
+    vh160 = chr(addrtype) + h160
+    h = Hash(vh160)
+    addr = vh160 + h[0:4]
+    return b58encode(addr)
+
+def public_key_to_address(public_key):
+    h160 = hash_160(public_key)
+    return hash_160_to_address(h160)
+
+def point_to_ser(P, comp=True):
+    if comp:
+        return ( ('%02x'%(2+(P.y()&1)))+('%064x'%P.x()) ).decode('hex')
+    return ( '04'+('%064x'%P.x())+('%064x'%P.y()) ).decode('hex')
+
+def pubkey_to_address(pubkey):
+    return public_key_to_address(point_to_ser(pubkey))
+
+def EncodeBase58Check(vchIn):
+    hash = Hash(vchIn)
+    return b58encode(vchIn + hash[0:4])
+
+def DecodeBase58Check(psz):
+    vchRet = b58decode(psz)
+    key = vchRet[0:-4]
+    csum = vchRet[-4:]
+    hash = Hash(key)
+    cs32 = hash[0:4]
+    if cs32 != csum:
+        return None
+    else:
+        return key
+
+def serialize_privkey(secret, compressed=False, addrtype=0):
+    order = ecdsa.SECP256k1.generator.order()
+    secret_string = ecdsa.util.number_to_string(secret, order)
+    vchIn = chr((addrtype + 128) & 255) + secret_string
+    return EncodeBase58Check(vchIn)
+
+def deserialize_privkey(base58_privkey):
+    vch_privkey = DecodeBase58Check(base58_privkey)
+    return ecdsa.util.string_to_number(vch_privkey[1:])
+
+def random_private_key():
+    modulus = ecdsa.SECP256k1.generator.order()
+    privkey = ecdsa.util.randrange(pow(2, 256)) % modulus
+    return privkey
+
+def get_txid():
+    return hex(int(datetime.datetime.now().strftime("%s%f")))[2:]
+
+txout_count = defaultdict(int)
+
+def txout(address, amount, txid):
+    n = txout_count[txid]
+    txout_count[txid] += 1
+    return {'value': amount,
+            'amount': amount,
+            'address': address,
+            'txid': txid,
+            'vout': n,
+            'n': n,
+            'confirmations': 30,
+            'scriptPubKey': {'type': 'pubkeyhash',
+                             'addresses': [address]}}
+
+def initial_wallet(privkey):
+    txid = get_txid()
+    pubkey = privkey * ecdsa.SECP256k1.generator
+    address = pubkey_to_address(pubkey)
+    wallet = {address: {'privkey': privkey,
+                        'unspent': [txout(address, 10000, txid)]}}
+    return wallet
+
+wallet_file = "/tmp/cyberfarthings_wallet.pkl"
+
+class Wallet:
+    def __init__(self, user):
+        if os.path.exists(wallet_file):
+            self.wallet = cPickle.load(open(wallet_file))
+            if not user in self.wallet:
+                self.wallet[user] = initial_wallet(random_private_key())
+                self.save()
+        else:
+            self.wallet = {}
+            self.wallet[user] = initial_wallet(random_private_key())
+            self.save()
+
+    def add_new_private_key(self, privkey):
+        pubkey = privkey * ecdsa.SECP256k1.generator
+        address = pubkey_to_address(pubkey)
+        if not address in self.wallet[user]:
+            self.wallet[user][address] = {'privkey': privkey,
+                                          'unspent': []}
+        else:
+            self.wallet[user][address]['privkey'] = privkey
+        self.save()
+        return address
+
+    def balance(self):
+        total_balance = 0
+        for address in self.wallet[user]:
+            if 'privkey' in self.wallet[user][address]:
+                total_balance += sum([unspent['value'] for unspent in 
+                                      self.wallet[user][address]['unspent']])
+        return total_balance
+
+    def getaddressbalance(self, address):
+        balance = 0
+        for user in self.wallet:
+            if address not in self.wallet[user]:
+                self.wallet[user][address] = {'unspent': []}
+            else:
+                balance = sum([unspent['value'] for unspent in 
+                               self.wallet[user][address]['unspent']])
+        return balance
+
+    def listunspent(self):
+        unspent_list = []
+        for address in self.wallet[user]:
+            if 'privkey' in self.wallet[user][address]:
+                unspent_list.extend(self.wallet[user][address]['unspent'])
+        return unspent_list
+
+    def send_to_address(self, amount, address):
+        if amount > self.balance():
+            return False
+        inputs, outputs = self.make_transaction(amount, address)
+        self.handle_transaction(inputs, outputs)
+        return outputs[0]['txid']
+
+    def getnewaddress(self):
+        privkey = random_private_key()
+        address = self.add_new_private_key(privkey)
+        return address
+
+    def dump_privkey(self, address):
+        return serialize_privkey(self.wallet[user][address]['privkey'])
+
+    def import_privkey(self, privkey):
+        return self.add_new_private_key(deserialize_privkey(privkey))
+
+    def handle_transaction(self, inputs, outputs):
+        for unspent in inputs:
+            address = unspent['scriptPubKey']['addresses'][0]
+            self.wallet[user][address]['unspent'].remove(unspent)
+        for unspent in outputs:
+            address = unspent['scriptPubKey']['addresses'][0]
+            for recipient in self.wallet:
+                if address not in self.wallet[recipient]:
+                    self.wallet[recipient][address] = {'unspent': []}
+                self.wallet[recipient][address]['unspent'].append(unspent)
+        self.save()
+
+    def make_transaction(self, amount, address):
+        txid = get_txid()
+        inputs, outputs = [], []
+        outputs.append(txout(address, amount, txid))
+        total_in = 0
+        for address in self.wallet[user]:
+            if total_in >= amount:
+                break
+            if 'privkey' in self.wallet[user][address]:
+                for unspent in self.wallet[user][address]['unspent']:
+                    inputs.append(unspent)
+                    total_in += unspent['value']
+                    if total_in >= amount:
+                        break
+        change = total_in - amount
+        outputs.append(txout(self.getnewaddress(), change, txid))
+        return inputs, outputs
+
+    def save(self):
+        import stat
+        with FileLock(wallet_file):
+            cPickle.dump(self.wallet, open(wallet_file, "w"))
+            try:
+                os.chmod(wallet_file, 0666)
+            except:
+                pass
+
+user = os.environ["USER"]
+wallet = Wallet(user)
+
+
+def get_output(argv):
+    if 'help' in argv:
+        return ("help,gettxout,getinfo,listunspent,"
+                "getbalance,getaddressbalance,"
+                "getnewaddress,dumpprivkey,sendtoaddress,importprivkey")
+
+    if 'getinfo' in argv:
+        return json.dumps({'unlocked_until': 1900000000})
+
+    if 'listunspent' in argv:
+        return json.dumps(wallet.listunspent())
+
+    if 'getbalance' in argv:
+        return wallet.balance()
+
+    if 'getnewaddress' in argv:
+        return wallet.getnewaddress()
+
+    if 'getaddressbalance' in argv:
+        address = argv[2]
+        return wallet.getaddressbalance(address)
+
+    if 'dumpprivkey' in argv:
+        address = argv[2]
+        return wallet.dump_privkey(address)
+
+    if 'gettxout' in argv:
+        txid = argv[2]
+        n = int(argv[3])
+        for recipient in wallet.wallet:
+            for address in wallet.wallet[recipient]:
+                for txout in wallet.wallet[recipient][address]['unspent']:
+                    if txout['txid'] == txid and txout['n'] == n:
+                        return json.dumps(txout)
+
+    if 'sendtoaddress' in argv:
+        address = argv[2]
+        amount = int(argv[3])
+        return wallet.send_to_address(amount, address)
+
+    if 'importprivkey' in argv:
+        privkey = argv[2]
+        return wallet.import_privkey(privkey)
+
+    return get_output(["help"])
+
+if __name__ == '__main__':
+    print get_output(sys.argv)

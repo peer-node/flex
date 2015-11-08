@@ -1,0 +1,202 @@
+#!/usr/bin/env python
+
+from subprocess import Popen as popen, PIPE as pipe
+from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+from flex import get_config, get_rpc, flexdir
+from os.path import expanduser, join
+from threading import Thread
+from hashlib import md5
+import pyjsonrpc
+import inspect
+import sys
+import cgi
+
+requests_received = {}   # (payer, payee, amount) -> accept_commit_hash
+
+
+class FlexExampleReceiver(BaseHTTPRequestHandler):
+    def _set_headers(self, response_code=200):
+        self.send_response(response_code)
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
+
+    def send(self, body):
+        self.send_response( 200 )
+        self.send_header( "Content-type", "text/html")
+        self.send_header( "Content-length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def get_post_data(self):
+        content_type_header = self.headers.getheader('content-type')
+        content_type, data = cgi.parse_header(content_type_header)
+        if content_type == 'multipart/form-data':
+            return cgi.parse_multipart(self.rfile, data)
+        elif content_type == 'application/x-www-form-urlencoded':
+            length = int(self.headers.getheader('content-length'))
+            return cgi.parse_qs(self.rfile.read(length), keep_blank_values=1)
+        return {}
+
+    def send_payment_confirmation(self, payer, payee, amount):
+        print requests_received
+        print (payer, payee, amount), (payer, payee, amount) in requests_received
+        accept_commit_hash = requests_received.get((payer, payee, amount))
+        if accept_commit_hash is None:
+            return
+        rpc_port, rpc_user, rpc_password = get_rpc()
+        http_client = pyjsonrpc.HttpClient(
+            url = "http://localhost:" + str(rpc_port),
+            username = rpc_user,
+            password = rpc_password
+        )
+        try:
+            http_client.confirmfiatpayment(accept_commit_hash)
+            del requests_received[(payer, payee, amount)]
+        except:
+            print "Failed"
+        print "done"
+
+
+
+class FlexExampleIPNReceiver(FlexExampleReceiver):
+    def validate_IPN(self, data):
+        # insert a valid way of checking that the IPN came from the
+        # payment processor here or else the sender will be able to
+        # send a fake IPN and fool the notary into thinking the payment
+        # was sent.
+        #
+        # for example, for many payment processors, the notifications 
+        # always come from a specific set of ip addresses. requests
+        # from other ip addresses should be rejected.
+        # 
+        # also check that the event signalled is genuinely an irreversible
+        # completion of a payment of the right amount from the correct
+        # payer to the correct payee. if the payment processor supports 
+        # multiple currencies, check the currency is correct. 
+        # also check the payment status is "completed" or "paid"
+        # and not "refunded" or "subscription cancelled" etc.
+        return True
+
+    def do_POST(self):
+        data = self.get_post_data()
+        if not self.validate_IPN(data):
+            self._set_headers(400)
+            return
+        # retrieve the relevant variables from the notification here.
+        sender = data.get("sender")[0]
+        recipient = data.get("recipient")[0]
+        amount = float(data.get("amount")[0])
+        self.send_payment_confirmation(sender, recipient, amount)
+        self._set_headers()
+
+
+
+class FlexExamplePaymentProofReceiver(FlexExampleReceiver):
+    def check_details_and_proof(self, details, proof):
+        payer, payee, amount = details.split()
+        # here we suppose that proof is a string of the form:
+        # 
+        # ---------- BEGIN PAYMENT PROOF ------------
+        # sender:   <payer>  
+        # recipient:   <payee>  
+        # amount:   <amount>  
+        # code:   <code>  
+        # ----------- END PAYMENT PROOF -------------
+        #
+        # where code is the md5 digest of the concatenation
+        # of the payer, payee and amount fields.
+        def split(line):
+            return line.split(":", 1) if ":" in line else ("", "")
+        proof_contents = {key : value.strip() 
+                          for key, value in map(split, proof.split("\n"))}
+
+        # the <code> field here is used here in place of an actual
+        # check. for example, if a payment processor were to publish
+        # its public key and give a signed receipt to each payment sender,
+        # then we would at this point check the signature.
+        return (proof_contents['sender'] == payer and
+                proof_contents['recipient'] == payee and
+                proof_contents['amount'] == amount and
+                proof_contents['code'] 
+                    == md5(payer + payee + str(amount)).hexdigest())
+
+    def get_payer_payee_amount_from_proof(self, details, proof):
+        # here we suppose details is a string of the form:
+        # "payer payee amount"
+        # More generally, it could be a web page to be parsed.
+        payer, payee, amount = details.split()
+        amount = float(amount)
+        return payer, payee, amount
+
+    def do_POST(self):
+        data = self.get_post_data()
+        details = data.get("details")[0]
+        proof = data.get("proof")[0].replace("\r\n", "\n")
+        if not self.check_details_and_proof(details, proof):
+            return self._set_headers(400)
+        payer, payee, amount = self.get_payer_payee_amount_from_proof(details, 
+                                                                      proof)
+        self.send_payment_confirmation(payer, payee, amount)
+        self.send("ok")
+
+
+
+class FlexExampleNotaryRPCService(pyjsonrpc.HttpRequestHandler):
+    @pyjsonrpc.rpcmethod
+    def _stop(self):
+        sys.exit()
+
+    @pyjsonrpc.rpcmethod
+    def validate(self, accept_commit_hash, payer_data, payee_data, amount):
+        # do some validation here
+        amount = float(amount)
+        requests_received[(payer_data, 
+                           payee_data, 
+                           amount)] = accept_commit_hash
+        return "ok"
+
+    @pyjsonrpc.rpcmethod
+    def verify(self, payer_data, payee_data, amount, payment_proof):
+        return "ok"
+
+
+log = open(join(flexdir(), "notary.log"), "a+")
+sys.stdout = log
+
+if __name__ == "__main__":
+    try:
+        rpc_port, ipn_port, proof_port = map(int, sys.argv[1:])
+    except:
+        print """Usage: %s <rpc_port> <ipn_port> <proof_port>""" % sys.argv[0]
+        sys.exit()
+
+    notary_rpc_server = pyjsonrpc.ThreadingHttpServer(
+        server_address = ('0.0.0.0', rpc_port),
+        RequestHandlerClass = FlexExampleNotaryRPCService
+    )
+    print "Starting notary rpc server"
+    print "URL: http://localhost:" + str(rpc_port)
+    
+    notary_ipn_receiver = HTTPServer(('0.0.0.0', ipn_port),
+                                     FlexExampleIPNReceiver)
+    
+    print "Starting notary ipn receiver"
+    print "URL: http://localhost:" + str(ipn_port)
+    
+    notary_proof_receiver = HTTPServer(('0.0.0.0', proof_port),
+                                       FlexExamplePaymentProofReceiver)
+
+    print "Starting notary proof receiver"
+    print "URL: http://localhost:" + str(proof_port)
+
+    rpc_thread = Thread(target=notary_rpc_server.serve_forever)
+    ipn_thread = Thread(target=notary_ipn_receiver.serve_forever)
+    proof_thread = Thread(target=notary_proof_receiver.serve_forever)
+
+    rpc_thread.start()
+    ipn_thread.start()
+    proof_thread.start()
+
+    rpc_thread.join()
+    ipn_thread.join()
+    proof_thread.join()

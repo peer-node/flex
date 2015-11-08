@@ -1,0 +1,73 @@
+<form action="/cryptocurrencies" method=POST>
+
+{{ _("Install the test currencies (CBF, EGT, CBT, OBK):") }}
+<br>
+<input type=radio 
+       name=installtestcurrencies
+       value=yes checked
+       > {{ _("yes") }} <br>
+
+<input type=radio 
+       name=installtestcurrencies
+       value=no
+       > {{ _("no") }} <br>
+
+<p>
+
+{{ _("Act as a payment processor for fiat payments in CBT:") }}
+<br>
+<input type=radio 
+       name=CBT-actaspaymentprocessor
+       value=yes
+       > {{ _("yes") }} <br>
+
+<input type=radio 
+       name=CBT-actaspaymentprocessor
+       value=no checked
+       > {{ _("no") }} <br>
+
+<p>
+
+{{ _("Act as a notary for fiat payments in CBT:") }}
+<br>
+<input type=radio 
+       name=CBT-actasnotary
+       value=yes
+       > {{ _("yes") }} <br>
+
+<input type=radio 
+       name=CBT-actasnotary
+       value=no checked
+       > {{ _("no") }} <br>
+
+<p>
+
+{{ _("Act as an interactive payment processor for fiat payments in OBK:") }}
+<br>
+<input type=radio 
+       name=OBK-actaspaymentprocessor
+       value=yes
+       > {{ _("yes") }} <br>
+
+<input type=radio 
+       name=OBK-actaspaymentprocessor
+       value=no checked
+       > {{ _("no") }} <br>
+
+<p>
+
+{{ _("Act as a notary for online fiat payments in OBK:") }}
+<br>
+<input type=radio 
+       name=OBK-actasnotary
+       value=yes
+       > {{ _("yes") }} <br>
+
+<input type=radio 
+       name=OBK-actasnotary
+       value=no checked
+       > {{ _("no") }} <br>
+
+<br>
+<input type=submit>
+</form>

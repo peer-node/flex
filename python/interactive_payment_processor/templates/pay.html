@@ -1,0 +1,44 @@
+<html>
+<head>Example Bank - Make a payment</head>
+
+<form action="/payment_details/{{payer}}" method=POST>
+<table>
+    <tr>
+        <td>
+            Your balance:
+        </td>
+        <td>
+            {{ balance }}
+        </td>
+    </tr>
+    <tr>
+        <td>
+            Pay to:
+        </td>
+        <td>
+            <input type=text name=payee>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            Amount:
+        </td>
+        <td>
+            <input type=text name=amount>
+        </td>
+    </tr>
+    <tr>
+        <td colspan=2 align=center>
+            <input type=hidden name=payer value="{{payer}}">
+            <input type=submit>
+        </td>
+    </tr>
+    <tr>
+        <td colspan=2>
+            <a href="/account/{{payer}}">Return to Account</a>
+        </td>
+    </tr>
+</table>
+</form>
+
+</html>

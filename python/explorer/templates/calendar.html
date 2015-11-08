@@ -1,0 +1,48 @@
+<html>
+<style>
+table, th {
+    border: 1px solid lightgrey;
+    text-align: middle;
+    font-family: "Courier New", monospace;
+}
+td {
+    border: 1px solid lightgrey;
+    font-family: "Courier New", monospace;
+    text-align: left;
+}
+</style>
+</head>
+<body>
+<table>
+    <tr>
+        <th colspan=2>
+            calends
+        </th>
+    </tr>
+    {% for calend in calendar.calends %}
+    <tr>
+        <td>
+            <a href="/{{ calend.mined_credit_hash }}">
+                {{ calend.mined_credit_hash }}
+            </a>
+        </td>
+    </tr>
+    {% endfor %}
+    <tr>
+        <th colspan=2>
+            current_diurn
+        </th>
+    </tr>
+    {% for mined_credit in calendar.current_diurn %}
+    <tr>
+        <td>
+            <a href="/{{ mined_credit.mined_credit_hash }}">
+                {{ mined_credit.mined_credit_hash }}
+            </a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+</body>
+</html>

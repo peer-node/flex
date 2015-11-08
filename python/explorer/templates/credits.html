@@ -1,0 +1,62 @@
+<html>
+<head>
+<style>
+table, th {
+    border: 1px solid lightgrey;
+    text-align: right;
+    font-family: "Courier New", monospace;
+}
+td {
+    border: 1px solid lightgrey;
+    font-family: "Courier New", monospace;
+    text-align: left;
+}
+</style>
+</head>
+<body>
+<a href="/">calendar</a>
+
+<table>
+    <tr>
+        <th>
+            key hash
+        </th>
+        <th colspan="2">
+            {{ key_hash }}
+        </th>
+    </tr>
+    <tr>
+        <th colspan="3">
+            credits
+        </th>
+    </tr>
+    <tr>
+        <th>
+            position
+        </th>
+        <th>
+            amount
+        </th>
+        <th>
+            spent
+        </th>
+    </tr>
+    {% for credit in credits %}
+    <tr>
+        <th>
+            {{ credit.position }}
+        </th>
+        <td>
+            {{ credit.amount }}
+        </td>
+        <td>
+            {{ credit.spent }}
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+<p>
+
+</body>
+</html>

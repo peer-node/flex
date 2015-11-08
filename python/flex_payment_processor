@@ -1,0 +1,102 @@
+#!/usr/bin/python
+
+from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+from collections import defaultdict
+from datetime import datetime
+from lockfile import FileLock
+import requests
+import cPickle
+import json
+import sys
+import cgi
+import os
+
+
+"""
+This is an example payment processor which listens on a specific port
+for http POST messages containing payment details. The balances of the
+sender and recipient are then adjusted in accordance with the payment.
+
+When a payment is made, it will send an Instant Payment Notification
+to the specified URL, if provided.
+
+The notification is sent via http using a POST message with the
+variables `sender`, `recipient`, `amount` and `timestamp`.
+"""
+
+
+class PostRequestHandler(BaseHTTPRequestHandler):
+    def _set_headers(self, response_code=200):
+        self.send_response(response_code)
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
+
+    def get_post_data(self):
+        content_type_header = self.headers.getheader('content-type')
+        content_type, data = cgi.parse_header(content_type_header)
+        if content_type == 'multipart/form-data':
+            return cgi.parse_multipart(self.rfile, data)
+        elif content_type == 'application/x-www-form-urlencoded':
+            length = int(self.headers.getheader('content-length'))
+            return cgi.parse_qs(self.rfile.read(length), keep_blank_values=1)
+        return {}
+
+
+balances = defaultdict(lambda: 1000)
+
+class IPNPaymentProcessor(PostRequestHandler, object):
+    def __init__(self, *args):
+        super(IPNPaymentProcessor, self).__init__(*args)
+
+    def go_GET(self):
+        self.do_POST()
+
+    def do_POST(self):
+        string = self.do_post_and_return_string();
+        self.wfile.write(string)
+
+    def do_post_and_return_string(self):
+        data = self.get_post_data()
+        self._set_headers()
+        if 'recipient' in data and 'sender' in data and 'amount' in data:
+            return self.do_payment(data['sender'][0],
+                                   data['recipient'][0],
+                                   data['amount'][0],
+                                   data['ipn_url'][0] if 'ipn_url' in data 
+                                                      else None)
+        if 'user' in data:
+            user = data['user'][0]
+            return str(balances[user]) + "\n"
+
+    def do_payment(self, sender, recipient, amount, ipn_url=None):
+        amount = float(amount)
+        if amount > balances[sender]:
+            return str(False) + "\n"
+        balances[sender] -= amount
+        balances[recipient] += amount
+        payment_details = {
+            'sender': sender,
+            'recipient': recipient,
+            'amount': amount,
+            'timestamp': float(datetime.now().strftime("%s.%f"))
+        }
+        print "Payment Processor: doing payment:", payment_details
+        if ipn_url is not None:
+            print "making request to " + ipn_url
+            response = requests.post(ipn_url, data=payment_details)
+            return response.text
+        return json.dumps(payment_details) + "\n"
+
+
+if __name__ == '__main__':
+    try:
+        port = int(sys.argv[1])
+    except:
+        print """Usage: %s <port>""" % sys.argv[0]
+        sys.exit()
+
+    ipn_payment_processor = HTTPServer(('0.0.0.0', port),
+                                       IPNPaymentProcessor)
+    print "Starting payment processor"
+    print "URL: http://localhost:" + str(port)
+    ipn_payment_processor.serve_forever()

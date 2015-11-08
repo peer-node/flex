@@ -1,0 +1,31 @@
+<html>
+<head>Example Bank - Your Account</head>
+
+<table>
+    <tr>
+        <td>
+            Your username:
+        </td>
+        <td>
+            {{ user }}
+        </td>
+    </tr>
+    <tr>
+        <td>
+            Your balance:
+        </td>
+        <td>
+            {{ balance }}
+        </td>
+    </tr>
+    <tr>
+        <td align=left>
+            <a href="/pay/{{user}}">Make a payment</a>
+        </td>
+        <td align=right>
+            <a href="/">Logout</a>
+        </td>
+    </tr>
+</table>
+
+</html>

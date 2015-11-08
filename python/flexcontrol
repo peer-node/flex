@@ -1,0 +1,198 @@
+#!/usr/bin/env python
+
+from flex import (flexdir, get_client, get_config, random_string,
+                  set_config_value, get_config_file, set_config)
+from os.path import join, expanduser, exists
+from subprocess import Popen, PIPE
+from shutil import rmtree, move
+from datetime import datetime
+from sys import argv, exit
+from time import sleep
+import signal
+import sys
+import os
+
+processes = []
+
+def get_pidfilename():
+    return join(flexdir(), "flex.pids")
+
+def write_pids():
+    pidfile = open(get_pidfilename(), "w")
+    for process in processes:
+        pidfile.write(str(process.pid) + "\n")
+    pidfile.close()
+
+def start_egt(config):
+    rpcport = config['EGT-rpcport']
+    print ["daemonize", "egt", rpcport]
+    process = Popen(["daemonize", "egt", rpcport], stdout=log)
+    processes.append(process)
+
+def start_cbf(config):
+    rpcport = config['CBF-rpcport']
+    print ["daemonize", "cbf", rpcport]
+    process = Popen(["daemonize", "cbf", rpcport], stdout=log)
+    processes.append(process)
+
+def start_cbt(config):
+    rpcport = config['CBT-rpcport']
+    payment_processor_port = config['CBT-paymentprocessor']
+    notary_rpc_port = config['CBT-notary']
+    notary_ipn_port = config['CBT-notaryipn']
+    notary_proof_port = config['CBT-notaryproof']
+    if 'CBT-actaspaymentprocessor' in config:
+        
+        process = Popen(["flex_payment_processor", 
+                         payment_processor_port], stdout=log)
+        processes.append(process)
+        print "paymentprocessor:", process.pid
+    if 'CBT-actasnotary' in config:
+        process = Popen(["flex_notary",
+                         notary_rpc_port,
+                         notary_ipn_port,
+                         notary_proof_port])
+        processes.append(process)
+        print "notary", process.pid
+    process = Popen(["flex_cbt_plugin", rpcport,
+                     "http://localhost:" + payment_processor_port,
+                     "http://localhost:" + notary_ipn_port], stdout=log)
+    processes.append(process)
+    print "cbt_plugin", process.pid
+
+
+def start_obk(config):
+    rpcport = config['OBK-rpcport']
+    
+    web_port = config['OBK-web']
+    notary_rpc_port = config['OBK-notary']
+    notary_ipn_port = config['OBK-notaryipn']
+    notary_proof_port = config['OBK-notaryproof']
+    if 'OBK-actaspaymentprocessor' in config:
+        process = Popen(["flex_interactive_payment_processor", 
+                         web_port, notary_proof_port], stdout=log)
+        processes.append(process)
+        print "OBK-paymentprocessor:", process.pid
+    process = Popen(["flex_obk_plugin", rpcport,
+                     "http://localhost:" + rpcport,
+                     "http://localhost:" + notary_ipn_port], stdout=log)
+    processes.append(process)
+    print "obk_plugin:", process.pid
+
+    if 'OBK-actasnotary' in config and not 'CBT-actasnotary' in config:
+        process = Popen(["flex_notary", 
+                         notary_rpc_port,
+                         notary_ipn_port,
+                         notary_proof_port], stdout=log)
+        processes.append(process)
+        print "notary", process.pid
+
+def start_flex(config):
+    print "starting flex"
+    sleep(2)
+    process = Popen(["flexd", "-debug"], stdout=log, stderr=log)
+    print process.pid
+    processes.append(process)
+
+def start_explorer(config):
+    print "starting explorer"
+    process = Popen(["flex_explorer"], stdout=log, stderr=log)
+    print process.pid
+    processes.append(process)
+
+def configure(key, value):
+    set_config_value(key, value)
+
+def autoconfigure():
+    config_file = get_config_file()
+    if exists(config_file):
+        move(config_file, config_file + now().strftime("%Y%m%d-%H:%M:%S"))
+    file_ = open(config_file, "w")
+    initial_config = {'port': 8733,
+                      'rpcport': 8732,
+                      'rpcuser': random_string(15),
+                      'rpcpassword': random_string(15),
+                      'walletpassword': random_string(15),
+                      'CBF-rpcport': 8181,
+                      'CBF-decimalplaces': 0}
+    set_config(initial_config)
+    os.chmod(config_file, 0600)
+
+def do_cleanup():
+    dbdir = join(flexdir(), "db")
+    if os.path.exists(dbdir):
+        rmtree(dbdir)
+    debuglog = join(flexdir(), "debug.log")
+    if os.path.exists(debuglog):
+        os.unlink(debuglog)
+
+def check_already_running():
+    if os.path.exists(get_pidfilename()):
+        pids = open(get_pidfilename()).readlines()
+        for pid in pids:
+            try:
+                os.kill(int(pid), 0)
+                return True
+            except:
+                pass
+    return False
+
+def do_startup():
+    if check_already_running():
+        print "already running"
+        sys.exit()
+    print "starting"
+    if len(argv) > 2 and 'clean' in argv:
+        do_cleanup()
+    config = get_config()
+    if 'EGT-rpcport' in config:
+        start_egt(config)
+    if 'CBF-rpcport' in config:
+        start_cbf(config)
+    if 'CBT-rpcport' in config:
+        start_cbt(config)
+    if 'OBK-rpcport' in config:
+        start_obk(config)
+    start_flex(config)
+    start_explorer(config)
+
+def do_shutdown():
+    pidfile = get_pidfilename()
+    if not os.path.exists(pidfile):
+        return
+    pids = open(pidfile).readlines()
+    for pid in pids:
+        print "killing", pid
+        try:
+            os.kill(int(pid), signal.SIGTERM)
+        except:
+            print "Couldn't kill process", pid
+    os.unlink(pidfile)
+    
+if __name__ == '__main__':
+    def usage():
+        print "Usage: %s < start [clean] | stop | configure <key> <value> >" % argv[0]
+        exit()
+
+    old_stdout = sys.stdout
+    log = open(join(flexdir(), "flexcontrol.log"), "a+")
+    sys.stdout = log
+
+    if len(argv) == 1 or argv[1] not in ('start', 'stop', 'configure', 
+                                         'autoconfigure'):
+        usage()
+
+    if argv[1] == 'start':
+        do_startup()
+        write_pids()
+    elif argv[1] == 'stop':
+        do_shutdown()
+    elif argv[1] == 'configure':
+        if len(argv) != 4:
+            usage()
+        configure(argv[2], argv[3])
+    elif argv[1] == 'autoconfigure':
+        autoconfigure()
+
+sys.stdout = old_stdout
+log.close()
