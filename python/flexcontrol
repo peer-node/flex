@@ -108,7 +108,8 @@ def autoconfigure():
         os.mkdir(flexdir())
     config_file = get_config_file()
     if exists(config_file):
-        move(config_file, config_file + now().strftime("%Y%m%d-%H:%M:%S"))
+        move(config_file, 
+             config_file + datetime.now().strftime("%Y%m%d-%H:%M:%S"))
     file_ = open(config_file, "w")
     initial_config = {'port': 8733,
                       'rpcport': 8732,
