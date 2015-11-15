@@ -941,6 +941,10 @@ Value transferdeposit(const Array& params, bool fHelp)
     address_base58.GetKeyID(keyid);
     uint160 address_hash(vch_t(BEGIN(keyid), END(keyid)));
 
+    if (!depositdata[address_hash].HasProperty("address"))
+        throw runtime_error("Can't transfer until address "
+                            "secrets have been disclosed");
+
     CBitcoinAddress recipient_base58(params[1].get_str());
     recipient_base58.GetKeyID(keyid);
     uint160 recipient_key_hash(vch_t(BEGIN(keyid), END(keyid)));
@@ -963,12 +967,13 @@ Value transferdeposit(const Array& params, bool fHelp)
     return transfer_hash.ToString();
 }
 
-Value withdrawdeposit(const Array& params, bool fHelp)
+Value getpubkey(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
-        throw runtime_error("withdrawdeposit <address>\n");
+        throw runtime_error("getpubkey <address>\n");
 
     Point address;
+    Point recipient_key;
 
     CBitcoinAddress address_base58(params[0].get_str());
     CKeyID keyid;
@@ -976,8 +981,41 @@ Value withdrawdeposit(const Array& params, bool fHelp)
     address_base58.GetKeyID(keyid);
     uint160 address_hash(vch_t(BEGIN(keyid), END(keyid)));
 
-    log_ << "withdrawdeposit: address hash is " << address_hash << "\n";
-    WithdrawalRequestMessage request(address_hash);
+    Point pubkey = keydata[address_hash]["pubkey"];
+
+    vch_t pubkey_bytes = pubkey.getvch();
+    string bytes(pubkey_bytes.begin(), pubkey_bytes.end());
+    return string_to_hex(bytes);
+}
+
+Value withdrawdeposit(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() == 0 || params.size() >  2)
+        throw runtime_error("withdrawdeposit <address> [<recipient_key>]\n");
+
+    Point address;
+    Point recipient_key;
+
+    CBitcoinAddress address_base58(params[0].get_str());
+    CKeyID keyid;
+
+    address_base58.GetKeyID(keyid);
+    uint160 address_hash(vch_t(BEGIN(keyid), END(keyid)));
+
+    if (params.size() > 1)
+    {
+        string key_hex = params[1].get_str();
+        vch_t key_bytes = ParseHex(key_hex);
+        recipient_key.setvch(key_bytes);
+    }
+
+    log_ << "withdrawdeposit: address hash is " << address_hash << "\n"
+         << " and recipient_key is " << recipient_key << "\n";
+
+    if (!depositdata[address_hash].HasProperty("address"))
+        throw runtime_error("Can't withdraw until address "
+                            "secrets have been disclosed");
+    WithdrawalRequestMessage request(address_hash, recipient_key);
 
     request.Sign();
 
@@ -1029,6 +1067,7 @@ static const CRPCCommand vRPCCommands[] =
     { "getspent",               &getspent,               true,      true,       false },
     { "getspentchain",          &getspentchain,          true,      true,       false },
     { "getbatch",               &getbatch,               true,      true,       false },
+    { "getpubkey",              &getpubkey,              true,      true,       false },
     { "getcalendar",            &getcalendar,            true,      true,       false },
     { "getminedcredit",         &getminedcredit,         true,      true,       false },
     { "getminedcreditmsg",      &getminedcreditmsg,      true,      true,       false },

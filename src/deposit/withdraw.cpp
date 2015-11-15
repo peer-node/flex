@@ -215,12 +215,6 @@ void DoScheduledBackupWithdrawalRefutationCheck(uint160 complaint_hash)
 
     void DepositHandler::SendWithdrawalRequestMessage(uint160 address_hash)
     {
-        log_ << "SendWithdrawalRequestMessage: " << address_hash << "\n";
-
-        WithdrawalRequestMessage request(address_hash);
-        request.Sign();
-        depositdata[request.GetHash160()]["is_mine"] = true;
-        BroadcastMessage(request);
     }
 
     void DepositHandler::HandleWithdrawalRequestMessage(
@@ -243,7 +237,6 @@ void DoScheduledBackupWithdrawalRefutationCheck(uint160 complaint_hash)
         }
 
         log_ << "VerifySignature: " << request.VerifySignature() << "\n";
-        
 
         uint160 transfer_hash = depositdata[address]["latest_transfer"];
 

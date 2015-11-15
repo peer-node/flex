@@ -20,28 +20,43 @@ class WithdrawalRequestMessage
 public:
     Point deposit_address;
     uint160 previous_transfer_hash;
-    Point withdrawal_key;
+    Point authorized_key;
+    Point recipient_key;
     Signature signature;
 
     WithdrawalRequestMessage() { }
 
-    WithdrawalRequestMessage(uint160 deposit_address_hash)
+    WithdrawalRequestMessage(uint160 deposit_address_hash,
+                             Point recipient_key_):
+        recipient_key(recipient_key_)
     {
         log_ << "deposit address hash is " << deposit_address_hash << "\n";
         deposit_address = depositdata[deposit_address_hash]["address"];
         log_ << "deposit address is " << deposit_address << "\n";
 
-        previous_transfer_hash = depositdata[deposit_address]["latest_transfer"];
+        previous_transfer_hash
+            = depositdata[deposit_address]["latest_transfer"];
+        
         log_ << "WithdrawalRequestMessage: previous_transfer_hash is "
              << previous_transfer_hash << "\n";
-        uint160 withdrawal_key_hash = GetPreviousTransfer().recipient_key_hash;
-        log_ << "recipient_key_hash was "
-             << GetPreviousTransfer().recipient_key_hash << "\n";
-        log_ << "withdrawal_key_hash = " << withdrawal_key_hash << "\n";
-        withdrawal_key = keydata[withdrawal_key_hash]["pubkey"];
-        log_ << "withdrawal_key = " << withdrawal_key << "\n";
-        log_ << "withdrawal_key has privkey: "
-             << keydata[withdrawal_key].HasProperty("privkey") << "\n";
+
+        uint160 authorized_key_hash
+            = GetPreviousTransfer().recipient_key_hash;
+
+        authorized_key = keydata[authorized_key_hash]["pubkey"];
+
+        log_ << "authorized_key = " << authorized_key << "\n";
+        log_ << "authorized_key has privkey: "
+             << keydata[authorized_key].HasProperty("privkey") << "\n";
+        log_ << "WithdrawalRequestMessage: recipient_key is "
+             << recipient_key << "\n";
+        if (recipient_key.curve == 0 || recipient_key.IsAtInfinity())
+        {
+            log_ << "invalid recipient_key: using authorized_key\n";
+            recipient_key = authorized_key;
+        }
+        log_ << "WithdrawalRequestMessage: recipient_key is "
+             << recipient_key << "\n";
     }
 
     static string_t Type() { return string_t("withdraw_request"); }
@@ -52,7 +67,8 @@ public:
     (
         READWRITE(deposit_address);
         READWRITE(previous_transfer_hash);
-        READWRITE(withdrawal_key);
+        READWRITE(authorized_key);
+        READWRITE(recipient_key);
         READWRITE(signature);
     )
 
@@ -63,25 +79,30 @@ public:
 
     Point VerificationKey()
     {
+        log_ << "WithdrawalRequestMessage: VerificationKey()\n";
+        uint160 latest_transfer_hash
+            = depositdata[deposit_address]["latest_transfer"];
+        log_ << "latest_transfer_hash is " << latest_transfer_hash << "\n";
+
+        if (latest_transfer_hash != previous_transfer_hash)
+        {
+            log_ << "latest_transfer_hash does not match "
+                 << "previous_transfer_hash " << previous_transfer_hash
+                 << "\n";
+            return Point(SECP256K1, 0);
+        }
         if (previous_transfer_hash != 0)
         {
             DepositTransferMessage previous_transfer = GetPreviousTransfer();
-            uint160 withdrawal_key_hash = KeyHash(withdrawal_key);
-
-            log_ << "VerificationKey: withdrawal_key is " << withdrawal_key
-                 << " and withdrawal_key_hash is " << withdrawal_key_hash << "\n";
-
-            log_ << "and previous_transfer.recipient_key_hash = "
-                 << previous_transfer.recipient_key_hash << "\n";
-
             if (previous_transfer.deposit_address == deposit_address &&
-                withdrawal_key_hash == previous_transfer.recipient_key_hash)
+                previous_transfer.recipient_key_hash
+                    == KeyHash(authorized_key))
             {
-                log_ << "VerificationKey(): returning withdrawal key: "
-                     << withdrawal_key << "\n";
-                return withdrawal_key;
+                log_ << "ok; returning authorized_key "
+                     << authorized_key << "\n";
+                return authorized_key;
             }
-            log_ << "VerificationKey(): returning 0\n";
+                
             return Point(SECP256K1, 0);
         }
         Point key = depositdata[deposit_address]["depositor_key"];
@@ -114,7 +135,7 @@ public:
     void SetSecret()
     {
         CBigNum secret =  keydata[GetAddressPart()]["privkey"];
-        CBigNum shared_secret = Hash(secret * GetRequest().VerificationKey());
+        CBigNum shared_secret = Hash(secret * GetRequest().recipient_key);
         secret_xor_shared_secret = secret ^ shared_secret;
     }
 
@@ -238,7 +259,7 @@ public:
 
     Point VerificationKey()
     {
-        return GetWithdraw().GetRequest().VerificationKey();
+        return GetWithdraw().GetRequest().recipient_key;
     }
 
     IMPLEMENT_HASH_SIGN_VERIFY();
@@ -453,7 +474,7 @@ public:
 
     Point VerificationKey()
     {
-        return GetBackupWithdraw().GetRequest().VerificationKey();
+        return GetBackupWithdraw().GetRequest().recipient_key;
     }
 
     IMPLEMENT_HASH_SIGN_VERIFY();
