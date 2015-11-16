@@ -41,6 +41,31 @@ void DoScheduledPostDisclosureCheck(uint160 request_hash)
     uint160 address_hash = KeyHash(address);
     depositdata[address_hash]["address"] = address;
     log_ << "address for " << address_hash << " is " << address << "\n";
+    log_ << "keyhash_ is " << FullKeyHash(address) << "\n";
+    DepositAddressRequest request = msgdata[request_hash]["deposit_request"];
+    string address_string;
+    if (request.currency_code != FLX)
+    {
+        Currency currency = flexnode.currencies[request.currency_code];
+        address_string = currency.crypto.PubKeyToAddress(address);
+    }
+    else
+    {
+        address_string = FlexAddressFromPubKey(address);
+    }
+    log_ << "final address is " << address_string << "\n";
+    CBitcoinAddress address_(address_string);
+    CKeyID keyid;
+    address_.GetKeyID(keyid);
+    vch_t keydata_(BEGIN(keyid), END(keyid));
+    log_ << "keydata is " << keydata_ << "\n";
+    uint160 hash(keydata_);
+    log_ << "hash is " << hash << "\n";
+    depositdata[hash]["address"] = address;
+    CKeyID keyID(hash);
+    log_ << "btc address is " << CBitcoinAddress(keyID).ToString() << "\n";
+    depositdata[address_hash]["confirmed"] = true;
+    depositdata[FullKeyHash(address)]["confirmed"] = true;
 }
 
 void DoScheduledDisclosureTimeoutCheck(uint160 part_msg_hash)

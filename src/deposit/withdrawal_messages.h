@@ -40,10 +40,16 @@ public:
         log_ << "WithdrawalRequestMessage: previous_transfer_hash is "
              << previous_transfer_hash << "\n";
 
-        uint160 authorized_key_hash
-            = GetPreviousTransfer().recipient_key_hash;
-
-        authorized_key = keydata[authorized_key_hash]["pubkey"];
+        if (previous_transfer_hash == 0)
+        {
+            authorized_key = depositdata[deposit_address]["depositor_key"];
+        }
+        else
+        {
+            uint160 authorized_key_hash
+                = GetPreviousTransfer().recipient_key_hash;
+            authorized_key = keydata[authorized_key_hash]["pubkey"];
+        }
 
         log_ << "authorized_key = " << authorized_key << "\n";
         log_ << "authorized_key has privkey: "

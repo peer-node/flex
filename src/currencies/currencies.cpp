@@ -1000,6 +1000,7 @@ vch_t PrefixFromBase58Data(string base58string)
             if (secret_bytes.size() == 34)
                 compressed = true;
         }
+        log_ << "compressed is " << compressed << "\n";
     }
 
     void CurrencyCrypto::DeterminePrefixes()

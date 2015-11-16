@@ -41,7 +41,7 @@ def public_key_to_address(public_key):
     h160 = hash_160(public_key)
     return hash_160_to_address(h160)
 
-def point_to_ser(P, comp=True):
+def point_to_ser(P, comp=False):
     if comp:
         return ( ('%02x'%(2+(P.y()&1)))+('%064x'%P.x()) ).decode('hex')
     return ( '04'+('%064x'%P.x())+('%064x'%P.y()) ).decode('hex')

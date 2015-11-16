@@ -941,7 +941,7 @@ Value transferdeposit(const Array& params, bool fHelp)
     address_base58.GetKeyID(keyid);
     uint160 address_hash(vch_t(BEGIN(keyid), END(keyid)));
 
-    if (!depositdata[address_hash].HasProperty("address"))
+    if (!depositdata[address_hash]["confirmed"])
         throw runtime_error("Can't transfer until address "
                             "secrets have been disclosed");
 
@@ -1012,7 +1012,7 @@ Value withdrawdeposit(const Array& params, bool fHelp)
     log_ << "withdrawdeposit: address hash is " << address_hash << "\n"
          << " and recipient_key is " << recipient_key << "\n";
 
-    if (!depositdata[address_hash].HasProperty("address"))
+    if (!depositdata[address_hash]["confirmed"])
         throw runtime_error("Can't withdraw until address "
                             "secrets have been disclosed");
     WithdrawalRequestMessage request(address_hash, recipient_key);

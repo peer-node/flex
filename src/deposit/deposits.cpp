@@ -260,6 +260,8 @@ void InitializeDepositScheduledTasks()
             log_ << "HandleDepositAddressParts: recording "
                  << address_hash << " has address " << address << "\n";
             depositdata[address_hash]["address"] = address;
+            depositdata[KeyHash(address)]["address"] = address;
+            depositdata[FullKeyHash(address)]["address"] = address;
             keydata[address_hash]["pubkey"] = address;
         }
     }

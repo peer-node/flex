@@ -6,6 +6,7 @@
 #include "credits/credits.h"
 #include "database/memdb.h"
 #include "database/data.h"
+#include "crypto/key.h"
 
 #include "log.h"
 #define LOG_CATEGORY "creditsign.h"
@@ -17,6 +18,14 @@ inline uint160 KeyHash(Point key)
     vch_t vchKey = key.getvch();
     vch_t point_bytes(&vchKey[1], &vchKey[vchKey.size()]);
     return Hash160(point_bytes);
+}
+
+inline uint160 FullKeyHash(Point pubkey)
+{
+    CPubKey key(pubkey);
+    key.Decompress();
+    CKeyID keyid = key.GetID();
+    return keyid;
 }
 
 inline uint160 Rand160()
