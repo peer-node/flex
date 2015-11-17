@@ -169,13 +169,13 @@ the gui and do:
 
 Now you can set up an rpc process for it using the included daemonize script:
 
-    $ daemonize electrum 8181
+    $ daemonize electrum 8181 &
 
 Then tell Flex about the currency code and the port:
 
     $ flexcontrol configure BTC-rpcport 8181
 
-You can have a look at ~/flex/flex.conf to see what's there if you want.
+You can have a look at ~/.flex/flex.conf to see what's there if you want.
 
 Depositing and Withdrawing Some Bitcoins
 ----------------------------------------

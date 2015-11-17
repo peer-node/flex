@@ -88,7 +88,7 @@ public:
     void BroadcastMessage(T message)
     {
         CDataStream ss = GetDepositBroadcastStream(message);
-        uint160 message_hash = Hash160(ss.begin(), ss.end());
+        uint160 message_hash = message.GetHash160();
         log_ << "BroadcastMessage:  sending " << message_hash << "\n";
         RelayDepositMessage(ss);
         if (!depositdata[message_hash]["received"])

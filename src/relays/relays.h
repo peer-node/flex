@@ -42,7 +42,7 @@ public:
     void BroadcastMessage(T message)
     {
         CDataStream ss = GetRelayBroadcastStream(message);
-        uint160 message_hash = Hash160(ss.begin(), ss.end());
+        uint160 message_hash = message.GetHash160();
         log_ << "broadcasting msg with hash " << message_hash << "\n";
             
         RelayRelayMessage(ss);

@@ -73,6 +73,9 @@ void DoForwarding()
             string_t type = msgdata[hash]["type"];
             log_ << "DoForwarding(): found " << hash
                  << " with type " << type << "\n";
+
+            tradedata[hash]["received"] = true;
+            log_ << hash << " has been marked as received\n";
             if (!msgdata[hash]["forwarded"])
             {
                 if (type == "order")
@@ -86,7 +89,7 @@ void DoForwarding()
                     flexnode.tradehandler.BroadcastMessage(accept);
                 }
             }
-            
+
             msgdata[hash]["forwarded"] = true;
             tradedata.RemoveFromLocation("forwarding", priority);
             order_scanner = tradedata.LocationIterator("forwarding");

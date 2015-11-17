@@ -103,10 +103,14 @@ public:
     void BroadcastMessage(T message)
     {
         CDataStream ss = GetTradeBroadcastStream(message);
-        uint160 message_hash = Hash160(ss.begin(), ss.end());
+        uint160 message_hash = message.GetHash160();
         RelayTradeMessage(ss);
         if (!tradedata[message_hash]["received"])
+        {
+            log_ << message_hash << " has NOT been received - handling\n";
             HandleMessage(ss, NULL);
+        }
+            
     }
 
     template <typename T>
