@@ -745,7 +745,6 @@ public:
     uint160 GetHash160()
     {
         uint160 hash = TreeHash(&data[0], (int)ceil(length / 8.));
-        log_ << "GetHash160(): hash of " << *this << " is " << hash << "\n";
         return hash;
     }
 
@@ -802,7 +801,6 @@ inline uint160 BitChain::HashDifferent(std::vector<uint64_t> to_set,
     }
     
     uint160 hash = other.GetHash160();
-    log_ << "HashDifferent: hash of " << other << " is " << hash << "\n";
     return hash;
 }
 

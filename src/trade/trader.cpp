@@ -388,7 +388,7 @@ std::vector<Point> ChooseRelays(uint160 chooser,
     RelayState state = GetRelayState(credit_hash);
 
     log_ << "Choosing relays with chooser " << chooser
-         << " from state " << state;
+         << " from state " << state.GetHash160() << "\n";
     
     return state.ChooseRelays(chooser, num_relays);
 }

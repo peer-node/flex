@@ -391,7 +391,7 @@ void WatchForCreditPayment(uint160 accept_commit_hash)
             tradedata[order_hash]["accept_commit_hash"] = accept_commit_hash;
             tradedata[accept_commit_hash].Location("my_trades") = now;
         }
-        else if (tradedata[accept_commit_hash]["is_mine"])
+        if (tradedata[accept_commit_hash]["is_mine"])
         {
             log_ << "my accept order\n";
             if (order.side == BID)

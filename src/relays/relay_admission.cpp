@@ -301,8 +301,7 @@ void DoScheduledFutureSuccessorComplaintCheck(uint160 complaint_hash)
         {
             log_ << "relay number " << msg.relay_number 
                  << " is taken; latest is "
-                 << relay_chain.state.latest_relay_number << "\n"
-                 << "relay state is " << relay_chain.state;
+                 << relay_chain.state.latest_relay_number << "\n";
             HandleDownStreamApplicants(msg.relay_pubkey);
             return;
         }

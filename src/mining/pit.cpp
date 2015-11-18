@@ -295,7 +295,6 @@ extern CMemoryDB batchhashesdb;
 
         RelayState state = GetRelayState(previous_credit_hash);
         state.latest_credit_hash = previous_credit_hash;
-        log_ << "relay state before applying accepted_relay_msgs: " << state;
 
         RelayStateChain relay_chain(state);
 
@@ -410,7 +409,6 @@ extern CMemoryDB batchhashesdb;
            << "== Timestamp: " << mined_credit.timestamp << "\n"
            << "============ End Prepared for Mining ===========" << "\n";
         log_ << ss.str();
-
     }
 
     void CreditPit::SetMinedCreditHashListHash()

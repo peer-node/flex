@@ -362,7 +362,10 @@ CreditBatch ReconstructBatch_(MinedCreditMessage& msg)
         StoreMinedCreditMessage(msg);
         SwitchToChainViaFork(credit_hash);
         flexnode.wallet.HandleNewBatch(ReconstructBatch_(msg));
-        log_ << "wallet is now: " << flexnode.wallet << "\n";
+        if (msg.mined_credit.batch_number < 500)
+        {
+            log_ << "wallet is now: " << flexnode.wallet << "\n";
+        }
         HandleNugget(msg.mined_credit);
         log_ << "Balance is now " << flexnode.wallet.Balance() << "\n";
         flexnode.pit.pool.already_included.insert(credit_hash);

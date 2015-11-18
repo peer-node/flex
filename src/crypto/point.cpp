@@ -10,7 +10,7 @@
 
 
 /***********
- *  Diurn
+ *  Point
  */
 
     Point::Point():

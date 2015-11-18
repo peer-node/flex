@@ -47,23 +47,18 @@ RelayState GetRelayState(uint160 credit_hash)
         
         credit_hash = prev_hash;
     }
-    log_ << "looking backwards, got to " << credit_hash << "\n";
 
     RelayState state;
 
     if (relaydata[credit_hash].HasProperty("state"))
     {
         state = relaydata[credit_hash]["state"];
-        log_ << "got relay state: " << state;
         state.latest_credit_hash = credit_hash;
     }
     else if (mined_credit.relay_state_hash != 0)
         throw NoKnownRelayStateException(credit_hash);
 
-
     RelayStateChain state_chain(state);
-
-    log_ << "proceeding forward through:\n"; 
 
     foreach_(const uint160 credit_hash_, credit_hashes)
     {
@@ -171,21 +166,15 @@ void RecordRelayState(RelayState state, uint160 credit_hash)
     void SharedChain<S>::HandleBatch(uint160 credit_hash)
     {
         MinedCreditMessage msg = creditdata[credit_hash]["msg"];
-        log_ << "SharedChain::HandleBatch(): applying "
-             << credit_hash << "\n";
         if (!msg.hash_list.RecoverFullHashes())
         {
             throw RecoverHashesFailedException(credit_hash);
         }
         foreach_(const uint160& message_hash, msg.hash_list.full_hashes)
         {
-            log_ << "SharedChain::HandleBatch: next is "
-                 << message_hash << "\n";
             string_t type = msgdata[message_hash]["type"];
-            log_ << "type is " << type << "\n";
             if (VectorContainsEntry(message_types, type))
             {
-                log_ << "in message types - handling\n";
                 HandleMessage(message_hash);
             }
         }
@@ -211,33 +200,19 @@ void RecordRelayState(RelayState state, uint160 credit_hash)
         }
         LOCK(relay_handler_mutex);
         RelayStateChain existing_state_chain = (*this);
-        // log_ << "RelayStateChain::ValidateBatch(): state of existing chain: "
-        //      << existing_state_chain.state << "\n";
-        
-        // log_ << "applying " << credit_hash << "\n";
 
         RelayState state_
             = GetRelayState(msg.mined_credit.previous_mined_credit_hash);
 
         (*this) = RelayStateChain(state_);
-
-        // log_ << "to the state: " << state_;
-        // log_ << "which is the state: " << state;
-
-        // log_ << "state of existing chain now: "
-        //      << existing_state_chain.state;
-
-        // log_ << "RelayStateChain::ValidateBatch(): handling messages\n";
         bool result = HandleMessages(msg.hash_list.full_hashes);
         if (!result)
         {
             log_ << "RelayStateChain::ValidateBatch FAILED\n";
             log_ << "calendar is " << flexnode.calendar;
         }
-        // log_ << "state before restoring original chain: " << state;
+
         (*this) = existing_state_chain;
-        // log_ << "RelayStateChain::ValidateBatch(): state after restoring:"
-        //      << state;
         return result;
     }
 
@@ -281,10 +256,7 @@ void RecordRelayState(RelayState state, uint160 credit_hash)
 
         foreach_(uint160 message_hash, final_messages_to_handle)
         {
-            log_ << "SharedChain::HandleMessages: next is "
-                  << message_hash << "\n";
             string_t type = msgdata[message_hash]["type"];
-            log_ << "type is " << type << "\n";
             
             if (!ValidateMessage(message_hash))
             {
@@ -295,7 +267,6 @@ void RecordRelayState(RelayState state, uint160 credit_hash)
             }
             else
             {
-                log_ << message_hash << " is ok; handling\n";
                 HandleMessage(message_hash);
             }
         }
@@ -307,7 +278,6 @@ void RecordRelayState(RelayState state, uint160 credit_hash)
     {
         LOCK(relay_handler_mutex);
         log_ << "RelayStateChain::ValidateJoin: " << message_hash << "\n";
-        log_ << "ValidateJoin: relay state is " << state;
         if (!msgdata[message_hash].HasProperty("join"))
         {
              log_ << "RelayStateChain::ValidateJoin - no join message "

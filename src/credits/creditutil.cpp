@@ -265,7 +265,6 @@ bool GetSpentChainDifferences(uint160 starting_credit_hash,
     {
         vector<uint64_t> spent = GetBitsSetInBatch(hash);
         to_set.insert(to_set.end(), spent.begin(), spent.end());
-        log_ << "adding " << spent << "to to_set\n";
         hash = PreviousCreditHash(hash);
  
         look_back++;
@@ -448,13 +447,11 @@ BitChain GetSpentChain(uint160 credit_hash)
     uint160 chain_hash = mined_credit.spent_chain_hash;
     BitChain spentchain = creditdata[chain_hash]["chain"];
 
-    log_ << "GetSpentChain: got a chain for " << mined_credit
-         << "namely " << spentchain << "\n";
+    log_ << "GetSpentChain: got a chain for " << mined_credit;
     
     log_ << "changing to spent chain for " << credit_hash << "\n";
     ChangeSpentChain(&spentchain, mined_credit.GetHash160(), credit_hash);
 
-    log_ << "GetSpentChain: chain is now " << spentchain << "\n";
     return spentchain;
 }
 
