@@ -1,5 +1,5 @@
-Flex: A Decentralized Cryptocurrency Exchange
-=============================================
+The Flex Network: A New Way to Move and Trade Cryptocurrencies
+==============================================================
 
 Copyleft (c) 2015 Flex Developers
 
