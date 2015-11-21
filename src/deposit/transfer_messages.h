@@ -18,6 +18,7 @@ public:
     uint160 previous_transfer_hash;
     Point sender_key;
     uint160 recipient_key_hash;
+    CBigNum offset_xor_shared_secret;
     Signature signature;
 
     DepositTransferMessage() { }
@@ -42,6 +43,34 @@ public:
              << recipient_key_hash << "\n";
     }
 
+    // We need the recipient pubkey to send a secret deposit
+    DepositTransferMessage(uint160 deposit_address_hash,
+                           Point recipient_key):
+        recipient_key_hash(KeyHash(recipient_key))
+    {
+        deposit_address = depositdata[deposit_address_hash]["address"];
+        Point offset_point = depositdata[deposit_address]["offset_point"];
+        CBigNum offset = keydata[offset_point]["privkey"];
+
+        previous_transfer_hash = depositdata[deposit_address]["latest_transfer"];
+        if (previous_transfer_hash == 0)
+        {
+            sender_key = GetDepositRequest().depositor_key;
+        }
+        else
+        {
+            uint160 sender_key_hash = GetPreviousTransfer().recipient_key_hash;
+            sender_key = keydata[sender_key_hash]["pubkey"];
+        }
+
+        CBigNum sender_privkey = keydata[sender_key]["privkey"];
+        CBigNum shared_secret = Hash(sender_privkey * recipient_key);
+        offset_xor_shared_secret = offset ^ shared_secret;
+
+        log_ << "DepositTransferMessage: recipient_key_hash is "
+             << recipient_key_hash << "\n";
+    }
+
     static string_t Type() { return string_t("transfer"); }
 
     IMPLEMENT_SERIALIZE
@@ -50,6 +79,7 @@ public:
         READWRITE(previous_transfer_hash);
         READWRITE(sender_key);
         READWRITE(recipient_key_hash);
+        READWRITE(offset_xor_shared_secret);
         READWRITE(signature);
     )
 

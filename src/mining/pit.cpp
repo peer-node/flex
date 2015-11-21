@@ -700,7 +700,7 @@ extern CMemoryDB batchhashesdb;
         else
         {
             flexnode.digging = true;
-            flexnode.downloader.finished_downloading = false;
+            flexnode.downloader.finished_downloading = true;
         }
     }
 

@@ -258,6 +258,8 @@ void DoScheduledBackupWithdrawalRefutationCheck(uint160 complaint_hash)
 
         std::vector<Point> relays = GetRelaysForAddress(address);
 
+        log_ << "got relays: " << relays << "\n";
+
         for (uint32_t position = 0; position < relays.size(); position++)
         {
             if (keydata[relays[position]].HasProperty("privkey"))
@@ -266,6 +268,7 @@ void DoScheduledBackupWithdrawalRefutationCheck(uint160 complaint_hash)
                      << "\n";
                 WithdrawalMessage msg(request_hash, position);
                 BroadcastMessage(msg);
+                log_ << "sent\n";
             }
         }
     }
@@ -466,6 +469,9 @@ void DoScheduledBackupWithdrawalRefutationCheck(uint160 complaint_hash)
     void DepositHandler::CheckForAllSecretsOfAddress(
         uint160 address_request_hash)
     {
+        if (depositdata[address_request_hash]["import_complete"])
+            return;
+
         log_ << "CheckForAllSecretsOfAddress: "
              << address_request_hash << "\n";
         vector<uint160> part_hashes;
@@ -494,10 +500,26 @@ void DoScheduledBackupWithdrawalRefutationCheck(uint160 complaint_hash)
                  << address << "\n";
             return;
         }
-        log_ << "recovered key for address " << address << "\n";
-        keydata[address]["privkey"] = address_privkey;
         DepositAddressRequest request;
         request = msgdata[address_request_hash]["deposit_request"];
+
+        log_ << "recovered key for address " << address << "\n";
+
+        keydata[address]["privkey"] = address_privkey;
+        if (depositdata[address].HasProperty("offset_point"))
+        {
+            log_ << address << " has an offset point\n";
+            Point offset_point = depositdata[address]["offset_point"];
+            log_ << "offset point is " << offset_point << "\n";
+            CBigNum offset = keydata[offset_point]["privkey"];
+            log_ << "offset is " << offset << "\n";
+            address_privkey = (address_privkey + offset) % address.Modulus();
+            log_ << "secret address is " << address + offset_point << "\n";
+            log_ << "point(privkey) is "
+                 << Point(request.curve, address_privkey) << "\n";
+            keydata[address + offset_point]["privkey"] = address_privkey;
+        }
+        
         if (request.currency_code != FLX)
         {
             Currency currency = flexnode.currencies[request.currency_code];
@@ -509,7 +531,9 @@ void DoScheduledBackupWithdrawalRefutationCheck(uint160 complaint_hash)
         {
             flexnode.wallet.ImportPrivateKey(address_privkey);
         }
+
         RemoveAddress(address, request.currency_code);
+        depositdata[address_request_hash]["import_complete"] = true;
     }
 
     void DepositHandler::HandleBackupWithdrawalComplaint(

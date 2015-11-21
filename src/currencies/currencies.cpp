@@ -526,14 +526,12 @@ vector<Unspent> ExtractUnspentFromOutput(string json_output, vch_t currency)
         }
         
         Unspent item;
-        log_ << "pre string parsing\n";
         if (Contains(json_output, "txid"))
             item.txid = find_value(output, "txid").get_str();
         else if (Contains(json_output, "prevout_hash"))
             item.txid = find_value(output, "prevout_hash").get_str();
         else
             continue;
-        log_ << "post string parsing\n";
         
         if (Contains(json_output, "prevout_n"))
         {

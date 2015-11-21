@@ -538,7 +538,7 @@ Now user2 can place an order:
 </td>
 <td>
 <pre>
-user2@host$ flex-cli placeorder sell CBF sell CBF 5000 0.0000001
+user2@host$ flex-cli placeorder sell CBF 5000 0.0000001
 b5353593611e2bc8bb13061777a4690fc581f1
 </pre>
 </td>

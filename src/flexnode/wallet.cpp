@@ -459,6 +459,18 @@ string_t FlexAddressFromPubKey(Point pubkey)
         }
         watched_credits.resize(0);
         walletdata[keyhash]["watched_credits"] = watched_credits;
+
+        vector<CreditInBatch> known_credits;
+        known_credits = GetCreditsPayingToRecipient(keyhash);
+        foreach_(const CreditInBatch& credit, watched_credits)
+        {
+            if (VectorContainsEntry(credits, credit))
+                continue;
+            log_ << "importing credit with amount " << credit.amount << "\n";
+            credits.push_back(credit);
+            log_ << "balance is now " << Balance() << "\n";
+        }
+
         sort(credits.begin(), credits.end());
         NotifyGuiOfBalance(FLX, Balance() * 1e-8);
     }

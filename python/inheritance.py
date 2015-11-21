@@ -21,16 +21,7 @@ def have_five_executors(n, some_nodes):
                                  if (n - offset) % len(nodes) in some_nodes])
     return num_executors_present >= 5
 
-nodes_to_sample_from = []
-
-for i in range(0, len(nodes), 100):
-    hours_ago = (600 - i) / 100
-    if 'timeweighted' in sys.argv:
-        weighting = max(4 - hours_ago, 1)  # 75% loss after 3 hours
-    else:
-        weighting = 1
-    nodes_to_sample_from.extend(nodes[i:i + 100] * weighting)
-
+nodes_to_sample_from = nodes
 
 count = 0
 def final_fraction(fraction):

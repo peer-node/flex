@@ -870,7 +870,34 @@ Value requestdepositaddress(const Array& params, bool fHelp)
     }
     
     flexnode.deposit_handler.SendDepositAddressRequest(currency_code,
-                                                       curve);
+                                                       curve,
+                                                       false);
+
+    return "";
+}
+
+Value requestprivateaddress(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 1)
+        throw runtime_error("requestprivateaddress <currency_code>\n");
+
+    string currency_ = params[0].get_str();
+    vch_t currency_code(currency_.begin(), currency_.end());
+    uint8_t curve;
+
+    if (currency_ != "FLX")
+    {
+        Currency currency = flexnode.currencies[currency_code];
+        curve = currency.crypto.curve;
+    }
+    else
+    {
+        curve = SECP256K1;
+    }
+    
+    flexnode.deposit_handler.SendDepositAddressRequest(currency_code,
+                                                       curve,
+                                                       true);
 
     return "";
 }
@@ -891,6 +918,16 @@ Value listdepositaddresses(const Array& params, bool fHelp)
     
     foreach_(Point address, my_addresses)
     {
+        bool private_ = false;
+        if (depositdata[address].HasProperty("offset_point"))
+        {
+            private_ = true;
+            log_ << "address before adding offset point is "
+                 << address << "\n";
+            Point offset_point = depositdata[address]["offset_point"];
+            log_ << "offset_point is " << offset_point << "\n";
+            address += offset_point;
+        }
         log_ << "listdepositaddresses: point address is " << address << "\n";
         log_ << "address hash is " << KeyHash(address) << "\n";
         string address_string;
@@ -908,7 +945,6 @@ Value listdepositaddresses(const Array& params, bool fHelp)
         uint160 hash_from_keyid(bytes);
         log_ << "getkeyid is " << hash_from_keyid << "\n";
 
-
         int64_t balance;
         if (currency_code == FLX)
             balance = GetKnownPubKeyBalance(address);
@@ -920,6 +956,9 @@ Value listdepositaddresses(const Array& params, bool fHelp)
 
         string balance_string = AmountToString(balance, currency_code);
         address_object.push_back(Pair("balance", balance_string));
+
+        if (private_)
+            address_object.push_back(Pair("private", true));
 
         addresses.push_back(address_object);
     }
@@ -945,6 +984,18 @@ Value transferdeposit(const Array& params, bool fHelp)
         throw runtime_error("Can't transfer until address "
                             "secrets have been disclosed");
 
+    address = keydata[address_hash]["pubkey"];
+
+    log_ << "transferdeposit: address is " << address << "\n";
+    log_ << "has public address: "
+         << depositdata[address].HasProperty("public_address") << "\n";
+
+
+    if (depositdata[address].HasProperty("public_address"))
+        throw runtime_error("Can't transfer private addresses using "
+                            "transferdeposit. "
+                            "Use transferprivateaddress.\n");
+
     CBitcoinAddress recipient_base58(params[1].get_str());
     recipient_base58.GetKeyID(keyid);
     uint160 recipient_key_hash(vch_t(BEGIN(keyid), END(keyid)));
@@ -956,6 +1007,66 @@ Value transferdeposit(const Array& params, bool fHelp)
          << keydata[recipient_key_hash].HasProperty("pubkey") << "\n";
 
     DepositTransferMessage transfer(address_hash, recipient_key_hash);
+
+    transfer.Sign();
+
+    uint160 transfer_hash = transfer.GetHash160();
+
+    depositdata[transfer_hash]["is_mine"] = true;
+    flexnode.deposit_handler.PushDirectlyToPeers(transfer);
+
+    return transfer_hash.ToString();
+}
+
+uint160 GetAddressHashFromPrivateAddressHash(uint160 secret_address_hash)
+{
+    Point secret_address, public_address;
+    secret_address = depositdata[secret_address_hash]["address"];
+    public_address = depositdata[secret_address]["public_address"];
+
+    if (secret_address_hash == KeyHash(secret_address))
+        return KeyHash(public_address);
+    else if (secret_address_hash == FullKeyHash(secret_address))
+        return FullKeyHash(public_address);
+    return 0;
+}
+
+Value transferprivateaddress(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 2)
+        throw runtime_error(
+            "transferprivateaddress <deposit_address> <recipient_pubkey>\n");
+
+    Point secret_address, recipient_key;
+    uint160 address_hash;
+    CBitcoinAddress address_base58(params[0].get_str());
+    CKeyID keyid;
+
+    address_base58.GetKeyID(keyid);
+    uint160 secret_address_hash(vch_t(BEGIN(keyid), END(keyid)));
+
+    if (!depositdata[secret_address_hash]["confirmed"])
+        throw runtime_error("Can't transfer until address "
+                            "secrets have been disclosed");
+
+    address_hash = GetAddressHashFromPrivateAddressHash(secret_address_hash);
+
+    string recipient_pubkey_string = params[1].get_str();
+
+    if (recipient_pubkey_string.size() < 36)
+        throw runtime_error("Must specify recipient pubkey, "
+                            "not recipient address.");
+    
+    string key_hex = params[1].get_str();
+    vch_t key_bytes = ParseHex(key_hex);
+    recipient_key.setvch(key_bytes);
+    
+    log_ << "recipient has key: " << recipient_key << "\n";
+
+    log_ << "have privkey: "
+         << keydata[recipient_key].HasProperty("privkey") << "\n";
+
+    DepositTransferMessage transfer(address_hash, recipient_key);
 
     transfer.Sign();
 
@@ -1001,6 +1112,17 @@ Value withdrawdeposit(const Array& params, bool fHelp)
 
     address_base58.GetKeyID(keyid);
     uint160 address_hash(vch_t(BEGIN(keyid), END(keyid)));
+
+    log_ << "withdrawdeposit: address hash is " << address_hash << "\n";
+
+    address = depositdata[address_hash]["address"];
+
+    if (depositdata[address].HasProperty("public_address"))
+    {
+        log_ << "address " << address << " is secret; getting public address\n";
+        address_hash = GetAddressHashFromPrivateAddressHash(address_hash);
+        log_ << "address has is now " << address_hash << "\n";
+    }
 
     if (params.size() > 1)
     {
@@ -1091,7 +1213,9 @@ static const CRPCCommand vRPCCommands[] =
 
     /* Deposits */
     { "requestdepositaddress",  &requestdepositaddress,  true,      false,      false },
+    { "requestprivateaddress",  &requestprivateaddress,  true,      false,      false },
     { "listdepositaddresses",   &listdepositaddresses,   true,      false,      false },
+    { "transferprivateaddress", &transferprivateaddress, true,      false,      false },
     { "transferdeposit",        &transferdeposit,        true,      false,      false },
     { "withdrawdeposit",        &withdrawdeposit,        true,      false,      false },
 

@@ -28,6 +28,23 @@ void DoScheduledDisclosureRefutationCheck(uint160 complaint_hash)
     DoSuccession(bad_relay);
 }
 
+void StoreSecretAddress(Point address)
+{
+    Point offset_point = depositdata[address]["offset_point"];
+    Point secret_address = address + offset_point;
+    uint160 secret_address_hash = KeyHash(secret_address);
+    uint160 full_secret_address_hash = FullKeyHash(secret_address);
+    keydata[secret_address_hash]["pubkey"] = secret_address;
+    keydata[full_secret_address_hash]["pubkey"] = secret_address;
+    depositdata[secret_address_hash]["offset_point"] = offset_point;
+    depositdata[secret_address_hash]["confirmed"] = true;
+    depositdata[secret_address_hash]["address"] = secret_address;
+    depositdata[full_secret_address_hash]["offset_point"] = offset_point;
+    depositdata[full_secret_address_hash]["confirmed"] = true;
+    depositdata[full_secret_address_hash]["address"] = secret_address;
+    depositdata[secret_address]["public_address"] = address;
+}
+
 void DoScheduledPostDisclosureCheck(uint160 request_hash)
 {
     log_ << "DoScheduledPostDisclosureCheck: " << request_hash << "\n";
@@ -66,6 +83,11 @@ void DoScheduledPostDisclosureCheck(uint160 request_hash)
     log_ << "btc address is " << CBitcoinAddress(keyID).ToString() << "\n";
     depositdata[address_hash]["confirmed"] = true;
     depositdata[FullKeyHash(address)]["confirmed"] = true;
+
+    if (depositdata[address].HasProperty("offset_point"))
+    {
+        StoreSecretAddress(address);
+    }
 }
 
 void DoScheduledDisclosureTimeoutCheck(uint160 part_msg_hash)

@@ -127,13 +127,26 @@ void InitializeDepositScheduledTasks()
  */
 
     void DepositHandler::SendDepositAddressRequest(vch_t currency,
-                                                   uint8_t curve)
+                                                   uint8_t curve,
+                                                   bool secret=false)
     {
         DepositAddressRequest request(curve, currency);
         request.DoWork();
         request.Sign();
         uint160 request_hash = request.GetHash160();
         depositdata[request_hash]["is_mine"] = true;
+        if (secret)
+        {
+            log_ << "SendDepositAddressRequest: secret\n";
+            CBigNum secret_offset = RandomPrivateKey(curve);
+            log_ << "secret offset is " << secret_offset << "\n";
+            Point offset_point(curve, secret_offset);
+            log_ << "offset point is " << offset_point << "\n";
+            depositdata[request_hash]["offset_point"] = offset_point;
+            log_ << "recorded offset point of " << offset_point
+                 << "for " << request_hash << "\n";
+            keydata[offset_point]["privkey"] = secret_offset;
+        }
         log_ << "sending address request " << request_hash << "\n";
         BroadcastMessage(request);
     }
@@ -141,11 +154,14 @@ void InitializeDepositScheduledTasks()
     void DepositHandler::HandleDepositAddressRequest(
         DepositAddressRequest request)
     {
+        uint160 request_hash = request.GetHash160();
+        log_ << "HandleDepositAddressRequest: " << request_hash << "\n";
         if (!flexnode.downloader.finished_downloading)
         {
+            log_ << "not finished downloading\n";
             return;
         }
-        uint160 request_hash = request.GetHash160();
+        
         log_ << "handling address request " << request_hash << "\n";
         if (depositdata[request_hash]["processed"]||
             !request.VerifySignature() ||
@@ -263,6 +279,21 @@ void InitializeDepositScheduledTasks()
             depositdata[KeyHash(address)]["address"] = address;
             depositdata[FullKeyHash(address)]["address"] = address;
             keydata[address_hash]["pubkey"] = address;
+
+            if (depositdata[request_hash].HasProperty("offset_point"))
+            {
+                Point offset_point = depositdata[request_hash]["offset_point"];
+                log_ << "recording offset_point of " << offset_point
+                     << " for " << address << "\n";
+                depositdata[address]["offset_point"] = offset_point;
+                uint160 secret_address_hash = KeyHash(address + offset_point);
+                if (request.currency_code == FLX)
+                {
+                    walletdata[secret_address_hash]["watched"] = true;
+                }
+            }
+            else
+                log_ << "no offset point for " << request_hash << "\n";
         }
     }
 

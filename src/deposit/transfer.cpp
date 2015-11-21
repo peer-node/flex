@@ -134,6 +134,22 @@ bool TooLateForConflict(TransferAcknowledgement acknowledgement)
     return conflict_time - first_transfer_time > TRANSFER_CONFIRM_TIME;
 }
 
+void CheckForSecretDepositAddress(DepositTransferMessage transfer)
+{
+    if (!keydata[transfer.recipient_key_hash].HasProperty("pubkey"))
+        return;
+    Point recipient_key = keydata[transfer.recipient_key_hash]["pubkey"];
+    CBigNum privkey = keydata[recipient_key]["privkey"];
+    if (privkey == 0)
+        return;
+    CBigNum shared_secret = Hash(privkey * transfer.sender_key);
+    CBigNum offset = transfer.offset_xor_shared_secret ^ shared_secret;
+    Point offset_point(transfer.deposit_address.curve, offset);
+    keydata[transfer.deposit_address]["offset_point"] = offset_point;
+    keydata[offset_point]["privkey"] = offset;
+}
+
+
 /*******************
  * DepositHandler
  */
@@ -185,6 +201,9 @@ bool TooLateForConflict(TransferAcknowledgement acknowledgement)
 
         if (!depositdata[transfer_hash]["inherited"])
             PushDirectlyToPeers(transfer);
+
+        if (transfer.offset_xor_shared_secret != 0)
+            CheckForSecretDepositAddress(transfer);
 
         Point relay = GetRespondingRelay(transfer.deposit_address);
         log_ << "responding relay is " << relay << "\n";

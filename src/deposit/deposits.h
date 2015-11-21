@@ -244,7 +244,7 @@ public:
 
     void InitiateAtCalend(uint160 calend_hash);
 
-    void SendDepositAddressRequest(vch_t currency, uint8_t curve);
+    void SendDepositAddressRequest(vch_t currency, uint8_t curve, bool secret);
 
     void HandleDepositAddressRequest(DepositAddressRequest request);
 
