@@ -243,8 +243,6 @@ string_t FlexAddressFromPubKey(Point pubkey)
         }
         sort(credits.begin(), credits.end());
         walletdata[seed]["credits"] = credits;
-        log_ << "wallet::HandleNewBatch: " << seed << " now has credits "
-             << credits << "\n";
     }
 
     void Wallet::UnhandleBatch(CreditBatch batch)

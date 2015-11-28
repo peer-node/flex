@@ -146,6 +146,9 @@ public:
         deposit_handler.AddBatchToTip(msg);
         event_notifier.RecordEvent(new_mined_credit_hash);
 
+        if (msg.mined_credit.batch_number % 300 == 0)
+            creditdata[spent_chain.GetHash160()]["chain"] = spent_chain;
+
         log_ << "AddBatchToTip(): finished.\n";
         digging = was_digging;
     }

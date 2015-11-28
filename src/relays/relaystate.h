@@ -167,8 +167,6 @@ public:
 
     void RemoveRelay(Point relay, bool decrement=true)
     {
-        log_ << "RemoveRelay(): to remove " << relay << "\n";
-
         if (!relays.count(relay))
         {
             log_ << "RemoveRelay(): state is " << ToString();
@@ -187,7 +185,6 @@ public:
         RemoveRelayFromSuccessors(relay);
         if (decrement)
             latest_relay_number--;
-        log_ << "RemoveRelay(): final state is " << ToString();
     }
 
     void RemoveRelayFromSuccessors(Point relay)

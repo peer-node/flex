@@ -367,7 +367,6 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         ss << "== " << "\n"
            << "== Total Work: " << TotalWork().ToString() << "\n"
            << "============ End Calendar ===========" << "\n";
-        ss << HistoryString(LastMinedCreditHash());
         return ss.str();
     }
 
