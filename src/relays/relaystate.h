@@ -311,6 +311,20 @@ public:
         return successor;
     }
 
+    std::vector<Point> GetEligibleRelays()
+    {
+        std::vector<Point> eligible_relays;
+        foreach_(const Numbering::value_type& item, relays)
+        {
+            Point relay = item.first;
+
+            if (!actual_successions.count(relay) &&
+                !disqualifications.count(relay))
+                eligible_relays.push_back(relay);
+        }
+        return eligible_relays;
+    }
+
     Point SelectRelay(uint64_t chooser_number)
     {
         if (NumberOfValidRelays() == 0)
