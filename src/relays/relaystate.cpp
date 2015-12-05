@@ -118,8 +118,9 @@ void RecordRelayState(RelayState state, uint160 credit_hash)
                                                 uint32_t num_relays_required)
     {
         std::vector<Point> chosen_relays;
+        std::vector<Point> eligible_relays = GetEligibleRelays();
 
-        uint64_t num_valid_relays = NumberOfValidRelays();
+        uint64_t num_valid_relays = eligible_relays.size();
 
         if (num_relays_required > num_valid_relays)
         {
@@ -129,19 +130,22 @@ void RecordRelayState(RelayState state, uint160 credit_hash)
             return chosen_relays;
         }
 
+        while (eligible_relays.size() > MAX_POOL_SIZE)
+        {
+            EraseEntryFromVector(eligible_relays[0], eligible_relays);
+        }
+
         while (chosen_relays.size() < num_relays_required &&
-               chosen_relays.size() < num_valid_relays)
+               chosen_relays.size() < num_valid_relays &&
+               eligible_relays.size() > 0)
         {
             chooser = HashUint160(chooser);
             CBigNum chooser_ = CBigNum(chooser);
          
-            uint64_t relays_available = latest_relay_number < MAX_POOL_SIZE
-                                  ? latest_relay_number : MAX_POOL_SIZE;
-            CBigNum num_available = CBigNum(relays_available);
-            uint64_t chooser_number
-                = (chooser_ % relays_available).getuint();
+            uint64_t chooser_number = chooser_.getuint() 
+                                        % eligible_relays.size();
             
-            Point relay_pubkey = SelectRelay(chooser_number);
+            Point relay_pubkey = eligible_relays[chooser_number];
             
             if (relay_pubkey.IsAtInfinity())
                  log_ << "ChooseRelays(): selected pubkey was infinity!\n";
@@ -149,6 +153,7 @@ void RecordRelayState(RelayState state, uint160 credit_hash)
                 !VectorContainsEntry(chosen_relays, relay_pubkey))
             {
                 chosen_relays.push_back(relay_pubkey);
+                EraseEntryFromVector(relay_pubkey, eligible_relays);
             }
         }
         return chosen_relays;

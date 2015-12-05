@@ -19,14 +19,23 @@
 #include <boost/foreach.hpp>
 
 #define NUM_EXECUTORS 6
+
 #ifndef _PRODUCTION_BUILD
+
 #define EXECUTOR_OFFSETS {2, 3, 4, 5, 6, 7}
+
+#define MAX_RELAYS_REMEMBERED 40
+#define MAX_POOL_SIZE 20
+#define FUTURE_SUCCESSOR_FREQUENCY 10
+
 #else
+
 #define EXECUTOR_OFFSETS {9, 17, 19, 24, 31, 36}
-#endif
 #define MAX_RELAYS_REMEMBERED 1200
 #define MAX_POOL_SIZE 600
 #define FUTURE_SUCCESSOR_FREQUENCY 30
+
+#endif
 
 #include "log.h"
 #define LOG_CATEGORY "relays/relaystate.h"
@@ -307,7 +316,11 @@ public:
         if (NumberOfValidRelays() == 0)
             return Point(SECP256K1);
         
-        chooser_number = 1 + (chooser_number % relays.size());
+        if (latest_relay_number > MAX_POOL_SIZE)
+            chooser_number = latest_relay_number - MAX_POOL_SIZE
+                                + (chooser_number % MAX_POOL_SIZE);
+        else
+            chooser_number = 1 + (chooser_number % latest_relay_number);
 
         std::map<uint32_t, Point> relays_by_number = RelaysByNumber();
 
@@ -318,7 +331,7 @@ public:
         {
             relay = Successor(relay);
             if (!relay)
-                break;
+                relay = relays_by_number[latest_relay_number];
         }
         return relay;
     }
