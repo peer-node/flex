@@ -7,6 +7,32 @@
 
 using namespace json_spirit;
 
+
+
+Object GetObjectFromSignature(Signature signature)
+{
+    Object object;
+    object.push_back(Pair("exhibit", signature.exhibit.ToString()));
+    object.push_back(Pair("signature", signature.signature.ToString()));
+    return object;
+}
+
+Object GetObjectFromDepositAddressRequest(uint160 request_hash)
+{
+    Object request_object;
+
+    DepositAddressRequest request = msgdata[request_hash]["deposit_request"];
+
+    request_object.push_back(Pair("depositor_key",
+                                  request.depositor_key.ToString()));
+    string currency_code(request.currency_code.begin(),
+                         request.currency_code.end());
+    request_object.push_back(Pair("currency_code", currency_code));
+    request_object.push_back(Pair("signature",
+                             GetObjectFromSignature(request.signature)));
+    return request_object;
+}
+
 Object GetObjectFromTrade(uint160 accept_commit_hash)
 {
     Object trade_object;
@@ -260,14 +286,6 @@ Object GetObjectFromMinedCreditMessage(MinedCreditMessage& msg)
     }
     msg_object.push_back(Pair("contents", contents));
     return msg_object;
-}
-
-Object GetObjectFromSignature(Signature signature)
-{
-    Object object;
-    object.push_back(Pair("exhibit", signature.exhibit.ToString()));
-    object.push_back(Pair("signature", signature.signature.ToString()));
-    return object;
 }
 
 Object GetObjectFromTransaction(SignedTransaction tx)

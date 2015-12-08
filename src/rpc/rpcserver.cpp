@@ -14,8 +14,8 @@
 #include <boost/shared_ptr.hpp>
 #include "json/json_spirit_writer_template.h"
 
-#include "rpc/rpcobjects.h"
 #include "flexnode/flexnode.h"
+#include "rpc/rpcobjects.h"
 
 #include "log.h"
 #define LOG_CATEGORY "rpcserver.cpp"
@@ -1099,6 +1099,16 @@ Value getpubkey(const Array& params, bool fHelp)
     return string_to_hex(bytes);
 }
 
+Value getdepositaddressrequest(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 1)
+        throw runtime_error("getdepositaddressrequest <request_hash>\n");
+
+    uint160 request_hash(params[0].get_str());
+
+    return GetObjectFromDepositAddressRequest(request_hash);
+}
+
 Value withdrawdeposit(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() == 0 || params.size() >  2)
@@ -1193,6 +1203,7 @@ static const CRPCCommand vRPCCommands[] =
     { "getcalendar",            &getcalendar,            true,      true,       false },
     { "getminedcredit",         &getminedcredit,         true,      true,       false },
     { "getminedcreditmsg",      &getminedcreditmsg,      true,      true,       false },
+    { "getdepositaddressrequest", &getdepositaddressrequest, true,  true,       false },
     { "listreceivedcredits",    &listreceivedcredits,    true,      true,       false },
     { "getrelaystate",          &getrelaystate,          true,      true,       false },
     { "getjoin",                &getjoin,                true,      true,       false },

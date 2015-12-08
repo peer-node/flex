@@ -1,0 +1,54 @@
+<html>
+<head>
+<style>
+th {
+    max-width: 600px;
+    border: 1px solid lightgrey;
+    text-align: right;
+    font-family: "Courier New", monospace;
+}
+td {
+    max-width: 700px;
+    border: 1px solid lightgrey;
+    font-family: "Courier New", monospace;
+    text-align: left;
+    overflow: auto;
+}
+table {
+    border: 1px solid lightgrey;
+    text-align: right;
+    font-family: "Courier New", monospace;
+}
+tr {
+    width: 100px;
+}
+</style>
+</head>
+<body>
+<a href="/">calendar</a>
+
+<table>
+    <tr>
+        <th>
+            deposit address request hash
+        </th>
+        <th>
+            {{ request.hash }}
+        </th>
+    </tr>
+    {% for key, value in request.items() %}
+    <tr>
+        <th>
+            {{ key }}
+        </th>
+        <td>
+            <pre>{{ value }}</pre>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% include "signature.html" %}
+
+</body>
+</html>

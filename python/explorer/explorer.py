@@ -38,6 +38,16 @@ def show_succession(succession_hash):
     succession['hash'] = succession_hash
     return render_template('succession.html', succession=succession)
 
+@app.route("/deposit_request/<request_hash>")
+def show_deposit_address_request(request_hash):
+    request = client.getdepositaddressrequest(request_hash)
+    request['hash'] = request_hash
+    signature = request['signature']
+    del request['signature']
+    return render_template('depositaddressrequest.html', 
+                           request=request,
+                           signature=signature)
+
 @app.route("/credits/<key_hash>")
 def show_credits(key_hash):
     credits = client.listreceivedcredits(key_hash)
@@ -49,7 +59,10 @@ def show_transaction(transaction_hash):
     if transaction_hash.replace("0", "") == "":
         return show_calendar()
     transaction = client.gettransaction(transaction_hash)
-    return render_template('transaction.html', transaction=transaction)
+    return render_template(
+            'transaction.html', 
+            transaction=transaction,
+            signature=transaction['signature'])
 
 @app.route("/<credit_hash>")
 def show_batch(credit_hash):
