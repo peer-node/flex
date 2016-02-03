@@ -138,7 +138,8 @@ public:
         transfer_hash(transfer_hash)
     {
         Point deposit_address = GetTransfer().deposit_address;
-        disqualifications = depositdata[deposit_address]["disqualifications"];
+        std::vector<std::pair<uint160, uint160> > d = depositdata[deposit_address]["disqualifications"];
+        disqualifications = d;
     }
 
     static string_t Type() { return string_t("transfer_ack"); }

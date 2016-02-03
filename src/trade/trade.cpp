@@ -273,8 +273,7 @@ void HandleCurrencyPaymentConfirmation(CurrencyPaymentConfirmation confirmation)
 
 void RecordComplaintAboutSecret(uint160 accept_commit_hash, uint64_t position)
 {
-    vector<uint64_t> positions;
-    positions = tradedata[accept_commit_hash]["complaints_about_secrets"];
+    vector<uint64_t> positions = tradedata[accept_commit_hash]["complaints_about_secrets"];
     if (!VectorContainsEntry(positions, position))
         positions.push_back(position);
     tradedata[accept_commit_hash]["complaints_about_secrets"] = positions;

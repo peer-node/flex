@@ -74,6 +74,7 @@ public:
             keydata[Point(SECP256K1, secrets[i])]["privkey"] = secrets[i];
         }
     }
+
     string_t ToString() const
     {
         std::stringstream ss;
@@ -96,6 +97,7 @@ public:
         ss << "=========== End DistributedSuccessionSecret =========\n";
         return ss.str(); 
     }
+
     IMPLEMENT_SERIALIZE
     (
         READWRITE(credit_hash);

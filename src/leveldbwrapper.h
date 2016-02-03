@@ -5,12 +5,12 @@
 #ifndef BITCOIN_LEVELDBWRAPPER_H
 #define BITCOIN_LEVELDBWRAPPER_H
 
-#include "serialize.h"
-#include "util.h"
-#include "version.h"
+#include "base/serialize.h"
+#include "base/util.h"
+#include "base/version.h"
 
 #include <boost/filesystem/path.hpp>
-#include <leveldb/db.h>
+#include <leveldb/include/leveldb/db.h>
 #include <leveldb/write_batch.h>
 
 class leveldb_error : public std::runtime_error

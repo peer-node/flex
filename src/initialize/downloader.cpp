@@ -552,8 +552,7 @@ uint32_t FindFork(Calendar calendar1, Calendar calendar2)
 
     void CalendarHandler::RemoveEveryThingAfter(uint160 bad_credit_hash)
     {
-        std::vector<uint160> children;
-        children = creditdata[bad_credit_hash]["children"];
+        std::vector<uint160> children = creditdata[bad_credit_hash]["children"];
         foreach_(const uint160& child_hash, children)
             RemoveEveryThingAfter(child_hash);
         uint160 zero = 0;

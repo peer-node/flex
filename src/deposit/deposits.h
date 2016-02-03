@@ -130,8 +130,7 @@ public:
 
         msgdata[message_hash][type] = message;
 
-        std::vector<uint32_t> peers_who_know;
-        peers_who_know = depositdata[message_hash]["peers"];
+        std::vector<uint32_t> peers_who_know = depositdata[message_hash]["peers"];
 
         LOCK(cs_vNodes);
         foreach_(CNode* peer, vNodes)
@@ -175,8 +174,7 @@ public:
         uint160 message_hash = Hash160(ss.begin(), ss.end());
         if (message_type == "transfer" || message_type == "transfer_ack")
         {
-            std::vector<uint32_t> peers_who_know;
-            peers_who_know = depositdata[message_hash]["peers"];
+            std::vector<uint32_t> peers_who_know = depositdata[message_hash]["peers"];
             if (!VectorContainsEntry(peers_who_know, (uint32_t)peer->id))
                 peers_who_know.push_back((uint32_t)peer->id);
             depositdata[message_hash]["peers"] = peers_who_know;

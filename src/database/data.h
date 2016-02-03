@@ -5,6 +5,8 @@
 #ifndef FLEX_DATA_H
 #define FLEX_DATA_H
 
+#ifndef FLEX_MOCKDATA_H
+
 #include "database/datastore.h"
 
 extern CDataStore calendardata;
@@ -25,8 +27,27 @@ extern CDataStore guidata;
 extern CDataStore keydata;
 extern CDataStore msgdata;
 
+#else
 
+MockDataStore calendardata;
+MockDataStore currencydata;
+MockDataStore scheduledata;
+MockDataStore commanddata;
+MockDataStore depositdata;
+MockDataStore marketdata;
+MockDataStore walletdata;
+MockDataStore creditdata;
+MockDataStore relaydata;
+MockDataStore tradedata;
+MockDataStore hashdata;
+MockDataStore initdata;
+MockDataStore taskdata;
+MockDataStore workdata;
+MockDataStore guidata;
+MockDataStore keydata;
+MockDataStore msgdata;
 
+#endif /* FLEX_MOCKDATA_H */
 
 
 #endif /* FLEX_DATA_H */

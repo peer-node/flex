@@ -56,8 +56,7 @@ public:
         {
             log_ << "orphanage: batch is missing previous credit: "
                  << prev_hash << "\n";
-            std::vector<MinedCreditMessage> nugget_orphans;
-            nugget_orphans = nuggetorphandb[prev_hash];
+            std::vector<MinedCreditMessage> nugget_orphans = nuggetorphandb[prev_hash];
             nugget_orphans.push_back(msg);
             nuggetorphandb[prev_hash] = nugget_orphans;
             IncrementNumParents(msg.GetHash160());
@@ -72,8 +71,7 @@ public:
             if (matches.size() == 0)
             {
                 log_ << "orphanage: missing " << hash << "\n";
-                std::vector<MinedCreditMessage> nugget_orphans;
-                nugget_orphans = nuggetorphandb[hash];
+                std::vector<MinedCreditMessage> nugget_orphans = nuggetorphandb[hash];
                 if (!VectorContainsEntry(nugget_orphans, msg))
                 {
                     nugget_orphans.push_back(msg);
@@ -135,8 +133,7 @@ public:
     std::vector<MinedCreditMessage> 
     NuggetNonOrphansAfterBatch(uint160 credit_hash)
     {
-        std::vector<MinedCreditMessage> old_orphans;
-        old_orphans = nuggetorphandb[credit_hash];
+        std::vector<MinedCreditMessage> old_orphans = nuggetorphandb[credit_hash];
         std::vector<MinedCreditMessage> non_orphans;
         
         nuggetorphandb.Erase(credit_hash);

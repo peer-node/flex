@@ -40,8 +40,7 @@ bool CheckSuccessionMessage(SuccessionMessage msg)
     if (!relaydata[relay]["dead"])
     {
         log_ << "This relay isn't dead. queueing succession message\n";
-        vector<SuccessionMessage> msgs;
-        msgs = relaydata[relay]["queued_succession_msgs"];
+        vector<SuccessionMessage> msgs = relaydata[relay]["queued_succession_msgs"];
         msgs.push_back(msg);
         relaydata[relay]["queued_succession_msgs"] = msgs;
         return false;
@@ -52,8 +51,7 @@ bool CheckSuccessionMessage(SuccessionMessage msg)
 
 void HandleQueuedSuccessionMessages(Point dead_relay)
 {
-    vector<SuccessionMessage> msgs;
-    msgs = relaydata[dead_relay]["queued_succession_msgs"];
+    vector<SuccessionMessage> msgs = relaydata[dead_relay]["queued_succession_msgs"];
     foreach_(SuccessionMessage msg, msgs)
     {
         flexnode.relayhandler.HandleSuccessionMessage(msg);

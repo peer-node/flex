@@ -73,7 +73,8 @@ std::vector<uint160> GetDiurnBranch(uint160 credit_hash)
 
     if (creditdata[credit_hash].HasProperty("branch"))
     {
-        diurn_branch = creditdata[credit_hash]["branch"];
+        std::vector<uint160> d = creditdata[credit_hash]["branch"];
+        diurn_branch = d;
         return diurn_branch;
     }
     if (!InMainChain(credit_hash))

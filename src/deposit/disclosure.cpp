@@ -184,8 +184,7 @@ void DoScheduledDisclosureTimeoutCheck(uint160 part_msg_hash)
         part_msg = msgdata[part_msg_hash]["deposit_part"];
         uint160 request_hash = part_msg.address_request_hash;
 
-        std::vector<uint160> disclosure_hashes;
-        disclosure_hashes = depositdata[request_hash]["disclosures"];
+        std::vector<uint160> disclosure_hashes = depositdata[request_hash]["disclosures"];
         if (!VectorContainsEntry(disclosure_hashes, disclosure_hash))
         {
             disclosure_hashes.push_back(disclosure_hash);

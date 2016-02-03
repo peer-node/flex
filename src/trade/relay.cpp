@@ -334,8 +334,7 @@ void DoScheduledTimeout(uint160 accept_commit_hash)
 
         tradedata[msg.accept_commit_hash][complaint_key] = true;
 
-        vector<Point> awaited_relays;
-        awaited_relays = tradedata[msg.accept_commit_hash]["awaited_relays"];
+        vector<Point> awaited_relays = tradedata[msg.accept_commit_hash]["awaited_relays"];
         awaited_relays.push_back(msg.VerificationKey());
         tradedata[msg.accept_commit_hash]["awaited_relays"] = awaited_relays;
 
@@ -362,8 +361,7 @@ void DoScheduledTimeout(uint160 accept_commit_hash)
 
         uint160 accept_commit_hash = refutation.GetAcceptCommitHash();
 
-        vector<Point> awaited_relays;
-        awaited_relays = tradedata[accept_commit_hash]["awaited_relays"];
+        vector<Point> awaited_relays = tradedata[accept_commit_hash]["awaited_relays"];
         EraseEntryFromVector(refutation.VerificationKey(), awaited_relays);
         tradedata[accept_commit_hash]["awaited_relays"] = awaited_relays;
     }
@@ -643,8 +641,7 @@ void DoScheduledSecretsReleasedCheck(uint160 accept_commit_hash)
 {
     log_ << "DoScheduledSecretsReleasedCheck: "
          << accept_commit_hash << "\n";
-    vector<Point> awaited_relays;
-    awaited_relays = tradedata[accept_commit_hash]["awaited_relays"];
+    vector<Point> awaited_relays = tradedata[accept_commit_hash]["awaited_relays"];
     foreach_(Point non_responder, awaited_relays)
     {
         log_ << non_responder << " is not responding - doing succession\n";

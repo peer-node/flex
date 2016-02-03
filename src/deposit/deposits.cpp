@@ -206,8 +206,7 @@ void InitializeDepositScheduledTasks()
             parts_received |= (1 << msg.position);
             depositdata[request_hash]["parts_received"] = parts_received;
 
-            std::vector<uint160> part_hashes;
-            part_hashes = depositdata[msg.address_request_hash]["parts"];
+            std::vector<uint160> part_hashes = depositdata[msg.address_request_hash]["parts"];
 
             part_hashes.push_back(part_msg_hash);
             depositdata[msg.address_request_hash]["parts"] = part_hashes;
@@ -318,8 +317,7 @@ void InitializeDepositScheduledTasks()
             return;
         }
 
-        vector<uint160> complaint_hashes;
-        complaint_hashes = depositdata[part_msg_hash]["complaints"];
+        vector<uint160> complaint_hashes = depositdata[part_msg_hash]["complaints"];
 
         complaint_hashes.push_back(complaint_hash);
         depositdata[part_msg_hash]["complaints"] = complaint_hashes;

@@ -11,6 +11,9 @@
 #include <boost/foreach.hpp>
 #include "mining/work.h"
 #include "database/data.h"
+#include "Credit.h"
+#include "MinedCredit.h"
+#include "MinedCreditMessage.h"
 
 #include "log.h"
 #define LOG_CATEGORY "credits.h"
@@ -29,7 +32,7 @@ bool VectorContainsEntry(std::vector<T> vector_, T entry)
 template <typename T>
 void EraseEntryFromVector(T entry, std::vector<T>& vector_)
 {
-    uint32_t position = std::distance(vector_.begin(), 
+    uint64_t position = std::distance(vector_.begin(),
                             std::find(vector_.begin(), vector_.end(), entry));
     if (position < vector_.size())
     {
@@ -39,111 +42,7 @@ void EraseEntryFromVector(T entry, std::vector<T>& vector_)
 
 string_t ByteString(vch_t bytes);
 
-class Credit
-{
-public:
-    uint64_t amount;
-    vch_t keydata;
 
-    Credit() { }
-
-    Credit(vch_t keydata, uint64_t amount);
-
-    Credit(vch_t data);
-
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(amount);
-        READWRITE(keydata);
-    )
-
-    string_t ToString() const;
-
-    uint160 KeyHash() const;
-
-    vch_t getvch() const;
-
-    bool operator==(const Credit& other_credit) const;
-
-    bool operator<(const Credit& other_credit) const;
-};
-
-class MinedCredit : public Credit
-{
-public:
-    uint160 previous_mined_credit_hash;
-    uint160 previous_diurn_root;
-    uint160 diurnal_block_root;
-    uint160 hash_list_hash;
-    uint160 batch_root;
-    uint160 spent_chain_hash;
-    uint160 relay_state_hash;
-    uint160 total_work;
-    uint32_t batch_number;
-    uint32_t offset;
-    uint64_t timestamp;
-    uint160 difficulty;
-    uint160 diurnal_difficulty;
-
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(amount);
-        READWRITE(keydata);
-        READWRITE(previous_mined_credit_hash);
-        READWRITE(previous_diurn_root);
-        READWRITE(diurnal_block_root);
-        READWRITE(hash_list_hash);
-        READWRITE(batch_root);
-        READWRITE(spent_chain_hash);
-        READWRITE(relay_state_hash);
-        READWRITE(total_work);
-        READWRITE(batch_number);
-        READWRITE(offset);
-        READWRITE(timestamp);
-        READWRITE(difficulty);
-        READWRITE(diurnal_difficulty);
-    )
-
-    string_t ToString() const;
-
-    uint256 GetHash();
-
-    uint160 BranchBridge() const;
-
-    uint160 GetHash160() const;
-};
-
-
-class MinedCreditMessage
-{
-public:
-    MinedCredit mined_credit;
-    TwistWorkProof proof;
-    ShortHashList<uint160> hash_list;
-    uint64_t timestamp;
-
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(mined_credit);
-        READWRITE(proof);
-        READWRITE(hash_list);
-        READWRITE(timestamp);
-    )
-
-    uint256 GetHash() const;
-
-    uint160 GetHash160() const;
-
-    bool operator==(const MinedCreditMessage& other);
-
-    bool HaveData();
-
-    bool CheckHashList();
-
-    bool Validate();
-
-    string_t ToString() const;
-};
 
 
 class CreditInBatch : public Credit

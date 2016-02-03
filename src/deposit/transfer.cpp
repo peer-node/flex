@@ -13,8 +13,7 @@ Point GetRespondingRelay(Point deposit_address)
 {
     vector<Point> relays = GetRelaysForAddress(deposit_address);
 
-    vector<pair<uint160, uint160> > disqualifications;
-    disqualifications = depositdata[deposit_address]["disqualifications"];
+    vector<pair<uint160, uint160> > disqualifications = depositdata[deposit_address]["disqualifications"];
 
     if (disqualifications.size() >= relays.size())
         return Point(SECP256K1, 0);
@@ -265,7 +264,6 @@ void CheckForSecretDepositAddress(DepositTransferMessage transfer)
     void DepositHandler::AddDisqualification(TransferAcknowledgement ack1,
                                              TransferAcknowledgement ack2)
     {
-        std::vector<std::pair<uint160, uint160> > disqualifications;
         std::pair<uint160, uint160> disqualification;
 
         Point address = ack1.GetTransfer().deposit_address;
@@ -275,7 +273,7 @@ void CheckForSecretDepositAddress(DepositTransferMessage transfer)
         log_ << "AddDisqualification: " << ack1_hash << " and "
              << ack2_hash << "\n";
         disqualification = std::make_pair(ack1_hash, ack2_hash);        
-        disqualifications = depositdata[address]["disqualifications"];
+        std::vector<std::pair<uint160, uint160> > disqualifications = depositdata[address]["disqualifications"];
 
         Point relay = ack1.VerificationKey();
         depositdata[address][relay] = string_t("disqualified");

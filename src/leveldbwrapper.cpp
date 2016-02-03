@@ -4,7 +4,7 @@
 
 #include "leveldbwrapper.h"
 
-#include "util.h"
+#include "base/util.h"
 
 #include <boost/filesystem.hpp>
 #include <leveldb/cache.h>

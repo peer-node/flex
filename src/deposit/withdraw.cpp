@@ -474,8 +474,7 @@ void DoScheduledBackupWithdrawalRefutationCheck(uint160 complaint_hash)
 
         log_ << "CheckForAllSecretsOfAddress: "
              << address_request_hash << "\n";
-        vector<uint160> part_hashes;
-        part_hashes = depositdata[address_request_hash]["parts"];
+        vector<uint160> part_hashes = depositdata[address_request_hash]["parts"];
 
         CBigNum address_privkey;
         Point address = depositdata[address_request_hash]["address"];

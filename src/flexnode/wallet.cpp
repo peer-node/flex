@@ -16,8 +16,7 @@ using namespace std;
 
 vch_t GetSalt()
 {
-    vch_t salt;
-    salt = keydata["salt"]["salt"];
+    vch_t salt = keydata["salt"]["salt"];
     if (salt.size() == 0)
     {
         salt.resize(WALLET_CRYPTO_SALT_SIZE);
@@ -70,7 +69,8 @@ string_t FlexAddressFromPubKey(Point pubkey)
         derived_seed(seed)
     {
         log_ << "Wallet(): seed is " << seed << "\n";
-        credits = walletdata[seed]["credits"];
+        std::vector<CreditInBatch> credits_ = walletdata[seed]["credits"];
+        credits = credits_;
         log_ << "credits are: " << credits << "\n";
     }
 
@@ -228,8 +228,7 @@ string_t FlexAddressFromPubKey(Point pubkey)
                 log_ << "credit watched by me!\n";
                 log_ << "watched credit has keyhash: " << keyhash << "\n";
                 CreditInBatch credit = batch.GetWithPosition(batch.credits[i]);
-                vector<CreditInBatch> watched_credits;
-                watched_credits = walletdata[keyhash]["watched_credits"];
+                vector<CreditInBatch> watched_credits = walletdata[keyhash]["watched_credits"];
                 watched_credits.push_back(credit);
                 walletdata[keyhash]["watched_credits"] = watched_credits;
                 log_ << "number of watched credits for "
@@ -253,8 +252,7 @@ string_t FlexAddressFromPubKey(Point pubkey)
             if (VectorContainsEntry(credits, credit))
                 EraseEntryFromVector(credit, credits);
             uint160 keyhash = KeyHashFromKeyData(credit.keydata);
-            vector<CreditInBatch> watched_credits;
-            watched_credits = walletdata[keyhash]["watched_credits"];
+            vector<CreditInBatch> watched_credits = walletdata[keyhash]["watched_credits"];
             if (VectorContainsEntry(watched_credits, credit))
             {
                 EraseEntryFromVector(credit, watched_credits);
@@ -444,8 +442,7 @@ string_t FlexAddressFromPubKey(Point pubkey)
 
     void Wallet::ImportWatchedCredits(uint160 keyhash)
     {
-        vector<CreditInBatch> watched_credits;
-        watched_credits = walletdata[keyhash]["watched_credits"];
+        vector<CreditInBatch> watched_credits = walletdata[keyhash]["watched_credits"];
         log_ << "number of watched credits for " << keyhash << " is " 
              << watched_credits.size() << "\n";
 

@@ -604,8 +604,8 @@ void RecordRelayState(RelayState state, uint160 credit_hash)
         if (msgs.size() < RelaysRequired(NUM_EXECUTORS))
         {
             state.actual_successions.erase(predecessor);
-            state.subthreshold_succession_msgs[predecessor]
-                = relaydata[predecessor]["succession_msgs"];
+            std::set<uint160> succession_msgs = relaydata[predecessor]["succession_msgs"];
+            state.subthreshold_succession_msgs[predecessor] = succession_msgs;
         }
         state.subthreshold_succession_msgs[predecessor].erase(message_hash);
     }

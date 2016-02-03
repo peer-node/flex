@@ -780,8 +780,6 @@ void HandleSecretMessage(MSG message)
     pair<string_t, Point> key = make_pair("received_secret_from", relay);
     tradedata[message.accept_commit_hash][key] = true;
 
-    vector<Point> awaited_relays;
-    
     Point original_relay;
 
     if (message.Type() == "backup_secret")
@@ -794,7 +792,7 @@ void HandleSecretMessage(MSG message)
     else 
         original_relay = relay;
     
-    awaited_relays = tradedata[message.accept_commit_hash]["awaited_relays"];
+    vector<Point> awaited_relays = tradedata[message.accept_commit_hash]["awaited_relays"];
     EraseEntryFromVector(original_relay, awaited_relays);
     tradedata[message.accept_commit_hash]["awaited_relays"] = awaited_relays;
 
@@ -854,8 +852,7 @@ Point GetPubKeyOfPieceOfSecret(uint160 accept_commit_hash,
 
 void RecordBroadcastOfSecret(uint160 accept_commit_hash, uint64_t position)
 {
-    vector<uint64_t> positions;
-    positions = tradedata[accept_commit_hash]["secrets_broadcast"];
+    vector<uint64_t> positions = tradedata[accept_commit_hash]["secrets_broadcast"];
     if (!VectorContainsEntry(positions, position))
         positions.push_back(position);
     tradedata[accept_commit_hash]["secrets_broadcast"] = positions;

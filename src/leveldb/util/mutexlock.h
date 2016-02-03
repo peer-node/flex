@@ -5,6 +5,7 @@
 #ifndef STORAGE_LEVELDB_UTIL_MUTEXLOCK_H_
 #define STORAGE_LEVELDB_UTIL_MUTEXLOCK_H_
 
+#include <src/leveldb/port/port_posix.h>
 #include "port/port.h"
 #include "port/thread_annotations.h"
 

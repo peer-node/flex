@@ -1003,8 +1003,10 @@ vch_t PrefixFromBase58Data(string base58string)
 
     void CurrencyCrypto::DeterminePrefixes()
     {
-        pubkey_prefix = currencydata[currency_code]["pubkey_prefix"];
-        privkey_prefix = currencydata[currency_code]["privkey_prefix"];
+        vch_t prefix = currencydata[currency_code]["pubkey_prefix"];
+        pubkey_prefix = prefix;
+        vch_t prefix_ = currencydata[currency_code]["privkey_prefix"];
+        privkey_prefix = prefix_;
 
         string address = GetAnyAddress();
         log_ << "got address: " << address << "\n";
