@@ -180,7 +180,7 @@ string_t FlexAddressFromPubKey(Point pubkey)
         {
             if (!HaveKeyForCredit((Credit)credit))
                 continue;
-            if (CreditInBatchHasValidConnectionToCalendar(credit))
+            if (flexnode.calendar.CreditInBatchHasValidConnection(credit))
             {
                 log_ << "adding received credit with amount " << credit.amount
                      << " to wallet.\n";

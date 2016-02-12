@@ -10,6 +10,7 @@
 #include "relays/relaystate.h"
 #include "relays/successionsecret.h"
 #include "flexnode/message_handler.h"
+#include "relays/RelayJoinMessage.h"
 
 #include "log.h"
 #define LOG_CATEGORY "relay_messages.h"
@@ -17,79 +18,6 @@
 DistributedSuccessionSecret GetDistributedSuccessionSecret(Point relay);
 
 
-
-class RelayJoinMessage
-{
-public:
-    uint32_t relay_number;
-    uint160 credit_hash;
-    uint160 preceding_relay_join_hash;
-    Point relay_pubkey;
-    CBigNum successor_secret_xor_shared_secret;
-    Point successor_secret_point;
-    DistributedSuccessionSecret distributed_succession_secret;
-    Signature signature;
-
-    RelayJoinMessage():
-        relay_number(0)
-    { }
-
-    static string_t Type() { return string_t("join"); }
-
-    RelayJoinMessage(uint160 credit_hash);
-
-    string_t ToString() const
-    {
-        stringstream ss;
-        ss << "\n============== RelayJoinMessage =============" << "\n"
-           << "== Credit Hash: " << credit_hash.ToString() << "\n"
-           << "==" << "\n"
-           << "== Relay Number:" << relay_number << "\n"
-           << "== Preceding Join Hash: "
-           << preceding_relay_join_hash.ToString() << "\n"
-           << "== Relay Pubkey:" << relay_pubkey.ToString() << "\n"
-           << "== Distributed Succession Secret: " 
-           << distributed_succession_secret.ToString()
-           << "==" << "\n"
-           << "== Successor Secret xor Shared Secret: " 
-           << successor_secret_xor_shared_secret.ToString() << "\n"
-           << "== Successor Secret Point: " 
-           << successor_secret_point.ToString() << "\n"
-           << "==" << "\n"
-           << "== Hash: " << GetHash160().ToString() << "\n"
-           << "============ End RelayJoinMessage ===========" << "\n";
-        return ss.str();
-    }
-
-    bool operator<(const RelayJoinMessage& other) const
-    {
-        return relay_number < other.relay_number;
-    }
-
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(relay_number);
-        READWRITE(credit_hash);
-        READWRITE(preceding_relay_join_hash);
-        READWRITE(relay_pubkey);
-        READWRITE(successor_secret_xor_shared_secret);
-        READWRITE(successor_secret_point);
-        READWRITE(distributed_succession_secret);
-        READWRITE(signature);
-    )
-
-    DEPENDENCIES(credit_hash, preceding_relay_join_hash);
-
-    Point VerificationKey() const
-    {
-        MinedCredit mined_credit = creditdata[credit_hash]["mined_credit"];
-        Point pubkey;
-        pubkey.setvch(mined_credit.keydata);
-        return pubkey;
-    }
-
-    IMPLEMENT_HASH_SIGN_VERIFY();
-};
 
 RelayJoinMessage GetJoinMessage(Point relay);
 
@@ -490,7 +418,7 @@ public:
         return GetSuccessionMessage().successor_join_hash;
     }
 
-    uint64_t Position() const
+    int64_t Position() const
     {
         return GetSuccessionMessage().Position();
     }

@@ -297,7 +297,7 @@ CreditBatch ReconstructBatch_(MinedCreditMessage& msg)
             log_ << "Couldn't recover full hashes\n";
             return;
         }
-        if (!msg.Validate())
+        if (!flexnode.message_validator.ValidateMinedCreditMessage(msg))
         {
             log_ << "couldn't validate batch\n";
             return;
@@ -433,7 +433,7 @@ CreditBatch ReconstructBatch_(MinedCreditMessage& msg)
             return;
         }
 
-        if (!msg.Validate() || !msg.CheckHashList())
+        if (!flexnode.message_validator.ValidateMinedCreditMessage(msg) || !msg.CheckHashList())
         {
             log_ << "Bad Mined Credit Message\n";
             return;
@@ -592,6 +592,16 @@ CreditBatch ReconstructBatch_(MinedCreditMessage& msg)
         {
             log_ << "invalid transaction!\n";
             return;
+        }
+
+        for (auto credit : tx_.rawtx.inputs)
+        {
+            if (!(flexnode.calendar.CreditInBatchHasValidConnection(credit)))
+            {
+                log_ << "transaction contains credits "
+                     << "with no connection to calendar\n";
+                return;
+            }
         }
 
         StoreTransaction(tx);

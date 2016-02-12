@@ -5,6 +5,8 @@
 #include "log.h"
 #define LOG_CATEGORY "calendar.cpp"
 
+bool CheckBranches(CreditInBatch& credit);
+
 uint160 GetDifficulty(int64_t cumulative_adjustments)
 {
     uint160 difficulty = INITIAL_DIURNAL_DIFFICULTY;
@@ -1052,8 +1054,67 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         MinedCredit mined_credit = creditdata[credit_hash]["mined_credit"];
         return mined_credit;
     }
-    
+
+    bool Calendar::CreditInBatchHasValidConnection(CreditInBatch& credit)
+    {
+        log_ << "CreditInBatchHasValidConnectionToCalendar()\n";
+        if (credit.diurn_branch.size() == 0 || credit.branch.size() == 0)
+        {
+            log_ << "missing branch!" << credit.diurn_branch.size()
+                 << " vs " << credit.branch.size() << "\n";
+            return false;
+        }
+
+        if (credit.diurn_branch.size() != 1)
+        {
+            uint160 diurn_root = credit.diurn_branch.back();
+
+            if (!flexnode.calendar.ContainsDiurn(diurn_root))
+            {
+                log_ << "diurn root " << diurn_root << " is not in calendar\n";
+                return false;
+            }
+        }
+        else
+        {
+            uint160 mined_credit_hash = SymmetricCombine(credit.diurn_branch[0],
+                                                         credit.branch.back());
+            if (!InMainChain(mined_credit_hash))
+            {
+                log_ << mined_credit_hash << " is not in main chain\n";
+                return false;
+            }
+        }
+        return CheckBranches(credit);
+    }
+
 /*
  *  Calendar
  **************/
+
+bool CheckBranches(CreditInBatch& credit)
+{
+    Credit raw_credit(credit.keydata, credit.amount);
+    uint160 batch_root = credit.branch.back();
+    vch_t raw_credit_data = raw_credit.getvch();
+
+    if (!VerifyBranch(credit.position, raw_credit_data,
+                      credit.branch, batch_root))
+    {
+        log_ << "credit branch failed\n";
+        return false;
+    }
+    if (credit.diurn_branch.size() != 1)
+    {
+        uint160 diurn_root;
+        diurn_root = EvaluateBranchWithHash(credit.diurn_branch, batch_root);
+        if (diurn_root != credit.diurn_branch.back())
+        {
+            log_ << "diurn branch failed: " << diurn_root << " vs "
+                 << credit.diurn_branch.back() << "\n";
+            return false;
+        }
+    }
+    return true;
+}
 

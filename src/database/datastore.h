@@ -389,6 +389,8 @@ public:
         return nNumber;
     }
 
+    void Reset() { }
+
     template <typename K> bool
     GetKey(uint32_t nNumber, K& key)
     {

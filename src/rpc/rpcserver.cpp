@@ -847,7 +847,7 @@ Value verifyfunds(const Array& params, bool fHelp)
     {
         return false;
     }
-    return CreditInBatchHasValidConnectionToCalendar(credit);
+    return flexnode.calendar.CreditInBatchHasValidConnection(credit);
 }
 
 Value requestdepositaddress(const Array& params, bool fHelp)

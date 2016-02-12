@@ -295,7 +295,8 @@ void static ProcessGetData(CNode* pfrom)
 
     LOCK(cs_main);
 
-    while (it != pfrom->vRecvGetData.end()) {
+    while (it != pfrom->vRecvGetData.end())
+    {
         // Don't bother if send buffer is too full to respond anyway
         if (pfrom->nSendSize >= SendBufferSize())
             break;

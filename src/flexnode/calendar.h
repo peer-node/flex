@@ -219,6 +219,8 @@ public:
     uint160 LastMinedCreditHash() const;
 
     MinedCredit LastMinedCredit();
+
+    bool CreditInBatchHasValidConnection(CreditInBatch& credit);
 };
 
 

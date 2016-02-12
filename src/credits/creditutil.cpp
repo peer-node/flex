@@ -8,65 +8,6 @@
 using namespace std;
 
 
-bool CheckBranches(CreditInBatch& credit)
-{
-    Credit raw_credit(credit.keydata, credit.amount);
-    uint160 batch_root = credit.branch.back();
-    vch_t raw_credit_data = raw_credit.getvch();
-    
-    if (!VerifyBranch(credit.position, raw_credit_data, 
-                      credit.branch, batch_root))
-    {
-        log_ << "credit branch failed\n";
-        return false;
-    }
-    if (credit.diurn_branch.size() != 1)
-    {
-        uint160 diurn_root;
-        diurn_root = EvaluateBranchWithHash(credit.diurn_branch, batch_root);
-        if (diurn_root != credit.diurn_branch.back())
-        {
-            log_ << "diurn branch failed: " << diurn_root << " vs "
-                 << credit.diurn_branch.back() << "\n";
-            return false;
-        }
-    }
-    return true;
-}
-
-bool CreditInBatchHasValidConnectionToCalendar(CreditInBatch& credit)
-{
-    log_ << "CreditInBatchHasValidConnectionToCalendar()\n";
-    if (credit.diurn_branch.size() == 0 || credit.branch.size() == 0)
-    {
-        log_ << "missing branch!" << credit.diurn_branch.size()
-             << " vs " << credit.branch.size() << "\n";
-        return false;
-    }
-
-    if (credit.diurn_branch.size() != 1)
-    {
-        uint160 diurn_root = credit.diurn_branch.back();
-
-        if (!flexnode.calendar.ContainsDiurn(diurn_root))
-        {
-            log_ << "diurn root " << diurn_root << " is not in calendar\n";
-            return false;
-        }
-    }
-    else
-    {
-        uint160 mined_credit_hash = SymmetricCombine(credit.diurn_branch[0],
-                                                     credit.branch.back());
-        if (!InMainChain(mined_credit_hash))
-        {
-            log_ << mined_credit_hash << " is not in main chain\n";
-            return false;
-        }
-    }
-    return CheckBranches(credit);
-}
-
 std::vector<uint160> GetDiurnBranch(uint160 credit_hash)
 {
     std::vector<uint160> diurn_branch;

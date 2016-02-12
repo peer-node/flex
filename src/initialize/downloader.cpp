@@ -384,7 +384,7 @@ void StartUsing(uint160 latest_credit_hash)
                      << ", not " << previous_hash << "!\n";
                 return false;
             }
-            if (!msg.Validate())
+            if (!flexnode.message_validator.ValidateMinedCreditMessage(msg))
             {
                 log_ << "can't validate " << credit_hash << "\n"
                      << "ValidateInitialDataMessage failed\n";
