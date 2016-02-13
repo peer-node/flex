@@ -1,5 +1,6 @@
 #include "gmock/gmock.h"
 #include "TestData.h"
+#include "crypto/uint256.h"
 
 using namespace ::testing;
 
@@ -236,6 +237,41 @@ TEST_F(AMockDataStore, CanRemoveAnObjectFromALocation)
     location = datastore[5].Location("lattitude");
 
     ASSERT_THAT(location, Eq(0));
+}
+
+class ALocationIteratorWithUint160Locations : public Test
+{
+public:
+    MockDataStore datastore;
+    LocationIterator scanner;
+    uint160 object;
+    uint160 location;
+
+    virtual void SetUp()
+    {
+        for (uint32_t i = 0; i < 160; i++)
+        {
+            object = 1;
+            object = object << i;
+            location = object;
+            datastore[object].Location("lattitude") = location;
+        }
+
+        scanner = datastore.LocationIterator("lattitude");
+    }
+};
+
+TEST_F(ALocationIteratorWithUint160Locations, ReturnsObjectsAndLocationsInTheCorrectOrder)
+{
+    uint32_t digits;
+    for (digits = 0; digits < 160; digits++)
+    {
+        EXPECT_TRUE(scanner.GetNextObjectAndLocation(object, location)) << "failed at " << digits;
+        EXPECT_TRUE(object == location);
+        object = object >> digits;
+        EXPECT_THAT(object, Eq(1)) << "failed at " << digits;
+    }
+    ASSERT_FALSE(scanner.GetNextObjectAndLocation(object, location));
 }
 
 class GlobalDatabases : public TestWithGlobalDatabases

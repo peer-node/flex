@@ -11,9 +11,9 @@ static void
 salsa64_core_basic(uint64_t state[16]) {
 	const size_t rounds = 8;
 	uint64_t v[16], t;
-	size_t i;
+	size_t digits;
 
-	for (i = 0; i < 16; i++) v[i] = state[i];
+	for (digits = 0; digits < 16; digits++) v[digits] = state[digits];
 
 	#define G(a,b,c,d) \
 		t = v[a]+v[d]; t = ROTL64(t, 32); v[b] ^= t; \
@@ -21,7 +21,7 @@ salsa64_core_basic(uint64_t state[16]) {
 		t = v[c]+v[b]; t = ROTL64(t, 39); v[d] ^= t; \
 		t = v[d]+v[c]; t = ROTL64(t, 32); v[a] ^= t; \
 
-	for (i = 0; i < rounds; i += 2) {
+	for (digits = 0; digits < rounds; digits += 2) {
 		G( 0, 4, 8,12);
 		G( 5, 9,13, 1);
 		G(10,14, 2, 6);
@@ -32,7 +32,7 @@ salsa64_core_basic(uint64_t state[16]) {
 		G(15,12,13,14);
 	}
 
-	for (i = 0; i < 16; i++) state[i] += v[i];
+	for (digits = 0; digits < 16; digits++) state[digits] += v[digits];
 
 	#undef G
 }
