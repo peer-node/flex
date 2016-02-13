@@ -99,12 +99,12 @@ TEST_F(AMockDataStore, RetrievesStoredData)
 
 TEST_F(AMockDataStore, CanAcceptRawStringsAsNames)
 {
-    MockObject object =  datastore["hello"];
+    MockObject object =  datastore["hat"];
 }
 
 TEST_F(AMockObject, CanAcceptRawStringsAsNames)
 {
-    MockProperty property = object["there"];
+    MockProperty property = object["size"];
 }
 
 TEST_F(AMockDataStore, CanRetrieveDataStoredWithRawStringNames)
@@ -225,6 +225,18 @@ TEST_F(ALocationIterator, CanBeResetToTheStartWithSeekStart)
     ASSERT_FALSE(scanner.GetNextObjectAndLocation(object, location));
 }
 
+TEST_F(AMockDataStore, CanRemoveAnObjectFromALocation)
+{
+    datastore[5].Location("lattitude") = 100;
+    int location = datastore[5].Location("lattitude");
+
+    ASSERT_THAT(location, Eq(100));
+
+    datastore.RemoveFromLocation("lattitude", 100);
+    location = datastore[5].Location("lattitude");
+
+    ASSERT_THAT(location, Eq(0));
+}
 
 class GlobalDatabases : public TestWithGlobalDatabases
 {

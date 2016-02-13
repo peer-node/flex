@@ -44,6 +44,30 @@ public:
     {
         return LocationIterator(std::string(location_name));
     }
+
+    template <typename LOCATION_NAME, typename LOCATION_VALUE>
+    void RemoveFromLocation(LOCATION_NAME location_name, LOCATION_VALUE location_value)
+    {
+        vch_t serialized_location_name = MockDataStore::Serialize(location_name);
+
+        if (not dimensions.count(serialized_location_name))
+            return;
+
+        MockDimension& dimension = dimensions[serialized_location_name];
+
+        vch_t serialized_location_value = MockDataStore::Serialize(location_value);
+
+        if (not dimension.located_serialized_objects.count(serialized_location_value))
+            return;
+
+        dimension.located_serialized_objects.erase(serialized_location_value);
+    }
+
+    template <typename LOCATION_VALUE>
+    void RemoveFromLocation(const char* location_name, LOCATION_VALUE location_value)
+    {
+        RemoveFromLocation(std::string(location_name), location_value);
+    }
 };
 
 

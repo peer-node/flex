@@ -23,6 +23,9 @@ public:
     template <typename VALUE>
     void Deserialize(vch_t serialized_data, VALUE& value)
     {
+        VALUE blank;
+        value = blank;
+
         serialized_data = ReverseBytes(serialized_data);
         CDataStream stream(serialized_data,
                            SER_DISK,
