@@ -1,6 +1,4 @@
 #include "mining/work.h"
-#include <openssl/rand.h>
-#include "database/memdb.h"
 
 
 #include "log.h"
@@ -30,6 +28,15 @@ uint160 uint128to160(uint128_t n)
     return n_;
 }
 
+uint160 target_from_difficulty(uint160 difficulty)
+{
+    uint160 target(1);
+    target <<= 128;
+    target /= difficulty;
+    return target;
+}
+
+
 /******************
  * TwistWorkProof
  */
@@ -58,10 +65,19 @@ uint160 uint128to160(uint128_t n)
       difficulty_achieved(0)
     { }
 
+    TwistWorkProof::TwistWorkProof(uint256 memory_seed,
+                                   uint64_t memory_factor,
+                                   uint160 difficulty)
+            : memoryseed(memory_seed),
+              N_factor(memory_factor),
+              target(target_from_difficulty(difficulty)),
+              link_threshold(target * FLEX_WORK_NUMBER_OF_LINKS),
+              num_segments(FLEX_WORK_NUMBER_OF_SEGMENTS),
+              difficulty_achieved(0)
+    { }
+
     uint160 TwistWorkProof::DifficultyAchieved()
     {
-        if (num_links < num_segments / 4)
-            return 0;
         uint128_t quick_verifier_ = uint160to128(quick_verifier);
 
         uint128_t hash =  twist_doquickcheck(
@@ -78,7 +94,7 @@ uint160 uint128to160(uint128_t n)
 
         if (hash160 > target || hash160 == 0)
             return 0;
-        
+
         uint160 numerator = 1;
         numerator = numerator << 128;
 
@@ -115,7 +131,7 @@ uint160 uint128to160(uint128_t n)
                                   seeds, links, link_lengths,
                                   working);
         quick_verifier = uint128to160(quick_verifier_);
-        num_links = links.size();
+        num_links = (uint32_t) links.size();
         return result;
     }
 
@@ -133,29 +149,28 @@ uint160 uint128to160(uint128_t n)
                 ? target_difficulty : 0;
     }
 
-    TwistWorkCheck TwistWorkProof::CheckRange(
-                              uint32_t seed, uint32_t num_segments_to_check,
-                              uint32_t link, uint32_t links_to_check)
+    TwistWorkCheck TwistWorkProof::CheckRange(uint32_t seed, uint32_t num_segments_to_check,
+                                              uint32_t link, uint32_t links_to_check)
     {
         TwistWorkCheck check(*this);
         check.start_link = link;
         check.end_link = link + links_to_check;
-        check.valid = twist_doverify(UBEGIN(memoryseed), 
-                                     uint160to128(target), 
-                                     uint160to128(link_threshold),
-                                     N_factor, 
-                                     RFACTOR, 
-                                     num_segments,
-                                     seeds, 
-                                     links, 
-                                     link_lengths,
-                                     seed, 
-                                     num_segments_to_check, 
-                                     link, 
-                                     link + links_to_check,
-                                     &check.failure_step, 
-                                     &check.failure_link, 
-                                     &check.failure_seed);
+        check.valid = (uint8_t) twist_doverify(UBEGIN(memoryseed),
+                                               uint160to128(target),
+                                               uint160to128(link_threshold),
+                                               N_factor,
+                                               RFACTOR,
+                                               num_segments,
+                                               seeds,
+                                               links,
+                                               link_lengths,
+                                               seed,
+                                               num_segments_to_check,
+                                               link,
+                                               link + links_to_check,
+                                               &check.failure_step,
+                                               &check.failure_link,
+                                               &check.failure_seed);
         return check;
     }
 
@@ -165,10 +180,8 @@ uint160 uint128to160(uint128_t n)
         uint32_t num_segments_to_check = num_segments > 4 ? 4 : 1;
         uint32_t num_links_to_check = num_links > 4 ? 4 : 1;
 
-        uint32_t start_segment = RandomNumberLessThan(num_segments + 1 -
-                                                      num_segments_to_check);
-        uint32_t start_link = RandomNumberLessThan(num_links + 1 - 
-                                                   num_links_to_check);
+        uint32_t start_segment = RandomNumberLessThan(num_segments + 1 - num_segments_to_check);
+        uint32_t start_link = RandomNumberLessThan(num_links + 1 - num_links_to_check);
 
         return CheckRange(start_segment, num_segments_to_check,
                           start_link, num_links_to_check);
@@ -191,7 +204,6 @@ uint160 uint128to160(uint128_t n)
         proof_hash = proof.GetHash();
     }
 
-
     uint256 TwistWorkCheck::GetHash()
     {
         CDataStream ss(SER_NETWORK, CLIENT_VERSION);
@@ -199,13 +211,11 @@ uint160 uint128to160(uint128_t n)
         return Hash(ss.begin(), ss.end());
     }
 
-    int TwistWorkCheck::VerifyInvalid()
+    int TwistWorkCheck::VerifyInvalid(TwistWorkProof &proof)
     {
-        TwistWorkProof proof = workdata[proof_hash]["proof"];
         if (proof.Length() == 0)
             return false;
-        TwistWorkCheck check_ = proof.CheckRange(failure_seed, 1,
-                                                 failure_link, 1);
+        TwistWorkCheck check_ = proof.CheckRange(failure_seed, 1, failure_link, 1);
         return (!check_.valid);
     }
 

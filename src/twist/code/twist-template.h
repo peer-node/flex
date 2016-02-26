@@ -1,6 +1,9 @@
 #ifndef __TOKEN__
 #define __TOKEN__
 
+
+#define MINIMUM_LINKS 10
+
 #if !defined(SCRYPT_CHOOSE_COMPILETIME) || !defined(SCRYPT_HAVE_ROMIX)
 
 #if defined(SCRYPT_CHOOSE_COMPILETIME)
@@ -24,24 +27,17 @@
 #include <sys/time.h>
 #include "../twistcpp.h"
 
-static void print128(__uint128_t x)
-{
-    int i;
-
-    unsigned char *p = (unsigned char*)&x;
-
-    for (i = 0; i < 16; i++)
-        printf("%02X", p[i]);
-}
-
-
 /*
 	Bout = ChunkMix(Bin)
 
 	2*r: number of blocks in the chunk
 */
 static void asm_calling_convention
-SCRYPT_CHUNKMIX_FN(scrypt_mix_word_t *Bout/*[chunkWords]*/, scrypt_mix_word_t *Bin/*[chunkWords]*/, scrypt_mix_word_t *Bxor/*[chunkWords]*/, uint32_t r) {
+SCRYPT_CHUNKMIX_FN(scrypt_mix_word_t *Bout/*[chunkWords]*/,
+                   scrypt_mix_word_t *Bin/*[chunkWords]*/,
+                   scrypt_mix_word_t *Bxor/*[chunkWords]*/,
+                   uint32_t r)
+{
 #if (defined(X86ASM_AVX2) || defined(X86_64ASM_AVX2) || defined(X86_INTRINSIC_AVX2))
 	scrypt_mix_word_t ALIGN22(32) X[SCRYPT_BLOCK_WORDS], *block;
 #else
@@ -123,13 +119,13 @@ SCRYPT_ROMIX_FN(scrypt_mix_word_t *X/*[chunkWords]*/,
 	  for (i = 0; i < N; i += 2) 
     {
     		/* 7: j = Integerify(X) % N */
-    		j = X[chunkWords - SCRYPT_BLOCK_WORDS] & (N - 1);
+    		j = (uint32_t) (X[chunkWords - SCRYPT_BLOCK_WORDS] & (N - 1));
 
     		/* 8: X = H(Y ^ V_j) */
     		SCRYPT_CHUNKMIX_FN(Y, X, scrypt_item(V, j, chunkWords), r);
 
     		/* 7: j = Integerify(Y) % N */
-    		j = Y[chunkWords - SCRYPT_BLOCK_WORDS] & (N - 1);
+    		j = (uint32_t) (Y[chunkWords - SCRYPT_BLOCK_WORDS] & (N - 1));
 
 		    /* 8: X = H(Y ^ V_j) */
 		    SCRYPT_CHUNKMIX_FN(X, Y, scrypt_item(V, j, chunkWords), r);
@@ -163,29 +159,14 @@ SCRYPT_ROMIX_FN(scrypt_mix_word_t *X/*[chunkWords]*/,
 	2*r: number of blocks in a chunk
 */
 
-#if !defined(WORDSPERSEED)
-#define WORDSPERSEED 2
-#endif
-
 #ifndef TWIST_PREPARE_BLOCK_FN_
 #define TWIST_PREPARE_BLOCK_FN_
-
-#ifndef SAYTIME
-#define SAYTIME
-static struct timeval _last, _now;
-
-static double saytime()
-{
-    _last = _now; gettimeofday(&_now, NULL);
-    return (_now.tv_sec - _last.tv_sec + (_now.tv_usec - _last.tv_usec) * 1e-6);
-}
-#endif
 
 static void NOINLINE FASTCALL
 TWIST_PREPARE_BLOCK_FN(scrypt_mix_word_t *X,
                        scrypt_mix_word_t *block,
-                       scrypt_mix_word_t *V/*[N * chunkWords]*/, 
-                       uint8_t *VSeeds/*[numSegments *WORDSPERSEED]*/,
+                       scrypt_mix_word_t *V,
+                       uint8_t *VSeeds,
                        uint32_t startSeed,
                        uint32_t *numSeeds,
                        uint32_t N, 
@@ -224,8 +205,8 @@ TWIST_PREPARE_BLOCK_FN(scrypt_mix_word_t *X,
 static void NOINLINE FASTCALL
 TWIST_PREPARESEGMENTS_FN(
         scrypt_mix_word_t *X,
-        scrypt_mix_word_t *V/*[N * chunkWords]*/, 
-        uint8_t *VSeeds/*[numSegments]*/,
+        scrypt_mix_word_t *V,
+        uint8_t *VSeeds,
         uint32_t startSeed,
         uint32_t numSeedsToUse,
         uint32_t chunkWords,
@@ -247,8 +228,8 @@ TWIST_PREPARESEGMENTS_FN(
 
 static void NOINLINE FASTCALL
 TWIST_PREPARE_FN(scrypt_mix_word_t *X, 
-                 scrypt_mix_word_t *V/*[N * chunkWords]*/, 
-                 uint8_t *VSeeds/*[numSegments * chunkWords]*/,
+                 scrypt_mix_word_t *V,
+                 uint8_t *VSeeds,
                  uint32_t *numSeeds,
                  uint32_t N, 
                  uint32_t r,
@@ -307,7 +288,7 @@ static uint32_t MaxLinkLength(uint128_t T)
 {
     uint128_t numerator = 1;
     numerator = numerator << 127;
-    return numerator / (T / (2 * MAXLINKLENGTHFACTOR));
+    return (uint32_t) (numerator / (T / (2 * MAXLINKLENGTHFACTOR)));
 }
 
 static void NOINLINE FASTCALL
@@ -330,7 +311,6 @@ TWIST_WORK_FN(scrypt_mix_word_t *X_in,
 	uint32_t i, j, k; 
     uint32_t chunkWords = (uint32_t)(SCRYPT_BLOCK_WORDS * r * 2);
     uint32_t maxLinkLength = MaxLinkLength(T);
-    uint32_t wordsPerLink = 8 / sizeof(scrypt_mix_word_t);
     uint128_t best_so_far = 1; best_so_far <<= 127;
 
     scrypt_mix_word_t *X = (scrypt_mix_word_t *)
@@ -346,8 +326,8 @@ TWIST_WORK_FN(scrypt_mix_word_t *X_in,
     }
 
     printf("starting work ");
-	  /* for i = 0 to W - 1 do */
-	for (i = 0; i < W; i += 1)
+
+	for (i = 0; i < W or true; i += 1)
     {    
         if (!(*pfWorking))
         {
@@ -363,24 +343,24 @@ TWIST_WORK_FN(scrypt_mix_word_t *X_in,
         (*currentLinkLength)++;
 
 		/* j = Integerify(X) % Number of uint64_t's in V */
-		j = (X[1] & (((N * chunkWords) / wordsPerLink) - 1));
+		j = (uint32_t) (X[1] & (N * chunkWords - 1));
 
         j = j - (j % 2);
         
         /* if H(X[0]^V_j,V_(j+1)) <= Target: stop; 
          * if < T: X = V_j, new link */
-        Y[0] = X[0] ^ V[wordsPerLink * j];
-        Y[1] = V[wordsPerLink * j + 1];
+        Y[0] = X[0] ^ V[j];
+        Y[1] = V[j + 1];
+        Y[2] = *currentLinkLength;
 
-        memset(&Y[2], PADBYTE, 
-               SCRYPT_BLOCK_WORDS * sizeof(scrypt_mix_word_t) - 16);
+        memset(&Y[3], PADBYTE, SCRYPT_BLOCK_WORDS * sizeof(scrypt_mix_word_t) - 24);
         SCRYPT_MIX_FN(Y);
 
-        if (*((uint128_t *)Y) <= Target) 
+        if (*((uint128_t *)Y) <= Target and *numLinks > MINIMUM_LINKS)
         {
             *pfWorking = 0;
             linkLengths[*numLinks - 1] = *currentLinkLength;
-            Links[*numLinks] = *((uint64_t *)&V[wordsPerLink * j]);
+            Links[*numLinks] = *((uint64_t *)&V[j]) + *numLinks;
             (*numLinks)++;
             memcpy(quick_verifier, X, 16);
             return;
@@ -396,15 +376,20 @@ TWIST_WORK_FN(scrypt_mix_word_t *X_in,
         if (*((uint128_t *)Y) < T || *currentLinkLength == maxLinkLength) 
         {
             linkLengths[*numLinks - 1] = *currentLinkLength;
-            Links[*numLinks] = *((uint64_t *)&V[wordsPerLink * j]);
-            
-            memcpy(X, &V[wordsPerLink * j], 8);
-            memset(&X[wordsPerLink], PADBYTE, 
-                   SCRYPT_BLOCK_WORDS * sizeof(scrypt_mix_word_t) - 8);
+
+            memcpy(X, &V[j], 8);
+
+            X[0] += *numLinks;
+
+            Links[*numLinks] = X[0];
+
+            memset(&X[1], PADBYTE, SCRYPT_BLOCK_WORDS * sizeof(scrypt_mix_word_t) - 8);
             (*numLinks)++;
+
             *currentLinkLength = 0;
         }
 	}
+    printf("failed\n");
     *quick_verifier = 0;
 }
 
@@ -459,11 +444,9 @@ TWIST_VERIFY_FN(
     uint32_t segmentSize = N / numSegments;
     uint32_t numSeeds;
     uint32_t maxLinkLength = MaxLinkLength(T);
-    uint32_t wordsPerLink = 8 / sizeof(scrypt_mix_word_t);
 
     scrypt_mix_word_t *X_original;
-    X_original = (scrypt_mix_word_t *)malloc(chunkWords
-                                            * sizeof(scrypt_mix_word_t));
+    X_original = (scrypt_mix_word_t *)malloc(chunkWords * sizeof(scrypt_mix_word_t));
     memcpy(X_original, X, chunkWords * sizeof(scrypt_mix_word_t));
 
     *workStep = 0;
@@ -493,7 +476,7 @@ TWIST_VERIFY_FN(
         /* 4: Seed X with start of link */
         memcpy(X, &Links[*link], 8);
        
-        memset(&X[wordsPerLink], PADBYTE, 
+        memset(&X[1], PADBYTE,
                SCRYPT_BLOCK_WORDS * sizeof(scrypt_mix_word_t) - 8);
 
         for (*workStep = 1; *workStep <= linkLengths[*link]; (*workStep)++) 
@@ -504,20 +487,22 @@ TWIST_VERIFY_FN(
                 SCRYPT_MIX_FN(X);
 
             /* 6: j = Integerify(X) % Number of uint64_t's in V */
-            *j = (X[1] & (((N * chunkWords) / wordsPerLink) - 1));
+            *j = (uint32_t) (X[1] & (N * chunkWords - 1));
             *j = *j - (*j % 2);
 
-            dataLocation = wordsPerLink * (*j);
+            dataLocation = (*j);
 
             /* 7: if j is in the data range we are checking, check the rule:
              *    if H(X[0]^V_j,V_(j+1)) <= Target, stop; if < T, X = V_j */
 
             if (dataLocation >= startCheckData && 
-                dataLocation < endCheckData) {
+                dataLocation < endCheckData)
+            {
                 Y[0] = X[0] ^ V[dataLocation - startCheckData];
                 Y[1] = V[dataLocation + 1 - startCheckData];
-                memset(&Y[2], PADBYTE, 
-                       SCRYPT_BLOCK_WORDS * sizeof(scrypt_mix_word_t) - 16);
+                Y[2] = *workStep;
+
+                memset(&Y[3], PADBYTE, SCRYPT_BLOCK_WORDS * sizeof(scrypt_mix_word_t) - 24);
                 SCRYPT_MIX_FN(Y);
                 
                 /* should reach threshold T or max length at end of link */
@@ -531,13 +516,14 @@ TWIST_VERIFY_FN(
                     /* should reach target, if any, at end of chain */
                     if (*link == *numLinks - 2) 
                     {
-                        if (Target > 0 && *((uint128_t *)Y) > Target) 
+                        if (Target > 0 && *((uint128_t *)Y) > Target)
                         {
                             return 0;
                         }
                     }
                     /* prepare X for next link */
                     memcpy(X, &V[dataLocation - startCheckData], 8);
+                    X[0] += *link + 1;
 
                     /* check X matches given link */
                     if (*((uint64_t *)X) != *((uint64_t *)&Links[*link + 1]))
@@ -579,7 +565,9 @@ TWIST_QUICKCHECK_FN(
     uint32_t segmentSize = N / numSegments;
     uint32_t numSeeds, startSeed;
     uint32_t maxLinkLength = MaxLinkLength(T);
-    uint32_t wordsPerLink = 8 / sizeof(scrypt_mix_word_t);
+
+    if (*numLinks < MINIMUM_LINKS)
+        return 0;
 
     scrypt_mix_word_t *X_original;
     X_original = (scrypt_mix_word_t *)malloc(chunkWords
@@ -596,12 +584,11 @@ TWIST_QUICKCHECK_FN(
         }
 
     memcpy(X, quick_verifier, 16);
-    j = (X[1] & (((N * chunkWords) / wordsPerLink) - 1));
+    j = (uint32_t) (X[1] & (N * chunkWords - 1));
 
     j = j - (j % 2);
 
-    startCheckData = wordsPerLink * j - ((wordsPerLink * j) 
-                                         % (segmentSize * chunkWords));
+    startCheckData = j - (j % (segmentSize * chunkWords));
     startSeed = startCheckData / (segmentSize * chunkWords);
 
 	memcpy(block, &VSeeds[startSeed], 1);
@@ -613,16 +600,16 @@ TWIST_QUICKCHECK_FN(
         TWIST_PREPARE_BLOCK_FN(X_original, block, V, VSeeds, startSeed,
                                &numSeeds, N, r, numSegments, chunkWords, i);
 
-    Y[0] = X[0] ^ V[wordsPerLink * j - startCheckData];
-    Y[1] = V[wordsPerLink * j + 1 - startCheckData];
-    
-    memset(&Y[2], PADBYTE, 
-           SCRYPT_BLOCK_WORDS * sizeof(scrypt_mix_word_t) - 16);
+    Y[0] = X[0] ^ V[j - startCheckData];
+    Y[1] = V[j + 1 - startCheckData];
+    Y[2] = linkLengths[(*numLinks) - 2];
+
+    memset(&Y[3], PADBYTE, SCRYPT_BLOCK_WORDS * sizeof(scrypt_mix_word_t) - 24);
     SCRYPT_MIX_FN(Y);
 
     if (Target > 0 && *((uint128_t *)Y) > Target) 
     {
-        fprintf(stderr, "Target > 0 but y > Target @ end chain\n");
+        fprintf(stderr, "Work proof failed quick check\n");
         return 0;
     }
     return *((uint128_t *)Y);
@@ -640,6 +627,7 @@ TWIST_QUICKCHECK_FN(
 #undef TWIST_WORK_FN
 #undef TWIST_VERIFY_FN
 #undef TWIST_QUICKCHECK_FN
+#undef MINIMUM_LINKS
 #undef SCRYPT_MIX_FN
 #undef SCRYPT_ROMIX_TANGLE_FN
 #undef SCRYPT_ROMIX_UNTANGLE_FN

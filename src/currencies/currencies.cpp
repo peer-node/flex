@@ -597,8 +597,7 @@ CurrencyTxOut CurrencyTxOutFromJSON(string json, vch_t currency)
     if (addresses.size() != 1)
         return txout;
 
-    txout.amount = RealToAmount(find_value(json_object, "value").get_real(),
-                                currency);
+    txout.amount = RealToAmount(find_value(json_object, "value").get_real(), currency);
     txout.address = addresses[0].get_str();
     txout.confirmations = find_value(json_object, "confirmations").get_int();
     return txout;

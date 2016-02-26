@@ -1,6 +1,7 @@
 #include "gmock/gmock.h"
 #include "crypto/point.h"
 #include "DistributedSecret.h"
+#include "EncryptedSecret.h"
 
 using namespace ::testing;
 
@@ -59,3 +60,53 @@ TEST(ADistributedSecret_SplitAmongTwoRelaysTwice,
     s.SplitAmongRelays(2);
     ASSERT_DOUBLE_EQ(2 * pow(0.3, 2) - pow(0.3, 4), s.probability_of_discovery(0.3));
 }
+
+
+class AnEncryptedSecret : public Test
+{
+public:
+    EncryptedSecret encrypted_secret;
+    CBigNum recipient_private_key;
+    CBigNum secret;
+    Point recipient;
+
+    virtual void SetUp()
+    {
+        recipient_private_key = 12345;
+        secret = 54321;
+        recipient = Point(SECP256K1, recipient_private_key);
+        encrypted_secret = EncryptedSecret(secret, recipient);
+    }
+
+};
+
+TEST_F(AnEncryptedSecret, SpecifiesTheCorrespondingEllipticCurvePoint)
+{
+    Point point = encrypted_secret.point;
+}
+
+TEST_F(AnEncryptedSecret, SpecifiesTheSecretXorSharedSecret)
+{
+    CBigNum secret_xor_shared_secret = encrypted_secret.secret_xor_shared_secret;
+}
+
+TEST_F(AnEncryptedSecret, YieldsSecretToRecipient)
+{
+    CBigNum recovered_secret = encrypted_secret.RecoverSecret(recipient_private_key);
+    ASSERT_THAT(recovered_secret, Eq(secret));
+}
+
+TEST_F(AnEncryptedSecret, CanBeAuditedUsingSecret)
+{
+    ASSERT_TRUE(encrypted_secret.Audit(secret, recipient));
+    ASSERT_FALSE(encrypted_secret.Audit(secret + 1, recipient));
+    ASSERT_FALSE(encrypted_secret.Audit(secret, 2 * recipient));
+}
+
+TEST_F(AnEncryptedSecret, FailsAuditIfPointDoesNotMatchSecret)
+{
+    Point bad_point(SECP256K1, 98765);
+    encrypted_secret.point = bad_point;
+    ASSERT_FALSE(encrypted_secret.Audit(secret, recipient));
+}
+

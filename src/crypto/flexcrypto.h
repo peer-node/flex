@@ -11,6 +11,7 @@
 #include <openssl/obj_mac.h>
 
 #include "crypto/point.h"
+#include "bignum_hashes.h"
 
 
 typedef std::vector<std::pair<uint32_t, CBigNum> > BigNumsInPositions;
@@ -67,18 +68,6 @@ int generate_public_key_from_K_polynomial_point_values(
         std::vector<Point>& point_values,
         std::vector<CBigNum>& x_values,
         uint32_t K);
-
-inline CBigNum Hash(Point point)
-{
-    vch_t bytes = point.getvch();
-    return CBigNum(Hash(bytes.begin(), bytes.end())) % point.Modulus();
-}
-
-inline CBigNum Hash(CBigNum number)
-{
-    vch_t bytes = number.getvch();
-    return CBigNum(Hash(bytes.begin(), bytes.end()));
-}
 
 class RevelationOfPieceOfSecret;
 

@@ -15,7 +15,6 @@
 #include "scrypt-jane-twist.h"
 #include <vector>
 
-using namespace std;
 
 inline int 
 twist_dowork(uint8_t *pHashInput,
@@ -26,14 +25,14 @@ twist_dowork(uint8_t *pHashInput,
              uint8_t Nfactor,
              uint8_t rfactor,
              uint32_t numSegments,
-             vector<uint8_t> &vnSeeds,
-             vector<uint64_t> &vnLinks,
-             vector<uint32_t> &vnLinkLengths,
+             std::vector<uint8_t> &vnSeeds,
+             std::vector<uint64_t> &vnLinks,
+             std::vector<uint32_t> &vnLinkLengths,
              unsigned char *pfWorking) 
 {
     scrypt_aligned_alloc *V, *VSeeds;
     uint32_t numLinks = 0;
-    uint32_t max_worksteps = 10 * ((((uint128_t)1ULL) << 127) / target);
+    uint32_t max_worksteps = (uint32_t) (10 * ((((uint128_t)1ULL) << 127) / target));
     int result;
 
     V = (scrypt_aligned_alloc *)malloc(sizeof(scrypt_aligned_alloc));
@@ -77,14 +76,14 @@ twist_doquickcheck(unsigned char *pHashInput,
                    uint8_t Nfactor,
                    uint8_t rfactor,
                    uint32_t numSegments,
-                   vector<uint8_t> vnSeeds,
-                   vector<uint64_t> vnLinks,
-                   vector<uint32_t> vnLinkLengths) 
+                   std::vector<uint8_t> vnSeeds,
+                   std::vector<uint64_t> vnLinks,
+                   std::vector<uint32_t> vnLinkLengths)
 {
     scrypt_aligned_alloc *VSeeds;
     uint64_t *Links = &vnLinks[0];
     uint32_t *linkLengths = &vnLinkLengths[0];
-    uint32_t numLinks = vnLinks.size();
+    uint32_t numLinks = (uint32_t) vnLinks.size();
     uint128_t result = 0;
 
     VSeeds =(scrypt_aligned_alloc *)malloc(sizeof(scrypt_aligned_alloc));
@@ -104,9 +103,9 @@ int twist_doverify(uint8_t *pHashInput,
                    uint8_t Nfactor,
                    uint8_t rfactor,
                    uint32_t numSegments,
-                   vector<uint8_t> vnSeeds,
-                   vector<uint64_t> vnLinks,
-                   vector<uint32_t> vnLinkLengths,
+                   std::vector<uint8_t> vnSeeds,
+                   std::vector<uint64_t> vnLinks,
+                   std::vector<uint32_t> vnLinkLengths,
                    uint32_t startSeed,
                    uint32_t numSeedsToUse,
                    uint32_t startCheckLink,
@@ -118,7 +117,7 @@ int twist_doverify(uint8_t *pHashInput,
     scrypt_aligned_alloc *VSeeds;
     uint64_t *Links = &vnLinks[0];
     uint32_t *linkLengths = &vnLinkLengths[0];
-    uint32_t numLinks = vnLinks.size();
+    uint32_t numLinks = (uint32_t) vnLinks.size();
     int result;
 
     VSeeds =(scrypt_aligned_alloc *)malloc(sizeof(scrypt_aligned_alloc));

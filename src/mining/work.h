@@ -4,7 +4,6 @@
 #ifndef FLEX_WORK_H
 #define FLEX_WORK_H
 
-#include "database/data.h"
 #include "crypto/flexcrypto.h"
 #include "crypto/uint256.h"
 #include "twist/twistcpp.h"
@@ -12,11 +11,17 @@
 #include "log.h"
 #define LOG_CATEGORY "work.h"
 
+#define FLEX_WORK_NUMBER_OF_LINKS 128
+#define FLEX_WORK_NUMBER_OF_SEGMENTS 32
+
+
 class TwistWorkCheck;
 
 class TwistWorkProof
 {
 public:
+    TwistWorkProof(uint256 memory_seed, uint64_t memory_factor, uint160 difficulty);
+
     uint256 memoryseed;
     uint64_t N_factor;
     uint160 target;
@@ -93,12 +98,12 @@ public:
 
     uint256 GetHash();
 
-    int VerifyInvalid();
-
     uint8_t Valid()
     {
         return valid;
     }
+
+    int VerifyInvalid(TwistWorkProof &proof);
 };
 
 #endif

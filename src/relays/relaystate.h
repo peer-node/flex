@@ -169,7 +169,7 @@ public:
     void AddDisqualification(Point relay, uint160 message_hash)
     {
         if (!disqualifications.count(relay))
-            disqualifications[relay] = set<uint160>();
+            disqualifications[relay] = std::set<uint160>();
 
         disqualifications[relay].insert(message_hash);
     }

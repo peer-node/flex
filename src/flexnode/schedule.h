@@ -7,8 +7,11 @@
 
 #define COMPLAINT_WAIT_TIME (12 * 1000 * 1000) // 12 seconds
 
+#include "define.h"
 #include "database/data.h"
 #include <boost/thread.hpp>
+#include <boost/foreach.hpp>
+#include "crypto/uint256.h"
 
 #include "log.h"
 #define LOG_CATEGORY "schedule.h"
@@ -18,7 +21,7 @@ class ScheduledTask
 public:
     string_t task_type;
     void (*task_function)(uint160);
-    CLocationIterator<> schedule_scanner;
+    LocationIterator schedule_scanner;
 
     ScheduledTask(const char* task_type, void (*task_function)(uint160)):
         task_type(task_type),
@@ -109,11 +112,16 @@ public:
     {
         while (running)
         {
-            foreach_(ScheduledTask& task, tasks)
-                task.DoTasksScheduledForExecutionBeforeNow();
+            DoTasksScheduledForExecutionBeforeNow();
             boost::this_thread::interruption_point();
-            boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
+            boost::this_thread::sleep(boost::posix_time::milliseconds(100));
         }
+    }
+
+    void DoTasksScheduledForExecutionBeforeNow()
+    {
+        foreach_(ScheduledTask& task, tasks)
+            task.DoTasksScheduledForExecutionBeforeNow();
     }
 
     void AddTask(ScheduledTask task)
@@ -121,7 +129,7 @@ public:
         tasks.push_back(task);
     }
 
-    void Schedule(string_t task_type, uint160 task_hash, uint64_t when)
+    void Schedule(string_t task_type, uint160 task_hash, int64_t when)
     {
         scheduledata[task_hash].Location(task_type) = when;
         log_ << "scheduled " << task_type << " with task "

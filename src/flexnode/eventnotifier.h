@@ -62,7 +62,6 @@ public:
         while (event_scanner.GetPreviousObjectAndLocation(event_hash,
                                                           event_time))
         {
-            
             guidata.RemoveFromLocation("events", event_time);
             event_scanner = guidata.LocationIterator("events");
             event_scanner.Seek(now, true);

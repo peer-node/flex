@@ -33,7 +33,7 @@ public:
         pchMessageStart[1] = 0xec;
         pchMessageStart[2] = 0xe4;
         pchMessageStart[3] = 0xe9;
-        vAlertPubKey = ParseHex("692d524e9d6a6956e7c5ecbcd68284");
+        vAlertPubKey = ParseHex("");
         nDefaultPort = 8733;
         nRPCPort = 8732;
 

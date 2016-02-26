@@ -1,0 +1,1 @@
+#include "NetworkMiningInfo.h"

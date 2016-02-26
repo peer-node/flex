@@ -7,6 +7,8 @@ class RelayState_
 {
 public:
     std::vector<Relay> relays;
+
+    void AddRelay(Relay relay);
 };
 
 

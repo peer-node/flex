@@ -312,14 +312,25 @@ inline int64_t GetPerformanceCounter()
     return nCounter;
 }
 
+static int64_t nMockTimeMicros = 0;
+
+inline void SetMockTimeMicros(int64_t nMockTimeMicros_)
+{
+    nMockTimeMicros = nMockTimeMicros_;
+}
+
 inline int64_t GetTimeMillis()
 {
+    if (nMockTimeMicros != 0)
+        return nMockTimeMicros / 1000;
     return (boost::posix_time::ptime(boost::posix_time::microsec_clock::universal_time()) -
             boost::posix_time::ptime(boost::gregorian::date(1970,1,1))).total_milliseconds();
 }
 
 inline int64_t GetTimeMicros()
 {
+    if (nMockTimeMicros != 0)
+        return nMockTimeMicros;
     return (boost::posix_time::ptime(boost::posix_time::microsec_clock::universal_time()) -
             boost::posix_time::ptime(boost::gregorian::date(1970,1,1))).total_microseconds();
 }
