@@ -39,7 +39,7 @@ public:
         uint32_t network_port = 123;
         std::string network_ip("123.456.789.12");
         uint256 network_seed(123456);
-        uint256 network_id(1);
+        uint64_t network_id = 1;
         uint160 difficulty(10000);
 
         network_mining_info = NetworkMiningInfo(network_id, network_ip, network_port, network_seed, difficulty);

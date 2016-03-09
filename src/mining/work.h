@@ -58,7 +58,7 @@ public:
         READWRITE(link_lengths);
     )
 
-    uint256 GetHash();
+    uint256 GetHash() const;
 
     int DoWork(unsigned char *working);
 

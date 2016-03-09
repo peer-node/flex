@@ -109,7 +109,7 @@ uint160 target_from_difficulty(uint160 difficulty)
         return sum_of_link_lengths;
     }
 
-    uint256 TwistWorkProof::GetHash()
+    uint256 TwistWorkProof::GetHash() const
     {
         CDataStream ss(SER_NETWORK, CLIENT_VERSION);
         ss << *this;

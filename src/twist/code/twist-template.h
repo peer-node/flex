@@ -311,23 +311,20 @@ TWIST_WORK_FN(scrypt_mix_word_t *X_in,
 	uint32_t i, j, k; 
     uint32_t chunkWords = (uint32_t)(SCRYPT_BLOCK_WORDS * r * 2);
     uint32_t maxLinkLength = MaxLinkLength(T);
-    uint128_t best_so_far = 1; best_so_far <<= 127;
 
     scrypt_mix_word_t *X = (scrypt_mix_word_t *)
                 malloc(SCRYPT_BLOCK_WORDS * sizeof(scrypt_mix_word_t));
     memcpy(X, X_in, 8);
 
     /* seed with start of V */
-    if (*numLinks == 0 && *currentLinkLength == 0) {
-        memset(&X[8 / sizeof(scrypt_mix_word_t)], PADBYTE, 
-               SCRYPT_BLOCK_WORDS * sizeof(scrypt_mix_word_t) - 8);
-        Links[0] = *((uint64_t *)X);
-        (*numLinks)++;
-    }
 
-    printf("starting work ");
+    memset(&X[8 / sizeof(scrypt_mix_word_t)], PADBYTE,
+           SCRYPT_BLOCK_WORDS * sizeof(scrypt_mix_word_t) - 8);
+    Links[0] = *((uint64_t *)X);
 
-	for (i = 0; i < W or true; i += 1)
+    *numLinks = 1;
+
+	for (i = 0; true; i += 1)
     {    
         if (!(*pfWorking))
         {
@@ -356,7 +353,7 @@ TWIST_WORK_FN(scrypt_mix_word_t *X_in,
         memset(&Y[3], PADBYTE, SCRYPT_BLOCK_WORDS * sizeof(scrypt_mix_word_t) - 24);
         SCRYPT_MIX_FN(Y);
 
-        if (*((uint128_t *)Y) <= Target and *numLinks > MINIMUM_LINKS)
+        if (*((uint128_t *)Y) <= Target and *numLinks + 2 > MINIMUM_LINKS)
         {
             *pfWorking = 0;
             linkLengths[*numLinks - 1] = *currentLinkLength;
@@ -364,13 +361,6 @@ TWIST_WORK_FN(scrypt_mix_word_t *X_in,
             (*numLinks)++;
             memcpy(quick_verifier, X, 16);
             return;
-        }
-
-        if (*((uint128_t *)Y) <= best_so_far)
-        {
-            printf(".");
-            fflush(stdout);
-            best_so_far = *((uint128_t *)Y);
         }
 
         if (*((uint128_t *)Y) < T || *currentLinkLength == maxLinkLength) 
@@ -389,7 +379,6 @@ TWIST_WORK_FN(scrypt_mix_word_t *X_in,
             *currentLinkLength = 0;
         }
 	}
-    printf("failed\n");
     *quick_verifier = 0;
 }
 
@@ -454,9 +443,7 @@ TWIST_VERIFY_FN(
     /* 1: Check link lengths within bounds */
     for (*link = startCheckLink; *link < endCheckLink; (*link)++) 
         if (linkLengths[*link] > maxLinkLength)
-        {
             return 0;
-        }
 
     SCRYPT_ROMIX_TANGLE_FN(X_original, r * 2);
 
@@ -472,7 +459,6 @@ TWIST_VERIFY_FN(
     /* 3: Check each link in the specified link range */
     for (*link = startCheckLink; *link < endCheckLink; (*link)++)
     {
-        
         /* 4: Seed X with start of link */
         memcpy(X, &Links[*link], 8);
        
@@ -570,16 +556,12 @@ TWIST_QUICKCHECK_FN(
         return 0;
 
     scrypt_mix_word_t *X_original;
-    X_original = (scrypt_mix_word_t *)malloc(chunkWords
-                                            * sizeof(scrypt_mix_word_t));
+    X_original = (scrypt_mix_word_t *)malloc(chunkWords * sizeof(scrypt_mix_word_t));
     memcpy(X_original, X, chunkWords * sizeof(scrypt_mix_word_t));
 
     for (uint32_t link = 0; link < *numLinks; (link)++) 
         if (linkLengths[link] > maxLinkLength)
         {
-            printf("failed at link: %u\n", link);
-            printf("linklength: %u\n", linkLengths[link]);
-            printf("max link length = %u\n", maxLinkLength);
             return 0;
         }
 
@@ -609,7 +591,6 @@ TWIST_QUICKCHECK_FN(
 
     if (Target > 0 && *((uint128_t *)Y) > Target) 
     {
-        fprintf(stderr, "Work proof failed quick check\n");
         return 0;
     }
     return *((uint128_t *)Y);

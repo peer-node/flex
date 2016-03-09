@@ -15,7 +15,7 @@ public:
 
     virtual void SetUp()
     {
-        memory_seed = 1234567890;
+        memory_seed = 123456789;
         N_factor = 6;
         target = 1;
         target <<= 110;
@@ -53,10 +53,9 @@ TEST_F(ATwistWorkProof, PassesSpotChecks)
     ASSERT_TRUE(proof.SpotCheck().valid);
 }
 
-
 TEST_F(ATwistWorkProof, HasAtLeastTenLinks)
 {
-    proof.link_threshold = 2 * proof.target;
+    proof.link_threshold = proof.target;
     uint8_t keep_working = 1;
 
     proof.DoWork(&keep_working);
