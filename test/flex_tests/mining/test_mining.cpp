@@ -1,49 +1,24 @@
 #include "gmock/gmock.h"
 #include "mining/work.h"
 #include "FlexMiner.h"
-#include "MockRPCConnection.h"
+#include "NetworkSpecificProofOfWork.h"
+
+#include <jsonrpccpp/server.h>
+#include <jsonrpccpp/server/connectors/httpserver.h>
+
+#include <jsonrpccpp/client.h>
+#include <jsonrpccpp/client/connectors/httpclient.h>
+
 
 using namespace ::testing;
-
-
-TEST(AnRPCConnection, CanHaveRequestsSentToIt)
-{
-    RPCConnection connection;
-    std::string method("test_method");
-    json_spirit::Array params;
-    json_spirit::Value result = connection.SendRPCRequest(method, params);
-}
-
-
-TEST(AMockRPCConnection, RecordsRequestsSentToIt)
-{
-    MockRPCConnection connection;
-
-    std::string method("test_method");
-    json_spirit::Array params;
-    json_spirit::Value result = connection.SendRPCRequest(method, params);
-
-    ASSERT_THAT(connection.requests.size(), Eq(1));
-    ASSERT_THAT(connection.requests[0].first, Eq("test_method"));
-}
+using namespace jsonrpc;
+using namespace std;
 
 
 class AFlexMiner : public Test
 {
 public:
     FlexMiner miner;
-    NetworkMiningInfo network_mining_info;
-
-    virtual void SetUp()
-    {
-        uint32_t network_port = 123;
-        std::string network_ip("123.456.789.12");
-        uint256 network_seed(123456);
-        uint64_t network_id = 1;
-        uint160 difficulty(10000);
-
-        network_mining_info = NetworkMiningInfo(network_id, network_ip, network_port, network_seed, difficulty);
-    }
 };
 
 TEST_F(AFlexMiner, IsNotInitiallyMining)
@@ -56,51 +31,113 @@ TEST_F(AFlexMiner, InitiallyHasNoMiningInfo)
     ASSERT_THAT(miner.network_id_to_mining_info.size(), Eq(0));
 }
 
-TEST_F(AFlexMiner, HasMiningInfoWhenOneIsAdded)
-{
-    miner.AddNetworkMiningInfo(network_mining_info);
-    ASSERT_THAT(miner.network_id_to_mining_info.size(), Eq(1));
-}
 
-TEST_F(AFlexMiner, CanAddAnRPCConnection)
-{
-    RPCConnection connection;
-    miner.AddRPCConnection(&connection);
-    ASSERT_THAT(miner.network_id_to_network_connection.size(), Eq(1));
-}
-
-TEST_F(AFlexMiner, CanAddAMockRPCConnection)
-{
-    MockRPCConnection connection;
-    miner.AddRPCConnection(&connection);
-    ASSERT_THAT(miner.network_id_to_network_connection.size(), Eq(1));
-}
-
-
-class AFlexMinerWithAMockRPCConnection : public AFlexMiner
+class AFlexMinerWithMiningInfo : public AFlexMiner
 {
 public:
-    MockRPCConnection connection;
+    NetworkMiningInfo network_mining_info;
 
     virtual void SetUp()
     {
         AFlexMiner::SetUp();
-        miner.AddRPCConnection(&connection);
+        uint32_t network_port = 0;
+        std::string network_host("localhost");
+        uint256 network_seed(123456);
+        uint64_t network_id = 1;
+        uint160 difficulty(10000);
+
+        network_mining_info = NetworkMiningInfo(network_id, network_host, network_port, network_seed, difficulty);
+
+        miner.AddNetworkMiningInfo(network_mining_info);
     }
 };
 
-TEST_F(AFlexMinerWithAMockRPCConnection, StoresARequest)
+TEST_F(AFlexMinerWithMiningInfo, HasMiningInfo)
 {
-    std::string method("test_method");
-    json_spirit::Array params;
+    ASSERT_THAT(miner.network_id_to_mining_info.size(), Eq(1));
+}
 
-    ASSERT_THAT(miner.network_id_to_network_connection.size(), Eq(1));
-    ASSERT_TRUE(miner.network_id_to_network_connection.count(0));
+TEST_F(AFlexMinerWithMiningInfo, ReturnsAValidBranchForTheMiningInfo)
+{
+    std::vector<uint256> branch = miner.BranchForNetwork(network_mining_info.network_id);
+    ASSERT_THAT(branch[0], Eq(network_mining_info.network_seed));
+    ASSERT_THAT(MiningHashTree::EvaluateBranch(branch), Eq(miner.MiningRoot()));
+}
 
-    json_spirit::Value result = miner.network_id_to_network_connection[0]->SendRPCRequest(method, params);
-    uint64_t number_of_requests = miner.network_id_to_network_connection[0]->NumberOfRequests();
+TEST_F(AFlexMinerWithMiningInfo, CompletesAProofOfWorkUsingTheMiningRoot)
+{
+    miner.SetMemoryUsageInMegabytes(1);
+    miner.StartMining();
+    TwistWorkProof proof = miner.GetProof();
+    ASSERT_THAT(proof.memoryseed, Eq(miner.MiningRoot()));
+    ASSERT_THAT(proof.DifficultyAchieved(), Gt(0));
+}
 
-    ASSERT_THAT(number_of_requests, Eq(1));
+
+class TestRPCProofListener : public jsonrpc::AbstractServer<TestRPCProofListener>
+{
+public:
+    bool received_proof = false;
+    string proof_base64;
+
+    TestRPCProofListener(jsonrpc::HttpServer &server) :
+            jsonrpc::AbstractServer<TestRPCProofListener>(server)
+    {
+        BindMethod("new_proof", &TestRPCProofListener::NewProof);
+    }
+
+    void NewProof(const Json::Value& request, Json::Value& response)
+    {
+        proof_base64 = request["proof_base64"].asString();
+        received_proof = true;
+    }
+
+    void BindMethod(const char* method_name,
+                    void (TestRPCProofListener::*method)(const Json::Value &,Json::Value &))
+    {
+        this->bindAndAddMethod(Procedure(method_name, PARAMS_BY_NAME, JSON_STRING, NULL), method);
+    }
+};
+
+
+class AFlexMinerWithAProofListener : public AFlexMinerWithMiningInfo
+{
+public:
+    HttpServer *http_server;
+    TestRPCProofListener *listener;
+
+    virtual void SetUp()
+    {
+        AFlexMinerWithMiningInfo::SetUp();
+        http_server = new HttpServer(8387);
+        listener = new TestRPCProofListener(*http_server);
+        listener->StartListening();
+
+        network_mining_info.network_port = 8387;
+        miner.AddNetworkMiningInfo(network_mining_info);
+        miner.SetMemoryUsageInMegabytes(8);
+    }
+
+    virtual void TearDown()
+    {
+        listener->StopListening();
+        delete listener;
+        delete http_server;
+    }
+};
+
+TEST_F(AFlexMinerWithAProofListener, MakesAnRPCCallAfterEachProofIfPortIsNonZero)
+{
+    ASSERT_FALSE(listener->received_proof);
+    miner.StartMining();
+    ASSERT_TRUE(listener->received_proof);
+}
+
+TEST_F(AFlexMinerWithAProofListener, SendsAValidNetworkSpecificProofOfWorkWithTheRPCCall)
+{
+    miner.StartMining();
+    NetworkSpecificProofOfWork proof(listener->proof_base64);
+    ASSERT_TRUE(proof.IsValid());
 }
 
 
@@ -161,6 +198,7 @@ TEST_F(AMiningHashTree, DoesntGiveSameResultForInputsWithSameXor)
     ASSERT_THAT(combination1, Ne(combination2));
 }
 
+
 class AMiningHashTreeWithAHash : public AMiningHashTree
 {
 public:
@@ -182,6 +220,7 @@ TEST_F(AMiningHashTreeWithAHash, ProvidesAValidBranchForTheHash)
     ASSERT_THAT(MiningHashTree::EvaluateBranch(tree.Branch(hash1)), Eq(tree.Root()));
 }
 
+
 class AMiningHashTreeWithTwoHashes : public AMiningHashTree
 {
 public:
@@ -199,6 +238,7 @@ TEST_F(AMiningHashTreeWithTwoHashes, HasARootEqualToTheCombinationOfTheHashes)
     uint256 combination = MiningHashTree::Combine(hash1, hash2);
     ASSERT_THAT(root, Eq(combination));
 }
+
 
 class AMiningHashTreeWithThreeHashes : public AMiningHashTree
 {
@@ -259,6 +299,7 @@ TEST_F(AMiningHashTreeWithFourHashes, ProvidesAValidBranchForAGivenHash)
     ASSERT_THAT(MiningHashTree::EvaluateBranch(tree.Branch(hash4)), Eq(tree.Root()));
 }
 
+
 TEST(AMiningHashTreeWithManyHashes, ProvidesAValidBranchForAGivenHash)
 {
     MiningHashTree tree;
@@ -271,29 +312,3 @@ TEST(AMiningHashTreeWithManyHashes, ProvidesAValidBranchForAGivenHash)
         ASSERT_THAT(MiningHashTree::EvaluateBranch(tree.Branch(i)), Eq(tree.Root()));
 }
 
-
-class AFlexMinerWithMiningInfo : public AFlexMiner
-{
-public:
-    virtual void SetUp()
-    {
-        AFlexMiner::SetUp();
-        miner.AddNetworkMiningInfo(network_mining_info);
-    }
-};
-
-TEST_F(AFlexMinerWithMiningInfo, ReturnsAValidBranchForTheMiningInfo)
-{
-    std::vector<uint256> branch = miner.BranchForNetwork(network_mining_info.network_id);
-    ASSERT_THAT(branch[0], Eq(network_mining_info.network_seed));
-    ASSERT_THAT(MiningHashTree::EvaluateBranch(branch), Eq(miner.MiningRoot()));
-}
-
-TEST_F(AFlexMinerWithMiningInfo, CompletesAProofOfWorkUsingTheMiningRoot)
-{
-    miner.SetMemoryUsageInMegabytes(1);
-    miner.StartMining();
-    TwistWorkProof proof = miner.GetProof();
-    ASSERT_THAT(proof.memoryseed, Eq(miner.MiningRoot()));
-    ASSERT_THAT(proof.DifficultyAchieved(), Gt(0));
-}

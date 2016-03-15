@@ -9,6 +9,7 @@
 
 #define FLEX_MINER_VERSION "0.0.1"
 
+
 class MiningRPCServer : public jsonrpc::AbstractServer<MiningRPCServer>
 {
 public:
@@ -22,6 +23,7 @@ public:
         BindMethod("set_mining_information", &MiningRPCServer::SetMiningInformation);
         BindMethod("get_mining_root", &MiningRPCServer::GetMiningRoot);
         BindMethod("start_mining", &MiningRPCServer::StartMining);
+        BindMethod("start_mining_asynchronously", &MiningRPCServer::StartMiningASynchronously);
         BindMethod("get_proof_of_work", &MiningRPCServer::GetProofOfWork);
         BindMethod("set_megabytes_used", &MiningRPCServer::SetMegabytesUsed);
         BindMethod("get_megabytes_used", &MiningRPCServer::GetMegabytesUsed);
@@ -30,6 +32,11 @@ public:
     void StartMining(const Json::Value& request, Json::Value& response)
     {
         miner.StartMining();
+    }
+
+    void StartMiningASynchronously(const Json::Value& request, Json::Value& response)
+    {
+        boost::thread t(&FlexMiner::StartMining, &miner);
     }
 
     void SetMegabytesUsed(const Json::Value& request, Json::Value& response)
@@ -76,19 +83,16 @@ public:
 
     void SetMiningInformation(const Json::Value& request, Json::Value& response)
     {
-        auto network_id = request["network_id"];
-        auto network_host = request["network_host"];
-        auto network_port = request["network_port"];
-        auto network_seed = request["network_seed"];
-        auto network_difficulty = request["network_difficulty"];
+        uint256 network_id(request["network_id"].asString());
+        auto network_host = request["network_host"].asString();
+        auto network_port = request["network_port"].asInt();
+        uint256 network_seed(request["network_seed"].asString());
+        uint160 network_difficulty(request["network_difficulty"].asString());
 
-        uint256 network_seed_, network_id_;
-        network_seed_.SetHex(network_seed.asString());
-        network_id_.SetHex(network_id.asString());
 
-        NetworkMiningInfo info(network_id_, network_host.asString(),
-                               network_port.asInt(), network_seed_,
-                               network_difficulty.asInt64());
+        NetworkMiningInfo info(network_id, network_host,
+                               (uint32_t) network_port, network_seed,
+                               network_difficulty);
         miner.AddNetworkMiningInfo(info);
         response = "ok";
     }

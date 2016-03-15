@@ -1,5 +1,12 @@
 #include "FlexMiner.h"
-#include "mining/work.h"
+#include "NetworkSpecificProofOfWork.h"
+
+#include <jsonrpccpp/client.h>
+#include <jsonrpccpp/client/connectors/httpclient.h>
+
+using namespace jsonrpc;
+using namespace std;
+
 
 bool FlexMiner::IsMining()
 {
@@ -10,11 +17,6 @@ void FlexMiner::AddNetworkMiningInfo(NetworkMiningInfo info)
 {
     network_id_to_mining_info[info.network_id] = info;
     tree.AddHash(info.network_seed);
-}
-
-void FlexMiner::AddRPCConnection(RPCConnection *connection)
-{
-    network_id_to_network_connection[connection->network_id] = connection;
 }
 
 std::vector<uint256> FlexMiner::BranchForNetwork(uint256 network_id)
@@ -58,6 +60,34 @@ void FlexMiner::StartMining()
     proof = TwistWorkProof(memory_seed, memory_factor, difficulty);
     uint8_t working = 1;
     proof.DoWork(&working);
+    InformNetworksOfProofOfWork();
+}
+
+void FlexMiner::InformNetworksOfProofOfWork()
+{
+    Json::Value params;
+
+    for (auto entry : network_id_to_mining_info)
+    {
+        NetworkMiningInfo info = entry.second;
+        if (info.network_port == 0)
+            continue;
+        InformNetworkOfProofOfWork(info);
+    }
+}
+
+void FlexMiner::InformNetworkOfProofOfWork(NetworkMiningInfo info)
+{
+    NetworkSpecificProofOfWork network_proof(BranchForNetwork(info.network_id), proof);
+
+    Json::Value params;
+    params["proof_base64"] = network_proof.GetBase64String();
+
+    string url = info.NotificationUrl();
+    HttpClient http_client(url);
+    Client client(http_client);
+
+    client.CallMethod("new_proof", params);
 }
 
 TwistWorkProof FlexMiner::GetProof()

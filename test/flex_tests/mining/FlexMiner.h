@@ -5,7 +5,6 @@
 #include <map>
 #include <src/mining/work.h>
 #include "NetworkMiningInfo.h"
-#include "RPCConnection.h"
 #include "MiningHashTree.h"
 
 #define FLEX_WORK_NUMBER_OF_MEGABYTES 4096
@@ -16,7 +15,6 @@ class FlexMiner
 {
 public:
     std::map<uint256, NetworkMiningInfo> network_id_to_mining_info;
-    std::map<uint256, RPCConnection*> network_id_to_network_connection;
     MiningHashTree tree;
     TwistWorkProof proof;
     uint32_t megabytes_used;
@@ -24,8 +22,6 @@ public:
     FlexMiner(): megabytes_used(FLEX_WORK_NUMBER_OF_MEGABYTES) { }
 
     void AddNetworkMiningInfo(NetworkMiningInfo info);
-
-    void AddRPCConnection(RPCConnection *connection);
 
     bool IsMining();
 
@@ -40,6 +36,12 @@ public:
     uint160 GetMaxDifficulty();
 
     void SetMemoryUsageInMegabytes(uint32_t number_of_megabytes);
+
+    void MakeRPCCalls();
+
+    void InformNetworksOfProofOfWork();
+
+    void InformNetworkOfProofOfWork(NetworkMiningInfo info);
 };
 
 

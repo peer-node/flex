@@ -50,18 +50,13 @@ twist_dowork(uint8_t *pHashInput,
 
     scrypt_free(V);
     free(V);
+
     result = *quick_verifier != 0;
     
     vnSeeds.resize(numSegments);
     memcpy(&vnSeeds[0], VSeeds->ptr, numSegments);
     vnLinks.resize(numLinks);
     vnLinkLengths.resize(numLinks);
-    printf("numlinks is %u\n", numLinks);
-    if (result)
-    {    
-        printf("proof ok\n");
-        *pfWorking = 1;
-    }
     
     scrypt_free(VSeeds);
     free(VSeeds);

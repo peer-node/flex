@@ -26,6 +26,13 @@ public:
             network_seed(network_seed),
             difficulty(difficulty)
     { }
+
+    std::string NotificationUrl()
+    {
+        std::string host = network_ip;
+        std::string port = std::to_string(network_port);
+        return std::string("http://") + host + ":" + port;
+    }
 };
 
 
