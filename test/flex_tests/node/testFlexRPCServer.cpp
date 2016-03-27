@@ -1,5 +1,6 @@
 #include "gmock/gmock.h"
 #include "FlexRPCServer.h"
+#include "HttpAuthServer.h"
 
 #include <jsonrpccpp/client.h>
 
@@ -16,7 +17,7 @@ using namespace std;
 class AFlexRPCServer : public Test
 {
 public:
-    HttpServer *http_server;
+    HttpAuthServer *http_server;
     FlexRPCServer *server;
     HttpClient *http_client;
     Client *client;
@@ -24,10 +25,11 @@ public:
 
     virtual void SetUp()
     {
-        http_server = new HttpServer(8388);
+        http_server = new HttpAuthServer(8388, "username", "password");
         server = new FlexRPCServer(*http_server);
         server->StartListening();
         http_client = new HttpClient("http://localhost:8388");
+        http_client->AddHeader("Authorization", "Basic username:password");
         client = new Client(*http_client);
     }
 
