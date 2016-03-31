@@ -5,6 +5,7 @@
 #undef private
 
 #include <fstream>
+#include <test/flex_tests/mining/MiningRPCServer.h>
 #include "gmock/gmock.h"
 #include "FlexNode.h"
 
@@ -60,6 +61,75 @@ TEST_F(AFlexNode, ThrowsAnExceptionIfNoRPCUsernameOrPasswordAreInTheConfigFile)
     ASSERT_THROW(flexnode.StartRPCServer(), std::runtime_error);
 }
 
+TEST_F(AFlexNode, ProvidesAMiningSeed)
+{
+    uint256 mining_seed = flexnode.MiningSeed();
+}
+
+class AFlexNodeWithAMiningRPCServer : public AFlexNode
+{
+public:
+    HttpAuthServer *mining_http_server;
+    MiningRPCServer *mining_rpc_server;
+    HttpClient *mining_http_client;
+    Client *mining_client;
+
+    virtual void SetUp()
+    {
+        AFlexNode::SetUp();
+        mining_http_server = new HttpAuthServer(8339, "username", "password");
+        mining_rpc_server = new MiningRPCServer(*mining_http_server);
+        mining_rpc_server->StartListening();
+        mining_http_client = new HttpClient("http://localhost:8339");
+        mining_http_client->AddHeader("Authorization", "Basic username:password");
+        mining_client = new Client(*mining_http_client);
+        WriteConfigFile("miningrpcport=8339\n"
+                        "miningrpcuser=username\n"
+                        "miningrpcpassword=password\n"
+                        "rpcuser=flexuser\n"
+                        "rpcpassword=abcd123\n"
+                        "rpcport=8383\n");
+        flexnode.LoadConfig(argc, argv);
+    }
+
+    virtual void TearDown()
+    {
+        AFlexNode::TearDown();
+        mining_rpc_server->StopListening();
+        delete mining_rpc_server;
+        delete mining_http_server;
+        delete mining_client;
+        delete mining_http_client;
+    }
+};
+
+TEST_F(AFlexNodeWithAMiningRPCServer, SetsTheNumberOfMegabytesUsed)
+{
+    flexnode.SetNumberOfMegabytesUsedForMining(1);
+    auto result = mining_client->CallMethod("get_megabytes_used", Json::Value());
+    ASSERT_THAT(result.asInt64(), Eq(1));
+}
+
+TEST_F(AFlexNodeWithAMiningRPCServer, SetsTheNetworkInfo)
+{
+    flexnode.SetMiningNetworkInfo();
+    auto seed_list = mining_client->CallMethod("list_seeds", Json::Value());
+    ASSERT_THAT(seed_list.size(), Eq(1));
+}
+
+TEST_F(AFlexNodeWithAMiningRPCServer, ReceivesTheNewProofNotificationFromTheMiner)
+{
+    flexnode.SetNumberOfMegabytesUsedForMining(1);
+    flexnode.SetMiningNetworkInfo();
+    flexnode.StartRPCServer();
+    mining_client->CallMethod("start_mining", Json::Value());
+    flexnode.StopRPCServer();
+    NetworkSpecificProofOfWork proof = flexnode.GetLatestProofOfWork();
+    ASSERT_THAT(proof.MegabytesUsed(), Eq(1));
+    ASSERT_TRUE(proof.IsValid());
+}
+
+
 class AFlexNodeWithRPCSettings : public AFlexNode
 {
 public:
@@ -94,6 +164,5 @@ TEST_F(AFlexNodeWithRPCSettings, StartsAnRPCServer)
     Json::Value params;
 
     auto result = client->CallMethod("help", params);
-    std::cout << result << endl;
     ASSERT_THAT(result.asString(), Ne(""));
 }

@@ -37,8 +37,6 @@ public:
 
     void SetMemoryUsageInMegabytes(uint32_t number_of_megabytes);
 
-    void MakeRPCCalls();
-
     void InformNetworksOfProofOfWork();
 
     void InformNetworkOfProofOfWork(NetworkMiningInfo info);

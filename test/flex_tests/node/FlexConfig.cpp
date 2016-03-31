@@ -100,6 +100,11 @@ bool FlexConfig::Value(string key, bool default_value)
     return default_value;
 }
 
+bool FlexConfig::Bool(string key, bool default_value)
+{
+    return Value(key, default_value);
+}
+
 uint64_t FlexConfig::Value(string key, uint64_t default_value)
 {
     if (settings.count(key))
@@ -109,6 +114,11 @@ uint64_t FlexConfig::Value(string key, uint64_t default_value)
     return default_value;
 }
 
+uint64_t FlexConfig::Uint64(string key, uint64_t default_value)
+{
+    return Value(key, default_value);
+}
+
 string FlexConfig::Value(string key, string default_value)
 {
     if (settings.count(key))
@@ -116,5 +126,10 @@ string FlexConfig::Value(string key, string default_value)
         return settings[key];
     }
     return default_value;
+}
+
+string FlexConfig::String(string key, string default_value)
+{
+    return Value(key, default_value);
 }
 

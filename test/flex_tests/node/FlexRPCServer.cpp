@@ -1,4 +1,5 @@
 #include "FlexRPCServer.h"
+#include "FlexNode.h"
 
 void FlexRPCServer::BindMethod(const char* method_name,
                                void (FlexRPCServer::*method)(const Json::Value &,Json::Value &))
@@ -23,4 +24,14 @@ void FlexRPCServer::SetNetworkID(const Json::Value& request, Json::Value& respon
     auto network_id_string = request[0].asString();
     network_id = uint256(network_id_string);
     response = "ok";
+}
+
+void FlexRPCServer::NewProof(const Json::Value &request, Json::Value &response)
+{
+    flexnode->latest_proof_of_work = NetworkSpecificProofOfWork(request["proof_base64"].asString());
+}
+
+void FlexRPCServer::SetFlexNode(FlexNode *flexnode_)
+{
+    flexnode = flexnode_;
 }

@@ -68,6 +68,21 @@ public:
                               uint32_t link, uint32_t links_to_check);
 
     TwistWorkCheck SpotCheck();
+
+    uint64_t MegabytesUsed()
+    {
+        int64_t power_of_two = N_factor - 7;
+        if (power_of_two < 0)
+            return 0;
+
+        uint64_t number_of_megabytes = 1;
+        while (power_of_two > 0)
+        {
+            power_of_two /= 2;
+            number_of_megabytes *= 2;
+        }
+        return number_of_megabytes;
+    }
 };
 
 

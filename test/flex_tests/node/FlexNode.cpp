@@ -1,5 +1,8 @@
 #include <openssl/rand.h>
 #include <src/base/base58.h>
+#include <jsonrpccpp/client/connectors/httpclient.h>
+#include <jsonrpccpp/client.h>
+#include <test/flex_tests/mining/NetworkSpecificProofOfWork.h>
 #include "FlexNode.h"
 
 using jsonrpc::HttpAuthServer;
@@ -30,9 +33,10 @@ void FlexNode::StartRPCServer()
     if (config["rpcuser"] == "" or config["rpcpassword"] == "")
         ThrowUsernamePasswordException();
 
-    int port = (int) config.Value("rpcport", (uint64_t)8732);
-    http_server = new HttpAuthServer(port, config["rpcuser"], config["rpcpassword"]);
+    uint64_t port = RPCPort();
+    http_server = new HttpAuthServer((int) port, config["rpcuser"], config["rpcpassword"]);
     rpc_server = new FlexRPCServer(*http_server);
+    rpc_server->SetFlexNode(this);
     rpc_server->StartListening();
 }
 
@@ -42,6 +46,76 @@ void FlexNode::StopRPCServer()
     delete rpc_server;
     delete http_server;
 }
+
+uint256 FlexNode::MiningSeed()
+{
+    return uint256();
+}
+
+std::string FlexNode::MiningAuthorization()
+{
+    return "Basic " + config.String("miningrpcuser") + ":" + config.String("miningrpcpassword");
+}
+
+Json::Value FlexNode::MakeRequestToMiningRPCServer(std::string method, Json::Value& request)
+{
+    jsonrpc::HttpClient http_client("http://localhost:" + config.String("miningrpcport", "8339"));
+    http_client.AddHeader("Authorization", "Basic " + MiningAuthorization());
+    jsonrpc::Client client(http_client);
+    return client.CallMethod(method, request);
+}
+
+uint256 FlexNode::NetworkID()
+{
+    return uint256(config.String("network_id", "1"));
+}
+
+uint160 FlexNode::MiningDifficulty()
+{
+    return 20;
+}
+
+uint64_t FlexNode::RPCPort()
+{
+    return config.Uint64("rpcport", 8732);
+}
+
+std::string FlexNode::ExternalIPAddress()
+{
+    return "localhost";
+}
+
+void FlexNode::SetMiningNetworkInfo()
+{
+    Json::Value request;
+    request["network_id"] = NetworkID().ToString();
+    request["network_port"] = (Json::Value::UInt64)RPCPort();
+    request["network_seed"] = MiningSeed().ToString();
+    request["network_difficulty"] = MiningDifficulty().ToString();
+    request["network_host"] = ExternalIPAddress();
+
+    MakeRequestToMiningRPCServer("set_mining_information", request);
+}
+
+void FlexNode::SetNumberOfMegabytesUsedForMining(uint32_t number_of_megabytes)
+{
+    Json::Value request;
+    request["megabytes_used"] = number_of_megabytes;
+    MakeRequestToMiningRPCServer("set_megabytes_used", request);
+}
+
+NetworkSpecificProofOfWork FlexNode::GetLatestProofOfWork()
+{
+    return latest_proof_of_work;
+}
+
+
+
+
+
+
+
+
 
 
 

@@ -13,6 +13,7 @@
 #undef private
 
 #include <fstream>
+#include <test/flex_tests/node/HttpAuthServer.h>
 
 using namespace ::testing;
 using namespace jsonrpc;
@@ -22,7 +23,7 @@ using namespace std;
 class AMiningRPCServer : public Test
 {
 public:
-    HttpServer *http_server;
+    HttpAuthServer *http_server;
     MiningRPCServer *server;
     HttpClient *http_client;
     Client *client;
@@ -30,10 +31,11 @@ public:
 
     virtual void SetUp()
     {
-        http_server = new HttpServer(8383);
+        http_server = new HttpAuthServer(8383, "username", "password");
         server = new MiningRPCServer(*http_server);
         server->StartListening();
         http_client = new HttpClient("http://localhost:8383");
+        http_client->AddHeader("Authorization", "Basic username:password");
         client = new Client(*http_client);
     }
 
@@ -228,12 +230,13 @@ public:
     virtual void SetUp()
     {
         CreateFiles();
-        http_server = new HttpServer(8389, certificate_file, server_key_file);
+        http_server = new HttpAuthServer(8389, "username", "password", certificate_file, server_key_file);
         server = new MiningRPCServer(*http_server);
         server->StartListening();
         http_client = new HttpClient("https://localhost:8389");
         curl_easy_setopt(http_client->curl, CURLOPT_SSL_VERIFYPEER, 0);
         curl_easy_setopt(http_client->curl, CURLOPT_SSL_VERIFYHOST, 0);
+        http_client->AddHeader("Authorization", "Basic username:password");
         client = new Client(*http_client);
     }
 

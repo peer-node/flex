@@ -3,6 +3,7 @@
 
 #include <jsonrpccpp/server.h>
 #include <jsonrpccpp/server/connectors/httpserver.h>
+#include <test/flex_tests/node/HttpAuthServer.h>
 
 #include "FlexMiner.h"
 #include "NetworkSpecificProofOfWork.h"
@@ -15,7 +16,7 @@ class MiningRPCServer : public jsonrpc::AbstractServer<MiningRPCServer>
 public:
     FlexMiner miner;
 
-    MiningRPCServer(jsonrpc::HttpServer &server) :
+    MiningRPCServer(jsonrpc::HttpAuthServer& server) :
             jsonrpc::AbstractServer<MiningRPCServer>(server)
     {
         BindMethod("version", &MiningRPCServer::SendVersion);

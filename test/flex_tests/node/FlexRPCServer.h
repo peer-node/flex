@@ -8,12 +8,16 @@
 #include "HttpAuthServer.h"
 
 
+class FlexNode;
+
+
 class FlexRPCServer : public jsonrpc::AbstractServer<FlexRPCServer>
 {
 public:
     uint256 network_id;
     std::map<std::string,std::string> headers;
     std::string response{"a response"};
+    FlexNode *flexnode;
 
     FlexRPCServer(jsonrpc::HttpAuthServer &server) :
             jsonrpc::AbstractServer<FlexRPCServer>(server)
@@ -21,14 +25,18 @@ public:
         BindMethod("help", &FlexRPCServer::Help);
         BindMethod("getinfo", &FlexRPCServer::GetInfo);
         BindMethod("setnetworkid", &FlexRPCServer::SetNetworkID);
-
+        BindMethod("new_proof", &FlexRPCServer::NewProof);
     }
+
+    void SetFlexNode(FlexNode *flexnode_);
 
     void Help(const Json::Value& request, Json::Value& response);
 
     void GetInfo(const Json::Value& request, Json::Value& response);
 
     void SetNetworkID(const Json::Value& request, Json::Value& response);
+
+    void NewProof(const Json::Value& request, Json::Value& response);
 
     void BindMethod(const char* method_name,
                     void (FlexRPCServer::*method)(const Json::Value &,Json::Value &));

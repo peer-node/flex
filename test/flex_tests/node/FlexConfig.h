@@ -26,6 +26,12 @@ public:
     uint64_t Value(std::string key, uint64_t default_value);
 
     std::string Value(std::string key, std::string default_value);
+
+    std::string String(std::string key, std::string default_value="");
+
+    uint64_t Uint64(std::string key, uint64_t default_value=0);
+
+    bool Bool(std::string key, bool default_value=false);
 };
 
 

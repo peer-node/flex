@@ -29,6 +29,11 @@ public:
     )
 
     bool IsValid();
+
+    uint64_t MegabytesUsed()
+    {
+        return proof.MegabytesUsed();
+    }
 };
 
 
