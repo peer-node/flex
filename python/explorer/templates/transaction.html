@@ -67,8 +67,33 @@ td {
 
 <p>
 
-{% include "signature.html" %}
-
+<table>
+    <tr>
+        <th>
+            signature
+        </th>
+        <td>
+            <table>
+                <tr>
+                    <td>
+                        exhibit
+                    </td>
+                    <td>
+                        {{ transaction.signature.exhibit }}
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        signature
+                    </td>
+                    <td>
+                        {{ transaction.signature.signature }}
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
 
 <p>
 

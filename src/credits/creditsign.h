@@ -3,10 +3,12 @@
 
 
 #include <openssl/rand.h>
-#include "credits/credits.h"
+#include <openssl/ecdsa.h>
+#include <openssl/obj_mac.h>
+#include "credits/Credit.h"
+#include "credits/SignedTransaction.h"
 #include "database/memdb.h"
 #include "database/data.h"
-#include "crypto/key.h"
 
 #include "log.h"
 #define LOG_CATEGORY "creditsign.h"
@@ -20,13 +22,53 @@ inline uint160 KeyHash(Point key)
     return Hash160(point_bytes);
 }
 
+class CECKey
+{
+private:
+    EC_KEY *pkey;
+
+public:
+    CECKey()
+    {
+        pkey = EC_KEY_new_by_curve_name(NID_secp256k1);
+        assert(pkey != NULL);
+    }
+
+    ~CECKey()
+    {
+        EC_KEY_free(pkey);
+    }
+
+    void GetPubKey(vch_t &pubkey_bytes, bool fCompressed)
+    {
+        EC_KEY_set_conv_form(pkey, fCompressed ? POINT_CONVERSION_COMPRESSED : POINT_CONVERSION_UNCOMPRESSED);
+        int nSize = i2o_ECPublicKey(pkey, NULL);
+        assert(nSize);
+        assert(nSize <= 65);
+        unsigned char c[65];
+        unsigned char *pbegin = c;
+        int nSize2 = i2o_ECPublicKey(pkey, &pbegin);
+        assert(nSize == nSize2);
+        pubkey_bytes.resize(nSize);
+        memcpy(&pubkey_bytes[0], &c[0], nSize);
+    }
+
+    bool SetPubKey(const vch_t &pubkey_bytes)
+    {
+        const unsigned char* pbegin = &pubkey_bytes[0];
+        return o2i_ECPublicKey(&pkey, &pbegin, pubkey_bytes.size());
+    }
+};
+
 inline uint160 FullKeyHash(Point pubkey)
 {
-    CPubKey key(pubkey);
-    key.Decompress();
-    CKeyID keyid = key.GetID();
-    return keyid;
+    vch_t pubkey_bytes = pubkey.getvch();
+    CECKey key;
+    key.SetPubKey(pubkey_bytes);
+    key.GetPubKey(pubkey_bytes, false);
+    return Hash160(pubkey_bytes);
 }
+
 
 inline uint160 Rand160()
 {

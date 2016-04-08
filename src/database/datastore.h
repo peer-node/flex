@@ -16,7 +16,7 @@
 #include <boost/utility/value_init.hpp>
 #include "base/allocators.h"
 #include <openssl/rand.h>
-#include "base/util.h"
+#include "base/util_log.h"
 #include "crypto/uint256.h"
 #include "crypto/hash.h"
 

@@ -1,7 +1,7 @@
 #ifndef FLEX_LOG
 #define FLEX_LOG
 
-#include "base/util.h"
+#include "base/util_log.h"
 #include "define.h"
 
 #ifdef LOG_CATEGORY

@@ -37,6 +37,4 @@ json_spirit::Object GetObjectFromJoin(RelayJoinMessage join);
 
 json_spirit::Object GetObjectFromSuccession(SuccessionMessage succession);
 
-json_spirit::Object GetObjectFromDepositAddressRequest(uint160 request_hash);
-
 #endif
