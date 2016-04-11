@@ -846,7 +846,7 @@ json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_s
 
 
     // Observe safe mode
-    string strWarning = GetWarnings("rpc");
+    string strWarning = "rpc";
     if (strWarning != "" && !GetBoolArg("-disablesafemode", false) &&
         !pcmd->okSafeMode)
         throw JSONRPCError(RPC_FORBIDDEN_BY_SAFE_MODE, string("Safe mode: ") + strWarning);

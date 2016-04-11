@@ -7,6 +7,8 @@
 
 #define COMPLAINT_WAIT_TIME (12 * 1000 * 1000) // 12 seconds
 
+#include "../../test/flex_tests/flex_data/TestData.h"
+
 #include "define.h"
 #include "database/data.h"
 #include <boost/thread.hpp>

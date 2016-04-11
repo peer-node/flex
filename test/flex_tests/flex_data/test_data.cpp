@@ -7,7 +7,7 @@ using namespace ::testing;
 class AMockDataStore : public Test
 {
 public:
-    MockDataStore datastore;
+    MemoryDataStore datastore;
 };
 
 class AMockObject : public Test
@@ -133,7 +133,7 @@ TEST_F(AMockDataStore, ReturnsALocationIterator)
 class ALocationIterator : public Test
 {
 public:
-    MockDataStore datastore;
+    MemoryDataStore datastore;
     LocationIterator scanner;
     uint64_t object;
     uint64_t location;
@@ -242,7 +242,7 @@ TEST_F(AMockDataStore, CanRemoveAnObjectFromALocation)
 class ALocationIteratorWithUint160Locations : public Test
 {
 public:
-    MockDataStore datastore;
+    MemoryDataStore datastore;
     LocationIterator scanner;
     uint160 object;
     uint160 location;

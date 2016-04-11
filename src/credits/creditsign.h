@@ -116,7 +116,7 @@ inline Point GetTransactionVerificationKey(UnsignedTransaction &unsigned_tx)
     return key;
 }
 
-inline Signature SignTx(UnsignedTransaction unsigned_tx)
+inline Signature SignTx(UnsignedTransaction unsigned_tx, MemoryDataStore& keydata)
 {
     uint256 hash_, hash = unsigned_tx.GetHash();
     CBigNum signing_key(0);
@@ -161,11 +161,11 @@ inline Signature SignTx(UnsignedTransaction unsigned_tx)
     return sig;
 }
 
-inline SignedTransaction SignTransaction(UnsignedTransaction unsigned_tx)
+inline SignedTransaction SignTransaction(UnsignedTransaction unsigned_tx, MemoryDataStore& keydata)
 {
     SignedTransaction tx;
     tx.rawtx = unsigned_tx;
-    tx.signature = SignTx(unsigned_tx);
+    tx.signature = SignTx(unsigned_tx, keydata);
     return tx;
 }
 

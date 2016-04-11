@@ -1,6 +1,10 @@
 #ifndef FLEX_UTIL_DATA_H
 #define FLEX_UTIL_DATA_H
 
+#include <boost/filesystem.hpp>
+#include <map>
+#include <string>
+
 boost::filesystem::path GetDefaultDataDir_();
 const boost::filesystem::path GetDataDir_(bool fNetSpecific = true);
 boost::filesystem::path GetConfigFile();

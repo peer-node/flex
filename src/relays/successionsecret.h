@@ -175,7 +175,7 @@ public:
         bool ok = true;
         for (uint32_t i = 0; i < relays.size(); i++)
         {
-            if (!keydata[relays[i]].HasProperty("privkey"))
+            if (not keydata[relays[i]].HasProperty("privkey"))
                 continue;
             
             CBigNum privkey = keydata[relays[i]]["privkey"];

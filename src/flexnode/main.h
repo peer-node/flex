@@ -1,8 +1,3 @@
-// Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2014 The Bitcoin developers
-// Distributed under the MIT/X11 software license, see the accompanying
-// file COPYING or http://www.opensource.org/licenses/mit-license.php.
-
 #ifndef BITCOIN_MAIN_H
 #define BITCOIN_MAIN_H
 
@@ -14,7 +9,6 @@
 
 #include "crypto/bignum.h"
 #include "base/chainparams.h"
-#include "base/core.h"
 #include "net/net.h"
 #include "base/sync.h"
 #include "crypto/uint256.h"
@@ -28,6 +22,7 @@
 #include <utility>
 #include <vector>
 
+#define BLOCK_DOWNLOAD_TIMEOUT 20 // seconds
 
 class CInv;
 
@@ -80,5 +75,68 @@ void Misbehaving(NodeId nodeid, int howmuch);
 struct CNodeStateStats {
     int nMisbehavior;
 };
+
+//////////////////////////////////////////////////////////////////////////////
+//
+// dispatching functions
+//
+
+// These functions dispatch to one or all registered wallets
+
+
+struct CMainSignals {
+    // Notifies listeners about an inventory item being seen on the network.
+    boost::signals2::signal<void (const uint256 &)> Inventory;
+    // Tells listeners to broadcast their data.
+    boost::signals2::signal<void ()> Broadcast;
+};
+
+extern CMainSignals g_signals;
+
+struct QueuedBlock {
+    uint256 hash;
+    int64_t nTime;  // Time of "getdata" request in microseconds.
+    int nQueuedBefore;  // Number of blocks in flight at the time of request.
+};
+
+
+struct CNodeState
+{
+    // Accumulated misbehaviour score for this peer.
+    int nMisbehavior;
+    // Whether this peer should be disconnected and banned.
+    bool fShouldBan;
+    // String name of this peer (debugging/logging purposes).
+    std::string name;
+    // List of asynchronously-determined block rejections to notify this peer about.
+    int nBlocksInFlight;
+    list<QueuedBlock> vBlocksInFlight;
+    list<uint256> vBlocksToDownload;
+    int nBlocksToDownload;
+    int64_t nLastBlockReceive;
+    int64_t nLastBlockProcess;
+
+    CNodeState() {
+        nMisbehavior = 0;
+        fShouldBan = false;
+        nBlocksToDownload = 0;
+        nBlocksInFlight = 0;
+        nLastBlockReceive = 0;
+        nLastBlockProcess = 0;
+    }
+};
+
+CNodeState *StateOfNode(NodeId pnode);
+
+bool AddBlockToQueue(NodeId nodeid, const uint256 &hash);
+void MarkBlockAsReceived(const uint256 &hash, NodeId nodeFrom = -1);
+void MarkBlockAsInFlight(NodeId nodeid, const uint256 &hash);
+void InitializeNode(NodeId nodeid, const CNode *pnode);
+void FinalizeNode(NodeId nodeid);
+
+
+
+bool IsInitialBlockDownload();
+bool AlreadyHave(const CInv& inv);
 
 #endif

@@ -7,8 +7,7 @@
 #include "crypto/uint256.h"
 #include "crypto/bignum.h"
 #include "base/serialize.h"
-#include "database/data.h"
-
+#include "../../test/flex_tests/flex_data/TestData.h"
 
 
 template <typename HASH>
@@ -33,28 +32,30 @@ public:
         disambiguator = xorhash;
     }
 
-    bool RecoverFullHashes()
+    bool RecoverFullHashes(MemoryDataStore& hashdata)
     {
         if (short_hashes.size() > MAX_HASH_ENTRIES)
             return false;
         full_hashes.resize(0);
-        std::vector<std::vector<HASH> > candidates;
+        std::vector<std::vector<HASH> > full_hashes_;
         for (uint32_t i = 0; i < short_hashes.size(); i++)
         {
             std::vector<HASH> matches = hashdata[short_hashes[i]]["matches"];
-            candidates.push_back(matches);
+            full_hashes_.push_back(matches);
         }
 
-        std::vector<uint32_t> choices;
-        choices.resize(short_hashes.size());
-        std::vector<uint32_t> fixed_choices;
-        bool result = FindMatchingChoices(candidates, 
-                                          fixed_choices,
-                                          choices, disambiguator);
-        if (result)
-            for (uint32_t i = 0; i < choices.size(); i++)
-                full_hashes.push_back(candidates[i][choices[i]]);
-        return result;
+        uint64_t number_of_hashes = short_hashes.size();
+
+        std::vector<uint32_t> resulting_matches;
+        resulting_matches.resize(number_of_hashes);
+        std::vector<uint32_t> working_hypothesis;
+        bool successfully_got_result = TheresACorrectMatch(full_hashes_,
+                                                           working_hypothesis,
+                                                           resulting_matches, disambiguator);
+        if (successfully_got_result)
+            for (uint32_t i = 0; i < resulting_matches.size(); i++)
+                full_hashes_.push_back(full_hashes_[i][resulting_matches[i]]);
+        return successfully_got_result;
     }
 
     IMPLEMENT_SERIALIZE
@@ -81,26 +82,25 @@ public:
         return result;
     }
 
-    bool FindMatchingChoices(std::vector<std::vector<HASH> > &hashes,
-                             std::vector<uint32_t> &fixed_choices,
-                             std::vector<uint32_t> &choices,
+    bool TheresACorrectMatch(std::vector<std::vector<HASH> > &full_hashes,
+                             std::vector<uint32_t> &working_hypothesis,
+                             std::vector<uint32_t> &resulting_matches,
                              HASH disambiguator)
     {
-        if (fixed_choices.size() == choices.size())
+        if (working_hypothesis.size() == resulting_matches.size())
         {
-            if (MultiXor(hashes, fixed_choices) == disambiguator)
+            if (MultiXor(full_hashes, working_hypothesis) == disambiguator)
             {
-                choices = fixed_choices;
+                resulting_matches = working_hypothesis;
                 return true;
             }
             return false;
         }
         
-        for (uint32_t j = 0; j < hashes[fixed_choices.size()].size(); j++)
+        for (uint32_t individual_choice = 0; individual_choice < full_hashes[working_hypothesis.size()].size(); individual_choice++)
         {
-            fixed_choices.push_back(j);
-            if (FindMatchingChoices(hashes, fixed_choices, 
-                                    choices, disambiguator))
+            working_hypothesis.push_back(individual_choice);
+            if (TheresACorrectMatch(full_hashes, working_hypothesis, resulting_matches, disambiguator))
                 return true;
         }
         return false;

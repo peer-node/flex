@@ -1,8 +1,3 @@
-// Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2013 The Bitcoin developers
-// Distributed under the MIT/X11 software license, see the accompanying
-// file COPYING or http://www.opensource.org/licenses/mit-license.php.
-
 #ifndef __cplusplus
 # error This header can only be compiled as C++.
 #endif
@@ -41,7 +36,6 @@ class CMessageHeader
              READWRITE(nChecksum);
             )
 
-    // TODO: make private (improves encapsulation)
     public:
         enum {
             COMMAND_SIZE=12,
@@ -90,7 +84,6 @@ class CAddress : public CService
 
         void print() const;
 
-    // TODO: make private (improves encapsulation)
     public:
         uint64_t nServices;
 
@@ -122,7 +115,6 @@ class CInv
         std::string ToString() const;
         void print() const;
 
-    // TODO: make private (improves encapsulation)
     public:
         int type;
         uint256 hash;

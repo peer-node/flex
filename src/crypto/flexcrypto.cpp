@@ -1,16 +1,7 @@
-// Copyright (c) 2015 Flex Developers
-// Distributed under version 3 of the Gnu Affero GPL software license.
-// See the accompanying file COPYING for details.
-
+#include "../../test/flex_tests/flex_data/TestData.h"
 #include <map>
 
 #include <openssl/ecdsa.h>
-#include <openssl/obj_mac.h>
-#include <stdlib.h>
-#include <string.h>
-#include <openssl/aes.h>
-#include <openssl/sha.h>
-#include <openssl/rand.h>
 
 #include "crypto/key.h"
 #include "crypto/point.h"
@@ -19,7 +10,6 @@
 #include "relays/successionsecret.h"
 #include "trade/tradesecret.h"
 #include "deposit/deposit_secret.h"
-#include "base/util.h"
 
 #include "log.h"
 #define LOG_CATEGORY "flexcrypto.cpp"

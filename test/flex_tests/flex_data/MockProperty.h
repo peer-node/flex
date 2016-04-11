@@ -9,8 +9,7 @@ class MockProperty : MockData
 public:
     vch_t serialized_value;
 
-    template <typename VALUE>
-            operator VALUE()
+    template <typename VALUE> operator VALUE()
     {
         VALUE value;
         Deserialize(serialized_value, value);

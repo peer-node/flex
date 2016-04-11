@@ -1,5 +1,6 @@
-#include "base/util.h""
+#include "base/util.h"
 #include "sync.h"
+#include "util_rand.h"
 
 using namespace std;
 

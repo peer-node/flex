@@ -7,9 +7,7 @@
 
 #include "base/ui_interface.h"
 #include "base/util.h"
-
-#include <stdint.h>
-#include <string>
+#include "util_log.h"
 
 static bool noui_ThreadSafeMessageBox(const std::string& message, const std::string& caption, unsigned int style)
 {

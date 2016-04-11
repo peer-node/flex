@@ -52,6 +52,17 @@ public:
         return (*this)[std::string(property_name)];
     }
 
+    template <typename PROPERTY_NAME>
+    bool HasProperty (const PROPERTY_NAME& property_name)
+    {
+        return properties.count(Serialize(property_name));
+    }
+
+    bool HasProperty (const char* property_name)
+    {
+        return HasProperty(std::string(property_name));
+    }
+
     template <typename LOCATION_NAME>
     MockLocation Location(LOCATION_NAME location_name)
     {

@@ -3,7 +3,6 @@
 #include "base/util_args.h"
 #include "ui_interface.h"
 #include "sync.h"
-#include "util_args.h"
 #include "util_data.h"
 #include "util_format.h"
 #include "util_time.h"
@@ -14,11 +13,12 @@ using namespace std;
 
 CClientUIInterface uiInterface;
 bool fDebug = false;
+bool fNoListen = false;
 bool fPrintToConsole = false;
 bool fPrintToDebugLog = true;
 bool fLogTimestamps = false;
 volatile bool fReopenDebugLog = false;
-
+std::string strMiscWarning;
 
 static boost::once_flag debugPrintInitFlag = BOOST_ONCE_INIT;
 // We use boost::call_once() to make sure these are initialized in

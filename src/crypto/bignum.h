@@ -10,6 +10,7 @@
 #include <vector>
 #include <openssl/bn.h>
 #include <stdint.h>
+#include <test/flex_tests/flex_data/MockProperty.h>
 #include "base/serialize.h"
 #include "define.h"
 #include "crypto/uint256.h"
@@ -104,6 +105,11 @@ public:
 
     template<typename N, typename K>
     CBigNum& operator=(const CProperty<K,N> property)
+    {
+        return (*this) = (const CBigNum &)property;
+    }
+
+    CBigNum& operator=(const MockProperty property)
     {
         return (*this) = (const CBigNum &)property;
     }

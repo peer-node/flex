@@ -16,6 +16,7 @@
 #include <vector>
 
 #include <openssl/rand.h>
+#include <src/base/util_time.h>
 
 /** Extended statistics about a CAddress */
 class CAddrInfo : public CAddress

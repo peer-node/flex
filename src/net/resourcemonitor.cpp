@@ -1,3 +1,5 @@
+#include "../../test/flex_tests/flex_data/TestData.h"
+
 #include "flexnode/flexnode.h"
 #include "net/resourcemonitor.h"
 

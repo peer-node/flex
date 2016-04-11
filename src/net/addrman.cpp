@@ -2,10 +2,8 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <src/base/util_rand.h>
 #include "net/addrman.h"
-
-#include "crypto/hash.h"
-#include "base/serialize.h"
 
 using namespace std;
 

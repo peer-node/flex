@@ -3,6 +3,7 @@
 // Copyright (c) 2015 The Flex developers
 // Distributed under version 3 of the Gnu Affero GPL software license, see the accompanying
 // file COPYING 
+#include "../../test/flex_tests/flex_data/TestData.h"
 
 #if defined(HAVE_CONFIG_H)
 #include "flex-config.h"
@@ -29,6 +30,9 @@
 #include <boost/filesystem.hpp>
 #include <boost/interprocess/sync/file_lock.hpp>
 #include <openssl/crypto.h>
+#include <src/base/util_data.h>
+#include <src/base/util_init.h>
+#include <src/base/util_file.h>
 
 #include "flexnode/flexnode.h"
 
@@ -44,7 +48,7 @@ vch_t FLX(strFLX.begin(), strFLX.end());
 
 
 
-CLevelDBWrapper flexdb(GetDataDir() / "db", 1 << 29);
+CLevelDBWrapper flexdb(GetDataDir_() / "db", 1 << 29);
 
 CDataStore msgdata(&flexdb, "m");
 CDataStore guidata(&flexdb, "g");
@@ -299,12 +303,12 @@ std::string HelpMessage(HelpMessageMode hmm)
 struct CImportingNow
 {
     CImportingNow() {
-        assert(fImporting == false);
+        assert(not fImporting);
         fImporting = true;
     }
 
     ~CImportingNow() {
-        assert(fImporting == true);
+        assert(fImporting);
         fImporting = false;
     }
 };
@@ -447,10 +451,10 @@ bool AppInit2(boost::thread_group& threadGroup)
 
     // ********************************************************* Step 4: application initialization: dir lock, daemonize, pidfile, debug log
 
-    std::string strDataDir = GetDataDir().string();
+    std::string strDataDir = GetDataDir_().string();
     printf("got data dir: %s\n", strDataDir.c_str());
-    // Make sure only a single Bitcoin process is using the data directory.
-    boost::filesystem::path pathLockFile = GetDataDir() / ".lock";
+    // Make sure only a single process is using the data directory.
+    boost::filesystem::path pathLockFile = GetDataDir_() / ".lock";
     FILE* file = fopen(pathLockFile.string().c_str(), "a"); // empty lock file; created if it doesn't exist.
     if (file) fclose(file);
     static boost::interprocess::file_lock lock(pathLockFile.string().c_str());
@@ -465,7 +469,7 @@ bool AppInit2(boost::thread_group& threadGroup)
 
     if (!fLogTimestamps)
         LogPrintf("Startup time: %s\n", DateTimeStrFormat("%Y-%m-%d %H:%M:%S", GetTime()));
-    LogPrintf("Default data directory %s\n", GetDefaultDataDir().string());
+    LogPrintf("Default data directory %s\n", GetDefaultDataDir_().string());
     LogPrintf("Using data directory %s\n", strDataDir);
     LogPrintf("Using at most %i connections (%i file descriptors available)\n", nMaxConnections, nFD);
     std::ostringstream strErrors;

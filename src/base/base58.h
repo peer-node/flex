@@ -15,8 +15,6 @@
 #define BITCOIN_BASE58_H
 
 #include "base/chainparams.h"
-#include "crypto/key.h"
-#include "base/script.h"
 
 #include <string>
 

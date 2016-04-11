@@ -1,4 +1,6 @@
-#include "base/util.h""
+#include <boost/foreach.hpp>
+#include <src/crypto/uint256.h>
+#include "base/util_hex.h"
 
 using namespace std;
 

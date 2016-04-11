@@ -1,7 +1,4 @@
-// Copyright (c) 2010 Satoshi Nakamoto
-// Copyright (c) 2009-2014 The Bitcoin developers
-// Distributed under the MIT/X11 software license, see the accompanying
-// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+#include "../../test/flex_tests/flex_data/TestData.h"
 
 #include "net/alert.h"
 
@@ -9,6 +6,7 @@
 #include "net/net.h"
 #include "base/ui_interface.h"
 #include "base/util.h"
+#include "base/util_time.h"
 
 #include <stdint.h>
 #include <algorithm>
@@ -17,6 +15,7 @@
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/foreach.hpp>
+#include <src/base/util_init.h>
 
 using namespace std;
 

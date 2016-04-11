@@ -28,8 +28,13 @@
 #include <boost/foreach.hpp>
 #include <boost/signals2/signal.hpp>
 #include <openssl/rand.h>
+#include <src/base/util_args.h>
+#include <src/base/util_time.h>
+#include <src/base/util_format.h>
+#include <src/base/util_rand.h>
 
-class CAddrMan;
+#include "net/addrman.h"
+
 class CBlockIndex;
 class CNode;
 
@@ -57,6 +62,9 @@ void StartNode(boost::thread_group& threadGroup);
 bool StopNode();
 void SocketSendData(CNode *pnode);
 
+extern CNode* pnodeSync;
+
+
 typedef int NodeId;
 
 // Signals for message handling
@@ -69,7 +77,7 @@ struct CNodeSignals
     boost::signals2::signal<void (NodeId)> FinalizeNode;
 };
 
-
+extern CNodeSignals node_signals;
 CNodeSignals& GetNodeSignals();
 
 
@@ -149,7 +157,8 @@ public:
 
 
 
-class CNetMessage {
+class CNetMessage
+{
 public:
     bool in_data;                   // parsing header (false) or data (true)
 
@@ -771,5 +780,11 @@ public:
     bool Write(const CAddrMan& addr);
     bool Read(CAddrMan& addr);
 };
+
+
+
+CNode* FindNode(const CNetAddr& ip);
+CNode* FindNode(std::string addrName);
+CNode* FindNode(const CService& addr);
 
 #endif

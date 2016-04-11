@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <src/crypto/uint256.h>
 #include "base/util.h"
+#include "util_init.h"
 
 void RandAddSeed()
 {

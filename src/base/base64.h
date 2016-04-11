@@ -1,6 +1,10 @@
 #ifndef FLEX_BASE64_H
 #define FLEX_BASE64_H
 
+#include <string.h>
+#include <string>
+#include <vector>
+
 std::string EncodeBase64(const unsigned char* pch, size_t len);
 
 std::string EncodeBase64(const std::string& str);

@@ -5,14 +5,14 @@
 #include "LocationIterator.h"
 #include "MockDimension.h"
 
-class MockDataStore : MockData
+class MemoryDataStore : MockData
 {
 public:
     std::map<vch_t, MockObject> objects;
     std::map<vch_t, MockDimension> dimensions;
 
     template <typename OBJECT_NAME>
-    MockObject& operator[](const OBJECT_NAME & object_name)
+    MockObject& operator[](const OBJECT_NAME& object_name)
     {
         vch_t serialized_name = Serialize(object_name);
 
@@ -27,12 +27,18 @@ public:
         return (*this)[std::string(object_name)];
     }
 
+    template <typename OBJECT_NAME>
+    void Delete(const OBJECT_NAME& object_name)
+    {
+        objects.erase(Serialize(object_name));
+    }
+
     void Reset();
 
     template <typename LOCATION_NAME>
     ::LocationIterator LocationIterator(LOCATION_NAME location_name)
     {
-        vch_t serialized_location_name = MockDataStore::Serialize(location_name);
+        vch_t serialized_location_name = MemoryDataStore::Serialize(location_name);
 
         if (not dimensions.count(serialized_location_name))
             dimensions[serialized_location_name] = MockDimension();
@@ -48,14 +54,14 @@ public:
     template <typename LOCATION_NAME, typename LOCATION_VALUE>
     void RemoveFromLocation(LOCATION_NAME location_name, LOCATION_VALUE location_value)
     {
-        vch_t serialized_location_name = MockDataStore::Serialize(location_name);
+        vch_t serialized_location_name = MemoryDataStore::Serialize(location_name);
 
         if (not dimensions.count(serialized_location_name))
             return;
 
         MockDimension& dimension = dimensions[serialized_location_name];
 
-        vch_t serialized_location_value = MockDataStore::Serialize(location_value);
+        vch_t serialized_location_value = MemoryDataStore::Serialize(location_value);
 
         if (not dimension.located_serialized_objects.count(serialized_location_value))
             return;

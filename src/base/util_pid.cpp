@@ -1,6 +1,8 @@
 #include "base/util.h"
 #include "ui_interface.h"
 #include "sync.h"
+#include "util_args.h"
+#include "util_data.h"
 #include <set>
 #include <string>
 #include <boost/filesystem/operations.hpp>

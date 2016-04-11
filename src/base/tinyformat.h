@@ -109,6 +109,7 @@ namespace tinyformat {}
 namespace tfm = tinyformat;
 
 // Error handling; calls assert() by default.
+#include <stdexcept>
 #define TINYFORMAT_ERROR(reasonString) throw std::runtime_error(reasonString)
 
 // Define for C++11 variadic templates which make the code shorter & more

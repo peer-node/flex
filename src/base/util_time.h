@@ -2,8 +2,8 @@
 #define FLEX_UTIL_TIME_H
 
 #include <cstdint>
-#include <boost/date_time/posix_time/ptime.hpp>
-#include <boost/date_time/microsec_time_clock.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+//#include <boost/date_time/microsec_time_clock.hpp>
 
 inline void MilliSleep(int64_t n)
 {
@@ -49,5 +49,8 @@ inline int64_t GetTimeMicros()
             boost::posix_time::ptime(boost::gregorian::date(1970,1,1))).total_microseconds();
 }
 
+class CNetAddr;
+
+void AddTimeData(const CNetAddr& ip, int64_t nTime);
 
 #endif //FLEX_UTIL_TIME_H
