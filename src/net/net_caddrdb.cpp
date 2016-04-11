@@ -9,6 +9,7 @@
 #include <src/base/util_file.h>
 #include "addrman.h"
 #include "net.h"
+#include "net_caddrdb.h"
 
 CAddrDB::CAddrDB()
 {

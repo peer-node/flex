@@ -21,6 +21,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <src/net/net_signals.h>
 
 #define BLOCK_DOWNLOAD_TIMEOUT 20 // seconds
 

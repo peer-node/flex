@@ -1,6 +1,7 @@
 #include "../../test/flex_tests/flex_data/TestData.h"
 
 #include "flexnode/main.h"
+#include "net/net_cnode.h"
 
 #include "flexnode/MockInit.h"
 

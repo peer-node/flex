@@ -1,0 +1,6 @@
+#ifndef FLEX_NET_MESSAGEHANDLER_H
+#define FLEX_NET_MESSAGEHANDLER_H
+
+void ThreadMessageHandler();
+
+#endif //FLEX_NET_MESSAGEHANDLER_H

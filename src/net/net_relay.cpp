@@ -1,4 +1,6 @@
 #include "net.h"
+#include "net_cnode.h"
+#include "net_relay.h"
 
 
 void RelayTransaction(const SignedTransaction& tx)

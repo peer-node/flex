@@ -2,6 +2,7 @@
 #include <src/base/util_data.h>
 #include <boost/filesystem/operations.hpp>
 #include <src/base/util_init.h>
+#include <src/net/net_startstop.h>
 #include "main.h"
 
 #include "log.h"

@@ -1,10 +1,13 @@
+#include <src/net/net_services.h>
 #include "../../test/flex_tests/flex_data/TestData.h"
 
 #include "flexnode/main.h"
-
+#include "net/net_cnode.h"
 
 using namespace std;
 using namespace boost;
+
+
 
 #include "log.h"
 #define LOG_CATEGORY "main_send_messages.cpp"

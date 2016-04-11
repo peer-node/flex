@@ -1,3 +1,5 @@
+#include <src/net/net_services.h>
+#include <src/net/net_addresses.h>
 #include "../../test/flex_tests/flex_data/TestData.h"
 
 #include "flexnode/main.h"
@@ -5,6 +7,7 @@
 #include "flexnode/init.h"
 #include "flexnode/MockFlexNode.h"
 #include "net/addrman.h"
+#include "net/net_cnode.h"
 
 
 using namespace std;

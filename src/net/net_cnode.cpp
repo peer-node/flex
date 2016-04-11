@@ -1,5 +1,7 @@
 #include "net.h"
 #include "netbase.h"
+#include "net_cnode.h"
+#include "net_services.h"
 
 
 void CNode::CloseSocketDisconnect()
