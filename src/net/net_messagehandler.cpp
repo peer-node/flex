@@ -1,10 +1,9 @@
 #include <src/base/util_init.h>
 #include "net.h"
 #include "net_cnode.h"
-#include "net_signals.h"
 #include "net_sync.h"
 
-void ThreadMessageHandler()
+void Network::ThreadMessageHandler()
 {
     SetThreadPriority(THREAD_PRIORITY_BELOW_NORMAL);
     while (true)

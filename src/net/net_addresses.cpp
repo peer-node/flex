@@ -2,18 +2,14 @@
 #include "net_services.h"
 #include "net_caddrdb.h"
 
-// Dump addresses to peers.dat every 15 minutes (900s)
 
 
-
-void AddressCurrentlyConnected(const CService& addr)
+void Network::AddressCurrentlyConnected(const CService& addr)
 {
     addrman.Connected(addr);
 }
 
-
-
-void ThreadDNSAddressSeed()
+void Network::ThreadDNSAddressSeed()
 {
     const vector<CDNSSeedData> &vSeeds = Params().DNSSeeds();
     int found = 0;
@@ -44,8 +40,7 @@ void ThreadDNSAddressSeed()
     LogPrintf("%d addresses found from DNS seeds\n", found);
 }
 
-
-void DumpAddresses()
+void Network::DumpAddresses()
 {
     int64_t nStart = GetTimeMillis();
 

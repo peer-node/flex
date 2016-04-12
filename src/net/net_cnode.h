@@ -10,7 +10,6 @@
 #include <src/base/protocol.h>
 #include <src/net/net.h>
 #include "net_cnetmessage.h"
-#include "net_signals.h"
 
 /** Information about a peer */
 class CNode
@@ -95,7 +94,11 @@ public:
     int64_t nPingUsecTime;
     bool fPingQueued;
 
-    CNode(SOCKET hSocketIn, CAddress addrIn, std::string addrNameIn = "", bool fInboundIn=false) : ssSend(SER_NETWORK, INIT_PROTO_VERSION), setAddrKnown(5000)
+    // Network
+    Network& network;
+
+    CNode(Network& networkIn, SOCKET hSocketIn, CAddress addrIn, std::string addrNameIn = "", bool fInboundIn=false) :
+            ssSend(SER_NETWORK, INIT_PROTO_VERSION), setAddrKnown(5000), network(networkIn)
     {
         nServices = 0;
         hSocket = hSocketIn;
@@ -133,15 +136,15 @@ public:
         fPingQueued = false;
 
         {
-            LOCK(cs_nLastNodeId);
-            id = nLastNodeId++;
+            LOCK(network.cs_nLastNodeId);
+            id = network.nLastNodeId++;
         }
 
         // Be shy and don't send version until we hear
         if (hSocket != INVALID_SOCKET && !fInbound)
             PushVersion();
 
-        GetNodeSignals().InitializeNode(GetId(), this);
+        network.GetNodeSignals().InitializeNode(GetId(), this);
 
     }
 
@@ -154,7 +157,7 @@ public:
         }
         if (pfilter)
             delete pfilter;
-        GetNodeSignals().FinalizeNode(GetId());
+        network.GetNodeSignals().FinalizeNode(GetId());
     }
 
 private:
@@ -249,8 +252,8 @@ public:
         // We're using mapAskFor as a priority queue,
         // the key is the earliest time the request can be sent
         int64_t nRequestTime;
-        limitedmap<CInv, int64_t>::const_iterator it = mapAlreadyAskedFor.find(inv);
-        if (it != mapAlreadyAskedFor.end())
+        limitedmap<CInv, int64_t>::const_iterator it = network.mapAlreadyAskedFor.find(inv);
+        if (it != network.mapAlreadyAskedFor.end())
             nRequestTime = it->second;
         else
             nRequestTime = 0;
@@ -265,16 +268,13 @@ public:
 
         // Each retry is 2 minutes after the last
         nRequestTime = std::max(nRequestTime + 2 * 60 * 1000000, nNow);
-        if (it != mapAlreadyAskedFor.end())
-            mapAlreadyAskedFor.update(it, nRequestTime);
+        if (it != network.mapAlreadyAskedFor.end())
+            network.mapAlreadyAskedFor.update(it, nRequestTime);
         else
-            mapAlreadyAskedFor.insert(std::make_pair(inv, nRequestTime));
+            network.mapAlreadyAskedFor.insert(std::make_pair(inv, nRequestTime));
         mapAskFor.insert(std::make_pair(nRequestTime, inv));
     }
 
-
-
-    // TODO: Document the postcondition of this function.  Is cs_vSend locked?
     void BeginMessage(const char* pszCommand) EXCLUSIVE_LOCK_FUNCTION(cs_vSend)
     {
         ENTER_CRITICAL_SECTION(cs_vSend);
@@ -283,7 +283,6 @@ public:
         LogPrint("net", "sending: %s ", pszCommand);
     }
 
-    // TODO: Document the precondition of this function.  Is cs_vSend locked?
     void AbortMessage() UNLOCK_FUNCTION(cs_vSend)
     {
         ssSend.clear();
@@ -293,13 +292,12 @@ public:
         LogPrint("net", "(aborted)\n");
     }
 
-    // TODO: Document the precondition of this function.  Is cs_vSend locked?
     void EndMessage() UNLOCK_FUNCTION(cs_vSend)
     {
         // The -*messagestest options are intentionally not documented in the help message,
         // since they are only used during development to debug the networking code and are
         // not intended for end-users.
-        if (mapArgs.count("-dropmessagestest") && GetRand(GetArg("-dropmessagestest", 2)) == 0)
+        if (mapArgs.count("-dropmessagestest") && GetRand((uint64_t) GetArg("-dropmessagestest", 2)) == 0)
         {
             LogPrint("net", "dropmessages DROPPING SEND MESSAGE\n");
             AbortMessage();
@@ -312,15 +310,15 @@ public:
             return;
 
         // Set the size
-        unsigned int nSize = ssSend.size() - CMessageHeader::HEADER_SIZE;
-        memcpy((char*)&ssSend[CMessageHeader::MESSAGE_SIZE_OFFSET], &nSize, sizeof(nSize));
+        unsigned int nSize = (unsigned int) (ssSend.size() - CMessageHeader::HEADER_SIZE);
+        memcpy(&ssSend[CMessageHeader::MESSAGE_SIZE_OFFSET], &nSize, sizeof(nSize));
 
         // Set the checksum
         uint256 hash = Hash(ssSend.begin() + CMessageHeader::HEADER_SIZE, ssSend.end());
         unsigned int nChecksum = 0;
         memcpy(&nChecksum, &hash, sizeof(nChecksum));
         assert(ssSend.size () >= CMessageHeader::CHECKSUM_OFFSET + sizeof(nChecksum));
-        memcpy((char*)&ssSend[CMessageHeader::CHECKSUM_OFFSET], &nChecksum, sizeof(nChecksum));
+        memcpy(&ssSend[CMessageHeader::CHECKSUM_OFFSET], &nChecksum, sizeof(nChecksum));
 
         LogPrint("net", "(%d bytes)\n", nSize);
 
@@ -330,7 +328,7 @@ public:
 
         // If write queue empty, attempt "optimistic write"
         if (it == vSendMsg.begin())
-            SocketSendData(this);
+            network.SocketSendData(this);
 
         LEAVE_CRITICAL_SECTION(cs_vSend);
     }
@@ -560,12 +558,5 @@ public:
 };
 
 
-
-CNode* FindNode(const CNetAddr& ip);
-CNode* FindNode(std::string addrName);
-CNode* FindNode(const CService& addr);
-
-
-CNode* ConnectNode(CAddress addrConnect, const char *strDest = NULL);
 
 #endif //FLEX_NET_CNODE_H

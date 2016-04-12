@@ -60,8 +60,8 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
         if (!IsInitialBlockDownload() && (GetTime() - nLastRebroadcast > 24 * 60 * 60))
         {
             {
-                LOCK(cs_vNodes);
-                BOOST_FOREACH(CNode* pnode, vNodes)
+                LOCK(network.cs_vNodes);
+                BOOST_FOREACH(CNode* pnode, network.vNodes)
                 {
                     // Periodically clear setAddrKnown to allow refresh broadcasts
                     if (nLastRebroadcast)
@@ -70,7 +70,7 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
                     // Rebroadcast our address
                     if (!fNoListen)
                     {
-                        CAddress addr = GetLocalAddress(&pnode->addr);
+                        CAddress addr = network.GetLocalAddress(&pnode->addr);
                         if (addr.IsRoutable())
                             pnode->PushAddress(addr);
                     }

@@ -9,7 +9,7 @@ set<CNetAddr> setservAddNodeAddresses;
 CCriticalSection cs_setservAddNodeAddresses;
 
 
-void ThreadOpenConnections()
+void Network::ThreadOpenConnections()
 {
     // Connect to specific addresses
     if (mapArgs.count("-connect") && mapMultiArgs["-connect"].size() > 0)
@@ -109,7 +109,7 @@ void ThreadOpenConnections()
     }
 }
 
-void ThreadOpenAddedConnections()
+void Network::ThreadOpenAddedConnections()
 {
     {
         LOCK(cs_vAddedNodes);
@@ -182,7 +182,7 @@ void ThreadOpenAddedConnections()
 }
 
 // if successful, this moves the passed grant to the constructed node
-bool OpenNetworkConnection(const CAddress& addrConnect, CSemaphoreGrant *grantOutbound, const char *strDest, bool fOneShot)
+bool Network::OpenNetworkConnection(const CAddress& addrConnect, CSemaphoreGrant *grantOutbound, const char *strDest, bool fOneShot)
 {
     //
     // Initiate outbound network connection

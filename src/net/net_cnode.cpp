@@ -20,8 +20,8 @@ void CNode::CloseSocketDisconnect()
         vRecvMsg.clear();
 
     // if this was the sync node, we'll need a new one
-    if (this == pnodeSync)
-        pnodeSync = NULL;
+    if (this == network.pnodeSync)
+        network.pnodeSync = NULL;
 }
 
 void CNode::Cleanup()
@@ -31,16 +31,16 @@ void CNode::Cleanup()
 
 void CNode::PushVersion()
 {
-    int nBestHeight = node_signals.GetHeight().get_value_or(0);
+    int nBestHeight = network.node_signals.GetHeight().get_value_or(0);
 
     /// when NTP implemented, change to just nTime = GetAdjustedTime()
     int64_t nTime = (fInbound ? GetAdjustedTime() : GetTime());
     CAddress addrYou = (addr.IsRoutable() && !IsProxy(addr) ? addr : CAddress(CService("0.0.0.0",0)));
-    CAddress addrMe = GetLocalAddress(&addr);
-    RAND_bytes((unsigned char*)&nLocalHostNonce, sizeof(nLocalHostNonce));
+    CAddress addrMe = network.GetLocalAddress(&addr);
+    RAND_bytes((unsigned char*)&network.nLocalHostNonce, sizeof(network.nLocalHostNonce));
     LogPrint("net", "send version message: version %d, blocks=%d, us=%s, them=%s, peer=%s\n", PROTOCOL_VERSION, nBestHeight, addrMe.ToString(), addrYou.ToString(), addr.ToString());
-    PushMessage("version", 70002, nLocalServices, nTime, addrYou, addrMe,
-                nLocalHostNonce, FormatSubVersion(CLIENT_NAME, CLIENT_VERSION, std::vector<string>()), nBestHeight, true);
+    PushMessage("version", 70002, network.nLocalServices, nTime, addrYou, addrMe,
+                network.nLocalHostNonce, FormatSubVersion(CLIENT_NAME, CLIENT_VERSION, std::vector<string>()), nBestHeight, true);
 }
 
 
@@ -98,7 +98,7 @@ void CNode::copyStats(CNodeStats &stats)
     X(nStartingHeight);
     X(nSendBytes);
     X(nRecvBytes);
-    stats.fSyncNode = (this == pnodeSync);
+    stats.fSyncNode = (this == network.pnodeSync);
 
     // It is common for nodes with good ping times to suddenly become lagged,
     // due to a new block arriving or other large transfer.
@@ -217,7 +217,7 @@ uint64_t CNode::nTotalBytesSent = 0;
 CCriticalSection CNode::cs_totalBytesRecv;
 CCriticalSection CNode::cs_totalBytesSent;
 
-CNode* FindNode(const CNetAddr& ip)
+CNode* Network::FindNode(const CNetAddr& ip)
 {
     LOCK(cs_vNodes);
     BOOST_FOREACH(CNode* pnode, vNodes)
@@ -226,7 +226,7 @@ CNode* FindNode(const CNetAddr& ip)
     return NULL;
 }
 
-CNode* FindNode(std::string addrName)
+CNode* Network::FindNode(std::string addrName)
 {
     LOCK(cs_vNodes);
     BOOST_FOREACH(CNode* pnode, vNodes)
@@ -235,7 +235,7 @@ CNode* FindNode(std::string addrName)
     return NULL;
 }
 
-CNode* FindNode(const CService& addr)
+CNode* Network::FindNode(const CService& addr)
 {
     LOCK(cs_vNodes);
     BOOST_FOREACH(CNode* pnode, vNodes)
@@ -244,7 +244,7 @@ CNode* FindNode(const CService& addr)
     return NULL;
 }
 
-CNode* ConnectNode(CAddress addrConnect, const char *pszDest)
+CNode* Network::ConnectNode(CAddress addrConnect, const char *pszDest)
 {
     if (pszDest == NULL) {
         if (IsLocal(addrConnect))
@@ -287,7 +287,7 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest)
 #endif
 
         // Add node
-        CNode* pnode = new CNode(hSocket, addrConnect, pszDest ? pszDest : "", false);
+        CNode* pnode = new CNode(network, hSocket, addrConnect, pszDest ? pszDest : "", false);
         pnode->AddRef();
 
         {

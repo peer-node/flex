@@ -27,9 +27,9 @@ void Shutdown()
     if (!lockShutdown) return;
 
     RenameThread("flex-shutoff");
-    StopNode();
+    network.StopNode();
 
-    UnregisterNodeSignals(GetNodeSignals());
+    UnregisterNodeSignals(network.GetNodeSignals());
     {
         LOCK(cs_main);
     }

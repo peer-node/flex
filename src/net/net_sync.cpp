@@ -3,12 +3,12 @@
 
 // for now, use a very simple selection metric: the node from which we received
 // most recently
-int64_t NodeSyncScore(const CNode *pnode) 
+int64_t Network::NodeSyncScore(const CNode *pnode)
 {
     return pnode->nLastRecv;
 }
 
-void StartSync(const vector<CNode*> &vNodes) 
+void Network::StartSync(const vector<CNode*> &vNodes)
 {
     CNode *pnodeNewSync = NULL;
     int64_t nBestScore = 0;

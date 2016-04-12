@@ -3,12 +3,12 @@
 #include "net_relay.h"
 
 
-void RelayTransaction(const SignedTransaction& tx)
+void Network::RelayTransaction(const SignedTransaction& tx)
 {
     RelayTransaction(tx, tx.GetHash());
 }
 
-void RelayTransaction(const SignedTransaction& tx, const uint256& hash)
+void Network::RelayTransaction(const SignedTransaction& tx, const uint256& hash)
 {
     CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
     ss.reserve(10000);
@@ -16,7 +16,7 @@ void RelayTransaction(const SignedTransaction& tx, const uint256& hash)
     RelayTransaction(tx, hash, ss);
 }
 
-void RelayTransaction(const SignedTransaction& tx, const uint256& hash,
+void Network::RelayTransaction(const SignedTransaction& tx, const uint256& hash,
                       const CDataStream& ss)
 {
     CInv inv(MSG_TX, hash);
@@ -44,7 +44,7 @@ void RelayTransaction(const SignedTransaction& tx, const uint256& hash,
     }
 }
 
-void TellNodeAboutTransaction(CNode* pnode,
+void Network::TellNodeAboutTransaction(CNode* pnode,
                               const SignedTransaction& tx)
 {
     uint256 hash = tx.GetHash();
@@ -61,8 +61,7 @@ void TellNodeAboutTransaction(CNode* pnode,
     }
 }
 
-
-void RelayMinedCredit(const MinedCreditMessage& message)
+void Network::RelayMinedCredit(const MinedCreditMessage& message)
 {
     CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
     ss.reserve(10000);
@@ -72,7 +71,7 @@ void RelayMinedCredit(const MinedCreditMessage& message)
     RelayMinedCredit(message, hash, ss);
 }
 
-void RelayMinedCredit(const MinedCreditMessage& message, const uint256& hash,
+void Network::RelayMinedCredit(const MinedCreditMessage& message, const uint256& hash,
                       const CDataStream& ss)
 {
     CInv inv(MSG_BLOCK, hash);
@@ -97,7 +96,7 @@ void RelayMinedCredit(const MinedCreditMessage& message, const uint256& hash,
     }
 }
 
-void RelayMessage(const CDataStream& ss, int type)
+void Network::RelayMessage(const CDataStream& ss, int type)
 {
     uint256 hash = Hash(ss.begin(), ss.end());
     CInv inv(type, hash);
@@ -122,18 +121,18 @@ void RelayMessage(const CDataStream& ss, int type)
     }
 }
 
-void RelayTradeMessage(const CDataStream& ss)
+void Network::RelayTradeMessage(const CDataStream& ss)
 {
     RelayMessage(ss, MSG_TRADE);
 }
 
-void RelayDepositMessage(const CDataStream& ss)
+void Network::RelayDepositMessage(const CDataStream& ss)
 {
     log_ << "Relaying deposit message: " << ss.str() << "\n";
     RelayMessage(ss, MSG_DEPOSIT);
 }
 
-void RelayRelayMessage(const CDataStream& ss)
+void Network::RelayRelayMessage(const CDataStream& ss)
 {
     RelayMessage(ss, MSG_RELAY);
 }

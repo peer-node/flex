@@ -35,7 +35,7 @@ bool fNameLookup = false;
 
 static const unsigned char pchIPv4[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff };
 
-enum Network ParseNetwork(std::string net) {
+enum NetworkType ParseNetwork(std::string net) {
     boost::to_lower(net);
     if (net == "ipv4") return NET_IPV4;
     if (net == "ipv6") return NET_IPV6;
@@ -419,7 +419,7 @@ bool static ConnectSocketDirectly(const CService &addrConnect, SOCKET& hSocketRe
     return true;
 }
 
-bool SetProxy(enum Network net, CService addrProxy, int nSocksVersion) {
+bool SetProxy(enum NetworkType net, CService addrProxy, int nSocksVersion) {
     assert(net >= 0 && net < NET_MAX);
     if (nSocksVersion != 0 && nSocksVersion != 4 && nSocksVersion != 5)
         return false;
@@ -430,7 +430,7 @@ bool SetProxy(enum Network net, CService addrProxy, int nSocksVersion) {
     return true;
 }
 
-bool GetProxy(enum Network net, proxyType &proxyInfoOut) {
+bool GetProxy(enum NetworkType net, proxyType &proxyInfoOut) {
     assert(net >= 0 && net < NET_MAX);
     LOCK(cs_proxyInfos);
     if (!proxyInfo[net].second)
@@ -736,7 +736,7 @@ bool CNetAddr::IsRoutable() const
     return IsValid() && !(IsRFC1918() || IsRFC3927() || IsRFC4862() || (IsRFC4193() && !IsTor()) || IsRFC4843() || IsLocal());
 }
 
-enum Network CNetAddr::GetNetwork() const
+enum NetworkType CNetAddr::GetNetwork() const
 {
     if (!IsRoutable())
         return NET_UNROUTABLE;

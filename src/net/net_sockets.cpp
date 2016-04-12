@@ -5,10 +5,10 @@
 #include "net_startstop.h"
 #include "net_services.h"
 
-std::vector<SOCKET> vhListenSocket;
+
 
 // requires LOCK(cs_vSend)
-void SocketSendData(CNode *pnode)
+void Network::SocketSendData(CNode *pnode)
 {
     std::deque<CSerializeData>::iterator it = pnode->vSendMsg.begin();
 
@@ -52,7 +52,7 @@ void SocketSendData(CNode *pnode)
 }
 
 
-void ThreadSocketHandler()
+void Network::ThreadSocketHandler()
 {
     unsigned int nPrevNodeCount = 0;
     while (true)
@@ -245,7 +245,7 @@ void ThreadSocketHandler()
             else
             {
                 LogPrint("net", "accepted connection %s\n", addr.ToString());
-                CNode* pnode = new CNode(hSocket, addr, "", true);
+                CNode* pnode = new CNode(*this, hSocket, addr, "", true);
                 pnode->AddRef();
                 {
                     LOCK(cs_vNodes);
@@ -360,7 +360,7 @@ void ThreadSocketHandler()
 }
 
 
-bool BindListenPort(const CService &addrBind, string& strError)
+bool Network::BindListenPort(const CService &addrBind, string& strError)
 {
     strError = "";
     int nOne = 1;

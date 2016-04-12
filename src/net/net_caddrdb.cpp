@@ -1,10 +1,3 @@
-
-
-
-//
-// CAddrDB
-//
-
 #include <src/base/util_data.h>
 #include <src/base/util_file.h>
 #include "addrman.h"

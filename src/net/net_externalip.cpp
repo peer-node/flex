@@ -1,8 +1,9 @@
 #include "net.h"
 #include "net_services.h"
+#include "net_externalip.h"
 
 
-bool GetMyExternalIP2(const CService& addrConnect, const char* pszGet, const char* pszKeyword, CNetAddr& ipRet)
+bool Network::GetMyExternalIP2(const CService& addrConnect, const char* pszGet, const char* pszKeyword, CNetAddr& ipRet)
 {
     return false;
     SOCKET hSocket;
@@ -49,7 +50,7 @@ bool GetMyExternalIP2(const CService& addrConnect, const char* pszGet, const cha
     return error("GetMyExternalIP() : connection closed");
 }
 
-bool GetMyExternalIP(CNetAddr& ipRet)
+bool Network::GetMyExternalIP(CNetAddr& ipRet)
 {
     return false;
     CService addrConnect;
@@ -109,7 +110,7 @@ bool GetMyExternalIP(CNetAddr& ipRet)
     return false;
 }
 
-void ThreadGetMyExternalIP()
+void Network::ThreadGetMyExternalIP()
 {
     CNetAddr addrLocalHost;
     if (GetMyExternalIP(addrLocalHost))

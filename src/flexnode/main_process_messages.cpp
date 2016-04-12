@@ -66,9 +66,9 @@ void static ProcessGetData(CNode* pfrom)
                 // Send stream from relay memory
                 bool pushed = false;
                 {
-                    LOCK(cs_mapRelay);
-                    map<CInv, CDataStream>::iterator mi = mapRelay.find(inv);
-                    if (mi != mapRelay.end()) {
+                    LOCK(network.cs_mapRelay);
+                    map<CInv, CDataStream>::iterator mi = network.mapRelay.find(inv);
+                    if (mi != network.mapRelay.end()) {
                         pfrom->PushMessage(inv.GetCommand(), (*mi).second);
                         pushed = true;
                     }
@@ -166,11 +166,11 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         if (pfrom->fInbound && addrMe.IsRoutable())
         {
             pfrom->addrLocal = addrMe;
-            SeenLocal(addrMe);
+            network.SeenLocal(addrMe);
         }
 
         // Disconnect if we connected to ourself
-        if (nNonce == nLocalHostNonce && nNonce > 1)
+        if (nNonce == network.nLocalHostNonce && nNonce > 1)
         {
             log_ << "connected to self at " << pfrom->addr
                  << "; disconnecting\n";
@@ -196,23 +196,23 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
             // Advertise our address
             if (!fNoListen)
             {
-                CAddress addr = GetLocalAddress(&pfrom->addr);
+                CAddress addr = network.GetLocalAddress(&pfrom->addr);
                 if (addr.IsRoutable())
                     pfrom->PushAddress(addr);
             }
 
             // Get recent addresses
-            if (pfrom->fOneShot || pfrom->nVersion >= CADDR_TIME_VERSION || addrman.size() < 1000)
+            if (pfrom->fOneShot || pfrom->nVersion >= CADDR_TIME_VERSION || network.addrman.size() < 1000)
             {
                 pfrom->PushMessage("getaddr");
                 pfrom->fGetAddr = true;
             }
-            addrman.Good(pfrom->addr);
+            network.addrman.Good(pfrom->addr);
         } else {
             if (((CNetAddr)pfrom->addr) == (CNetAddr)addrFrom)
             {
-                addrman.Add(addrFrom, addrFrom);
-                addrman.Good(addrFrom);
+                network.addrman.Add(addrFrom, addrFrom);
+                network.addrman.Good(addrFrom);
             }
         }
 
@@ -247,7 +247,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         vRecv >> vAddr;
 
         // Don't want addr from older versions unless seeding
-        if (pfrom->nVersion < CADDR_TIME_VERSION && addrman.size() > 1000)
+        if (pfrom->nVersion < CADDR_TIME_VERSION && network.addrman.size() > 1000)
             return true;
         if (vAddr.size() > 1000)
         {
@@ -266,12 +266,12 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
             if (addr.nTime <= 100000000 || addr.nTime > nNow + 10 * 60)
                 addr.nTime = (unsigned int) (nNow - 5 * 24 * 60 * 60);
             pfrom->AddAddressKnown(addr);
-            bool fReachable = IsReachable(addr);
+            bool fReachable = network.IsReachable(addr);
             if (addr.nTime > nSince && !pfrom->fGetAddr && vAddr.size() <= 10 && addr.IsRoutable())
             {
                 // Relay to a limited number of other nodes
                 {
-                    LOCK(cs_vNodes);
+                    LOCK(network.cs_vNodes);
                     // Use deterministic randomness to send to the same nodes for 24 hours
                     // at a time so the setAddrKnowns of the chosen nodes prevent repeats
                     static uint256 hashSalt;
@@ -281,7 +281,8 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                     uint256 hashRand = hashSalt ^ (hashAddr<<32) ^ ((GetTime()+hashAddr)/(24*60*60));
                     hashRand = Hash(BEGIN(hashRand), END(hashRand));
                     multimap<uint256, CNode*> mapMix;
-                    BOOST_FOREACH(CNode* pnode, vNodes)
+
+                    for (auto pnode : network.vNodes)
                     {
                         if (pnode->nVersion < CADDR_TIME_VERSION)
                             continue;
@@ -300,7 +301,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
             if (fReachable)
                 vAddrOk.push_back(addr);
         }
-        addrman.Add(vAddrOk, pfrom->addr, 2 * 60 * 60);
+        network.addrman.Add(vAddrOk, pfrom->addr, 2 * 60 * 60);
         if (vAddr.size() < 1000)
             pfrom->fGetAddr = false;
         if (pfrom->fOneShot)
@@ -371,7 +372,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
     else if (strCommand == "getaddr")
     {
         pfrom->vAddrToSend.clear();
-        vector<CAddress> vAddr = addrman.GetAddr();
+        vector<CAddress> vAddr = network.addrman.GetAddr();
         BOOST_FOREACH(const CAddress &addr, vAddr)
             pfrom->PushAddress(addr);
     }
@@ -463,7 +464,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
     // Update the last seen time for this node's address
     if (pfrom->fNetworkNode)
         if (strCommand == "version" || strCommand == "addr" || strCommand == "inv" || strCommand == "getdata" || strCommand == "ping")
-            AddressCurrentlyConnected(pfrom->addr);
+            network.AddressCurrentlyConnected(pfrom->addr);
 
 
     return true;

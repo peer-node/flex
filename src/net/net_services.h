@@ -18,22 +18,4 @@ enum
 };
 
 
-void AddOneShot(std::string strDest);
-bool RecvLine(SOCKET hSocket, std::string& strLine);
-
-void ProcessOneShot();
-
-void SetLimited(enum Network net, bool fLimited = true);
-bool IsLimited(enum Network net);
-bool IsLimited(const CNetAddr& addr);
-bool AddLocal(const CService& addr, int nScore = LOCAL_NONE);
-bool AddLocal(const CNetAddr& addr, int nScore = LOCAL_NONE);
-bool SeenLocal(const CService& addr);
-bool IsLocal(const CService& addr);
-bool GetLocal(CService &addr, const CNetAddr *paddrPeer = NULL);
-bool IsReachable(const CNetAddr &addr);
-void SetReachable(enum Network net, bool fFlag = true);
-CAddress GetLocalAddress(const CNetAddr *paddrPeer = NULL);
-
-
 #endif //FLEX_NET_SERVICES_H

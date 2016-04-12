@@ -23,7 +23,7 @@ extern int nConnectTimeout;
 #undef SetPort
 #endif
 
-enum Network
+enum NetworkType
 {
     NET_UNROUTABLE,
     NET_IPV4,
@@ -67,7 +67,7 @@ class CNetAddr
         bool IsRoutable() const;
         bool IsValid() const;
         bool IsMulticast() const;
-        enum Network GetNetwork() const;
+        enum NetworkType GetNetwork() const;
         std::string ToString() const;
         std::string ToStringIP() const;
         unsigned int GetByte(int n) const;
@@ -135,10 +135,10 @@ class CService : public CNetAddr
 
 typedef std::pair<CService, int> proxyType;
 
-enum Network ParseNetwork(std::string net);
+enum NetworkType ParseNetwork(std::string net);
 void SplitHostPort(std::string in, int &portOut, std::string &hostOut);
-bool SetProxy(enum Network net, CService addrProxy, int nSocksVersion = 5);
-bool GetProxy(enum Network net, proxyType &proxyInfoOut);
+bool SetProxy(enum NetworkType net, CService addrProxy, int nSocksVersion = 5);
+bool GetProxy(enum NetworkType net, proxyType &proxyInfoOut);
 bool IsProxy(const CNetAddr &addr);
 bool SetNameProxy(CService addrProxy, int nSocksVersion = 5);
 bool HaveNameProxy();

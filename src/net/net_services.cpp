@@ -3,35 +3,31 @@
 #include "net_services.h"
 #include "net_connections.h"
 
-static deque<string> vOneShots;
-CCriticalSection cs_vOneShots;
 
-static bool vfReachable[NET_MAX] = {};
-static bool vfLimited[NET_MAX] = {};
 
 
 /** check whether a given address is in a network we can probably connect to */
-bool IsReachable(const CNetAddr& addr)
+bool Network::IsReachable(const CNetAddr& addr)
 {
     LOCK(cs_mapLocalHost);
-    enum Network net = addr.GetNetwork();
+    enum NetworkType net = addr.GetNetwork();
     return vfReachable[net] && !vfLimited[net];
 }
 
 
-void AddOneShot(string strDest)
+void Network::AddOneShot(string strDest)
 {
     LOCK(cs_vOneShots);
     vOneShots.push_back(strDest);
 }
 
-unsigned short GetListenPort()
+unsigned short Network::GetListenPort()
 {
     return (unsigned short)(GetArg("-port", Params().GetDefaultPort()));
 }
 
 // find 'best' local address for a particular peer
-bool GetLocal(CService& addr, const CNetAddr *paddrPeer)
+bool Network::GetLocal(CService& addr, const CNetAddr *paddrPeer)
 {
     if (fNoListen)
         return false;
@@ -56,7 +52,7 @@ bool GetLocal(CService& addr, const CNetAddr *paddrPeer)
 }
 
 // get best local address for a particular peer as a CAddress
-CAddress GetLocalAddress(const CNetAddr *paddrPeer)
+CAddress Network::GetLocalAddress(const CNetAddr *paddrPeer)
 {
     CAddress ret(CService("0.0.0.0",0),0);
     CService addr;
@@ -69,7 +65,7 @@ CAddress GetLocalAddress(const CNetAddr *paddrPeer)
     return ret;
 }
 
-bool RecvLine(SOCKET hSocket, string& strLine)
+bool Network::RecvLine(SOCKET hSocket, string& strLine)
 {
     strLine = "";
     while (true)
@@ -121,7 +117,7 @@ bool RecvLine(SOCKET hSocket, string& strLine)
 
 // used when scores of local addresses may have changed
 // pushes better local address to peers
-void static AdvertizeLocal()
+void Network::AdvertizeLocal()
 {
     LOCK(cs_vNodes);
     BOOST_FOREACH(CNode* pnode, vNodes)
@@ -138,7 +134,7 @@ void static AdvertizeLocal()
     }
 }
 
-void SetReachable(enum Network net, bool fFlag)
+void Network::SetReachable(enum NetworkType net, bool fFlag)
 {
     LOCK(cs_mapLocalHost);
     vfReachable[net] = fFlag;
@@ -147,7 +143,7 @@ void SetReachable(enum Network net, bool fFlag)
 }
 
 // learn a new local address
-bool AddLocal(const CService& addr, int nScore)
+bool Network::AddLocal(const CService& addr, int nScore)
 {
     if (!addr.IsRoutable())
         return false;
@@ -176,13 +172,13 @@ bool AddLocal(const CService& addr, int nScore)
     return true;
 }
 
-bool AddLocal(const CNetAddr &addr, int nScore)
+bool Network::AddLocal(const CNetAddr &addr, int nScore)
 {
     return AddLocal(CService(addr, GetListenPort()), nScore);
 }
 
 /** Make a particular network entirely off-limits (no automatic connects to it) */
-void SetLimited(enum Network net, bool fLimited)
+void Network::SetLimited(enum NetworkType net, bool fLimited)
 {
     if (net == NET_UNROUTABLE)
         return;
@@ -190,19 +186,19 @@ void SetLimited(enum Network net, bool fLimited)
     vfLimited[net] = fLimited;
 }
 
-bool IsLimited(enum Network net)
+bool Network::IsLimited(enum NetworkType net)
 {
     LOCK(cs_mapLocalHost);
     return vfLimited[net];
 }
 
-bool IsLimited(const CNetAddr &addr)
+bool Network::IsLimited(const CNetAddr &addr)
 {
     return IsLimited(addr.GetNetwork());
 }
 
 /** vote for a local address */
-bool SeenLocal(const CService& addr)
+bool Network::SeenLocal(const CService& addr)
 {
     {
         LOCK(cs_mapLocalHost);
@@ -217,14 +213,14 @@ bool SeenLocal(const CService& addr)
 }
 
 /** check whether a given address is potentially local */
-bool IsLocal(const CService& addr)
+bool Network::IsLocal(const CService& addr)
 {
     LOCK(cs_mapLocalHost);
     return mapLocalHost.count(addr) > 0;
 }
 
 
-void ProcessOneShot()
+void Network::ProcessOneShot()
 {
     string strDest;
     {

@@ -13,6 +13,8 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <src/net/net.h>
+
 #endif
 
 #ifdef WIN32

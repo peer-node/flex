@@ -2,18 +2,12 @@
 #include "net.h"
 #include "net_cnode.h"
 #include "net_services.h"
-#include "net_externalip.h"
-#include "net_addresses.h"
-#include "net_sockets.h"
-#include "net_startstop.h"
-#include "net_connections.h"
-#include "net_messagehandler.h"
 
 #define DUMP_ADDRESSES_INTERVAL 900
 
 
 
-void static Discover(boost::thread_group& threadGroup)
+void Network::Discover(boost::thread_group& threadGroup)
 {
     if (!fDiscover)
         return;
@@ -64,10 +58,37 @@ void static Discover(boost::thread_group& threadGroup)
 
     // Don't use external IPv4 discovery, when -onlynet="IPv6"
     if (!IsLimited(NET_IPV4))
-        threadGroup.create_thread(boost::bind(&TraceThread<void (*)()>, "ext-ip", &ThreadGetMyExternalIP));
+    {
+        boost::thread external_ip_thread(&Network::TraceThreadGetMyExternalIP, boost::ref(this));
+    }
+
 }
 
-void StartNode(boost::thread_group& threadGroup)
+void Network::TraceThreadGetMyExternalIP()
+{
+    RenameThread("get_ext_ip");
+    try
+    {
+        LogPrintf("get_ext_ip thread start\n");
+        ThreadGetMyExternalIP();
+        LogPrintf("get_ext_ip thread exit\n");
+    }
+    catch (boost::thread_interrupted)
+    {
+        LogPrintf("%s thread interrupt\n");
+        throw;
+    }
+    catch (std::exception& e) {
+        PrintExceptionContinue(&e, "get_ext_ip");
+        throw;
+    }
+    catch (...) {
+        PrintExceptionContinue(NULL, "get_ext_ip");
+        throw;
+    }
+}
+
+void Network::StartNode(boost::thread_group& threadGroup)
 {
     if (semOutbound == NULL) {
         // initialize semaphore
@@ -76,7 +97,7 @@ void StartNode(boost::thread_group& threadGroup)
     }
 
     if (pnodeLocalHost == NULL)
-        pnodeLocalHost = new CNode(INVALID_SOCKET, CAddress(CService("127.0.0.1", 0), nLocalServices));
+        pnodeLocalHost = new CNode(*this, INVALID_SOCKET, CAddress(CService("127.0.0.1", 0), nLocalServices));
 
     Discover(threadGroup);
 
@@ -87,7 +108,10 @@ void StartNode(boost::thread_group& threadGroup)
     if (!GetBoolArg("-dnsseed", true))
         LogPrintf("DNS seeding disabled\n");
     else
-        threadGroup.create_thread(boost::bind(&TraceThread<void (*)()>, "dnsseed", &ThreadDNSAddressSeed));
+    {
+        boost::thread dns_address_thread(&Network::ThreadDNSAddressSeed, boost::ref(this));
+        LogPrintf("DNS seeding enabled\n");
+    }
 
 #ifdef USE_UPNP
     // Map ports with UPnP
@@ -95,27 +119,54 @@ void StartNode(boost::thread_group& threadGroup)
 #endif
 
     // Send and receive from sockets, accept connections
-    threadGroup.create_thread(boost::bind(&TraceThread<void (*)()>, "net", &ThreadSocketHandler));
+    boost::thread socket_handler_thread(&Network::ThreadSocketHandler, boost::ref(this));
 
     // Initiate outbound connections from -addnode
-    threadGroup.create_thread(boost::bind(&TraceThread<void (*)()>, "addcon", &ThreadOpenAddedConnections));
+    boost::thread open_added_connections_thread(&Network::ThreadOpenAddedConnections, boost::ref(this));
 
     // Initiate outbound connections
-    threadGroup.create_thread(boost::bind(&TraceThread<void (*)()>, "opencon", &ThreadOpenConnections));
+    boost::thread open_connections_thread(&Network::ThreadOpenConnections, boost::ref(this));
 
     // Process messages
-    threadGroup.create_thread(boost::bind(&TraceThread<void (*)()>, "msghand", &ThreadMessageHandler));
+    boost::thread message_handler_thread(&Network::ThreadMessageHandler, boost::ref(this));
 
     // Dump network addresses
-    threadGroup.create_thread(boost::bind(&LoopForever<void (*)()>, "dumpaddr", &DumpAddresses, DUMP_ADDRESSES_INTERVAL * 1000));
+    boost::thread dump_addresses_thread(&Network::LoopForeverDumpAddresses, boost::ref(this));
+
 }
 
-bool StopNode()
+void Network::LoopForeverDumpAddresses()
+{
+    RenameThread("dump_addresses");
+    LogPrintf("dump_addresses thread start\n");
+    try
+    {
+        while (1)
+        {
+            MilliSleep(DUMP_ADDRESSES_INTERVAL * 1000);
+            DumpAddresses();
+        }
+    }
+    catch (boost::thread_interrupted)
+    {
+        LogPrintf("dump_addresses thread stop\n", "dump_addresses");
+        throw;
+    }
+    catch (std::exception& e) {
+        PrintExceptionContinue(&e, "dump_addresses");
+        throw;
+    }
+    catch (...) {
+        PrintExceptionContinue(NULL, "dump_addresses");
+        throw;
+    }
+}
+bool Network::StopNode()
 {
     LogPrintf("StopNode()\n");
     MapPort(false);
     if (semOutbound)
-        for (int i=0; i<MAX_OUTBOUND_CONNECTIONS; i++)
+        for (int i = 0; i < MAX_OUTBOUND_CONNECTIONS; i++)
             semOutbound->post();
     MilliSleep(50);
     DumpAddresses();
