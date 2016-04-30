@@ -37,12 +37,18 @@ void CNode::PushVersion()
     int64_t nTime = (fInbound ? GetAdjustedTime() : GetTime());
     CAddress addrYou = (addr.IsRoutable() && !IsProxy(addr) ? addr : CAddress(CService("0.0.0.0",0)));
     CAddress addrMe = network.GetLocalAddress(&addr);
+
     RAND_bytes((unsigned char*)&network.nLocalHostNonce, sizeof(network.nLocalHostNonce));
     LogPrint("net", "send version message: version %d, blocks=%d, us=%s, them=%s, peer=%s\n", PROTOCOL_VERSION, nBestHeight, addrMe.ToString(), addrYou.ToString(), addr.ToString());
     PushMessage("version", 70002, network.nLocalServices, nTime, addrYou, addrMe,
                 network.nLocalHostNonce, FormatSubVersion(CLIENT_NAME, CLIENT_VERSION, std::vector<string>()), nBestHeight, true);
 }
 
+void CNode::WaitForVersion()
+{
+    while (nVersion == 0)
+        MilliSleep(50);
+}
 
 
 
@@ -273,7 +279,6 @@ CNode* Network::ConnectNode(CAddress addrConnect, const char *pszDest)
     if (pszDest ? ConnectSocketByName(addrConnect, hSocket, pszDest, Params().GetDefaultPort()) : ConnectSocket(addrConnect, hSocket))
     {
         addrman.Attempt(addrConnect);
-
         LogPrint("net", "connected %s\n", pszDest ? pszDest : addrConnect.ToString());
 
         // Set to non-blocking
@@ -287,19 +292,19 @@ CNode* Network::ConnectNode(CAddress addrConnect, const char *pszDest)
 #endif
 
         // Add node
-        CNode* pnode = new CNode(network, hSocket, addrConnect, pszDest ? pszDest : "", false);
+        CNode* pnode = new CNode(*this, hSocket, addrConnect, pszDest ? pszDest : "", false);
         pnode->AddRef();
 
         {
             LOCK(cs_vNodes);
             vNodes.push_back(pnode);
         }
-
         pnode->nTimeConnected = GetTime();
         return pnode;
     }
     else
     {
+        std::cout << "Failed to connect\n";
         return NULL;
     }
 }

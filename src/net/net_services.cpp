@@ -21,9 +21,15 @@ void Network::AddOneShot(string strDest)
     vOneShots.push_back(strDest);
 }
 
+unsigned short Network::SetListenPort(unsigned short port)
+{
+    listen_port = port;
+    return listen_port;
+}
+
 unsigned short Network::GetListenPort()
 {
-    return (unsigned short)(GetArg("-port", Params().GetDefaultPort()));
+    return listen_port;
 }
 
 // find 'best' local address for a particular peer
@@ -225,6 +231,7 @@ void Network::ProcessOneShot()
     string strDest;
     {
         LOCK(cs_vOneShots);
+
         if (vOneShots.empty())
             return;
         strDest = vOneShots.front();

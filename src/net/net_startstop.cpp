@@ -1,5 +1,4 @@
 #include <src/base/util_init.h>
-#include "net.h"
 #include "net_cnode.h"
 #include "net_services.h"
 
@@ -7,7 +6,7 @@
 
 
 
-void Network::Discover(boost::thread_group& threadGroup)
+void Network::Discover()
 {
     if (!fDiscover)
         return;
@@ -88,7 +87,44 @@ void Network::TraceThreadGetMyExternalIP()
     }
 }
 
-void Network::StartNode(boost::thread_group& threadGroup)
+void Network::StartThreads()
+{
+    if (!GetBoolArg("-dnsseed", true))
+        LogPrintf("DNS seeding disabled\n");
+    else
+    {
+        auto dns_address_thread = new boost::thread(&Network::ThreadDNSAddressSeed, this);
+        threadGroup.add_thread(dns_address_thread);
+        LogPrintf("DNS seeding enabled\n");
+    }
+
+#ifdef USE_UPNP
+    // Map ports with UPnP
+    MapPort(GetBoolArg("-upnp", USE_UPNP));
+#endif
+
+    // Send and receive from sockets, accept connections
+    auto *socket_handler_thread = new boost::thread(&Network::ThreadSocketHandler, this);
+    threadGroup.add_thread(socket_handler_thread);
+
+    // Initiate outbound connections from -addnode
+    auto open_added_connections_thread = new boost::thread(&Network::ThreadOpenAddedConnections, this);
+    threadGroup.add_thread(open_added_connections_thread);
+
+    // Initiate outbound connections
+    auto open_connections_thread = new boost::thread(&Network::ThreadOpenConnections, this);
+    threadGroup.add_thread(open_connections_thread);
+
+    // Process messages
+    auto message_handler_thread = new boost::thread(&Network::ThreadMessageHandler, this);
+    threadGroup.add_thread(message_handler_thread);
+
+    // Dump network addresses
+    auto dump_addresses_thread = new boost::thread(&Network::LoopForeverDumpAddresses, this);
+    threadGroup.add_thread(dump_addresses_thread);
+}
+
+void Network::InitializeNode(bool start_threads)
 {
     if (semOutbound == NULL) {
         // initialize semaphore
@@ -99,40 +135,10 @@ void Network::StartNode(boost::thread_group& threadGroup)
     if (pnodeLocalHost == NULL)
         pnodeLocalHost = new CNode(*this, INVALID_SOCKET, CAddress(CService("127.0.0.1", 0), nLocalServices));
 
-    Discover(threadGroup);
+    Discover();
 
-    //
-    // Start threads
-    //
-
-    if (!GetBoolArg("-dnsseed", true))
-        LogPrintf("DNS seeding disabled\n");
-    else
-    {
-        boost::thread dns_address_thread(&Network::ThreadDNSAddressSeed, boost::ref(this));
-        LogPrintf("DNS seeding enabled\n");
-    }
-
-#ifdef USE_UPNP
-    // Map ports with UPnP
-    MapPort(GetBoolArg("-upnp", USE_UPNP));
-#endif
-
-    // Send and receive from sockets, accept connections
-    boost::thread socket_handler_thread(&Network::ThreadSocketHandler, boost::ref(this));
-
-    // Initiate outbound connections from -addnode
-    boost::thread open_added_connections_thread(&Network::ThreadOpenAddedConnections, boost::ref(this));
-
-    // Initiate outbound connections
-    boost::thread open_connections_thread(&Network::ThreadOpenConnections, boost::ref(this));
-
-    // Process messages
-    boost::thread message_handler_thread(&Network::ThreadMessageHandler, boost::ref(this));
-
-    // Dump network addresses
-    boost::thread dump_addresses_thread(&Network::LoopForeverDumpAddresses, boost::ref(this));
-
+    if (start_threads)
+        StartThreads();
 }
 
 void Network::LoopForeverDumpAddresses()
@@ -143,13 +149,17 @@ void Network::LoopForeverDumpAddresses()
     {
         while (1)
         {
-            MilliSleep(DUMP_ADDRESSES_INTERVAL * 1000);
+            for (uint32_t i = 0 ; i < DUMP_ADDRESSES_INTERVAL * 10; i++)
+            {
+                MilliSleep(100);
+                boost::this_thread::interruption_point();
+            }
             DumpAddresses();
+            boost::this_thread::interruption_point();
         }
     }
     catch (boost::thread_interrupted)
     {
-        LogPrintf("dump_addresses thread stop\n", "dump_addresses");
         throw;
     }
     catch (std::exception& e) {
@@ -161,15 +171,37 @@ void Network::LoopForeverDumpAddresses()
         throw;
     }
 }
+
 bool Network::StopNode()
 {
+    threadGroup.interrupt_all();
+    threadGroup.join_all();
+    DebugPrintStop();
+    static CCriticalSection cs_Shutdown;
+    //CCriticalSection cs_Shutdown;
+    TRY_LOCK(cs_Shutdown, lockShutdown);
+    if (!lockShutdown) return false;
+
+
     LogPrintf("StopNode()\n");
     MapPort(false);
     if (semOutbound)
         for (int i = 0; i < MAX_OUTBOUND_CONNECTIONS; i++)
             semOutbound->post();
+
     MilliSleep(50);
-    DumpAddresses();
+
+    // clean up some globals (to help leak detection)
+    for (auto pnode : vNodes)
+        delete pnode;
+    for (auto pnode : vNodesDisconnected)
+        delete pnode;
+    vNodes.clear();
+    vNodesDisconnected.clear();
+    delete semOutbound;
+    semOutbound = NULL;
+    delete pnodeLocalHost;
+    pnodeLocalHost = NULL;
 
     return true;
 }

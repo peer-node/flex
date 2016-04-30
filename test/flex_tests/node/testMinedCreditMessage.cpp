@@ -4,7 +4,7 @@
 #include "gmock/gmock.h"
 
 
-#include "FlexNode.h"
+#include "FlexLocalServer.h"
 #include "MinedCreditMessage.h"
 
 
@@ -37,5 +37,4 @@ TEST_F(AMinedCreditMessage, HasAProofOfWork)
 TEST_F(AMinedCreditMessage, CanBeSerialized)
 {
     creditdata["a"]["mined_credit_message"] = mined_credit_message;
-
 }

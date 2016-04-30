@@ -4,18 +4,14 @@
 #include "flexnode/main.h"
 #include "net/net_cnode.h"
 
-using namespace std;
-using namespace boost;
-
-
-
 #include "log.h"
 #define LOG_CATEGORY "main_send_messages.cpp"
 
+using namespace std;
 
-
-bool SendMessages(CNode* pto, bool fSendTrickle)
+bool MainRoutine::SendMessages(CNode* pto)
 {
+    bool fSendTrickle = false;
     {
         // Don't send anything until we get their version message
         if (pto->nVersion == 0)
@@ -60,8 +56,8 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
         if (!IsInitialBlockDownload() && (GetTime() - nLastRebroadcast > 24 * 60 * 60))
         {
             {
-                LOCK(network.cs_vNodes);
-                BOOST_FOREACH(CNode* pnode, network.vNodes)
+                LOCK(network->cs_vNodes);
+                BOOST_FOREACH(CNode* pnode, network->vNodes)
                 {
                     // Periodically clear setAddrKnown to allow refresh broadcasts
                     if (nLastRebroadcast)
@@ -70,7 +66,7 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
                     // Rebroadcast our address
                     if (!fNoListen)
                     {
-                        CAddress addr = network.GetLocalAddress(&pnode->addr);
+                        CAddress addr = network->GetLocalAddress(&pnode->addr);
                         if (addr.IsRoutable())
                             pnode->PushAddress(addr);
                     }
@@ -111,6 +107,7 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
                 log_ << "Warning: not banning local node "
                      << pto->addr << "\n";
             else {
+                std::cout << "main_send_messages.cpp: banning\n";
                 pto->fDisconnect = true;
                 CNode::Ban(pto->addr);
             }
@@ -198,6 +195,7 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
             log_ << "in flight: " << state.nBlocksInFlight;
             log_ << "receive: " << state.nLastBlockReceive;
             log_ << "process: " << state.nLastBlockProcess;
+            std::cout << "main_send_messages.cpp: peer is stalling\n";
             pto->fDisconnect = true;
         }
         //

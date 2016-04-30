@@ -57,5 +57,6 @@ static inline bool error(const char* format)
 
 void LogException(std::exception* pex, const char* pszThread);
 void PrintExceptionContinue(std::exception* pex, const char* pszThread);
+void DebugPrintStop();
 
 #endif //FLEX_UTIL_LOG_H

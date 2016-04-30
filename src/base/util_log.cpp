@@ -42,6 +42,21 @@ static void DebugPrintInit()
     mutexDebugLog = new boost::mutex();
 }
 
+void DebugPrintStop()
+{
+    if (fileout != NULL)
+    {
+        fclose(fileout);
+        fileout = NULL;
+    }
+    if (mutexDebugLog != NULL)
+    {
+        delete mutexDebugLog;
+        mutexDebugLog = NULL;
+    }
+
+}
+
 bool LogAcceptCategory(const char* category)
 {
     if (category != NULL)

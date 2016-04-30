@@ -6,7 +6,7 @@
 #define FLEX_POINT
 
 #include "define.h"
-#include "crypto/bignum.h"
+#include "bignum.h"
 
 #define FIAT 0
 #define SECP256K1 1

@@ -13,7 +13,7 @@ void Network::StartSync(const vector<CNode*> &vNodes)
     CNode *pnodeNewSync = NULL;
     int64_t nBestScore = 0;
 
-    int nBestHeight = node_signals.GetHeight().get_value_or(0);
+    int nBestHeight = 0;//node_signals.GetHeight().get_value_or(0);
 
     // Iterate over all nodes
     BOOST_FOREACH(CNode* pnode, vNodes) {

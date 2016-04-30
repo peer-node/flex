@@ -180,7 +180,8 @@ bool static InitError(const std::string &str)
     return false;
 }
 
-bool static Bind(const CService &addr, unsigned int flags) {
+bool static Bind(const CService &addr, unsigned int flags)
+{
     if (!(flags & BF_EXPLICIT) && IsLimited(addr))
         return false;
     std::string strError;
@@ -580,26 +581,6 @@ bool AppInit2(boost::thread_group& threadGroup)
 
     BOOST_FOREACH(string strDest, mapMultiArgs["-seednode"])
         AddOneShot(strDest);
-
-    // ********************************************************* Step 7: load block chain
-
-
-    bool fLoaded = false;
-    while (!fLoaded) {
-        std::string strLoadError;
-        nStart = GetTimeMillis();
-        fLoaded = true;
-    }
-
-    // As LoadBlockIndex can take several minutes, it's possible the user
-    // requested to kill the GUI during the last operation. If so, exit.
-    // As the program has not fully started yet, Shutdown() is possibly overkill.
-    if (fRequestShutdown)
-    {
-        LogPrintf("Shutdown requested. Exiting.\n");
-        return false;
-    }
-    LogPrintf(" block index %15dms\n", GetTimeMillis() - nStart);
 
     
     // ********************************************************* Step 8: load wallet

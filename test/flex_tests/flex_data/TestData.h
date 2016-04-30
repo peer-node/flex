@@ -8,6 +8,8 @@
 class TestWithGlobalDatabases : public ::testing::Test
 {
 public:
+    MemoryDataStore creditdata;
+
     virtual void TearDown() // delete contents of mock db after each test
     { }
 };

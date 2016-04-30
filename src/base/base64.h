@@ -13,7 +13,7 @@ std::vector<unsigned char> DecodeBase64(const char* p, bool* pfInvalid = NULL);
 
 std::string DecodeBase64(const std::string& str);
 
-std::string EncodeBase64(const unsigned char* pch, std::size_t len)
+inline std::string EncodeBase64(const unsigned char* pch, std::size_t len)
 {
     static const char *pbase64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -59,12 +59,12 @@ std::string EncodeBase64(const unsigned char* pch, std::size_t len)
     return strRet;
 }
 
-std::string EncodeBase64(const std::string& str)
+inline std::string EncodeBase64(const std::string& str)
 {
     return EncodeBase64((const unsigned char*)str.c_str(), str.size());
 }
 
-std::vector<unsigned char> DecodeBase64(const char* p, bool* pfInvalid)
+inline std::vector<unsigned char> DecodeBase64(const char* p, bool* pfInvalid)
 {
     static const int decode64_table[256] =
     {
@@ -147,7 +147,7 @@ std::vector<unsigned char> DecodeBase64(const char* p, bool* pfInvalid)
     return vchRet;
 }
 
-std::string DecodeBase64(const std::string& str)
+inline std::string DecodeBase64(const std::string& str)
 {
     std::vector<unsigned char> vchRet = DecodeBase64(str.c_str());
     return std::string((const char*)&vchRet[0], vchRet.size());

@@ -3,75 +3,87 @@
 #include "net_cnode.h"
 #include "net_sync.h"
 
-void Network::ThreadMessageHandler()
+void Network::MessageHandlerIteration()
 {
-    SetThreadPriority(THREAD_PRIORITY_BELOW_NORMAL);
-    while (true)
+    bool fHaveSyncNode = false;
+
+    vector<CNode*> vNodesCopy;
     {
-        bool fHaveSyncNode = false;
+        boost::this_thread::interruption_point();
+        LOCK(cs_vNodes);
 
-        vector<CNode*> vNodesCopy;
-        {
-            LOCK(cs_vNodes);
-            vNodesCopy = vNodes;
-            BOOST_FOREACH(CNode* pnode, vNodesCopy) {
-                pnode->AddRef();
-                if (pnode == pnodeSync)
-                    fHaveSyncNode = true;
-            }
-        }
-
-        if (!fHaveSyncNode)
-            StartSync(vNodesCopy);
-
-        // Poll the connected nodes for messages
-        CNode* pnodeTrickle = NULL;
-        if (!vNodesCopy.empty())
-            pnodeTrickle = vNodesCopy[GetRand(vNodesCopy.size())];
-
-        bool fSleep = true;
-
+        vNodesCopy = vNodes;
         BOOST_FOREACH(CNode* pnode, vNodesCopy)
         {
-            if (pnode->fDisconnect)
-                continue;
+            pnode->AddRef();
+            if (pnode == pnodeSync)
+                fHaveSyncNode = true;
+        }
+    }
 
-            // Receive messages
+    if (!fHaveSyncNode)
+        StartSync(vNodesCopy);
+
+    // Poll the connected nodes for messages
+    CNode* pnodeTrickle = NULL;
+    if (!vNodesCopy.empty())
+        pnodeTrickle = vNodesCopy[GetRand(vNodesCopy.size())];
+
+    bool fSleep = true;
+
+    BOOST_FOREACH(CNode* pnode, vNodesCopy)
+    {
+        if (pnode->fDisconnect)
+            continue;
+
+        // Receive messages
+        {
+            TRY_LOCK(pnode->cs_vRecvMsg, lockRecv);
+            if (lockRecv)
             {
-                TRY_LOCK(pnode->cs_vRecvMsg, lockRecv);
-                if (lockRecv)
+                if (!node_signals.ProcessMessages(pnode))
                 {
-                    if (!node_signals.ProcessMessages(pnode))
-                        pnode->CloseSocketDisconnect();
+                    pnode->CloseSocketDisconnect();
+                }
 
-                    if (pnode->nSendSize < SendBufferSize())
+
+                if (pnode->nSendSize < SendBufferSize())
+                {
+                    if (!pnode->vRecvGetData.empty() || (!pnode->vRecvMsg.empty() && pnode->vRecvMsg[0].complete()))
                     {
-                        if (!pnode->vRecvGetData.empty() || (!pnode->vRecvMsg.empty() && pnode->vRecvMsg[0].complete()))
-                        {
-                            fSleep = false;
-                        }
+                        fSleep = false;
                     }
                 }
             }
-            boost::this_thread::interruption_point();
-
-            // Send messages
-            {
-                TRY_LOCK(pnode->cs_vSend, lockSend);
-                if (lockSend)
-                    node_signals.SendMessages(pnode, pnode == pnodeTrickle);
-            }
-            boost::this_thread::interruption_point();
         }
+        boost::this_thread::interruption_point();
 
+        // Send messages
         {
-            LOCK(cs_vNodes);
-            BOOST_FOREACH(CNode* pnode, vNodesCopy)
-                pnode->Release();
+            TRY_LOCK(pnode->cs_vSend, lockSend);
+            if (lockSend)
+                node_signals.SendMessages(pnode);
         }
+        boost::this_thread::interruption_point();
+    }
 
-        if (fSleep)
-            MilliSleep(100);
+    {
+        LOCK(cs_vNodes);
+        BOOST_FOREACH(CNode* pnode, vNodesCopy)
+            pnode->Release();
+    }
+
+    if (fSleep)
+        MilliSleep(70);
+}
+
+void Network::ThreadMessageHandler()
+{
+    SetThreadPriority(THREAD_PRIORITY_BELOW_NORMAL);
+
+    while (true)
+    {
+        MessageHandlerIteration();
     }
 }
 

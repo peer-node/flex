@@ -6,14 +6,18 @@
 #include "main.h"
 
 #include "log.h"
-#define LOG_CATEGORY "main_init.cpp"
+#define LOG_CATEGORY "MockInit.cpp"
 
 volatile bool fRequestShutdown = false;
+
+MainRoutine main_node;
+
 
 void StartShutdown()
 {
     fRequestShutdown = true;
 }
+
 bool ShutdownRequested()
 {
     return fRequestShutdown;
@@ -27,12 +31,12 @@ void Shutdown()
     if (!lockShutdown) return;
 
     RenameThread("flex-shutoff");
-    network.StopNode();
-
-    UnregisterNodeSignals(network.GetNodeSignals());
-    {
-        LOCK(cs_main);
-    }
+//    network.StopNode();
+//
+//    main_node.UnregisterNodeSignals(network.GetNodeSignals());
+//    {
+//        LOCK(main_node.cs_main);
+//    }
 
     boost::filesystem::remove(GetPidFile());
 

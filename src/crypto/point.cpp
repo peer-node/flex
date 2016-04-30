@@ -316,3 +316,5 @@ Point operator*(const CBigNum& n, const Point& a)
 {
     return a * n;
 }
+
+

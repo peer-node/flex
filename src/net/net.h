@@ -81,13 +81,15 @@ public:
     std::string addrLocal;
 };
 
+class MainRoutine;
+
 
 // Signals for message handling
 struct CNodeSignals
 {
     boost::signals2::signal<int ()> GetHeight;
     boost::signals2::signal<bool (CNode*)> ProcessMessages;
-    boost::signals2::signal<bool (CNode*, bool)> SendMessages;
+    boost::signals2::signal<bool (CNode*)> SendMessages;
     boost::signals2::signal<void (NodeId, const CNode*)> InitializeNode;
     boost::signals2::signal<void (NodeId)> FinalizeNode;
 };
@@ -96,11 +98,15 @@ struct CNodeSignals
 class Network
 {
 public:
+    std::string network_name;
+    boost::thread_group threadGroup;
+
+    unsigned short listen_port;
     CSemaphore *semOutbound = NULL;
     bool fDiscover = true;
     uint64_t nLocalServices = NODE_NETWORK;
     CCriticalSection cs_mapLocalHost;
-    map<CNetAddr, LocalServiceInfo> mapLocalHost;
+    std::map<CNetAddr, LocalServiceInfo> mapLocalHost;
 
     CNode* pnodeLocalHost = NULL;
     CNode* pnodeSync = NULL;
@@ -111,21 +117,20 @@ public:
 
     vector<CNode*> vNodes;
     CCriticalSection cs_vNodes;
-    map<CInv, CDataStream> mapRelay;
+    std::map<CInv, CDataStream> mapRelay;
     deque<pair<int64_t, CInv> > vRelayExpiration;
     CCriticalSection cs_mapRelay;
     limitedmap<CInv, int64_t> mapAlreadyAskedFor;
 
-
-    vector<std::string> vAddedNodes;
+    std::vector<std::string> vAddedNodes;
     CCriticalSection cs_vAddedNodes;
 
     NodeId nLastNodeId = 0;
     CCriticalSection cs_nLastNodeId;
 
-    list<CNode*> vNodesDisconnected;
+    std::list<CNode*> vNodesDisconnected;
 
-    deque<string> vOneShots;
+    std::deque<std::string> vOneShots;
     CCriticalSection cs_vOneShots;
 
     bool vfReachable[NET_MAX] = {};
@@ -141,7 +146,18 @@ public:
         mapAlreadyAskedFor = limitedmap<CInv, int64_t>(MAX_INV_SZ);
     }
 
+    void SetName(std::string name)
+    {
+        network_name = name;
+    }
+
     ~Network();
+
+    void AddNode(std::string node_address)
+    {
+        CAddress addr;
+        ConnectNode(addr, node_address.c_str());
+    }
 
     bool AddLocal(const CService &addr, int nScore);
 
@@ -181,9 +197,7 @@ public:
 
     void SocketSendData(CNode *pnode);
 
-    void Discover(boost::thread_group &threadGroup);
-
-    void StartNode(boost::thread_group &threadGroup);
+    void Discover();
 
     bool StopNode();
 
@@ -240,14 +254,26 @@ public:
 
     void RelayRelayMessage(const CDataStream &ss);
 
-    template <typename Callable>
-    void TraceThread(const char *name, Callable func);
-
     void TraceThreadGetMyExternalIP();
 
     void LoopForeverDumpAddresses();
+
+    unsigned short SetListenPort(unsigned short port);
+
+    bool StartListening(std::string& strError);
+
+    void SocketHandlerIteration(unsigned int &nPrevNodeCount);
+
+    void OpenConnectionsIteration(int64_t &nStart);
+
+    void OpenAddedConnectionsIteration(unsigned int& i);
+
+    void MessageHandlerIteration();
+
+    void InitializeNode(bool start_threads = true);
+
+    void StartThreads();
 };
 
-extern Network network;
 
 #endif

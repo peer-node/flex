@@ -1,5 +1,5 @@
-#ifndef FLEX_FLEXNODE_H
-#define FLEX_FLEXNODE_H
+#ifndef FLEX_FLEXLOCALSERVER_H
+#define FLEX_FLEXLOCALSERVER_H
 
 #include "ConfigParser.h"
 #include "FlexRPCServer.h"
@@ -7,7 +7,7 @@
 #include <test/flex_tests/mining/NetworkSpecificProofOfWork.h>
 
 
-class FlexNode
+class FlexLocalServer
 {
 public:
     ConfigParser config_parser;
@@ -47,4 +47,4 @@ public:
 };
 
 
-#endif //FLEX_FLEXNODE_H
+#endif //FLEX_FLEXLOCALSERVER_H

@@ -3,5 +3,6 @@
 
 void StartShutdown();
 
+extern MainRoutine main_node;
 
 #endif //FLEX_MOCKINIT_H

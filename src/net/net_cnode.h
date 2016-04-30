@@ -145,7 +145,6 @@ public:
             PushVersion();
 
         network.GetNodeSignals().InitializeNode(GetId(), this);
-
     }
 
     ~CNode()
@@ -166,9 +165,6 @@ private:
     static CCriticalSection cs_totalBytesSent;
     static uint64_t nTotalBytesRecv;
     static uint64_t nTotalBytesSent;
-
-    CNode(const CNode&);
-    void operator=(const CNode&);
 
 public:
 
@@ -213,8 +209,6 @@ public:
         nRefCount--;
     }
 
-
-
     void AddAddressKnown(const CAddress& addr)
     {
         setAddrKnown.insert(addr);
@@ -228,7 +222,6 @@ public:
         if (addr.IsValid() && !setAddrKnown.count(addr))
             vAddrToSend.push_back(addr);
     }
-
 
     void AddInventoryKnown(const CInv& inv)
     {
@@ -555,6 +548,8 @@ public:
 
     static uint64_t GetTotalBytesRecv();
     static uint64_t GetTotalBytesSent();
+
+    void WaitForVersion();
 };
 
 

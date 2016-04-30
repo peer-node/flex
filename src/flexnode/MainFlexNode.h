@@ -1,24 +1,31 @@
-#ifndef FLEX_MOCKFLEXNODE_H
-#define FLEX_MOCKFLEXNODE_H
+#ifndef FLEX_MAINFLEXNODE_H
+#define FLEX_MAINFLEXNODE_H
 
+#include <src/net/net_cnode.h>
+#include <src/base/sync.h>
+#include <test/flex_tests/main_tests/CreditMessageHandler.h>
 #include "../../test/flex_tests/flex_data/TestData.h"
 
 
 #include "log.h"
-#define LOG_CATEGORY "flexnode.h"
+#define LOG_CATEGORY "MainFlexNode.h"
 
+class CInv;
 
-class MockFlexNode
+class MainFlexNode
 {
 public:
     bool HaveInventory(const CInv &inv);
 
     bool IsFinishedDownloading();
 
-    void LockMutex();
+    void HandleMessage(std::string command, CDataStream &stream, CNode *peer);
 
-    void HandleMessage(string command, CDataStream &stream, CNode *peer);
-    
+
+    CreditMessageHandler *credit_message_handler{NULL};
+    uint64_t messages_received{0};
+    Mutex mutex;
+
     MemoryDataStore msgdata;
     MemoryDataStore guidata;
     MemoryDataStore scheduledata;
@@ -38,27 +45,5 @@ public:
     MemoryDataStore keydata;
 };
 
-bool MockFlexNode::HaveInventory(const CInv &inv)
-{
-    return false;
-}
 
-bool MockFlexNode::IsFinishedDownloading()
-{
-    return false;
-}
-
-void MockFlexNode::LockMutex()
-{
-
-}
-
-void MockFlexNode::HandleMessage(string command, CDataStream &stream, CNode *peer)
-{
-
-}
-
-
-extern MockFlexNode flexnode;
-
-#endif //FLEX_MOCKFLEXNODE_H
+#endif //FLEX_MAINFLEXNODE_H

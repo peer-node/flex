@@ -1,14 +1,11 @@
 #include <src/net/net_services.h>
-#include <src/net/net_addresses.h>
 #include "../../test/flex_tests/flex_data/TestData.h"
 
 #include "flexnode/main.h"
 
 #include "flexnode/init.h"
-#include "flexnode/MockFlexNode.h"
-#include "net/addrman.h"
+#include "flexnode/MainFlexNode.h"
 #include "net/net_cnode.h"
-
 
 using namespace std;
 using namespace boost;
@@ -17,20 +14,17 @@ using namespace boost;
 #include "log.h"
 #define LOG_CATEGORY "main_process_messages.cpp"
 
-CMainSignals g_signals;
-
-bool AlreadyHave(const CInv& inv)
+bool MainRoutine::AlreadyHave(const CInv& inv)
 {
-    return flexnode.HaveInventory(inv);
+    return flexnode->HaveInventory(inv);
 }
 
-bool IsInitialBlockDownload()
+bool MainRoutine::IsInitialBlockDownload()
 {
-    //return not flexnode.downloader.finished_downloading;
-    return not flexnode.IsFinishedDownloading();
+    return not flexnode->IsFinishedDownloading();
 }
 
-void static ProcessGetData(CNode* pfrom)
+void MainRoutine::ProcessGetData(CNode* pfrom)
 {
     std::deque<CInv>::iterator it = pfrom->vRecvGetData.begin();
 
@@ -66,9 +60,9 @@ void static ProcessGetData(CNode* pfrom)
                 // Send stream from relay memory
                 bool pushed = false;
                 {
-                    LOCK(network.cs_mapRelay);
-                    map<CInv, CDataStream>::iterator mi = network.mapRelay.find(inv);
-                    if (mi != network.mapRelay.end()) {
+                    LOCK(network->cs_mapRelay);
+                    map<CInv, CDataStream>::iterator mi = network->mapRelay.find(inv);
+                    if (mi != network->mapRelay.end()) {
                         pfrom->PushMessage(inv.GetCommand(), (*mi).second);
                         pushed = true;
                     }
@@ -102,14 +96,19 @@ void static ProcessGetData(CNode* pfrom)
     }
 }
 
-bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
+bool MainRoutine::ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
 {
-    //LOCK(flexnode.mutex);
-    flexnode.LockMutex();
+    if (flexnode == NULL)
+    {
+        log_ << node_name << " no flexnode available to process message: " << strCommand << "\n";
+        return true;
+    }
+    LOCK(flexnode->mutex);
 
     RandAddSeedPerfmon();
-    log_ << "received: " << strCommand
-         << " (" << vRecv.size() << " bytes)\n";
+    log_ << "received: " << strCommand << " (" << vRecv.size() << " bytes)\n";
+
+    std::cout << "received: " << strCommand << " (" << vRecv.size() << " bytes)\n";
 
     if (mapArgs.count("-dropmessagestest") && GetRand(atoi(mapArgs["-dropmessagestest"])) == 0)
     {
@@ -144,6 +143,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                  << "; disconnecting\n";
             pfrom->PushMessage("reject", strCommand, REJECT_OBSOLETE,
                                strprintf("Version must be %d or greater", MIN_PEER_PROTO_VERSION));
+            std::cout << "obsolete peer\n";
             pfrom->fDisconnect = true;
             return false;
         }
@@ -166,14 +166,13 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         if (pfrom->fInbound && addrMe.IsRoutable())
         {
             pfrom->addrLocal = addrMe;
-            network.SeenLocal(addrMe);
+            network->SeenLocal(addrMe);
         }
 
         // Disconnect if we connected to ourself
-        if (nNonce == network.nLocalHostNonce && nNonce > 1)
+        if (nNonce == network->nLocalHostNonce && nNonce > 1)
         {
-            log_ << "connected to self at " << pfrom->addr
-                 << "; disconnecting\n";
+            log_ << "connected to self at " << pfrom->addr << "; disconnecting\n";
             pfrom->fDisconnect = true;
             return true;
         }
@@ -196,23 +195,23 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
             // Advertise our address
             if (!fNoListen)
             {
-                CAddress addr = network.GetLocalAddress(&pfrom->addr);
+                CAddress addr = network->GetLocalAddress(&pfrom->addr);
                 if (addr.IsRoutable())
                     pfrom->PushAddress(addr);
             }
 
             // Get recent addresses
-            if (pfrom->fOneShot || pfrom->nVersion >= CADDR_TIME_VERSION || network.addrman.size() < 1000)
+            if (pfrom->fOneShot || pfrom->nVersion >= CADDR_TIME_VERSION || network->addrman.size() < 1000)
             {
                 pfrom->PushMessage("getaddr");
                 pfrom->fGetAddr = true;
             }
-            network.addrman.Good(pfrom->addr);
+            network->addrman.Good(pfrom->addr);
         } else {
             if (((CNetAddr)pfrom->addr) == (CNetAddr)addrFrom)
             {
-                network.addrman.Add(addrFrom, addrFrom);
-                network.addrman.Good(addrFrom);
+                network->addrman.Add(addrFrom, addrFrom);
+                network->addrman.Good(addrFrom);
             }
         }
 
@@ -247,7 +246,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         vRecv >> vAddr;
 
         // Don't want addr from older versions unless seeding
-        if (pfrom->nVersion < CADDR_TIME_VERSION && network.addrman.size() > 1000)
+        if (pfrom->nVersion < CADDR_TIME_VERSION && network->addrman.size() > 1000)
             return true;
         if (vAddr.size() > 1000)
         {
@@ -266,12 +265,12 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
             if (addr.nTime <= 100000000 || addr.nTime > nNow + 10 * 60)
                 addr.nTime = (unsigned int) (nNow - 5 * 24 * 60 * 60);
             pfrom->AddAddressKnown(addr);
-            bool fReachable = network.IsReachable(addr);
+            bool fReachable = network->IsReachable(addr);
             if (addr.nTime > nSince && !pfrom->fGetAddr && vAddr.size() <= 10 && addr.IsRoutable())
             {
                 // Relay to a limited number of other nodes
                 {
-                    LOCK(network.cs_vNodes);
+                    LOCK(network->cs_vNodes);
                     // Use deterministic randomness to send to the same nodes for 24 hours
                     // at a time so the setAddrKnowns of the chosen nodes prevent repeats
                     static uint256 hashSalt;
@@ -282,7 +281,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                     hashRand = Hash(BEGIN(hashRand), END(hashRand));
                     multimap<uint256, CNode*> mapMix;
 
-                    for (auto pnode : network.vNodes)
+                    for (auto pnode : network->vNodes)
                     {
                         if (pnode->nVersion < CADDR_TIME_VERSION)
                             continue;
@@ -301,11 +300,15 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
             if (fReachable)
                 vAddrOk.push_back(addr);
         }
-        network.addrman.Add(vAddrOk, pfrom->addr, 2 * 60 * 60);
+        network->addrman.Add(vAddrOk, pfrom->addr, 2 * 60 * 60);
         if (vAddr.size() < 1000)
             pfrom->fGetAddr = false;
         if (pfrom->fOneShot)
+        {
+            std::cout << "oneshot - disconnecting\n";
             pfrom->fDisconnect = true;
+        }
+
     }
 
 
@@ -372,7 +375,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
     else if (strCommand == "getaddr")
     {
         pfrom->vAddrToSend.clear();
-        vector<CAddress> vAddr = network.addrman.GetAddr();
+        vector<CAddress> vAddr = network->addrman.GetAddr();
         BOOST_FOREACH(const CAddress &addr, vAddr)
             pfrom->PushAddress(addr);
     }
@@ -456,7 +459,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
 
     else
     {
-        flexnode.HandleMessage(strCommand, vRecv, pfrom);
+        flexnode->HandleMessage(strCommand, vRecv, pfrom);
     }
 
 
@@ -464,16 +467,15 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
     // Update the last seen time for this node's address
     if (pfrom->fNetworkNode)
         if (strCommand == "version" || strCommand == "addr" || strCommand == "inv" || strCommand == "getdata" || strCommand == "ping")
-            network.AddressCurrentlyConnected(pfrom->addr);
+            network->AddressCurrentlyConnected(pfrom->addr);
 
 
     return true;
 }
 
 // requires LOCK(cs_vRecvMsg)
-bool ProcessMessages(CNode* pfrom)
+bool MainRoutine::ProcessMessages(CNode* pfrom)
 {
-
     //
     // Message format
     //  (4) message start
@@ -491,7 +493,8 @@ bool ProcessMessages(CNode* pfrom)
     if (!pfrom->vRecvGetData.empty()) return fOk;
 
     std::deque<CNetMessage>::iterator it = pfrom->vRecvMsg.begin();
-    while (!pfrom->fDisconnect && it != pfrom->vRecvMsg.end()) {
+    while (!pfrom->fDisconnect && it != pfrom->vRecvMsg.end())
+    {
         // Don't bother if send buffer is too full to respond anyway
         if (pfrom->nSendSize >= SendBufferSize())
             break;
@@ -577,8 +580,7 @@ bool ProcessMessages(CNode* pfrom)
         }
 
         if (!fRet)
-            log_ << "ProcessMessage(" << strCommand << ", "
-                                   << nMessageSize << " bytes) FAILED\n";
+            log_ << "ProcessMessage(" << strCommand << ", " << nMessageSize << " bytes) FAILED\n";
 
         break;
     }

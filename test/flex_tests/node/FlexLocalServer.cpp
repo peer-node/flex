@@ -3,18 +3,18 @@
 #include <jsonrpccpp/client/connectors/httpclient.h>
 #include <jsonrpccpp/client.h>
 #include <test/flex_tests/mining/NetworkSpecificProofOfWork.h>
-#include "FlexNode.h"
+#include "FlexLocalServer.h"
 
 using jsonrpc::HttpAuthServer;
 
-void FlexNode::LoadConfig(int argc, const char **argv)
+void FlexLocalServer::LoadConfig(int argc, const char **argv)
 {
     config_parser.ParseCommandLineArguments(argc, argv);
     config_parser.ReadConfigFile();
     config = config_parser.GetConfig();
 }
 
-void FlexNode::ThrowUsernamePasswordException()
+void FlexLocalServer::ThrowUsernamePasswordException()
 {
     unsigned char rand_pwd[32];
     RAND_bytes(rand_pwd, 32);
@@ -28,7 +28,7 @@ void FlexNode::ThrowUsernamePasswordException()
     throw(std::runtime_error(message));
 }
 
-void FlexNode::StartRPCServer()
+void FlexLocalServer::StartRPCServer()
 {
     if (config["rpcuser"] == "" or config["rpcpassword"] == "")
         ThrowUsernamePasswordException();
@@ -40,24 +40,24 @@ void FlexNode::StartRPCServer()
     rpc_server->StartListening();
 }
 
-void FlexNode::StopRPCServer()
+void FlexLocalServer::StopRPCServer()
 {
     rpc_server->StopListening();
     delete rpc_server;
     delete http_server;
 }
 
-uint256 FlexNode::MiningSeed()
+uint256 FlexLocalServer::MiningSeed()
 {
     return uint256();
 }
 
-std::string FlexNode::MiningAuthorization()
+std::string FlexLocalServer::MiningAuthorization()
 {
     return "Basic " + config.String("miningrpcuser") + ":" + config.String("miningrpcpassword");
 }
 
-Json::Value FlexNode::MakeRequestToMiningRPCServer(std::string method, Json::Value& request)
+Json::Value FlexLocalServer::MakeRequestToMiningRPCServer(std::string method, Json::Value& request)
 {
     jsonrpc::HttpClient http_client("http://localhost:" + config.String("miningrpcport", "8339"));
     http_client.AddHeader("Authorization", "Basic " + MiningAuthorization());
@@ -65,27 +65,27 @@ Json::Value FlexNode::MakeRequestToMiningRPCServer(std::string method, Json::Val
     return client.CallMethod(method, request);
 }
 
-uint256 FlexNode::NetworkID()
+uint256 FlexLocalServer::NetworkID()
 {
     return uint256(config.String("network_id", "1"));
 }
 
-uint160 FlexNode::MiningDifficulty()
+uint160 FlexLocalServer::MiningDifficulty()
 {
     return 20;
 }
 
-uint64_t FlexNode::RPCPort()
+uint64_t FlexLocalServer::RPCPort()
 {
     return config.Uint64("rpcport", 8732);
 }
 
-std::string FlexNode::ExternalIPAddress()
+std::string FlexLocalServer::ExternalIPAddress()
 {
     return "localhost";
 }
 
-void FlexNode::SetMiningNetworkInfo()
+void FlexLocalServer::SetMiningNetworkInfo()
 {
     Json::Value request;
     request["network_id"] = NetworkID().ToString();
@@ -97,14 +97,14 @@ void FlexNode::SetMiningNetworkInfo()
     MakeRequestToMiningRPCServer("set_mining_information", request);
 }
 
-void FlexNode::SetNumberOfMegabytesUsedForMining(uint32_t number_of_megabytes)
+void FlexLocalServer::SetNumberOfMegabytesUsedForMining(uint32_t number_of_megabytes)
 {
     Json::Value request;
     request["megabytes_used"] = number_of_megabytes;
     MakeRequestToMiningRPCServer("set_megabytes_used", request);
 }
 
-NetworkSpecificProofOfWork FlexNode::GetLatestProofOfWork()
+NetworkSpecificProofOfWork FlexLocalServer::GetLatestProofOfWork()
 {
     return latest_proof_of_work;
 }

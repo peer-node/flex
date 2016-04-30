@@ -9,8 +9,9 @@ class CAddrDB
 {
 private:
     boost::filesystem::path pathAddr;
+    std::string network_name;
 public:
-    CAddrDB();
+    CAddrDB(std::string network_name);
     bool Write(const CAddrMan& addr);
     bool Read(CAddrMan& addr);
 };

@@ -1,5 +1,5 @@
 #include "FlexRPCServer.h"
-#include "FlexNode.h"
+#include "FlexLocalServer.h"
 
 void FlexRPCServer::BindMethod(const char* method_name,
                                void (FlexRPCServer::*method)(const Json::Value &,Json::Value &))
@@ -31,7 +31,7 @@ void FlexRPCServer::NewProof(const Json::Value &request, Json::Value &response)
     flexnode->latest_proof_of_work = NetworkSpecificProofOfWork(request["proof_base64"].asString());
 }
 
-void FlexRPCServer::SetFlexNode(FlexNode *flexnode_)
+void FlexRPCServer::SetFlexNode(FlexLocalServer *flexnode_)
 {
     flexnode = flexnode_;
 }

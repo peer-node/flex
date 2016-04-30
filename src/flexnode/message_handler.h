@@ -1,7 +1,3 @@
-// Distributed under version 3 of the Gnu Affero GPL software license, 
-// see the accompanying file COPYING for details.
-
-
 #ifndef FLEX_MESSAGE_HANDLER
 #define FLEX_MESSAGE_HANDLER
 

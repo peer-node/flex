@@ -4,9 +4,9 @@
 #include "net.h"
 #include "net_caddrdb.h"
 
-CAddrDB::CAddrDB()
+CAddrDB::CAddrDB(std::string network_name) : network_name(network_name)
 {
-    pathAddr = GetDataDir_() / "peers.dat";
+    pathAddr = GetDataDir_() / (network_name + "_peers.dat").c_str();
 }
 
 bool CAddrDB::Write(const CAddrMan& addr)

@@ -3,21 +3,12 @@
 
 #include <cstdint>
 #include <boost/date_time/posix_time/posix_time.hpp>
-//#include <boost/date_time/microsec_time_clock.hpp>
+#include <boost/thread/thread.hpp>
+
 
 inline void MilliSleep(int64_t n)
 {
-// Boost's sleep_for was uninterruptable when backed by nanosleep from 1.50
-// until fixed in 1.52. Use the deprecated sleep method for the broken case.
-// See: https://svn.boost.org/trac/boost/ticket/7238
-#if defined(HAVE_WORKING_BOOST_SLEEP_FOR)
-    boost::this_thread::sleep_for(boost::chrono::milliseconds(n));
-#elif defined(HAVE_WORKING_BOOST_SLEEP)
     boost::this_thread::sleep(boost::posix_time::milliseconds(n));
-#else
-//should never get here
-//#error missing boost sleep implementation
-#endif
 }
 
 int64_t GetTime();
