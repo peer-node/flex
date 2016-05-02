@@ -3,7 +3,7 @@
 #include "net_services.h"
 #include "net_connections.h"
 
-
+using namespace std;
 
 set<CNetAddr> setservAddNodeAddresses;
 CCriticalSection cs_setservAddNodeAddresses;

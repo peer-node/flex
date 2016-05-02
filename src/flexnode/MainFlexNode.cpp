@@ -1,5 +1,6 @@
 #include "MainFlexNode.h"
 
+using std::string;
 
 bool MainFlexNode::HaveInventory(const CInv &inv)
 {

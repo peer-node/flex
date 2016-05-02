@@ -3,6 +3,8 @@
 #include "net_cnode.h"
 #include "net_sync.h"
 
+using namespace std;
+
 void Network::MessageHandlerIteration()
 {
     bool fHaveSyncNode = false;

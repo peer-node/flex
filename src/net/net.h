@@ -115,10 +115,10 @@ public:
     CAddrMan addrman;
     int nMaxConnections = 125;
 
-    vector<CNode*> vNodes;
+    std::vector<CNode*> vNodes;
     CCriticalSection cs_vNodes;
     std::map<CInv, CDataStream> mapRelay;
-    deque<pair<int64_t, CInv> > vRelayExpiration;
+    std::deque<std::pair<int64_t, CInv> > vRelayExpiration;
     CCriticalSection cs_mapRelay;
     limitedmap<CInv, int64_t> mapAlreadyAskedFor;
 
@@ -181,7 +181,7 @@ public:
 
     void AdvertizeLocal();
 
-    bool RecvLine(SOCKET hSocket, string &strLine);
+    bool RecvLine(SOCKET hSocket, std::string &strLine);
 
     CAddress GetLocalAddress(const CNetAddr *paddrPeer);
 
@@ -189,11 +189,11 @@ public:
 
     unsigned short GetListenPort();
 
-    void AddOneShot(string strDest);
+    void AddOneShot(std::string strDest);
 
     void ThreadSocketHandler();
 
-    bool BindListenPort(const CService &addrBind, string &strError);
+    bool BindListenPort(const CService &addrBind, std::string &strError);
 
     void SocketSendData(CNode *pnode);
 
@@ -222,7 +222,7 @@ public:
 
     CNode *FindNode(const CNetAddr &ip);
 
-    CNode *FindNode(string addrName);
+    CNode *FindNode(std::string addrName);
 
     void AddressCurrentlyConnected(const CService &addr);
 
@@ -232,7 +232,7 @@ public:
 
     int64_t NodeSyncScore(const CNode *pnode);
 
-    void StartSync(const vector<CNode *> &vNodes);
+    void StartSync(const std::vector<CNode *> &vNodes);
 
     void RelayTransaction(const SignedTransaction &tx);
 

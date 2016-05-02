@@ -68,8 +68,8 @@ struct CNodeState
     std::string name;
     // List of asynchronously-determined block rejections to notify this peer about.
     int nBlocksInFlight;
-    list<QueuedBlock> vBlocksInFlight;
-    list<uint256> vBlocksToDownload;
+    std::list<QueuedBlock> vBlocksInFlight;
+    std::list<uint256> vBlocksToDownload;
     int nBlocksToDownload;
     int64_t nLastBlockReceive;
     int64_t nLastBlockProcess;
@@ -97,8 +97,8 @@ public:
 
     CCriticalSection cs_main;
 
-    std::map<uint256, std::pair<NodeId, list<QueuedBlock>::iterator> > mapBlocksInFlight;
-    std::map<uint256, std::pair<NodeId, list<uint256>::iterator> > mapBlocksToDownload;
+    std::map<uint256, std::pair<NodeId, std::list<QueuedBlock>::iterator> > mapBlocksInFlight;
+    std::map<uint256, std::pair<NodeId, std::list<uint256>::iterator> > mapBlocksToDownload;
 
     // Map maintaining per-node state. Requires cs_main.
     std::map<NodeId, CNodeState> mapNodeState;
@@ -125,7 +125,7 @@ public:
 
     /** Process protocol messages received from a given node */
     bool ProcessMessages(CNode* pfrom);
-    bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv);
+    bool ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vRecv);
     /** Send queued protocol messages to be sent to a give node */
     bool SendMessages(CNode* pto);
 

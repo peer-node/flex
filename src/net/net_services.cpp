@@ -3,7 +3,7 @@
 #include "net_services.h"
 #include "net_connections.h"
 
-
+using namespace std;
 
 
 /** check whether a given address is in a network we can probably connect to */

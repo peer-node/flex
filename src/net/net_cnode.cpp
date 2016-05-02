@@ -3,6 +3,7 @@
 #include "net_cnode.h"
 #include "net_services.h"
 
+using namespace std;
 
 void CNode::CloseSocketDisconnect()
 {

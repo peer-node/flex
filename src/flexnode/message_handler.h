@@ -44,7 +44,7 @@ public:
         {
             log_ << orphan << " is an orphan of " << message_hash << "\n";
                 
-            set<uint160> parents = msgdata[orphan]["missing_parents"];
+            std::set<uint160> parents = msgdata[orphan]["missing_parents"];
             parents.erase(message_hash);
             msgdata[orphan]["missing_parents"] = parents;
             if (parents.size() == 0)

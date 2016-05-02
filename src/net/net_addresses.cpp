@@ -2,7 +2,7 @@
 #include "net_services.h"
 #include "net_caddrdb.h"
 
-
+using namespace std;
 
 void Network::AddressCurrentlyConnected(const CService& addr)
 {

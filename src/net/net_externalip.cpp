@@ -2,6 +2,7 @@
 #include "net_services.h"
 #include "net_externalip.h"
 
+using namespace std;
 
 bool Network::GetMyExternalIP2(const CService& addrConnect, const char* pszGet, const char* pszKeyword, CNetAddr& ipRet)
 {

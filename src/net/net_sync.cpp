@@ -1,6 +1,8 @@
 #include "net.h"
 #include "net_cnode.h"
 
+using namespace std;
+
 // for now, use a very simple selection metric: the node from which we received
 // most recently
 int64_t Network::NodeSyncScore(const CNode *pnode)

@@ -4,6 +4,8 @@
 #include "net.h"
 #include "net_caddrdb.h"
 
+using namespace std;
+
 CAddrDB::CAddrDB(std::string network_name) : network_name(network_name)
 {
     pathAddr = GetDataDir_() / (network_name + "_peers.dat").c_str();

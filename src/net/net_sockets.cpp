@@ -5,7 +5,7 @@
 #include "net_startstop.h"
 #include "net_services.h"
 
-
+using namespace std;
 
 // requires LOCK(cs_vSend)
 void Network::SocketSendData(CNode *pnode)
