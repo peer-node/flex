@@ -201,44 +201,43 @@ TEST_F(ATestMessageHandler, HandlesAnIncomingTestMessage)
     ASSERT_THAT(handled, Eq(true));
 }
 
+template <typename T>
+CDataStream TestDataStream(T message)
+{
+    CDataStream stream(SER_NETWORK, CLIENT_VERSION);
+    stream << string("test") << string("test") << message;
+    return stream;
+}
 
 TEST_F(ATestMessageHandler, HandlesAnIncomingTestMessageDataStream)
 {
-    CDataStream stream(SER_NETWORK, CLIENT_VERSION);
-    stream << string("test") << string("test") << message1;
     Network dummy_network;
     CNode peer(dummy_network);
-    message_handler->HandleMessage(stream, &peer);
+    message_handler->HandleMessage(TestDataStream(message1), &peer);
     bool handled = msgdata[message1_hash]["handled_by_test_message_handler"];
     ASSERT_THAT(handled, Eq(true));
 }
 
 TEST_F(ATestMessageHandler, DoesntHandleAnIncomingMessageDataStreamWithMissingDependencies)
 {
-    CDataStream stream(SER_NETWORK, CLIENT_VERSION);
-    stream << string("test") << string("test") << message2;
     Network dummy_network;
     CNode peer(dummy_network);
-    message_handler->HandleMessage(stream, &peer);
+    message_handler->HandleMessage(TestDataStream(message2), &peer);
     bool handled = msgdata[message2_hash]["handled_by_test_message_handler"];
     ASSERT_THAT(handled, Eq(false));
 }
 
 
-TEST_F(ATestMessageHandler, HandleAnIncomingMessageAfterMissingDependenciesHaveBeenReceived)
+TEST_F(ATestMessageHandler, HandlesAnIncomingMessageAfterMissingDependenciesHaveBeenReceived)
 {
-    CDataStream stream2(SER_NETWORK, CLIENT_VERSION);
-    stream2 << string("test") << string("test") << message2;
     Network dummy_network;
     CNode peer(dummy_network);
-    message_handler->HandleMessage(stream2, &peer);
+
+    message_handler->HandleMessage(TestDataStream(message2), &peer);
     bool handled = msgdata[message2_hash]["handled_by_test_message_handler"];
     ASSERT_THAT(handled, Eq(false));
 
-    CDataStream stream1(SER_NETWORK, CLIENT_VERSION);
-    stream1 << string("test") << string("test") << message1;
-    message_handler->HandleMessage(stream1, &peer);
-
+    message_handler->HandleMessage(TestDataStream(message1), &peer);
     handled = msgdata[message2_hash]["handled_by_test_message_handler"];
     ASSERT_THAT(handled, Eq(true));
 }
