@@ -44,11 +44,10 @@ namespace boost {
     class thread_group;
 }
 
-/** The maximum number of entries in an 'inv' protocol message */
 static const unsigned int MAX_INV_SZ = 50000;
 
-inline unsigned int ReceiveFloodSize() { return 1000*GetArg("-maxreceivebuffer", 5*1000); }
-inline unsigned int SendBufferSize() { return 1000*GetArg("-maxsendbuffer", 1*1000); }
+inline unsigned int ReceiveFloodSize() { return 5000000; }
+inline unsigned int SendBufferSize() { return 1000000; }
 
 void MapPort(bool fUseUPnP);
 
@@ -84,7 +83,6 @@ public:
 class MainRoutine;
 
 
-// Signals for message handling
 struct CNodeSignals
 {
     boost::signals2::signal<int ()> GetHeight;

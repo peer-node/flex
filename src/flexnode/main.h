@@ -91,7 +91,6 @@ class MainRoutine
 public:
     CMainSignals g_signals;
     std::string node_name;
-
     Network *network;
     MainFlexNode *flexnode = NULL;
 
@@ -106,34 +105,37 @@ public:
     CNodeState *StateOfNode(NodeId pnode);
 
     void SetNetwork(Network& network_);
+
     void SetFlexNode(MainFlexNode& flexnode_);
 
     bool AddBlockToQueue(NodeId nodeid, const uint256 &hash);
+
     void MarkBlockAsReceived(const uint256 &hash, NodeId nodeFrom = -1);
+
     void MarkBlockAsInFlight(NodeId nodeid, const uint256 &hash);
+
     void InitializeNode(NodeId nodeid, const CNode *pnode);
+
     void FinalizeNode(NodeId nodeid);
 
     bool IsInitialBlockDownload();
+
     bool AlreadyHave(const CInv& inv);
 
-    /** Register with a network node to receive its signals */
     void RegisterNodeSignals(CNodeSignals& nodeSignals);
-    /** Unregister a network node */
+
     void UnregisterNodeSignals(CNodeSignals& nodeSignals);
 
-
-    /** Process protocol messages received from a given node */
     bool ProcessMessages(CNode* pfrom);
+
     bool ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vRecv);
-    /** Send queued protocol messages to be sent to a give node */
+
     bool SendMessages(CNode* pto);
 
-    /** Abort with a message */
-    bool AbortNode(const std::string &msg);
-    /** Get statistics from node state */
+    bool AbortNode(const std::string &message);
+
     bool GetNodeStateStats(NodeId nodeid, CNodeStateStats &stats);
-    /** Increase a node's misbehavior score. */
+
     void Misbehaving(NodeId nodeid, int howmuch);
 
     void ProcessGetData(CNode *pfrom);

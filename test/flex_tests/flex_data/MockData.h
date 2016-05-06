@@ -22,8 +22,9 @@ public:
     template <typename VALUE>
     void Deserialize(vch_t serialized_data, VALUE& value)
     {
-        VALUE blank;
-        value = blank;
+        std::vector<VALUE> blank_values;
+        blank_values.resize(1);
+        value = blank_values[0];
 
         serialized_data = ReverseBytes(serialized_data);
         CDataStream stream(serialized_data,

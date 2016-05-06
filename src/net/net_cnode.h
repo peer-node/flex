@@ -56,8 +56,6 @@ public:
     //    until they have initialized their bloom filter.
     bool fRelayTxes;
     CSemaphoreGrant grantOutbound;
-    CCriticalSection cs_filter;
-    CBloomFilter* pfilter;
     int nRefCount;
     NodeId id;
 protected:
@@ -97,6 +95,13 @@ public:
     // Network
     Network& network;
 
+    bool connected_node_signals{false};
+
+    CNode(Network& network): network(network), ssSend(SER_NETWORK, INIT_PROTO_VERSION)
+    {
+
+    }
+
     CNode(Network& networkIn, SOCKET hSocketIn, CAddress addrIn, std::string addrNameIn = "", bool fInboundIn=false) :
             ssSend(SER_NETWORK, INIT_PROTO_VERSION), setAddrKnown(5000), network(networkIn)
     {
@@ -129,7 +134,6 @@ public:
         fGetAddr = false;
         fRelayTxes = false;
         setInventoryKnown.max_size(SendBufferSize() / 1000);
-        pfilter = new CBloomFilter();
         nPingNonceSent = 0;
         nPingUsecStart = 0;
         nPingUsecTime = 0;
@@ -145,6 +149,7 @@ public:
             PushVersion();
 
         network.GetNodeSignals().InitializeNode(GetId(), this);
+        connected_node_signals = true;
     }
 
     ~CNode()
@@ -154,9 +159,8 @@ public:
             closesocket(hSocket);
             hSocket = INVALID_SOCKET;
         }
-        if (pfilter)
-            delete pfilter;
-        network.GetNodeSignals().FinalizeNode(GetId());
+        if (connected_node_signals)
+            network.GetNodeSignals().FinalizeNode(GetId());
     }
 
 private:
@@ -517,6 +521,11 @@ public:
             AbortMessage();
             throw;
         }
+    }
+
+    virtual void FetchDependencies(std::vector<uint160> dependencies)
+    {
+
     }
 
     void CloseSocketDisconnect();

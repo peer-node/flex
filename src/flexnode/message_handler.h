@@ -10,7 +10,7 @@
 #define LOG_CATEGORY "message_handler.h"
 
 
-class MessageHandlerWithOrphanage
+class MessageHandlerWithOrphanage_
 {
 public:
     bool should_forward;
