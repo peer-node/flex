@@ -10,6 +10,12 @@ class MessageHandlerWithOrphanage
 {
 public:
     MemoryDataStore& msgdata;
+    Network *network{NULL};
+
+    void SetNetwork(Network &network_)
+    {
+        network = &network_;
+    }
 
     MessageHandlerWithOrphanage(MemoryDataStore &msgdata);
 
@@ -120,10 +126,21 @@ public:
     // put one HANDLECLASS here for each message type
     // and implement void HandleMyMessage(MyMessage message)
 
+    CNode *GetPeer(uint160 message_hash)
+    {
+        NodeId node_id = msgdata[message_hash]["peer"];
+        if (network != NULL)
+            for (auto peer : network->vNodes)
+            {
+                if(peer->id == node_id)
+                    return peer;
+            }
+        return NULL;
+    }
 };
 
 
-#define HANDLESTREAM(ClassName)                                                   \
+#define HANDLESTREAM(ClassName)                                                     \
     {                                                                               \
         if (GetMessageTypeFromDataStream(ss) == ClassName::Type())                  \
         {                                                                           \
@@ -134,19 +151,19 @@ public:
         }                                                                           \
     }
 
-#define HANDLEHASH(ClassName)                                                     \
+#define HANDLEHASH(ClassName)                                                       \
     {                                                                               \
         std::string type = msgdata[message_hash]["type"];                           \
         if (type == ClassName::Type())                                              \
             Handle ## ClassName ## Hash(message_hash);                              \
     }
 
-#define HANDLECLASS(ClassName)                                                     \
+#define HANDLECLASS(ClassName)                                                      \
     void Handle ## ClassName ## Hash(uint160 message_hash)                          \
     {                                                                               \
         ClassName object;                                                           \
         object = msgdata[message_hash][object.Type()];                              \
-        CNode *peer = NULL;                                                         \
+        CNode *peer = GetPeer(message_hash);                                        \
         Handle(object, peer);                                                       \
     }                                                                               \
     void Handle ## ClassName ## Stream(CDataStream ss, CNode *peer)                 \

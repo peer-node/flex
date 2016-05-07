@@ -80,7 +80,7 @@ public:
     vector<uint160> dependencies_requested;
     Network dummy_network;
 
-    TestPeer(): CNode(dummy_network) { }
+    TestPeer(): CNode(dummy_network) { dummy_network.vNodes.push_back(this); }
 
     virtual void FetchDependencies(set<uint160> dependencies)
     {
@@ -208,7 +208,7 @@ CDataStream TestDataStream(T message)
 
 TEST_F(ATestMessageHandler, HandlesAnIncomingTestMessageDataStream)
 {
-    message_handler->HandleMessage(TestDataStream(message1), (CNode*)peer);
+    message_handler->HandleMessage(TestDataStream(message1), peer);
     bool handled = msgdata[message1_hash]["handled_by_test_message_handler"];
     ASSERT_THAT(handled, Eq(true));
 }
@@ -237,4 +237,13 @@ TEST_F(ATestMessageHandler, FetchesMissingDependenciesFromThePeer)
 
     ASSERT_THAT(peer->dependencies_requested.size(), Eq(1));
     ASSERT_THAT(peer->dependencies_requested[0], Eq(message1_hash));
+}
+
+TEST_F(ATestMessageHandler, RecoversTheCorrectPeerIfItsStillConnected)
+{
+    message_handler->SetNetwork(peer->dummy_network);
+    message_handler->HandleMessage(TestDataStream(message2), peer);
+
+    CNode *recalled_peer = message_handler->GetPeer(message2_hash);
+    ASSERT_THAT(recalled_peer, Eq(peer));
 }
