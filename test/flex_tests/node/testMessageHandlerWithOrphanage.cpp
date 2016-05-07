@@ -82,9 +82,9 @@ public:
 
     TestPeer(): CNode(dummy_network) { }
 
-    virtual void FetchDependencies(vector<uint160> dependencies)
+    virtual void FetchDependencies(set<uint160> dependencies)
     {
-        dependencies_requested = dependencies;
+        dependencies_requested = vector<uint160>(dependencies.begin(), dependencies.end());
     }
 };
 
@@ -146,27 +146,20 @@ public:
     TestMessageHandler(MemoryDataStore &msgdata) :
             MessageHandlerWithOrphanage(msgdata) { }
 
-    HandleClass_(TestMessageWithDependencies);
-
     void HandleMessage(CDataStream ss, CNode* peer)
     {
-        string message_type;
-        ss >> message_type;
-        ss >> message_type;
-
-        handle_stream_(TestMessageWithDependencies, ss, peer);
+        HANDLESTREAM(TestMessageWithDependencies);
     }
 
     void HandleMessage(uint160 message_hash)
     {
-        string message_type = msgdata[message_hash]["type"];
-        handle_hash_(TestMessageWithDependencies, message_hash);
+        HANDLEHASH(TestMessageWithDependencies);
     }
 
+    HANDLECLASS(TestMessageWithDependencies);
     void HandleTestMessageWithDependencies(TestMessageWithDependencies message)
     {
-        uint160 message_hash = message.GetHash160();
-        msgdata[message_hash]["handled_by_test_message_handler"] = true;
+        msgdata[message.GetHash160()]["handled_by_test_message_handler"] = true;
     }
 };
 
@@ -179,9 +172,12 @@ public:
     TestMessageWithDependencies message1, message2;
     uint160 message1_hash, message2_hash;
 
+    TestPeer *peer;
+
     virtual void SetUp()
     {
         message_handler = new TestMessageHandler(msgdata);
+        peer = new TestPeer();
         message1_hash = message1.GetHash160();
         message2.dependencies.push_back(message1_hash);
         message2_hash = message2.GetHash160();
@@ -190,6 +186,7 @@ public:
     virtual void TearDown()
     {
         delete message_handler;
+        delete peer;
     }
 };
 
@@ -211,34 +208,33 @@ CDataStream TestDataStream(T message)
 
 TEST_F(ATestMessageHandler, HandlesAnIncomingTestMessageDataStream)
 {
-    Network dummy_network;
-    CNode peer(dummy_network);
-    message_handler->HandleMessage(TestDataStream(message1), &peer);
+    message_handler->HandleMessage(TestDataStream(message1), (CNode*)peer);
     bool handled = msgdata[message1_hash]["handled_by_test_message_handler"];
     ASSERT_THAT(handled, Eq(true));
 }
 
 TEST_F(ATestMessageHandler, DoesntHandleAnIncomingMessageDataStreamWithMissingDependencies)
 {
-    Network dummy_network;
-    CNode peer(dummy_network);
-    message_handler->HandleMessage(TestDataStream(message2), &peer);
+    message_handler->HandleMessage(TestDataStream(message2), peer);
     bool handled = msgdata[message2_hash]["handled_by_test_message_handler"];
     ASSERT_THAT(handled, Eq(false));
 }
 
-
 TEST_F(ATestMessageHandler, HandlesAnIncomingMessageAfterMissingDependenciesHaveBeenReceived)
 {
-    Network dummy_network;
-    CNode peer(dummy_network);
-
-    message_handler->HandleMessage(TestDataStream(message2), &peer);
+    message_handler->HandleMessage(TestDataStream(message2), peer);
     bool handled = msgdata[message2_hash]["handled_by_test_message_handler"];
     ASSERT_THAT(handled, Eq(false));
 
-    message_handler->HandleMessage(TestDataStream(message1), &peer);
+    message_handler->HandleMessage(TestDataStream(message1), peer);
     handled = msgdata[message2_hash]["handled_by_test_message_handler"];
     ASSERT_THAT(handled, Eq(true));
 }
 
+TEST_F(ATestMessageHandler, FetchesMissingDependenciesFromThePeer)
+{
+    message_handler->HandleMessage(TestDataStream(message2), peer);
+
+    ASSERT_THAT(peer->dependencies_requested.size(), Eq(1));
+    ASSERT_THAT(peer->dependencies_requested[0], Eq(message1_hash));
+}

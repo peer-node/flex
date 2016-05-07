@@ -523,7 +523,7 @@ public:
         }
     }
 
-    virtual void FetchDependencies(std::vector<uint160> dependencies)
+    virtual void FetchDependencies(std::set<uint160> dependencies)
     {
 
     }

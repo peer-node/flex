@@ -66,15 +66,6 @@ public:
         RemoveFromMissingDependenciesAndRecordNewNonOrphans(message_hash);
     }
 
-    virtual void HandleMessage(CDataStream ss, CNode *peer)
-    {
-        std::string message_type;
-        ss >> message_type;
-        ss >> message_type;
-
-        // populate with handle_stream_
-    }
-
     void RemoveFromMissingDependenciesAndRecordNewNonOrphans(uint160 message_hash)
     {
         std::set<uint160> new_non_orphans;
@@ -88,13 +79,6 @@ public:
                 new_non_orphans.insert(orphan);
         }
         msgdata[message_hash]["new_non_orphans"] = new_non_orphans;
-    }
-
-    virtual void HandleMessage(uint160 message_hash)
-    {
-        // populate with handle_hash_
-
-        msgdata[message_hash]["handled"] = true;
     }
 
     void HandleOrphans(uint160 message_hash)
@@ -111,20 +95,53 @@ public:
     std::set<uint160> GetOrphans(uint160 message_hash);
 
     bool IsOrphan(uint160 message_hash);
+
+    std::string GetMessageTypeFromDataStream(CDataStream ss)
+    {
+        std::string type;
+        ss >> type;
+        ss >> type;
+        return type;
+    }
+
+    virtual void HandleMessage(uint160 message_hash)
+    {
+        // populate with HANDLEHASH
+
+        msgdata[message_hash]["handled"] = true;
+    }
+
+    virtual void HandleMessage(CDataStream ss, CNode *peer)
+    {
+        // populate with HANDLESTREAM
+    }
+
+
+    // put one HANDLECLASS here for each message type
+    // and implement void HandleMyMessage(MyMessage message)
+
 };
 
 
-#define handle_stream_(ClassName, Datastream, Peer)                                 \
-        if (message_type == ClassName::Type())                                      \
+#define HANDLESTREAM(ClassName)                                                   \
+    {                                                                               \
+        if (GetMessageTypeFromDataStream(ss) == ClassName::Type())                  \
         {                                                                           \
-            Handle ## ClassName ## Stream(Datastream, Peer);                        \
-        }
+            std::string message_type;                                               \
+            ss >> message_type;                                                     \
+            ss >> message_type;                                                     \
+            Handle ## ClassName ## Stream(ss, peer);                                \
+        }                                                                           \
+    }
 
-#define handle_hash_(ClassName, Uint160)                                            \
-        if (message_type == ClassName::Type())                                      \
-            Handle ## ClassName ## Hash(Uint160);
+#define HANDLEHASH(ClassName)                                                     \
+    {                                                                               \
+        std::string type = msgdata[message_hash]["type"];                           \
+        if (type == ClassName::Type())                                              \
+            Handle ## ClassName ## Hash(message_hash);                              \
+    }
 
-#define HandleClass_(ClassName)                                                     \
+#define HANDLECLASS(ClassName)                                                     \
     void Handle ## ClassName ## Hash(uint160 message_hash)                          \
     {                                                                               \
         ClassName object;                                                           \
@@ -136,8 +153,11 @@ public:
     {                                                                               \
         ClassName object = Get ## ClassName ## FromStream(ss);                      \
         RegisterIncomingMessage(object, peer);                                      \
-        if (not IsOrphan(object.GetHash160()))                                      \
+        uint160 hash = object.GetHash160();                                         \
+        if (not IsOrphan(hash))                                                     \
             Handle(object, peer);                                                   \
+        else                                                                        \
+            peer->FetchDependencies(msgdata[hash]["missing_dependencies"]);         \
     }                                                                               \
     ClassName Get ## ClassName ## FromStream(CDataStream ss)                        \
     {                                                                               \
@@ -149,9 +169,11 @@ public:
     {                                                                               \
         Handle ## ClassName(instance);                                              \
         uint160 message_hash = instance.GetHash160();                               \
-        if (not msgdata[instance.GetHash160()]["rejected"])                         \
+        if (not msgdata[message_hash]["rejected"])                                  \
             HandleOrphans(message_hash);                                            \
+        msgdata[message_hash]["handled"] = true;                                    \
     }
+
 
 
 #endif //FLEX_MESSAGEHANDLERWITHORPHANAGE_H
