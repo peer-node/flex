@@ -1,6 +1,6 @@
 #include "gmock/gmock.h"
 #include "../flex_data/TestData.h"
-#include "NetworkState.h"
+#include "EncodedNetworkState.h"
 #include "MinedCredit.h"
 
 using namespace ::testing;
@@ -10,7 +10,7 @@ using namespace std;
 class ANetworkState : public Test
 {
 public:
-    NetworkState network_state;
+    EncodedNetworkState network_state;
 };
 
 TEST_F(ANetworkState, SpecifiesANetworkID)
@@ -32,7 +32,7 @@ public:
 
 TEST_F(AMinedCredit, SpecifiesANetworkState)
 {
-    NetworkState network_state = mined_credit.network_state;
+    EncodedNetworkState network_state = mined_credit.network_state;
 }
 
 TEST_F(AMinedCredit, CanBeStoredInADatabase)

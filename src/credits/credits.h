@@ -14,7 +14,6 @@
 #include "database/data.h"
 #include "Credit.h"
 #include "MinedCredit.h"
-#include "MinedCreditMessage.h"
 #include "CreditInBatch.h"
 #include "CreditBatch.h"
 #include "UnsignedTransaction.h"

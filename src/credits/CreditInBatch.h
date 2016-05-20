@@ -32,7 +32,7 @@ public:
 
     vch_t getvch();
 
-    bool operator==(const CreditInBatch& other);
+    bool operator==(const CreditInBatch& other) const;
 
     bool operator<(const CreditInBatch& other) const;
 };

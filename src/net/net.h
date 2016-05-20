@@ -6,7 +6,6 @@
 #ifndef BITCOIN_NET_H
 #define BITCOIN_NET_H
 
-#include "credits/credits.h"
 #include "base/bloom.h"
 #include "compat.h"
 #include "crypto/hash.h"
@@ -35,6 +34,8 @@
 #include "net/addrman.h"
 
 #include <boost/signals2/signal.hpp>
+#include <src/credits/SignedTransaction.h>
+#include <test/flex_tests/node/MinedCreditMessage.h>
 
 #define MAX_OUTBOUND_CONNECTIONS 8
 

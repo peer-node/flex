@@ -8,7 +8,7 @@
 
 
 
-class MinedCredit : public Credit
+class MinedCredit_ : public Credit
 {
 public:
     uint160 previous_mined_credit_hash;

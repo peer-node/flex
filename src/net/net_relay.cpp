@@ -39,7 +39,6 @@ void Network::RelayTransaction(const SignedTransaction& tx, const uint256& hash,
     {
         if(!pnode->fRelayTxes)
             continue;
-        LOCK(pnode->cs_filter);
         pnode->PushInventory(inv);
     }
 }
@@ -56,7 +55,6 @@ void Network::TellNodeAboutTransaction(CNode* pnode,
     mapRelay.insert(std::make_pair(inv, ss));
     LOCK(cs_vNodes);
     {
-        LOCK(pnode->cs_filter);
         pnode->PushInventory(inv);
     }
 }

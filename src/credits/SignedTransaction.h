@@ -35,6 +35,11 @@ public:
     uint64_t IncludedFees();
 
     std::vector<uint160> GetMissingCredits(MemoryDataStore &creditdata);
+
+    bool operator==(const SignedTransaction& other) const
+    {
+        return rawtx == other.rawtx and signature == other.signature;
+    }
 };
 
 

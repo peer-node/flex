@@ -68,7 +68,7 @@ CreditBatch ReconstructBatch_(MinedCreditMessage& msg)
  * BatchChainer
  */
 
-    void BatchChainer::SwitchToBestChain()
+    void BatchChainer_::SwitchToBestChain()
     {
         uint160 credit_hash = MostWorkBatch();
         bool was_digging = flexnode.digging;
@@ -86,13 +86,13 @@ CreditBatch ReconstructBatch_(MinedCreditMessage& msg)
         flexnode.digging = was_digging;
     }
 
-    void BatchChainer::RewindToCalend(uint160 calend_credit_hash)
+    void BatchChainer_::RewindToCalend(uint160 calend_credit_hash)
     {
         while (flexnode.previous_mined_credit_hash != calend_credit_hash)
             RemoveBatchFromTip();
     }
 
-    void BatchChainer::SwitchToChainViaCalend(uint160 credit_hash)
+    void BatchChainer_::SwitchToChainViaCalend(uint160 credit_hash)
     {
         log_ << "SwitchToChainViaCalend: " << credit_hash << "\n";
         uint160 calend_hash = GetCalendCreditHash(credit_hash);
@@ -131,7 +131,7 @@ CreditBatch ReconstructBatch_(MinedCreditMessage& msg)
         log_ << "calendar of " << credit_hash << " is " << calendar << "\n";
     }
 
-    void BatchChainer::SwitchToChainViaFork(uint160 credit_hash)
+    void BatchChainer_::SwitchToChainViaFork(uint160 credit_hash)
     {
         uint32_t stepsback;
 
@@ -163,7 +163,7 @@ CreditBatch ReconstructBatch_(MinedCreditMessage& msg)
         }
     }
 
-    void BatchChainer::CheckForPaymentsToWatchedPubKeys(SignedTransaction tx,
+    void BatchChainer_::CheckForPaymentsToWatchedPubKeys(SignedTransaction tx,
                                                         uint160 credit_hash)
     {
         log_ << "CheckForPaymentsToWatchedPubKeys(): " << tx;
@@ -203,7 +203,7 @@ CreditBatch ReconstructBatch_(MinedCreditMessage& msg)
         }
     }
 
-    void BatchChainer::AddBatchToTip(MinedCreditMessage& msg)
+    void BatchChainer_::AddBatchToTip(MinedCreditMessage& msg)
     {
         uint160 credit_hash = msg.mined_credit.GetHash160();
         log_ << "BatchChainer::AddBatchToTip(): " << credit_hash << "\n";
@@ -252,7 +252,7 @@ CreditBatch ReconstructBatch_(MinedCreditMessage& msg)
         total_work = msg.mined_credit.total_work + msg.mined_credit.difficulty;
     }
 
-    void BatchChainer::RemoveBatchFromTip()
+    void BatchChainer_::RemoveBatchFromTip()
     {
         MinedCreditMessage msg
             = creditdata[flexnode.previous_mined_credit_hash]["msg"];
@@ -283,7 +283,7 @@ CreditBatch ReconstructBatch_(MinedCreditMessage& msg)
         flexnode.previous_mined_credit_hash = preceding_hash;
     }
 
-    void BatchChainer::HandleBatch(MinedCreditMessage msg, CNode* peer)
+    void BatchChainer_::HandleBatch(MinedCreditMessage msg, CNode* peer)
     {
         log_ << "HandleBatch(): " << msg;
 
@@ -317,7 +317,7 @@ CreditBatch ReconstructBatch_(MinedCreditMessage& msg)
         HandleNonOrphansAfterBatch(msg);
     }
 
-    uint160 BatchChainer::RecordTotalWork(MinedCreditMessage msg)
+    uint160 BatchChainer_::RecordTotalWork(MinedCreditMessage msg)
     {
         MinedCredit mined_credit = msg.mined_credit;
         uint160 work = mined_credit.total_work + mined_credit.difficulty;
@@ -327,7 +327,7 @@ CreditBatch ReconstructBatch_(MinedCreditMessage& msg)
         return work;
     }
 
-    void BatchChainer::HandleNonOrphansAfterBatch(MinedCreditMessage msg)
+    void BatchChainer_::HandleNonOrphansAfterBatch(MinedCreditMessage msg)
     {
         vector<SignedTransaction> non_orphan_txs;
         non_orphan_txs = orphanage.TxNonOrphansAfterBatch(
@@ -342,7 +342,7 @@ CreditBatch ReconstructBatch_(MinedCreditMessage& msg)
             HandleMinedCreditMessage(msg_, NULL);
     }
 
-    void BatchChainer::HandleNewMostWorkBatch(MinedCreditMessage msg)
+    void BatchChainer_::HandleNewMostWorkBatch(MinedCreditMessage msg)
     {
         log_ << "HandleNewMostWorkBatch(): " << msg;
         
@@ -372,7 +372,7 @@ CreditBatch ReconstructBatch_(MinedCreditMessage& msg)
         flexnode.digging = was_digging;
     }
 
-    bool BatchChainer::CheckBadBlockMessage(BadBlockMessage msg)
+    bool BatchChainer_::CheckBadBlockMessage(BadBlockMessage msg)
     {
         MinedCreditMessage mined_credit_msg
             = creditdata[msg.message_hash]["msg"];
@@ -384,7 +384,7 @@ CreditBatch ReconstructBatch_(MinedCreditMessage& msg)
         return true;
     }
 
-    void BatchChainer::HandleBadBlockMessage(BadBlockMessage msg, CNode* peer)
+    void BatchChainer_::HandleBadBlockMessage(BadBlockMessage msg, CNode* peer)
     {
         if (!CheckBadBlockMessage(msg))
             return;
@@ -397,14 +397,14 @@ CreditBatch ReconstructBatch_(MinedCreditMessage& msg)
         SwitchToBestChain();
     }
 
-    void BatchChainer::SendBadBlockMessage(uint160 message_hash,
+    void BatchChainer_::SendBadBlockMessage(uint160 message_hash,
                                            TwistWorkCheck check)
     {
         BadBlockMessage msg(message_hash, check);
         SendBadBlockMessage(msg);
     }
 
-    void BatchChainer::SendBadBlockMessage(BadBlockMessage msg)
+    void BatchChainer_::SendBadBlockMessage(BadBlockMessage msg)
     {
         foreach_(CNode* peer, vNodes)
         {
@@ -413,7 +413,7 @@ CreditBatch ReconstructBatch_(MinedCreditMessage& msg)
     }
 
 
-    void BatchChainer::HandleMinedCreditMessage(MinedCreditMessage msg, 
+    void BatchChainer_::HandleMinedCreditMessage(MinedCreditMessage msg,
                                                 CNode* peer)
     {
         log_ << "BatchChainer::HandleMinedCreditMessage(): msg is " << msg;
@@ -483,7 +483,7 @@ CreditBatch ReconstructBatch_(MinedCreditMessage& msg)
         msgdata[credit_hash]["processed"] = true;
     }
 
-    void BatchChainer::HandleNugget(MinedCredit mined_credit)
+    void BatchChainer_::HandleNugget(MinedCredit mined_credit)
     {
         flexnode.pit.HandleNugget(mined_credit);
         vector<MinedCreditMessage> non_orphan_nuggets;
@@ -496,12 +496,12 @@ CreditBatch ReconstructBatch_(MinedCreditMessage& msg)
         }
     }
 
-    bool BatchChainer::CheckTransactionForMissingData(SignedTransaction tx)
+    bool BatchChainer_::CheckTransactionForMissingData(SignedTransaction tx)
     {
         return tx.GetMissingCredits().size() == 0;
     }
 
-    void BatchChainer::RequestMissingTransactionData(SignedTransaction tx,
+    void BatchChainer_::RequestMissingTransactionData(SignedTransaction tx,
                                                      CNode *peer)
     {
         if (peer == NULL)
@@ -515,7 +515,7 @@ CreditBatch ReconstructBatch_(MinedCreditMessage& msg)
                               missing_credits);
     }
 
-    void BatchChainer::HandleDiurnBranchesReceived(vector<uint160> hashes,
+    void BatchChainer_::HandleDiurnBranchesReceived(vector<uint160> hashes,
                                                    CNode *peer)
     {
         foreach_(const uint160& credit_hash, hashes)
@@ -527,7 +527,7 @@ CreditBatch ReconstructBatch_(MinedCreditMessage& msg)
         }
     }
 
-    bool BatchChainer::DiurnsAreInCalendar(SignedTransaction tx)
+    bool BatchChainer_::DiurnsAreInCalendar(SignedTransaction tx)
     {
         foreach_(const CreditInBatch& credit, tx.rawtx.inputs)
         {
@@ -546,7 +546,7 @@ CreditBatch ReconstructBatch_(MinedCreditMessage& msg)
         return true;
     }
 
-    SignedTransaction BatchChainer::AddMissingDiurnBranches(SignedTransaction tx)
+    SignedTransaction BatchChainer_::AddMissingDiurnBranches(SignedTransaction tx)
     {
         foreach_(CreditInBatch& credit, tx.rawtx.inputs)
         {
@@ -568,7 +568,7 @@ CreditBatch ReconstructBatch_(MinedCreditMessage& msg)
         return tx;
     }
 
-    void BatchChainer::HandleTransaction(SignedTransaction tx, CNode *peer)
+    void BatchChainer_::HandleTransaction(SignedTransaction tx, CNode *peer)
     {
         log_ << "batchchain: got transaction " << tx << "\n";
 
@@ -622,8 +622,8 @@ CreditBatch ReconstructBatch_(MinedCreditMessage& msg)
             HandleMinedCreditMessage(msg, NULL);
     }
 
-    bool BatchChainer::CheckMinedCreditForMissingData(MinedCreditMessage& msg,
-                                                      CNode *peer)
+    bool BatchChainer_::CheckMinedCreditForMissingData(MinedCreditMessage& msg,
+                                                       CNode *peer)
     {
         if (!msg.hash_list.RecoverFullHashes())
         {

@@ -1,18 +1,15 @@
 #ifndef FLEX_MINEDCREDIT_H
 #define FLEX_MINEDCREDIT_H
 
-
-#include <src/base/serialize.h>
-#include <src/base/version.h>
-#include <src/crypto/hash.h>
+#include <src/crypto/point.h>
 #include "credits/Credit.h"
-#include "NetworkState.h"
+#include "EncodedNetworkState.h"
 
 
 class MinedCredit : public Credit
 {
 public:
-    NetworkState network_state;
+    EncodedNetworkState network_state;
 
     IMPLEMENT_SERIALIZE
     (
@@ -28,6 +25,16 @@ public:
         return Hash160(ss.begin(), ss.end());
     }
 
+    Point PublicKey()
+    {
+        if (keydata.size() == 34)
+        {
+            Point public_key;
+            public_key.setvch(keydata);
+            return public_key;
+        }
+        return Point();
+    }
 };
 
 

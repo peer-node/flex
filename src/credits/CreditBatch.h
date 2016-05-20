@@ -31,6 +31,8 @@ public:
 
     uint160 Root();
 
+    uint64_t size();
+
     int32_t Position(Credit credit);
 
     Credit GetCredit(uint32_t position);

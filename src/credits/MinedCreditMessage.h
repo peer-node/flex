@@ -1,17 +1,17 @@
 #ifndef FLEX_MINEDCREDITMESSAGE_H
 #define FLEX_MINEDCREDITMESSAGE_H
 
+#include <test/flex_tests/mined_credits/MinedCredit.h>
 #include "crypto/hashtrees.h"
 #include "crypto/shorthash.h"
 #include "mining/work.h"
 #include "Credit.h"
-#include "MinedCredit.h"
 
 #include "log.h"
 #define LOG_CATEGORY "MinedCreditMessage.h"
 
 
-class MinedCreditMessage
+class MinedCreditMessage_
 {
 public:
     MinedCredit mined_credit;
@@ -19,7 +19,7 @@ public:
     ShortHashList<uint160> hash_list;
     uint64_t timestamp;
 
-    MinedCreditMessage(): timestamp(0) { }
+    MinedCreditMessage_(): timestamp(0) { }
 
     IMPLEMENT_SERIALIZE
     (
@@ -33,7 +33,7 @@ public:
 
     uint160 GetHash160() const;
 
-    bool operator==(const MinedCreditMessage& other);
+    bool operator==(const MinedCreditMessage_& other);
 
     bool HaveData();
 

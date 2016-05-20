@@ -28,6 +28,11 @@ extern string_t ByteString(vch_t bytes);
             Add(credit);
     }
 
+    uint64_t CreditBatch::size()
+    {
+        return credits.size();
+    }
+
     string_t CreditBatch::ToString() const
     {
         uint160 root = CreditBatch(*this).Root();

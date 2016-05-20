@@ -3,7 +3,6 @@
 
 #include "Credit.h"
 #include "crypto/point.h"
-#include "MinedCredit.h"
 #include "CreditInBatch.h"
 
 #include "log.h"
@@ -36,6 +35,11 @@ public:
     uint256 GetHash();
 
     bool operator!();
+
+    bool operator==(const UnsignedTransaction& other) const
+    {
+        return inputs == other.inputs and outputs == other.outputs and pubkeys == other.pubkeys;
+    }
 };
 
 

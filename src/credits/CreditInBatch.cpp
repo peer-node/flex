@@ -55,7 +55,7 @@ using namespace std;
         return result;
     }
 
-    bool CreditInBatch::operator==(const CreditInBatch& other)
+    bool CreditInBatch::operator==(const CreditInBatch& other) const
     {
         return branch == other.branch && position == other.position;
     }

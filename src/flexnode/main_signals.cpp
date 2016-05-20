@@ -146,15 +146,16 @@ void MainRoutine::Misbehaving(NodeId pnode, int howmuch)
         return;
 
     state->nMisbehavior += howmuch;
-    if (state->nMisbehavior >= GetArg("-banscore", 100))
+    if (state->nMisbehavior >= 100)
     {
         log_ << "Misbehaving: " << state->name
-        << " (" << state->nMisbehavior-howmuch << " -> "
-        << state->nMisbehavior << ") BAN THRESHOLD EXCEEDED\n";
+             << " (" << state->nMisbehavior-howmuch << " -> "
+             << state->nMisbehavior << ") BAN THRESHOLD EXCEEDED\n";
         state->fShouldBan = true;
-    } else
+    }
+    else
         log_ << "Misbehaving: " << state->name
-        << " (" << state->nMisbehavior-howmuch << ")\n";
+             << " (" << state->nMisbehavior-howmuch << ")\n";
 }
 
 bool MainRoutine::AbortNode(const std::string &strMessage)

@@ -12,7 +12,7 @@ using namespace std;
  *  MinedCreditMessage
  */
 
-    string_t MinedCreditMessage::ToString() const
+    string_t MinedCreditMessage_::ToString() const
     {
         ShortHashList<uint160> list = hash_list;
         list.RecoverFullHashes();
@@ -44,31 +44,31 @@ using namespace std;
         return ss.str();
     }
 
-    uint256 MinedCreditMessage::GetHash() const
+    uint256 MinedCreditMessage_::GetHash() const
     {
         CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
         ss << *this;
         return Hash(ss.begin(), ss.end());
     }
 
-    uint160 MinedCreditMessage::GetHash160() const
+    uint160 MinedCreditMessage_::GetHash160() const
     {
         CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
         ss << *this;
         return Hash160(ss.begin(), ss.end());
     }
 
-    bool MinedCreditMessage::operator==(const MinedCreditMessage& other)
+    bool MinedCreditMessage_::operator==(const MinedCreditMessage_& other)
     {
         return GetHash160() == other.GetHash160();
     }
 
-    bool MinedCreditMessage::HaveData()
+    bool MinedCreditMessage_::HaveData()
     {
         return hash_list.RecoverFullHashes();
     }
 
-    bool MinedCreditMessage::CheckHashList()
+    bool MinedCreditMessage_::CheckHashList()
     {
         hash_list.RecoverFullHashes();
 

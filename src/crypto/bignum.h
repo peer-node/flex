@@ -90,6 +90,11 @@ public:
         }
     }
 
+    CBigNum(const MockProperty &property)
+    {
+        *this = property;
+    }
+
     CBigNum& operator=(const CBigNum& b)
     {
         if (!BN_copy(this, &b))
@@ -106,12 +111,15 @@ public:
     template<typename N, typename K>
     CBigNum& operator=(const CProperty<K,N> property)
     {
-        return (*this) = (const CBigNum &)property;
+        return (*this) = (CBigNum &)property;
     }
 
     CBigNum& operator=(const MockProperty property)
     {
-        return (*this) = (const CBigNum &)property;
+        CBigNum value;
+        MockData m;
+        m.Deserialize(property.serialized_value, value);
+        return (*this) = value;
     }
 
     ~CBigNum()
@@ -654,6 +662,7 @@ inline const CBigNum operator%(const CBigNum& a, const CBigNum& b)
         throw bignum_error("CBigNum::operator% : BN_div failed");
     return r;
 }
+
 
 inline const CBigNum operator<<(const CBigNum& a, unsigned int shift)
 {

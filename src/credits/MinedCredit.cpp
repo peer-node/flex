@@ -12,7 +12,7 @@ using namespace std;
  *  MinedCredit
  */
 
-    string_t MinedCredit::ToString() const
+    string_t MinedCredit_::ToString() const
     {
         stringstream ss;
         ss << "\n============== Mined Credit =============" << "\n"
@@ -37,21 +37,21 @@ using namespace std;
         return ss.str();
     }
 
-    uint256 MinedCredit::GetHash()
+    uint256 MinedCredit_::GetHash()
     {
         CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
         ss << *this;
         return Hash(ss.begin(), ss.end());
     }
 
-    uint160 MinedCredit::BranchBridge() const
+    uint160 MinedCredit_::BranchBridge() const
     {
         CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
         ss << *this;
         return Hash160(ss.begin(), ss.end());
     }
 
-    uint160 MinedCredit::GetHash160() const
+    uint160 MinedCredit_::GetHash160() const
     {
         return SymmetricCombine(BranchBridge(), batch_root);
     }

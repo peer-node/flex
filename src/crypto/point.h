@@ -31,6 +31,8 @@ public:
 
     Point(uint8_t curve, CBigNum n);
 
+    Point(CBigNum n);
+
     Point(const Point& other);
 
     Point& operator=(const Point& other);

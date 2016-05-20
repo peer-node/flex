@@ -595,6 +595,11 @@ public:
         return data[position / 8] & (1 << (position % 8));
     }
 
+    bool operator==(const BitChain& other) const
+    {
+        return length == other.length and data == other.data;
+    }
+
     uint160 GetHash160()
     {
         uint160 hash = TreeHash(&data[0], (int)ceil(length / 8.));
@@ -618,6 +623,10 @@ public:
 
     uint160 HashDifferent(std::vector<uint64_t> to_set, 
                           std::vector<uint64_t> to_clear,
+                          uint64_t length_);
+
+    uint160 HashDifferent(std::set<uint64_t> to_set,
+                          std::set<uint64_t> to_clear,
                           uint64_t length_);
 
     IMPLEMENT_SERIALIZE
@@ -653,6 +662,23 @@ inline uint160 BitChain::HashDifferent(std::vector<uint64_t> to_set,
         other.Clear(to_clear[i]);
     }
     
+    uint160 hash = other.GetHash160();
+    return hash;
+}
+
+inline uint160 BitChain::HashDifferent(std::set<uint64_t> to_set,
+                                       std::set<uint64_t> to_clear,
+                                       uint64_t length_)
+{
+    BitChain other = *this;
+
+    other.SetLength(length_);
+
+    for (auto position : to_set)
+        other.Set(position);
+    for (auto position : to_clear)
+        other.Clear(position);
+
     uint160 hash = other.GetHash160();
     return hash;
 }
@@ -821,15 +847,15 @@ inline uint160 EvaluateBranchWithHash(std::vector<uint160> branch,
     return hash;
 }
 
-inline bool VerifyBranch(uint32_t position, 
-                         vch_t element, 
-                         std::vector<uint160> branch, 
-                         uint160 root)
+inline bool VerifyBranchFromOrderedHashTree(uint32_t position,
+                                            vch_t element,
+                                            std::vector<uint160> branch,
+                                            uint160 root)
 {
     if ((!branch.size()) || root != branch.back())
     {
         if (!branch.size())
-            log_ << "VerifyBranch(): no branch!!\n";
+            log_ << "VerifyBranchFromOrderedHashTree(): no branch!!\n";
         else
             log_ << "root != branch[branch.size() - 1]\n";
         return false;
@@ -839,14 +865,14 @@ inline bool VerifyBranch(uint32_t position,
     bool verified;
     if (EvaluateBranchWithHash(branch, hash) != root)
     {
-        log_ << "VerifyBranch(): failed!\n";
+        log_ << "VerifyBranchFromOrderedHashTree(): failed!\n";
         log_ << EvaluateBranchWithHash(branch, hash) << " vs "
              << root << "\n";
         verified = false;
     }
     else
     {
-        log_ << "VerifyBranch(): succeeded!\n";
+        log_ << "VerifyBranchFromOrderedHashTree(): succeeded!\n";
         verified = true;
     }
     return verified;

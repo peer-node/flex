@@ -50,6 +50,15 @@
         SetToMultipleOfGenerator(n);
     }
 
+    Point::Point(CBigNum n):
+        curve(SECP256K1),
+        c_point(NULL),
+        e_point(NULL)
+    {
+        s_point = new Secp256k1Point();
+        SetToMultipleOfGenerator(n);
+    }
+
     Point::Point(const Point& other):
         curve(other.curve),
         s_point(NULL),

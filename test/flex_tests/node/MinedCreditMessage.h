@@ -19,6 +19,14 @@ public:
         READWRITE(hash_list);
         READWRITE(proof_of_work);
     )
+
+    uint160 GetHash160();
+
+    bool operator==(const MinedCreditMessage &other) const
+    {
+        return mined_credit == other.mined_credit and hash_list == other.hash_list
+                                                  and proof_of_work == other.proof_of_work;
+    }
 };
 
 

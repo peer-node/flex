@@ -45,13 +45,13 @@ std::vector<Credit> GetAllMinedCredits(MinedCreditMessage& msg);
 std::vector<Credit> GetAllTransactionOutputs(MinedCreditMessage& msg);
 
 
-class BatchChainer
+class BatchChainer_
 {
 public:
     Orphanage orphanage;
     uint160 total_work;
     
-    BatchChainer() { total_work = 0; }
+    BatchChainer_() { total_work = 0; }
 
     void SwitchToBestChain();
     

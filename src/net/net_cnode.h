@@ -291,18 +291,6 @@ public:
 
     void EndMessage() UNLOCK_FUNCTION(cs_vSend)
     {
-        // The -*messagestest options are intentionally not documented in the help message,
-        // since they are only used during development to debug the networking code and are
-        // not intended for end-users.
-        if (mapArgs.count("-dropmessagestest") && GetRand((uint64_t) GetArg("-dropmessagestest", 2)) == 0)
-        {
-            LogPrint("net", "dropmessages DROPPING SEND MESSAGE\n");
-            AbortMessage();
-            return;
-        }
-        if (mapArgs.count("-fuzzmessagestest"))
-            Fuzz(GetArg("-fuzzmessagestest", 10));
-
         if (ssSend.size() == 0)
             return;
 
