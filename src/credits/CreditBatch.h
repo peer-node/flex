@@ -37,7 +37,7 @@ public:
 
     Credit GetCredit(uint32_t position);
 
-    CreditInBatch GetWithPosition(Credit credit);
+    CreditInBatch GetCreditInBatch(Credit credit);
 
     std::vector<uint160> Branch(Credit credit);
 };

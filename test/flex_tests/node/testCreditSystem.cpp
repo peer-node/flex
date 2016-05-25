@@ -76,11 +76,32 @@ TEST_F(ACreditSystem, ReportsTheCorrectBatchWithTheMostWork)
     ASSERT_THAT(credit_hash_of_batch_with_the_most_work, Eq(hash1));
 }
 
+EncodedNetworkState ExampleNetworkState()
+{
+    EncodedNetworkState network_state;
+
+    network_state.batch_number = 2;
+    network_state.previous_mined_credit_hash = 1;
+    network_state.previous_diurn_root = 1;
+    network_state.difficulty = 100;
+    network_state.diurnal_difficulty = 1000;
+    network_state.batch_offset = 1;
+    network_state.batch_size = 1;
+    network_state.batch_root = CreditBatch(0, 0).Root();
+    network_state.previous_diurn_root = 1;
+    network_state.diurnal_block_root = 1;
+    network_state.previous_total_work = 1;
+    network_state.timestamp = (uint64_t) (1e9 * 1e6);
+
+    return network_state;
+}
+
 MinedCredit ExampleMinedCredit()
 {
     MinedCredit credit;
-    credit.amount = 1000;
-    credit.keydata = Point(2).getvch();
+    credit.amount = ONE_CREDIT;
+    credit.keydata = Point(SECP256K1, 2).getvch();
+    credit.network_state = ExampleNetworkState();
     return credit;
 }
 
@@ -224,7 +245,79 @@ TEST_F(ACreditSystemWithAStoredMinedCredit, CanReconstructTheCreditBatchFromAMin
     ASSERT_THAT(reconstructed_credit_batch.credits[0], Eq((Credit)mined_credit));
 }
 
-class ACreditSystemWithStoredMinedCredits : public ACreditSystem
+TEST_F(ACreditSystemWithAStoredMinedCredit, GeneratesASucceedingNetworkState)
+{
+    EncodedNetworkState next_state = credit_system->SucceedingNetworkState(mined_credit);
+    auto prev_state = mined_credit.network_state;
+
+    ASSERT_THAT(next_state.batch_number, Eq(prev_state.batch_number + 1));
+}
+
+
+class ACreditSystemWithASmallIntervalBetweenMinedCredits: public ACreditSystem
+{
+public:
+    MinedCredit credit1, credit2;
+    EncodedNetworkState second_network_state;
+
+    virtual void SetUp()
+    {
+        ACreditSystem::SetUp();
+        credit1 = ExampleMinedCredit();
+        credit_system->StoreMinedCredit(credit1);
+        second_network_state = credit_system->SucceedingNetworkState(credit1);
+        second_network_state.timestamp = credit1.network_state.timestamp + 59 * 1000 * 1000;
+        credit2.amount = ONE_CREDIT;
+        credit2.keydata = Point(SECP256K1, 2).getvch();
+        credit2.network_state = second_network_state;
+        credit_system->StoreMinedCredit(credit2);
+    }
+
+    virtual void TearDown()
+    {
+        ACreditSystem::TearDown();
+    }
+};
+
+TEST_F(ACreditSystemWithASmallIntervalBetweenMinedCredits, IncreasesTheDifficultyOfTheSucceedingNetworkState)
+{
+    EncodedNetworkState third_network_state = credit_system->SucceedingNetworkState(credit2);
+    ASSERT_THAT(third_network_state.difficulty, Eq((second_network_state.difficulty * 100) / uint160(95)));
+}
+
+class ACreditSystemWithALargeIntervalBetweenMinedCredits: public ACreditSystem
+{
+public:
+    MinedCredit credit1, credit2;
+    EncodedNetworkState second_network_state;
+
+    virtual void SetUp()
+    {
+        ACreditSystem::SetUp();
+        credit1 = ExampleMinedCredit();
+        credit_system->StoreMinedCredit(credit1);
+        second_network_state = credit_system->SucceedingNetworkState(credit1);
+        second_network_state.timestamp = credit1.network_state.timestamp + 61 * 1000 * 1000;
+        credit2.amount = ONE_CREDIT;
+        credit2.keydata = Point(SECP256K1, 2).getvch();
+        credit2.network_state = second_network_state;
+        credit_system->StoreMinedCredit(credit2);
+    }
+
+    virtual void TearDown()
+    {
+        ACreditSystem::TearDown();
+    }
+};
+
+TEST_F(ACreditSystemWithALargeIntervalBetweenMinedCredits, DecreasesTheDifficultyOfTheSucceedingNetworkState)
+{
+    EncodedNetworkState third_network_state = credit_system->SucceedingNetworkState(credit2);
+    ASSERT_THAT(third_network_state.difficulty, Eq((second_network_state.difficulty * 95) / uint160(100)));
+}
+
+
+class ACreditSystemWithSeveralStoredMinedCredits : public ACreditSystem
 {
 public:
     MinedCredit credit1, credit2, credit3, credit4, credit5;
@@ -255,7 +348,7 @@ public:
     }
 };
 
-TEST_F(ACreditSystemWithStoredMinedCredits, CanFindAFork)
+TEST_F(ACreditSystemWithSeveralStoredMinedCredits, CanFindAFork)
 {
     uint160 fork = credit_system->FindFork(credit4_hash, credit5_hash);
     ASSERT_THAT(fork, Eq(credit2_hash));
@@ -498,4 +591,47 @@ TEST_F(ACreditSystemWithAFork, GetsTheSpentChainOfAGivenCreditHashByReplayingTra
 
     BitChain recovered_spent_chain = credit_system->GetSpentChain(hash1);
     ASSERT_THAT(recovered_spent_chain, Eq(original_spent_chain));
+}
+
+
+class ACreditSystemWithAMinedCreditAndATransaction : public ACreditSystem
+{
+public:
+    MinedCredit mined_credit;
+    SignedTransaction tx;
+
+
+    virtual void SetUp()
+    {
+        ACreditSystem::SetUp();
+        mined_credit = ExampleMinedCredit();
+        tx.rawtx.outputs.push_back(Credit(Point(SECP256K1, 3).getvch(), ONE_CREDIT));
+        credit_system->StoreMinedCredit(mined_credit);
+        credit_system->StoreTransaction(tx);
+    }
+
+    virtual void TearDown()
+    {
+        ACreditSystem::TearDown();
+    }
+};
+
+TEST_F(ACreditSystemWithAMinedCreditAndATransaction, SetsTheBatchRootAndSizeAndMessageListHashInAMinedCreditMessage)
+{
+    MinedCreditMessage msg;
+    msg.mined_credit.network_state.previous_mined_credit_hash = 1;
+    msg.mined_credit.network_state.batch_offset = 10;
+    msg.hash_list.full_hashes.push_back(mined_credit.GetHash160());
+    msg.hash_list.full_hashes.push_back(tx.GetHash160());
+    msg.hash_list.GenerateShortHashes();
+
+    credit_system->SetBatchRootAndSizeAndMessageListHash(msg);
+    ASSERT_THAT(msg.mined_credit.network_state.batch_size, Eq(2));
+
+    CreditBatch batch(1, 10);
+    batch.Add(mined_credit);
+    batch.Add(tx.rawtx.outputs[0]);
+    ASSERT_THAT(msg.mined_credit.network_state.batch_root, Eq(batch.Root()));
+
+    ASSERT_THAT(msg.mined_credit.network_state.message_list_hash, Eq(msg.hash_list.GetHash160()));
 }

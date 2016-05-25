@@ -25,6 +25,8 @@ public:
     bool CheckBatchNumber(MinedCreditMessage &msg);
 
     bool CheckMessageListHash(MinedCreditMessage &msg);
+
+    bool CheckSpentChainHash(MinedCreditMessage &msg);
 };
 
 

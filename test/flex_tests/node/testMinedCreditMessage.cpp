@@ -1,6 +1,7 @@
 #include <test/flex_tests/flex_data/TestData.h>
 #include <test/flex_tests/mined_credits/MinedCredit.h>
 #include <src/crypto/shorthash.h>
+#include <src/credits/SignedTransaction.h>
 #include "gmock/gmock.h"
 
 

@@ -9,6 +9,12 @@
 #include <src/credits/CreditBatch.h>
 #include "MinedCreditMessage.h"
 
+#define TARGET_BATCH_INTERVAL 60000000ULL // one minute
+#define TARGET_DIURN_LENGTH (24 * 60 * 60 * 1000000ULL) // one day
+
+uint160 AdjustDifficultyAfterBatchInterval(uint160 earlier_difficulty, uint64_t interval);
+uint160 AdjustDiurnalDifficultyAfterDiurnDuration(uint160 earlier_diurnal_difficulty, uint64_t duration);
+
 class CreditSystem
 {
 public:
@@ -44,6 +50,26 @@ public:
     BitChain GetSpentChainOnOtherProngOfFork(BitChain &spent_chain, uint160 from_credit_hash, uint160 to_credit_hash);
 
     BitChain GetSpentChain(uint160 credit_hash);
+
+    void AddToMainChain(MinedCreditMessage &msg);
+
+    uint160 TotalWork(MinedCreditMessage &msg);
+
+    void RemoveFromMainChain(MinedCreditMessage &msg);
+
+    bool IsInMainChain(uint160 credit_hash);
+
+    bool IsCalend(uint160 credit_hash);
+
+    uint160 PrecedingCalendCreditHash(uint160 credit_hash);
+
+    EncodedNetworkState SucceedingNetworkState(MinedCredit mined_credit);
+
+    uint160 GetNextDifficulty(MinedCredit credit);
+
+    uint160 GetNextDiurnalDifficulty(MinedCredit credit);
+
+    void SetBatchRootAndSizeAndMessageListHash(MinedCreditMessage& msg);
 };
 
 

@@ -35,6 +35,11 @@ public:
         }
         return Point();
     }
+
+    bool operator==(const MinedCredit& other) const
+    {
+        return amount == other.amount and keydata == other.keydata and network_state == other.network_state;
+    }
 };
 
 

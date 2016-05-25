@@ -38,11 +38,9 @@ bool MinedCreditMessageValidator::CheckMessageListHash(MinedCreditMessage &msg)
     return msg.mined_credit.network_state.message_list_hash == msg.hash_list.GetHash160();
 }
 
-
-
-
-
-
-
-
+bool MinedCreditMessageValidator::CheckSpentChainHash(MinedCreditMessage &msg)
+{
+    BitChain spent_chain = credit_system->GetSpentChain(msg.mined_credit.GetHash160());
+    return spent_chain.GetHash160() == msg.mined_credit.network_state.spent_chain_hash;
+}
 

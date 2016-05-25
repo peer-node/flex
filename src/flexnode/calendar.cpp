@@ -93,7 +93,7 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
  *  Diurn
  */
 
-    Diurn::Diurn(const Diurn& diurn)
+    Diurn_::Diurn_(const Diurn_& diurn)
     {
         previous_diurn_root = diurn.previous_diurn_root;
         initial_difficulty = diurn.initial_difficulty;
@@ -102,7 +102,7 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         credits_in_diurn = diurn.credits_in_diurn;
     }
 
-    Diurn& Diurn::operator=(const Diurn& diurn)
+    Diurn_& Diurn_::operator=(const Diurn_& diurn)
     {
         previous_diurn_root = diurn.previous_diurn_root;
         initial_difficulty = diurn.initial_difficulty;
@@ -112,23 +112,23 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         return *this;
     }
 
-    void Diurn::SetInitialDifficulty(uint160 difficulty)
+    void Diurn_::SetInitialDifficulty(uint160 difficulty)
     {
         initial_difficulty = difficulty;
         current_difficulty = difficulty;
     }
 
-    std::vector<uint160> Diurn::Hashes() const
+    std::vector<uint160> Diurn_::Hashes() const
     {
         return diurnal_block.Hashes();
     }
 
-    uint64_t Diurn::Size() const
+    uint64_t Diurn_::Size() const
     {
         return diurnal_block.Size();
     }
 
-    void Diurn::Add(uint160 credit_hash)
+    void Diurn_::Add(uint160 credit_hash)
     {
         diurnal_block.Add(credit_hash);
         MinedCreditMessage msg = creditdata[credit_hash]["msg"];
@@ -136,45 +136,45 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         current_difficulty = ApplyAdjustments(current_difficulty, 1);
     }
 
-    void Diurn::RemoveLast()
+    void Diurn_::RemoveLast()
     {
         diurnal_block.RemoveLast();
         credits_in_diurn.pop_back();
         current_difficulty = ApplyAdjustments(current_difficulty, -1);
     }
 
-    uint160 Diurn::Last() const
+    uint160 Diurn_::Last() const
     {
         if (diurnal_block.Size() == 0)
             return 0;
         return diurnal_block.Last();
     }
 
-    uint160 Diurn::First() const
+    uint160 Diurn_::First() const
     {
         if (diurnal_block.Size() == 0)
             return 0;
         return diurnal_block.First();
     }
 
-    bool Diurn::Contains(uint160 hash)
+    bool Diurn_::Contains(uint160 hash)
     {
         return diurnal_block.Contains(hash);
     }
 
-    uint160 Diurn::BlockRoot() const
+    uint160 Diurn_::BlockRoot() const
     {
         DiurnalBlock block;
         block.setvch(diurnal_block.getvch());
         return block.Root();
     }
 
-    uint160 Diurn::Root() const
+    uint160 Diurn_::Root() const
     {
         return SymmetricCombine(previous_diurn_root, BlockRoot());
     }
 
-    uint160 Diurn::Work() const
+    uint160 Diurn_::Work() const
     {
         uint160 work = 0;
         std::vector<uint160> credit_hashes = Hashes();
@@ -191,7 +191,7 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         return work;
     }
 
-    std::vector<uint160> Diurn::Branch(uint160 credit_hash)
+    std::vector<uint160> Diurn_::Branch(uint160 credit_hash)
     {
         if (!Contains(credit_hash))
         {
@@ -204,7 +204,7 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         return branch;
     }
 
-    string_t Diurn::ToString() const
+    string_t Diurn_::ToString() const
     {
         stringstream ss;
         ss << "\n============== Diurn =============" << "\n";
@@ -234,7 +234,7 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
  *  Calend
  */
 
-    Calend::Calend(const MinedCreditMessage msg)
+    Calend_::Calend(const MinedCreditMessage msg)
     {
         hash_list = msg.hash_list;
         timestamp = msg.timestamp;
@@ -242,23 +242,23 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         mined_credit = msg.mined_credit;
     }
 
-    uint160 Calend::MinedCreditHash()
+    uint160 Calend_::MinedCreditHash()
     {
         return mined_credit.GetHash160();
     }
 
-    uint160 Calend::TotalCreditWork()
+    uint160 Calend_::TotalCreditWork()
     {
         return mined_credit.total_work + mined_credit.difficulty;
     }
 
-    uint160 Calend::Root() const
+    uint160 Calend_::Root() const
     {
         return SymmetricCombine(mined_credit.previous_diurn_root,
                                 mined_credit.diurnal_block_root);
     }
 
-    bool Calend::operator!=(Calend calend_)
+    bool Calend_::operator!=(Calend_ calend_)
     {
         return mined_credit.GetHash160() != calend_.mined_credit.GetHash160();
     }
@@ -310,7 +310,7 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
  *  Calendar
  */
 
-    Calendar::Calendar(const Calendar& othercalendar)
+    Calendar_::Calendar(const Calendar& othercalendar)
     {
         calends = othercalendar.calends;
         current_diurn = othercalendar.current_diurn;
@@ -318,7 +318,7 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         current_extra_work = othercalendar.current_extra_work;
     }
 
-    Calendar::Calendar(uint160 credit_hash)
+    Calendar_::Calendar(uint160 credit_hash)
     {
         if (credit_hash == 0)
             return;
@@ -327,7 +327,7 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         PopulateTopUpWork(credit_hash);
     }
 
-    string_t Calendar::ToString() const
+    string_t Calendar_::ToString() const
     {
         stringstream ss;
         ss << "\n============== Calendar =============" << "\n"
@@ -372,7 +372,7 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         return ss.str();
     }
 
-    void Calendar::PopulateCalends(uint160 credit_hash)
+    void Calendar_::PopulateCalends(uint160 credit_hash)
     {
         log_ << "populating calends: " << credit_hash << "\n";
 
@@ -398,12 +398,12 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         std::reverse(calends.begin(), calends.end());
     }
 
-    uint64_t Calendar::Size() const
+    uint64_t Calendar_::Size() const
     {
         return calends.size();
     }
 
-    bool Calendar::ContainsDiurn(uint160 diurn_root)
+    bool Calendar_::ContainsDiurn(uint160 diurn_root)
     {
         foreach_(const Calend& calend, calends)
         {
@@ -415,7 +415,7 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         return false;
     }
 
-    std::vector<uint160> Calendar::GetCalendCreditHashes()
+    std::vector<uint160> Calendar_::GetCalendCreditHashes()
     {
         std::vector<uint160> calend_credit_hashes;
 
@@ -425,21 +425,21 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         return calend_credit_hashes;
     }
 
-    uint160 Calendar::GetLastCalendCreditHash()
+    uint160 Calendar_::GetLastCalendCreditHash()
     {
         if (calends.size() == 0)
             return 0;
         return calends.back().mined_credit.GetHash160();
     }
 
-    uint160 Calendar::Hash160()
+    uint160 Calendar_::Hash160()
     {
         CDataStream ss(SER_NETWORK, CLIENT_VERSION);
         ss << *this;
         return ::Hash160(ss.begin(), ss.end());
     }
 
-    void Calendar::HandleBatch(MinedCreditMessage& msg)
+    void Calendar_::HandleBatch(MinedCreditMessage& msg)
     {
         uint160 difficulty = msg.proof.DifficultyAchieved();
 
@@ -468,7 +468,7 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         }        
     }
 
-    void Calendar::HandleMinedCreditMessage(MinedCreditMessage& msg)
+    void Calendar_::HandleMinedCreditMessage(MinedCreditMessage& msg)
     {
         log_ << "HandleMinedCreditMessage(): handling: " << msg.mined_credit;
 
@@ -487,7 +487,7 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
              << *this << "\n";
     }
 
-    void Calendar::StoreTopUpWorkIfNecessary(MinedCreditMessage& msg)
+    void Calendar_::StoreTopUpWorkIfNecessary(MinedCreditMessage& msg)
     {
         if (CalendWork() 
             + msg.mined_credit.diurnal_difficulty
@@ -499,7 +499,7 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         TrimTopUpWork();
     }
 
-    void Calendar::AddMinedCreditToTip(MinedCreditMessage& msg)
+    void Calendar_::AddMinedCreditToTip(MinedCreditMessage& msg)
     {
         if (msg.mined_credit.previous_mined_credit_hash
             != LastMinedCreditHash())
@@ -515,7 +515,7 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         }
     }
 
-    void Calendar::FinishCurrentCalendAndStartNext(MinedCreditMessage msg)
+    void Calendar_::FinishCurrentCalendAndStartNext(MinedCreditMessage msg)
     {
         uint160 calend_hash = GetLastCalendCreditHash();
 
@@ -525,7 +525,6 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
 
         calends.push_back(Calend(msg));
 
-        
         uint160 previous_diurn_root = current_diurn.Root();
         
         calendardata[previous_diurn_root]["diurn"] = current_diurn;
@@ -543,7 +542,7 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         current_diurn.SetInitialDifficulty(next_difficulty);
     }
 
-    void Calendar::RemoveLast()
+    void Calendar_::RemoveLast()
     {
         if (current_diurn.Size() == 0)
             return;
@@ -552,7 +551,7 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         *this = Calendar(last_credit.previous_mined_credit_hash);
     }
 
-    bool Calendar::CheckRootsAndDifficulty()
+    bool Calendar_::CheckRootsAndDifficulty()
     {
         if (calends.size() > 0
             && calends[0].mined_credit.diurnal_difficulty 
@@ -639,7 +638,7 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         return true;
     }
 
-    bool Calendar::Validate()
+    bool Calendar_::Validate()
     {
         CalendarFailureDetails details;
         details.credit_hash = 0;
@@ -661,7 +660,7 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         return true;
     }
 
-    bool Calendar::SpotCheckWork(CalendarFailureDetails& details)
+    bool Calendar_::SpotCheckWork(CalendarFailureDetails& details)
     {
         for (uint32_t i = 0; i < calends.size(); i++)
         {
@@ -680,7 +679,7 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         return true;
     }
 
-    uint160 Calendar::CalendWork() const
+    uint160 Calendar_::CalendWork() const
     {
         uint160 calend_work = 0;
 
@@ -690,7 +689,7 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         return calend_work;
     }
 
-    bool Calendar::CheckTopUpWorkProofs()
+    bool Calendar_::CheckTopUpWorkProofs()
     {
         foreach_(CreditAndProofList& credit_and_proof_list, extra_work)
         {
@@ -709,7 +708,7 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         return true;
     }
 
-    bool Calendar::CheckTopUpWorkQuantities()
+    bool Calendar_::CheckTopUpWorkQuantities()
     {
         if (extra_work.size() != calends.size())
             return false;
@@ -738,7 +737,7 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         return true;
     }
 
-    bool Calendar::CheckTopUpWorkCredits()
+    bool Calendar_::CheckTopUpWorkCredits()
     {
         MinedCredit credit, next_credit;
         TwistWorkProof proof;
@@ -772,14 +771,14 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         return true;
     }
 
-    bool Calendar::CheckTopUpWork()
+    bool Calendar_::CheckTopUpWork()
     {
         return CheckTopUpWorkQuantities() &&
                CheckTopUpWorkCredits()    &&
                CheckTopUpWorkProofs();
     }
 
-    uint160 Calendar::TopUpWork() const
+    uint160 Calendar_::TopUpWork() const
     {
         uint160 top_up_work(0);
 
@@ -804,7 +803,7 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         return top_up_work;
     }
 
-    void Calendar::PopulateTopUpWork(uint160 credit_hash)
+    void Calendar_::PopulateTopUpWork(uint160 credit_hash)
     {
         extra_work.resize(0);
         MinedCredit last_credit = LastMinedCredit();
@@ -855,7 +854,7 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
             StoreTopUpWorkIfNecessary(msg);
     }
 
-    void Calendar::HandleCalend(MinedCreditMessage& msg)
+    void Calendar_::HandleCalend(MinedCreditMessage& msg)
     {
         log_ << "HandleCalend: " << msg;
 
@@ -906,7 +905,7 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         log_ << "HandleCalend(): exiting: final calendar is" << ToString();
     }
 
-    void Calendar::TrimTopUpWork()
+    void Calendar_::TrimTopUpWork()
     {
         uint160 calendar_work = TotalWork();
         uint160 credit_work = LastMinedCredit().total_work
@@ -933,7 +932,7 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         }
     }
 
-    void Calendar::DropTopUpWorkCredits(uint32_t num_credits_to_drop)
+    void Calendar_::DropTopUpWorkCredits(uint32_t num_credits_to_drop)
     {
         uint32_t num_credits_dropped = 0;
         for (uint32_t i = 0; i < extra_work.size(); i++)
@@ -957,7 +956,7 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         }
     }
 
-    void Calendar::PopulateDiurn(uint160 credit_hash)
+    void Calendar_::PopulateDiurn(uint160 credit_hash)
     {
         log_ << "populating diurn: " << credit_hash << "\n";
         MinedCreditMessage msg = creditdata[credit_hash]["msg"];
@@ -1006,7 +1005,7 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         log_ << "finished populating diurn\n";
     }
 
-    uint160 Calendar::TotalWork() const
+    uint160 Calendar_::TotalWork() const
     {
         uint160 total_work = CalendWork();
         total_work += TopUpWork();
@@ -1020,7 +1019,7 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         return total_work;
     }
 
-    uint160 Calendar::PreviousDiurnRoot() const
+    uint160 Calendar_::PreviousDiurnRoot() const
     {
         if (current_diurn.Size() > 1)
         {
@@ -1038,7 +1037,7 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         return 0;
     }
 
-    uint160 Calendar::LastMinedCreditHash() const
+    uint160 Calendar_::LastMinedCreditHash() const
     {
         if (current_diurn.Size() > 0)
             return current_diurn.Last();
@@ -1048,14 +1047,14 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
         return last_calend.mined_credit.GetHash160();
     }
 
-    MinedCredit Calendar::LastMinedCredit()
+    MinedCredit Calendar_::LastMinedCredit()
     {
         uint160 credit_hash = LastMinedCreditHash();
         MinedCredit mined_credit = creditdata[credit_hash]["mined_credit"];
         return mined_credit;
     }
 
-    bool Calendar::CreditInBatchHasValidConnection(CreditInBatch& credit)
+    bool Calendar_::CreditInBatchHasValidConnection(CreditInBatch& credit)
     {
         log_ << "CreditInBatchHasValidConnectionToCalendar()\n";
         if (credit.diurn_branch.size() == 0 || credit.branch.size() == 0)
@@ -1098,8 +1097,8 @@ bool CheckBranches(CreditInBatch& credit)
     uint160 batch_root = credit.branch.back();
     vch_t raw_credit_data = raw_credit.getvch();
 
-    if (!VerifyBranch(credit.position, raw_credit_data,
-                      credit.branch, batch_root))
+    if (!VerifyBranchFromOrderedHashTree(credit.position, raw_credit_data,
+                                         credit.branch, batch_root))
     {
         log_ << "credit branch failed\n";
         return false;

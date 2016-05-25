@@ -123,5 +123,15 @@ TEST_F(AMinedCreditMessageValidator, ChecksTheMessageListHash)
 
 TEST_F(AMinedCreditMessageValidator, ChecksTheSpentChainHash)
 {
-
+    auto msg = MinedCreditMessageWithABatch();
+    BitChain spent_chain;
+    spent_chain.Add();
+    msg.mined_credit.network_state.spent_chain_hash = spent_chain.GetHash160();
+    msg.mined_credit.network_state.batch_size = 1;
+    credit_system->StoreMinedCreditMessage(msg);
+    bool ok = validator.CheckSpentChainHash(msg);
+    ASSERT_THAT(ok, Eq(true));
+    msg.mined_credit.network_state.spent_chain_hash = spent_chain.GetHash160() + 1;
+    ok = validator.CheckSpentChainHash(msg);
+    ASSERT_THAT(ok, Eq(false));
 }

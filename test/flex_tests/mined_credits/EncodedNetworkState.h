@@ -3,7 +3,15 @@
 
 #include <src/crypto/uint256.h>
 #include <src/base/serialize.h>
+#include <src/base/version.h>
+#include <src/crypto/hashtrees.h>
 
+#ifndef INITIAL_DIFFICULTY
+#define INITIAL_DIFFICULTY 10000
+#endif
+#ifndef INITIAL_DIURNAL_DIFFICULTY
+#define INITIAL_DIURNAL_DIFFICULTY 100000
+#endif
 
 class EncodedNetworkState
 {
@@ -16,6 +24,12 @@ public:
     uint32_t batch_size{0};
     uint160 message_list_hash{0};
     uint160 spent_chain_hash{0};
+    uint160 previous_total_work{0};
+    uint160 difficulty{0};
+    uint160 diurnal_difficulty{0};
+    uint160 previous_diurn_root{0};
+    uint160 diurnal_block_root{0};
+    uint64_t timestamp{0};
 
 
     IMPLEMENT_SERIALIZE
@@ -27,8 +41,27 @@ public:
         READWRITE(batch_offset);
         READWRITE(batch_size);
         READWRITE(message_list_hash);
+        READWRITE(spent_chain_hash);
+        READWRITE(previous_total_work);
+        READWRITE(difficulty);
+        READWRITE(previous_diurn_root);
+        READWRITE(diurnal_block_root);
+        READWRITE(diurnal_difficulty);
+        READWRITE(timestamp);
     )
 
+    bool operator==(const EncodedNetworkState& other) const
+    {
+        CDataStream stream1(SER_NETWORK, CLIENT_VERSION), stream2(SER_NETWORK, CLIENT_VERSION);
+        stream1 << *this;
+        stream2 << other;
+        return stream1.str() == stream2.str();
+    }
+
+    uint160 DiurnRoot()
+    {
+        return SymmetricCombine(previous_diurn_root, diurnal_block_root);
+    }
 };
 
 

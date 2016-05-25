@@ -382,4 +382,5 @@ twist_quickcheck(uint8_t *pHashInput,
     return result;
 }
 
+
 #endif

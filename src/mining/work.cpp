@@ -78,6 +78,9 @@ uint160 target_from_difficulty(uint160 difficulty)
 
     uint160 TwistWorkProof::DifficultyAchieved()
     {
+        if (quick_verifier == 0)
+            return 0;
+
         uint128_t quick_verifier_ = uint160to128(quick_verifier);
 
         uint128_t hash =  twist_doquickcheck(

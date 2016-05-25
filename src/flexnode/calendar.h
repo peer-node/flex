@@ -31,7 +31,7 @@ uint160 GetNextDiurnInitialDifficulty(MinedCredit last_calend_credit,
                                       MinedCredit calend_credit);
 
 
-class Diurn
+class Diurn_
 {
 public:
     uint160 previous_diurn_root;
@@ -40,19 +40,19 @@ public:
     uint160 initial_difficulty;
     uint160 current_difficulty;
 
-    Diurn():
+    Diurn_():
         previous_diurn_root(0),
         initial_difficulty(INITIAL_DIURNAL_DIFFICULTY),
         current_difficulty(INITIAL_DIURNAL_DIFFICULTY)
     { }
 
-    Diurn(uint160 previous_diurn_root):
+    Diurn_(uint160 previous_diurn_root):
         previous_diurn_root(previous_diurn_root)
     { }
 
-    Diurn(const Diurn& diurn);
+    Diurn_(const Diurn_& diurn);
 
-    Diurn& operator=(const Diurn& diurn);
+    Diurn_& operator=(const Diurn_& diurn);
 
     string_t ToString() const;
 
@@ -91,7 +91,7 @@ public:
 };
 
 
-class Calend : public MinedCreditMessage
+class Calend_ : public MinedCreditMessage
 {
 public:
     Calend () {}
@@ -104,12 +104,12 @@ public:
 
     uint160 Root() const;
 
-    bool operator!=(Calend calend_);
+    bool operator!=(Calend_ calend_);
 };
 
-class Calendar;
+class Calendar_;
 
-class CalendarFailureDetails
+class CalendarFailureDetails_
 {
 public:
     uint160 diurn_root;
@@ -131,24 +131,24 @@ public:
 };
 
 
-typedef std::pair<MinedCredit, TwistWorkProof> CreditAndProof;
-typedef std::vector<CreditAndProof> CreditAndProofList;
+typedef std::pair<MinedCredit, TwistWorkProof> CreditAndProof_;
+typedef std::vector<CreditAndProof_> CreditAndProofList_;
 
-class Calendar
+class Calendar_
 {
 public:
-    std::vector<Calend> calends;
-    std::vector<CreditAndProofList> extra_work;
+    std::vector<Calend_> calends;
+    std::vector<CreditAndProofList_> extra_work;
     Diurn current_diurn;
-    CreditAndProofList current_extra_work;
+    CreditAndProofList_ current_extra_work;
 
-    Calendar() { }
+    Calendar_() { }
 
-    Calendar(const Calendar& othercalendar);
+    Calendar_(const Calendar_& othercalendar);
 
-    Calendar(uint160 credit_hash);
+    Calendar_(uint160 credit_hash);
 
-    ~Calendar()
+    ~Calendar_()
     { }
 
     string_t ToString() const;
@@ -194,7 +194,7 @@ public:
 
     bool Validate();
 
-    bool SpotCheckWork(CalendarFailureDetails& details);
+    bool SpotCheckWork(CalendarFailureDetails_& details);
 
     uint160 CalendWork() const;
 

@@ -8,6 +8,8 @@
 #include "log.h"
 #define LOG_CATEGORY "Credit.h"
 
+#define ONE_CREDIT 100000000
+
 class Credit
 {
 public:

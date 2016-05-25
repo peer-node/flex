@@ -99,7 +99,7 @@ extern string_t ByteString(vch_t bytes);
         return Credit(tree.GetData(position));
     }
 
-    CreditInBatch CreditBatch::GetWithPosition(Credit credit)
+    CreditInBatch CreditBatch::GetCreditInBatch(Credit credit)
     {
         return CreditInBatch(credit, Position(credit), Branch(credit));
     }

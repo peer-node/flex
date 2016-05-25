@@ -412,7 +412,7 @@ class DiurnalBlock
 {
 public:
     std::vector<uint160Datum*> hashes;
-    HashTree<uint160Datum> *tree;
+    HashTree<uint160Datum> *tree{NULL};
 
     DiurnalBlock(): tree(NULL) { }
 
