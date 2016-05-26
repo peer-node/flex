@@ -18,12 +18,21 @@ Diurn& Diurn::operator=(const Diurn& diurn)
 
 void Diurn::Add(MinedCreditMessage &msg)
 {
-    diurnal_block.Add(msg.mined_credit.GetHash160());
     credits_in_diurn.push_back(msg);
+    diurnal_block.setvch(vch_t());
+}
+
+void Diurn::PopulateDiurnalBlockIfNecessary()
+{
+    if (diurnal_block.Size() != 0)
+        return;
+    for (auto msg : credits_in_diurn)
+        diurnal_block.Add(msg.mined_credit.GetHash160());
 }
 
 uint160 Diurn::Last()
 {
+    PopulateDiurnalBlockIfNecessary();
     if (diurnal_block.Size() == 0)
         return 0;
     return diurnal_block.Last();
@@ -31,6 +40,7 @@ uint160 Diurn::Last()
 
 uint160 Diurn::First()
 {
+    PopulateDiurnalBlockIfNecessary();
     if (diurnal_block.Size() == 0)
         return 0;
     return diurnal_block.First();
@@ -38,11 +48,13 @@ uint160 Diurn::First()
 
 bool Diurn::Contains(uint160 hash)
 {
+    PopulateDiurnalBlockIfNecessary();
     return diurnal_block.Contains(hash);
 }
 
 std::vector<uint160> Diurn::Branch(uint160 credit_hash)
 {
+    PopulateDiurnalBlockIfNecessary();
     if (!Contains(credit_hash))
     {
         return std::vector<uint160>();
@@ -53,15 +65,17 @@ std::vector<uint160> Diurn::Branch(uint160 credit_hash)
     return branch;
 }
 
-uint160 Diurn::BlockRoot() const
+uint160 Diurn::BlockRoot()
 {
+    PopulateDiurnalBlockIfNecessary();
     DiurnalBlock block;
     block.setvch(diurnal_block.getvch());
     return block.Root();
 }
 
-uint160 Diurn::Root() const
+uint160 Diurn::Root()
 {
+    PopulateDiurnalBlockIfNecessary();
     return SymmetricCombine(previous_diurn_root, BlockRoot());
 }
 
@@ -81,7 +95,7 @@ uint160 Diurn::Work()
 
 uint64_t Diurn::Size()
 {
-    return diurnal_block.Size();
+    return credits_in_diurn.size();
 }
 
 

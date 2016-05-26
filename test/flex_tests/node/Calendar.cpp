@@ -160,7 +160,7 @@ uint160 Calendar::TotalWork()
     total_work += current_diurn.Work();
 
     if (calends.size() > 0)
-    {
+    {   // current diurn starts with last calend
         uint160 double_counted_work = calends.back().mined_credit.network_state.difficulty;
         total_work -= double_counted_work;
     }
@@ -168,34 +168,121 @@ uint160 Calendar::TotalWork()
     return total_work;
 }
 
-bool Calendar::CheckExtraWorkRoots()
+bool Calendar::CheckCreditHashesInExtraWork()
 {
-    return false;
+    if (extra_work.size() != calends.size())
+        return false;
+    for (uint32_t i = 0; i < extra_work.size(); i++)
+    {
+        if (not CheckCreditHashesInSequenceOfConsecutiveMinedCreditMessages(extra_work[i]))
+            return false;
+        if (extra_work[i].size() > 0 and extra_work[i].back().mined_credit != calends[i].mined_credit)
+            return false;
+    }
+    return true;
 }
 
-bool Calendar::CheckCurrentDiurnRoots()
+bool Calendar::CheckCreditHashesInSequenceOfConsecutiveMinedCreditMessages(std::vector<MinedCreditMessage> msgs)
 {
-    return false;
+    for (uint32_t i = 1 ; i < msgs.size() ; i++)
+        if (msgs[i].mined_credit.network_state.previous_mined_credit_hash != msgs[i-1].mined_credit.GetHash160())
+            return false;
+    return true;
 }
 
-bool Calendar::CheckCalendRoots()
+bool Calendar::CheckCreditHashesInCurrentDiurn()
 {
-    return false;
+    if (calends.size() == 0)
+    {
+        auto first_network_state = current_diurn.credits_in_diurn[0].mined_credit.network_state;
+        if (first_network_state.previous_mined_credit_hash != 0)
+            return false;
+    }
+    return CheckCreditHashesInSequenceOfConsecutiveMinedCreditMessages(current_diurn.credits_in_diurn);
 }
 
-bool Calendar::CheckRoots()
+bool Calendar::CheckDiurnRoots()
 {
-    return CheckCalendRoots() and CheckCurrentDiurnRoots() and CheckExtraWorkRoots();
+    Calend previous_calend;
+    uint64_t calend_number = 0;
+    for (auto calend : calends)
+    {
+        if (calend_number == 0 and calend.mined_credit.network_state.previous_diurn_root != 0)
+            return false;
+        else if (calend_number > 0)
+        {
+            auto previous_network_state = previous_calend.mined_credit.network_state;
+            uint160 previous_diurn_root = SymmetricCombine(previous_network_state.previous_diurn_root,
+                                                           previous_network_state.diurnal_block_root);
+            if (previous_diurn_root != calend.mined_credit.network_state.previous_diurn_root)
+                return false;
+        }
+        previous_calend = calend;
+        calend_number++;
+    }
+    if (calends.size() > 0)
+    {
+        auto first_mined_credit_of_diurn = current_diurn.credits_in_diurn[0].mined_credit;
+        if (calends.back().mined_credit.GetHash160() != first_mined_credit_of_diurn.GetHash160())
+            return false;
+    }
+    return true;
+}
+
+bool Calendar::CheckDiurnRootsAndCreditHashes()
+{
+    return CheckDiurnRoots() and CheckCreditHashesInCurrentDiurn() and CheckCreditHashesInExtraWork();
+}
+
+bool Calendar::CheckExtraWorkDifficultiesForDiurn(Calend calend, std::vector<MinedCreditMessage> msgs)
+{
+    if (not CheckDifficultiesOfConsecutiveSequenceOfMinedCreditMessages(msgs))
+        return false;
+    return msgs.size() == 0 or msgs.back().mined_credit.GetHash160() == calend.mined_credit.GetHash160();
 }
 
 bool Calendar::CheckExtraWorkDifficulties()
 {
-    return false;
+    if (calends.size() != extra_work.size())
+        return false;
+    for (uint32_t i = 0; i < calends.size(); i++)
+        if (not CheckExtraWorkDifficultiesForDiurn(calends[i], extra_work[i]))
+            return false;
+    return true;
+}
+
+bool Calendar::CheckDifficultiesOfConsecutiveSequenceOfMinedCreditMessages(std::vector<MinedCreditMessage> msgs)
+{
+    uint64_t message_number = 0, previous_timestamp = 0, preceding_timestamp = 0;
+    uint160 previous_difficulty = 0;
+    for (auto msg : msgs)
+    {
+        uint160 difficulty = msg.mined_credit.network_state.difficulty;
+        if (message_number > 1)
+        {
+            uint64_t batch_interval = previous_timestamp - preceding_timestamp;
+            uint160 correct_difficulty = AdjustDifficultyAfterBatchInterval(previous_difficulty, batch_interval);
+            if (difficulty != correct_difficulty)
+                return false;
+        }
+        else if (message_number == 1)
+        {
+            uint160 one_possible_difficulty = AdjustDifficultyAfterBatchInterval(previous_difficulty, 0);
+            uint160 other_possible_difficulty = AdjustDifficultyAfterBatchInterval(previous_difficulty, 61000000);
+            if (difficulty != one_possible_difficulty and difficulty != other_possible_difficulty)
+                return false;
+        }
+        previous_difficulty = difficulty;
+        preceding_timestamp = previous_timestamp;
+        previous_timestamp = msg.mined_credit.network_state.timestamp;
+        message_number++;
+    }
+    return true;
 }
 
 bool Calendar::CheckCurrentDiurnDifficulties()
 {
-    return false;
+    return CheckDifficultiesOfConsecutiveSequenceOfMinedCreditMessages(current_diurn.credits_in_diurn);
 }
 
 bool Calendar::CheckCalendDifficulties()
@@ -206,7 +293,6 @@ bool Calendar::CheckCalendDifficulties()
     for (auto calend : calends)
     {
         uint160 diurnal_difficulty = calend.mined_credit.network_state.diurnal_difficulty;
-        std::cout << "calend " << calend_number << " difficulty = " << diurnal_difficulty.ToString() << "\n";
 
         if (calend_number < 2)
         {
@@ -220,7 +306,6 @@ bool Calendar::CheckCalendDifficulties()
             if (diurnal_difficulty != correct_difficulty)
                 return false;
         }
-
         previous_difficulty = diurnal_difficulty;
         preceding_timestamp = previous_timestamp;
         previous_timestamp = calend.mined_credit.network_state.timestamp;
@@ -236,7 +321,42 @@ bool Calendar::CheckDifficulties()
 
 bool Calendar::CheckRootsAndDifficulties()
 {
-    return CheckRoots() and CheckDifficulties();
+    return CheckDiurnRootsAndCreditHashes() and CheckDifficulties();
 }
+
+bool Calendar::CheckProofsOfWorkInCurrentDiurn(CreditSystem* credit_system)
+{
+    for (auto msg : current_diurn.credits_in_diurn)
+        if (not credit_system->QuickCheckProofOfWorkInMinedCreditMessage(msg))
+            return false;
+    return true;
+}
+
+bool Calendar::CheckProofsOfWorkInCalends(CreditSystem *credit_system)
+{
+    for (auto calend : calends)
+        if (not credit_system->QuickCheckProofOfWorkInCalend(calend))
+            return false;
+    return true;
+}
+
+bool Calendar::CheckProofsOfWorkInExtraWork(CreditSystem *credit_system)
+{
+    for (auto msgs : extra_work)
+        for (auto msg : msgs)
+            if (not credit_system->QuickCheckProofOfWorkInMinedCreditMessage(msg))
+                return false;
+    return true;
+}
+
+bool Calendar::CheckProofsOfWork(CreditSystem *credit_system)
+{
+    bool diurns_ok = CheckProofsOfWorkInCurrentDiurn(credit_system);
+    bool calends_ok = CheckProofsOfWorkInCalends(credit_system);
+    bool extra_work_ok = CheckProofsOfWorkInExtraWork(credit_system);
+
+    return calends_ok and diurns_ok and extra_work_ok;
+}
+
 
 

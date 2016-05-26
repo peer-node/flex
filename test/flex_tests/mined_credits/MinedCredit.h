@@ -25,6 +25,13 @@ public:
         return Hash160(ss.begin(), ss.end());
     }
 
+    uint256 GetHash()
+    {
+        CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
+        ss << *this;
+        return Hash(ss.begin(), ss.end());
+    }
+
     Point PublicKey()
     {
         if (keydata.size() == 34)
@@ -39,6 +46,11 @@ public:
     bool operator==(const MinedCredit& other) const
     {
         return amount == other.amount and keydata == other.keydata and network_state == other.network_state;
+    }
+
+    bool operator!=(const MinedCredit& other) const
+    {
+        return not (*this == other);
     }
 };
 

@@ -8,9 +8,12 @@
 #include <src/credits/SignedTransaction.h>
 #include <src/credits/CreditBatch.h>
 #include "MinedCreditMessage.h"
+#include "Calend.h"
 
 #define TARGET_BATCH_INTERVAL 60000000ULL // one minute
 #define TARGET_DIURN_LENGTH (24 * 60 * 60 * 1000000ULL) // one day
+
+#define MEMORY_FACTOR 19
 
 uint160 AdjustDifficultyAfterBatchInterval(uint160 earlier_difficulty, uint64_t interval);
 uint160 AdjustDiurnalDifficultyAfterDiurnDuration(uint160 earlier_diurnal_difficulty, uint64_t duration);
@@ -70,6 +73,16 @@ public:
     uint160 GetNextDiurnalDifficulty(MinedCredit credit);
 
     void SetBatchRootAndSizeAndMessageListHash(MinedCreditMessage& msg);
+
+    void SetExpectedNumberOfMegabytesInMinedCreditProofsOfWork(uint64_t number_of_megabytes);
+
+    uint64_t expected_memory_factor_for_mined_credit_proofs_of_work{MEMORY_FACTOR};
+
+    bool QuickCheckProofOfWorkInMinedCreditMessage(MinedCreditMessage &msg);
+
+    bool QuickCheckProofOfWorkInCalend(Calend calend);
+
+    bool CheckHashesSeedsAndThresholdsInMinedCreditMessageProofOfWork(MinedCreditMessage &msg);
 };
 
 

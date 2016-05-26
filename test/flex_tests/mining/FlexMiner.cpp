@@ -41,17 +41,6 @@ uint160 FlexMiner::GetMaxDifficulty()
     return max_difficulty;
 }
 
-uint64_t MemoryFactorFromNumberOfMegabytes(uint64_t number_of_megabytes)
-{
-    uint64_t memory_factor = 7;
-    while (number_of_megabytes > 1)
-    {
-        memory_factor += 1;
-        number_of_megabytes /= 2;
-    }
-    return memory_factor;
-}
-
 void FlexMiner::StartMining()
 {
     uint256 memory_seed = MiningRoot();

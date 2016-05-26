@@ -2,8 +2,10 @@
 #include <test/flex_tests/mined_credits/MinedCredit.h>
 #include <src/credits/SignedTransaction.h>
 #include <src/credits/CreditBatch.h>
+#include <test/flex_tests/mining/MiningHashTree.h>
 #include "CreditSystem.h"
 #include "MinedCreditMessage.h"
+#include "Calend.h"
 
 using std::set;
 
@@ -315,6 +317,78 @@ void CreditSystem::SetBatchRootAndSizeAndMessageListHash(MinedCreditMessage& msg
     msg.mined_credit.network_state.batch_root = batch.Root();
     msg.mined_credit.network_state.message_list_hash = msg.hash_list.GetHash160();
 }
+
+void CreditSystem::SetExpectedNumberOfMegabytesInMinedCreditProofsOfWork(uint64_t number_of_megabytes)
+{
+    uint64_t memory_factor = MemoryFactorFromNumberOfMegabytes(number_of_megabytes);
+    expected_memory_factor_for_mined_credit_proofs_of_work = memory_factor;
+}
+
+bool CreditSystem::CheckHashesSeedsAndThresholdsInMinedCreditMessageProofOfWork(MinedCreditMessage& msg)
+{
+    bool ok = true;
+    auto branch = msg.proof_of_work.branch;
+    TwistWorkProof& proof = msg.proof_of_work.proof;
+
+    if (branch.size() == 0 or branch[0] != msg.mined_credit.GetHash())
+        ok = false;
+    else if (MiningHashTree::EvaluateBranch(branch) != msg.proof_of_work.proof.memoryseed)
+        ok = false;
+    else if (proof.N_factor != expected_memory_factor_for_mined_credit_proofs_of_work)
+        ok = false;
+    else if (proof.seeds.size() != FLEX_WORK_NUMBER_OF_SEGMENTS)
+        ok = false;
+    else if (proof.link_threshold != proof.target * FLEX_WORK_NUMBER_OF_LINKS)
+        ok = false;
+
+    return ok;
+}
+
+bool CreditSystem::QuickCheckProofOfWorkInMinedCreditMessage(MinedCreditMessage &msg)
+{
+    uint160 msg_hash = msg.GetHash160();
+    if (creditdata[msg_hash]["quickcheck_ok"]) return true;
+    if (creditdata[msg_hash]["quickcheck_bad"]) return false;
+
+    bool ok = true;
+    auto branch = msg.proof_of_work.branch;
+    TwistWorkProof& proof = msg.proof_of_work.proof;
+
+    if (not CheckHashesSeedsAndThresholdsInMinedCreditMessageProofOfWork(msg))
+        ok = false;
+
+    if (ok and msg.proof_of_work.proof.DifficultyAchieved() < msg.mined_credit.network_state.difficulty)
+        ok = false;
+
+    if (ok) creditdata[msg_hash]["quickcheck_ok"] = true;
+    else creditdata[msg_hash]["quickcheck_bad"] = true;
+
+    return ok;
+}
+
+bool CreditSystem::QuickCheckProofOfWorkInCalend(Calend calend)
+{
+    uint160 msg_hash = calend.GetHash160();
+    if (creditdata[msg_hash]["quickcalendcheck_ok"]) return true;
+    if (creditdata[msg_hash]["quickcalendcheck_bad"]) return false;
+
+    bool ok = true;
+    if (not QuickCheckProofOfWorkInMinedCreditMessage(calend))
+        ok = false;
+    if (calend.proof_of_work.proof.DifficultyAchieved() < calend.mined_credit.network_state.diurnal_difficulty)
+        ok = false;
+
+    if (ok) creditdata[msg_hash]["quickcalendcheck_ok"] = true;
+    else creditdata[msg_hash]["quickcalendcheck_bad"] = true;
+
+    return ok;
+}
+
+
+
+
+
+
 
 
 

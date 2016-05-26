@@ -4,6 +4,7 @@
 #include <test/flex_tests/flex_data/MemoryDataStore.h>
 #include <src/credits/SignedTransaction.h>
 #include <src/base/util_time.h>
+#include <test/flex_tests/mining/MiningHashTree.h>
 #include "gmock/gmock.h"
 #include "CreditSystem.h"
 
@@ -147,6 +148,7 @@ TEST_F(ACreditSystem, StoresTransactions)
 MinedCreditMessage ExampleMinedCreditMessage()
 {
     MinedCreditMessage mined_credit_message;
+    mined_credit_message.mined_credit = ExampleMinedCredit();
     mined_credit_message.mined_credit.amount = 2;
     return mined_credit_message;
 }
@@ -178,6 +180,55 @@ TEST_F(ACreditSystem, ReconstructsTheBatchRootOfAMinedCreditMessageWithAPrevious
     msg.mined_credit.network_state.batch_root = CreditBatch(previous_mined_credit_hash, 0).Root();
     CreditBatch batch = credit_system->ReconstructBatch(msg);
     ASSERT_THAT(batch.Root(), Eq(msg.mined_credit.network_state.batch_root));
+}
+
+MinedCreditMessage MessageWithAValidProofOfWork()
+{
+    MinedCreditMessage msg = ExampleMinedCreditMessage();
+    NetworkSpecificProofOfWork enclosed_proof;
+    enclosed_proof.branch.push_back(msg.mined_credit.GetHash());
+    enclosed_proof.branch.push_back(2);
+    uint256 memory_seed = MiningHashTree::EvaluateBranch(enclosed_proof.branch);
+    uint64_t memory_factor = MemoryFactorFromNumberOfMegabytes(1);
+    TwistWorkProof proof(memory_seed, memory_factor, msg.mined_credit.network_state.difficulty);
+    uint8_t keep_working = 1;
+    proof.DoWork(&keep_working);
+    enclosed_proof.proof = proof;
+    msg.proof_of_work = enclosed_proof;
+    return msg;
+}
+
+TEST_F(ACreditSystem, ChecksTheProofOfWorkInAMinedCreditMessage)
+{
+    auto msg = MessageWithAValidProofOfWork();
+    credit_system->SetExpectedNumberOfMegabytesInMinedCreditProofsOfWork(1);
+    bool ok = credit_system->QuickCheckProofOfWorkInMinedCreditMessage(msg);
+    ASSERT_THAT(ok, Eq(true));
+    msg.proof_of_work.branch[1] += 1;
+    ok = credit_system->QuickCheckProofOfWorkInMinedCreditMessage(msg);
+    ASSERT_THAT(ok, Eq(false));
+}
+
+TEST_F(ACreditSystem, CachesTheResultOfAProofOfWorkCheck)
+{
+    auto msg = MessageWithAValidProofOfWork();
+    credit_system->SetExpectedNumberOfMegabytesInMinedCreditProofsOfWork(1);
+    bool ok = credit_system->QuickCheckProofOfWorkInMinedCreditMessage(msg);
+    bool cached_result = creditdata[msg.GetHash160()]["quickcheck_ok"];
+    ASSERT_THAT(cached_result, Eq(true));
+    msg.proof_of_work.branch[1] += 1;
+    ok = credit_system->QuickCheckProofOfWorkInMinedCreditMessage(msg);
+    cached_result = creditdata[msg.GetHash160()]["quickcheck_bad"];
+    ASSERT_THAT(cached_result, Eq(true));
+}
+
+TEST_F(ACreditSystem, UsesTheCachedResultOfAProofOfWorkCheck)
+{
+    auto msg = MessageWithAValidProofOfWork();
+    credit_system->SetExpectedNumberOfMegabytesInMinedCreditProofsOfWork(1);
+    creditdata[msg.GetHash160()]["quickcheck_bad"] = true;
+    bool ok = credit_system->QuickCheckProofOfWorkInMinedCreditMessage(msg);
+    ASSERT_THAT(ok, Eq(false));
 }
 
 class ACreditSystemWithAStoredTransaction : public ACreditSystem

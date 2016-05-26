@@ -5,6 +5,9 @@
 #include <src/crypto/uint256.h>
 #include <src/mining/work.h>
 
+uint64_t MemoryFactorFromNumberOfMegabytes(uint64_t number_of_megabytes);
+
+
 class NetworkSpecificProofOfWork
 {
 public:

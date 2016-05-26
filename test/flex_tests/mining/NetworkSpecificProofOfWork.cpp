@@ -4,6 +4,17 @@
 #include "MiningHashTree.h"
 
 
+uint64_t MemoryFactorFromNumberOfMegabytes(uint64_t number_of_megabytes)
+{
+    uint64_t memory_factor = 7;
+    while (number_of_megabytes > 1)
+    {
+        memory_factor += 1;
+        number_of_megabytes /= 2;
+    }
+    return memory_factor;
+}
+
 NetworkSpecificProofOfWork::NetworkSpecificProofOfWork(std::vector<uint256> branch, TwistWorkProof proof):
         branch(branch),
         proof(proof)

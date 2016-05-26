@@ -14,6 +14,8 @@
 #define FLEX_WORK_NUMBER_OF_LINKS 128
 #define FLEX_WORK_NUMBER_OF_SEGMENTS 32
 
+uint160 target_from_difficulty(uint160 difficulty);
+
 
 class TwistWorkCheck;
 

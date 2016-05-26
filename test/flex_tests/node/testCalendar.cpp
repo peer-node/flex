@@ -123,11 +123,8 @@ public:
 
     MinedCreditMessage SucceedingMinedCreditMessage(MinedCreditMessage& msg)
     {
-        std::cout << "SucceedingMinedCreditMessage()\n";
         MinedCreditMessage next_msg;
         next_msg.mined_credit.network_state = SucceedingNetworkState(msg.mined_credit);
-        std::cout << "previous diurn difficulty: " << msg.mined_credit.network_state.diurnal_difficulty.ToString() << "\n";
-        std::cout << "next diurn difficulty: " << next_msg.mined_credit.network_state.diurnal_difficulty.ToString() << "\n";
         next_msg.hash_list.full_hashes.push_back(msg.mined_credit.GetHash160());
         next_msg.hash_list.GenerateShortHashes();
         credit_system->StoreMinedCreditMessage(next_msg);
@@ -313,3 +310,107 @@ TEST_F(ACalendarWithMinedCreditsWhoseDifficultiesVary, ChecksTheCalendDifficulti
     bool ok = calendar.CheckCalendDifficulties();
     ASSERT_THAT(ok, Eq(true));
 }
+
+TEST_F(ACalendarWithMinedCreditsWhoseDifficultiesVary, ChecksTheCurrentDiurnDifficulties)
+{
+    uint160 credit_hash = CreditHashAtTipOfChainContainingCalends();
+    calendar = Calendar(credit_hash, credit_system);
+    bool ok = calendar.CheckCurrentDiurnDifficulties();
+    ASSERT_THAT(ok, Eq(true));
+}
+
+TEST_F(ACalendarWithMinedCreditsWhoseDifficultiesVary, ChecksTheExtraWorkDifficulties)
+{
+    uint160 credit_hash = CreditHashAtTipOfChainContainingCalends();
+    calendar = Calendar(credit_hash, credit_system);
+    bool ok = calendar.CheckExtraWorkDifficulties();
+    ASSERT_THAT(ok, Eq(true));
+}
+
+TEST_F(ACalendarWithMinedCreditsWhoseDifficultiesVary, ChecksAllTheDifficulties)
+{
+    uint160 credit_hash = CreditHashAtTipOfChainContainingCalends();
+    calendar = Calendar(credit_hash, credit_system);
+    bool ok = calendar.CheckDifficulties();
+    ASSERT_THAT(ok, Eq(true));
+}
+
+TEST_F(ACalendarWithMinedCreditsWhoseDifficultiesVary, ChecksTheDiurnRoots)
+{
+    uint160 credit_hash = CreditHashAtTipOfChainContainingCalends();
+    calendar = Calendar(credit_hash, credit_system);
+    bool ok = calendar.CheckDiurnRoots();
+    ASSERT_THAT(ok, Eq(true));
+}
+
+TEST_F(ACalendarWithMinedCreditsWhoseDifficultiesVary, ChecksTheCreditHashesInTheCurrentDiurn)
+{
+    uint160 credit_hash = CreditHashAtTipOfChainContainingCalends();
+    calendar = Calendar(credit_hash, credit_system);
+    bool ok = calendar.CheckCreditHashesInCurrentDiurn();
+    ASSERT_THAT(ok, Eq(true));
+}
+
+TEST_F(ACalendarWithMinedCreditsWhoseDifficultiesVary, ChecksTheCreditHashesInTheExtraWork)
+{
+    uint160 credit_hash = CreditHashAtTipOfChainContainingCalends();
+    calendar = Calendar(credit_hash, credit_system);
+    bool ok = calendar.CheckCreditHashesInExtraWork();
+    ASSERT_THAT(ok, Eq(true));
+}
+
+TEST_F(ACalendarWithMinedCreditsWhoseDifficultiesVary, ChecksTheDiurnRootsAndCreditHashes)
+{
+    uint160 credit_hash = CreditHashAtTipOfChainContainingCalends();
+    calendar = Calendar(credit_hash, credit_system);
+    bool ok = calendar.CheckDiurnRootsAndCreditHashes();
+    ASSERT_THAT(ok, Eq(true));
+}
+
+TEST_F(ACalendarWithMinedCreditsWhoseDifficultiesVary, ChecksTheProofsOfWorkInTheCurrentDiurn)
+{
+    uint160 credit_hash = CreditHashAtTipOfChainContainingCalends();
+    calendar = Calendar(credit_hash, credit_system);
+    // faster to mark proofs as checked than generate & check valid proofs
+    for (auto msg : calendar.current_diurn.credits_in_diurn)
+        creditdata[msg.GetHash160()]["quickcheck_ok"] = true;
+    bool ok = calendar.CheckProofsOfWorkInCurrentDiurn(credit_system);
+    ASSERT_THAT(ok, Eq(true));
+}
+
+TEST_F(ACalendarWithMinedCreditsWhoseDifficultiesVary, ChecksTheProofsOfWorkInTheCalends)
+{
+    uint160 credit_hash = CreditHashAtTipOfChainContainingCalends();
+    calendar = Calendar(credit_hash, credit_system);
+    for (auto calend : calendar.calends)
+        creditdata[calend.GetHash160()]["quickcalendcheck_ok"] = true;
+    bool ok = calendar.CheckProofsOfWorkInCalends(credit_system);
+    ASSERT_THAT(ok, Eq(true));
+}
+
+TEST_F(ACalendarWithMinedCreditsWhoseDifficultiesVary, ChecksTheProofsOfWorkInTheExtraWork)
+{
+    uint160 credit_hash = CreditHashAtTipOfChainContainingCalends();
+    calendar = Calendar(credit_hash, credit_system);
+    for (auto msgs : calendar.extra_work)
+        for (auto msg : msgs)
+            creditdata[msg.GetHash160()]["quickcheck_ok"] = true;
+    bool ok = calendar.CheckProofsOfWorkInExtraWork(credit_system);
+    ASSERT_THAT(ok, Eq(true));
+}
+
+TEST_F(ACalendarWithMinedCreditsWhoseDifficultiesVary, ChecksTheProofsOfWork)
+{
+    uint160 credit_hash = CreditHashAtTipOfChainContainingCalends();
+    calendar = Calendar(credit_hash, credit_system);
+    for (auto calend : calendar.calends)
+        creditdata[calend.GetHash160()]["quickcalendcheck_ok"] = true;
+    for (auto msg : calendar.current_diurn.credits_in_diurn)
+        creditdata[msg.GetHash160()]["quickcheck_ok"] = true;
+    for (auto msgs : calendar.extra_work)
+        for (auto msg : msgs)
+            creditdata[msg.GetHash160()]["quickcheck_ok"] = true;
+    bool ok = calendar.CheckProofsOfWork(credit_system);
+    ASSERT_THAT(ok, Eq(true));
+}
+

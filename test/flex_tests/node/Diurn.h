@@ -25,7 +25,6 @@ public:
     IMPLEMENT_SERIALIZE
     (
         READWRITE(previous_diurn_root);
-        READWRITE(diurnal_block);
         READWRITE(credits_in_diurn);
     )
 
@@ -35,15 +34,17 @@ public:
 
     bool Contains(uint160 hash);
 
-    uint160 BlockRoot() const;
+    uint160 BlockRoot();
 
-    uint160 Root() const;
+    uint160 Root();
 
     uint160 Work();
 
     uint64_t Size();
 
     Diurn &operator=(const Diurn &diurn);
+
+    void PopulateDiurnalBlockIfNecessary();
 };
 
 
