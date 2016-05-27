@@ -52,14 +52,27 @@ bool Diurn::Contains(uint160 hash)
     return diurnal_block.Contains(hash);
 }
 
+MinedCredit Diurn::GetMinedCreditByHash(uint160 credit_hash)
+{
+    PopulateDiurnalBlockIfNecessary();
+    auto hashes = diurnal_block.Hashes();
+    for (int i = 0; i < hashes.size(); i++)
+        if (credit_hash == hashes[i])
+            return credits_in_diurn[i].mined_credit;
+    return MinedCredit();
+}
+
 std::vector<uint160> Diurn::Branch(uint160 credit_hash)
 {
     PopulateDiurnalBlockIfNecessary();
     if (!Contains(credit_hash))
-    {
         return std::vector<uint160>();
-    }
-    std::vector<uint160> branch = diurnal_block.Branch(credit_hash);
+
+    std::vector<uint160> branch{GetMinedCreditByHash(credit_hash).BranchBridge()};
+    auto branch_from_branch_bridge_to_diurnal_block_root = diurnal_block.Branch(credit_hash);
+    branch.insert(branch.end(),
+                  branch_from_branch_bridge_to_diurnal_block_root.begin(),
+                  branch_from_branch_bridge_to_diurnal_block_root.end());
     branch.push_back(previous_diurn_root);
     branch.push_back(Root());
     return branch;
@@ -97,10 +110,3 @@ uint64_t Diurn::Size()
 {
     return credits_in_diurn.size();
 }
-
-
-
-
-
-
-

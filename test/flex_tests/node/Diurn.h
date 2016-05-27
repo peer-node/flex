@@ -45,6 +45,8 @@ public:
     Diurn &operator=(const Diurn &diurn);
 
     void PopulateDiurnalBlockIfNecessary();
+
+    MinedCredit GetMinedCreditByHash(uint160 credit_hash);
 };
 
 

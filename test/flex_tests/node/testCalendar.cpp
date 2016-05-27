@@ -367,34 +367,49 @@ TEST_F(ACalendarWithMinedCreditsWhoseDifficultiesVary, ChecksTheDiurnRootsAndCre
     ASSERT_THAT(ok, Eq(true));
 }
 
+void MarkProofsInCurrentDiunAsCheckedAndValid(Calendar &calendar, MemoryDataStore &creditdata)
+{
+    for (auto msg : calendar.current_diurn.credits_in_diurn)
+        creditdata[msg.GetHash160()]["quickcheck_ok"] = true;
+}
+
 TEST_F(ACalendarWithMinedCreditsWhoseDifficultiesVary, ChecksTheProofsOfWorkInTheCurrentDiurn)
 {
     uint160 credit_hash = CreditHashAtTipOfChainContainingCalends();
     calendar = Calendar(credit_hash, credit_system);
     // faster to mark proofs as checked than generate & check valid proofs
-    for (auto msg : calendar.current_diurn.credits_in_diurn)
-        creditdata[msg.GetHash160()]["quickcheck_ok"] = true;
+    MarkProofsInCurrentDiunAsCheckedAndValid(calendar, creditdata);
     bool ok = calendar.CheckProofsOfWorkInCurrentDiurn(credit_system);
     ASSERT_THAT(ok, Eq(true));
+}
+
+void MarkProofsInCalendsAsCheckedAndValid(Calendar &calendar, MemoryDataStore &creditdata)
+{
+    for (auto calend : calendar.calends)
+        creditdata[calend.GetHash160()]["quickcalendcheck_ok"] = true;
 }
 
 TEST_F(ACalendarWithMinedCreditsWhoseDifficultiesVary, ChecksTheProofsOfWorkInTheCalends)
 {
     uint160 credit_hash = CreditHashAtTipOfChainContainingCalends();
     calendar = Calendar(credit_hash, credit_system);
-    for (auto calend : calendar.calends)
-        creditdata[calend.GetHash160()]["quickcalendcheck_ok"] = true;
+    MarkProofsInCalendsAsCheckedAndValid(calendar, creditdata);
     bool ok = calendar.CheckProofsOfWorkInCalends(credit_system);
     ASSERT_THAT(ok, Eq(true));
+}
+
+void MarkProofsInExtraWorkAsCheckedAndValid(Calendar &calendar, MemoryDataStore &creditdata)
+{
+    for (auto msgs : calendar.extra_work)
+        for (auto msg : msgs)
+            creditdata[msg.GetHash160()]["quickcheck_ok"] = true;
 }
 
 TEST_F(ACalendarWithMinedCreditsWhoseDifficultiesVary, ChecksTheProofsOfWorkInTheExtraWork)
 {
     uint160 credit_hash = CreditHashAtTipOfChainContainingCalends();
     calendar = Calendar(credit_hash, credit_system);
-    for (auto msgs : calendar.extra_work)
-        for (auto msg : msgs)
-            creditdata[msg.GetHash160()]["quickcheck_ok"] = true;
+    MarkProofsInExtraWorkAsCheckedAndValid(calendar, creditdata);
     bool ok = calendar.CheckProofsOfWorkInExtraWork(credit_system);
     ASSERT_THAT(ok, Eq(true));
 }
@@ -403,14 +418,153 @@ TEST_F(ACalendarWithMinedCreditsWhoseDifficultiesVary, ChecksTheProofsOfWork)
 {
     uint160 credit_hash = CreditHashAtTipOfChainContainingCalends();
     calendar = Calendar(credit_hash, credit_system);
-    for (auto calend : calendar.calends)
-        creditdata[calend.GetHash160()]["quickcalendcheck_ok"] = true;
-    for (auto msg : calendar.current_diurn.credits_in_diurn)
-        creditdata[msg.GetHash160()]["quickcheck_ok"] = true;
-    for (auto msgs : calendar.extra_work)
-        for (auto msg : msgs)
-            creditdata[msg.GetHash160()]["quickcheck_ok"] = true;
+    MarkProofsInCalendsAsCheckedAndValid(calendar, creditdata);
+    MarkProofsInCurrentDiunAsCheckedAndValid(calendar, creditdata);
+    MarkProofsInExtraWorkAsCheckedAndValid(calendar, creditdata);
     bool ok = calendar.CheckProofsOfWork(credit_system);
     ASSERT_THAT(ok, Eq(true));
 }
 
+TEST_F(ACalendarWithMinedCreditsWhoseDifficultiesVary, ThrowsAnExceptionWhenTheWrongMinedCreditMessageIsAddedToTheTip)
+{
+    uint160 credit_hash = CreditHashAtTipOfChainContainingCalends();
+    calendar = Calendar(credit_hash, credit_system);
+    MinedCreditMessage message;
+    message.mined_credit.network_state.previous_mined_credit_hash = 5;
+    EXPECT_ANY_THROW(calendar.AddToTip(message, credit_system));
+}
+
+TEST_F(ACalendarWithMinedCreditsWhoseDifficultiesVary, AddsAMinedCreditMessageToTheCurrentDiurn)
+{
+    calendar = Calendar(CreditHashAtTipOfChainContainingCalends(), credit_system);
+    MinedCreditMessage msg;
+    msg.mined_credit.network_state = credit_system->SucceedingNetworkState(calendar.LastMinedCredit());
+    credit_system->StoreMinedCreditMessage(msg);
+    calendar.AddToTip(msg, credit_system);
+    ASSERT_THAT(calendar.current_diurn.Last(), Eq(msg.mined_credit.GetHash160()));
+    ASSERT_THAT(calendar.current_diurn.Size(), Gt(1));
+}
+
+MinedCreditMessage NextCalend(Calendar& calendar, CreditSystem* credit_system)
+{
+    MinedCreditMessage msg;
+    msg.mined_credit.network_state = credit_system->SucceedingNetworkState(calendar.LastMinedCredit());
+    credit_system->StoreMinedCreditMessage(msg);
+    uint160 credit_hash = msg.mined_credit.GetHash160();
+    credit_system->creditdata[credit_hash]["is_calend"] = true;
+    return msg;
+}
+
+TEST_F(ACalendarWithMinedCreditsWhoseDifficultiesVary, AddsACalendAndStartsANewDiurn)
+{
+    calendar = Calendar(CreditHashAtTipOfChainContainingCalends(), credit_system);
+    auto msg = NextCalend(calendar, credit_system);
+    uint64_t previous_number_of_calends = calendar.calends.size();
+    calendar.AddToTip(msg, credit_system);
+    ASSERT_THAT(calendar.calends.size(), Eq(previous_number_of_calends + 1));
+    ASSERT_THAT(calendar.current_diurn.Last(), Eq(msg.mined_credit.GetHash160()));
+    ASSERT_THAT(calendar.current_diurn.Size(), Eq(1));
+}
+
+TEST_F(ACalendarWithACreditSystemContainingCalends, PopulatesTheTopUpWorkWhenAddingACalend)
+{
+    calendar = Calendar(CreditHashAtTipOfChainContainingCalends(), credit_system);
+    auto msg = NextCalend(calendar, credit_system);
+    uint64_t previous_number_of_extra_work_vectors = calendar.extra_work.size();
+    int64_t start = GetTimeMicros();
+    calendar.AddToTip(msg, credit_system);
+    uint64_t final_number_of_extra_work_vectors = calendar.extra_work.size();
+    ASSERT_THAT(final_number_of_extra_work_vectors, Eq(previous_number_of_extra_work_vectors + 1));
+    uint160 total_work = msg.mined_credit.network_state.previous_total_work + msg.mined_credit.network_state.difficulty;
+    bool enough_calendar_work = calendar.TotalWork() >= total_work;
+    ASSERT_THAT(enough_calendar_work, Eq(true));
+}
+
+TEST_F(ACalendarWithACreditSystemContainingCalends, RemovesTheLastMinedCreditFromTheTip)
+{
+    calendar = Calendar(CreditHashAtTipOfChainContainingCalends(), credit_system);
+    uint160 previous_credit_hash = calendar.LastMinedCredit().network_state.previous_mined_credit_hash;
+    calendar.RemoveLast(credit_system);
+    ASSERT_THAT(calendar.LastMinedCreditHash(), Eq(previous_credit_hash));
+}
+
+SignedTransaction TransactionWithAnOutput(CreditSystem* credit_system)
+{
+    SignedTransaction tx;
+    Credit credit(Point(2), ONE_CREDIT);
+    tx.rawtx.outputs.push_back(credit);
+    credit_system->StoreTransaction(tx);
+    return tx;
+}
+
+MinedCreditMessage MinedCreditMessageContainingATransaction(SignedTransaction tx,
+                                                            EncodedNetworkState network_state,
+                                                            CreditSystem* credit_system)
+{
+    MinedCreditMessage msg;
+    msg.mined_credit.network_state = network_state;
+    msg.hash_list.full_hashes.push_back(tx.GetHash160());
+    msg.hash_list.GenerateShortHashes();
+    credit_system->StoreMinedCreditMessage(msg);
+    return msg;
+}
+
+CreditInBatch GetCreditInBatchFromTxOutputAndNetworkState(SignedTransaction tx,
+                                                          EncodedNetworkState& network_state)
+{
+    CreditBatch batch(network_state.previous_mined_credit_hash, network_state.batch_offset + network_state.batch_size);
+    batch.Add(tx.rawtx.outputs[0]);
+    network_state.batch_root = batch.Root();
+    return batch.GetCreditInBatch(tx.rawtx.outputs[0]);
+}
+
+TEST_F(ACalendarWithACreditSystemContainingCalends, ChecksIfACreditInBatchFromTheCurrentDiurnIsValid)
+{
+    calendar = Calendar(CreditHashAtTipOfChainContainingCalends(), credit_system);
+    auto tx = TransactionWithAnOutput(credit_system);
+    auto next_network_state = credit_system->SucceedingNetworkState(calendar.LastMinedCredit());
+    auto credit_in_batch = GetCreditInBatchFromTxOutputAndNetworkState(tx, next_network_state);
+    auto msg = MinedCreditMessageContainingATransaction(tx, next_network_state, credit_system);
+    calendar.AddToTip(msg, credit_system);
+    bool ok = calendar.ValidateCreditInBatch(credit_in_batch);
+    ASSERT_THAT(ok, Eq(true));
+}
+
+MinedCreditMessage GetNextMinedCreditMessage(Calendar& calendar, CreditSystem* credit_system)
+{
+    MinedCreditMessage msg, prev_msg = calendar.current_diurn.credits_in_diurn.back();
+    msg.mined_credit.network_state = credit_system->SucceedingNetworkState(prev_msg.mined_credit);
+    msg.mined_credit.network_state.diurnal_block_root = calendar.current_diurn.BlockRoot();
+    credit_system->StoreMinedCreditMessage(msg);
+    return msg;
+}
+
+void ExtendCalendarWithMinedCreditMessages(Calendar& calendar, uint64_t number_of_credits, CreditSystem* credit_system)
+{
+    for (int i = 0; i < number_of_credits; i++)
+    {
+        auto msg = GetNextMinedCreditMessage(calendar, credit_system);
+        calendar.AddToTip(msg, credit_system);
+    }
+}
+
+TEST_F(ACalendarWithMinedCreditsWhoseDifficultiesVary, ChecksIfACreditInBatchFromAPreviousDiurnIsValid)
+{
+    calendar = Calendar(CreditHashAtTipOfChainContainingCalends(), credit_system);
+    auto tx = TransactionWithAnOutput(credit_system);
+    auto next_network_state = credit_system->SucceedingNetworkState(calendar.LastMinedCredit());
+    auto credit_in_batch = GetCreditInBatchFromTxOutputAndNetworkState(tx, next_network_state);
+    auto msg = MinedCreditMessageContainingATransaction(tx, next_network_state, credit_system);
+    calendar.AddToTip(msg, credit_system);
+
+    ExtendCalendarWithMinedCreditMessages(calendar, 5, credit_system);
+
+    auto calend = GetNextMinedCreditMessage(calendar, credit_system);
+    creditdata[calend.mined_credit.GetHash160()]["is_calend"] = true;
+
+    credit_in_batch.diurn_branch = calendar.current_diurn.Branch(msg.mined_credit.GetHash160());
+
+    calendar.AddToTip(calend, credit_system);
+    bool ok = calendar.ValidateCreditInBatch(credit_in_batch);
+    ASSERT_THAT(ok, Eq(true));
+}

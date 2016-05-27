@@ -99,7 +99,9 @@ bool CreditSystem::IsCalend(uint160 credit_hash)
         return false;
     bool is_calend;
     MinedCreditMessage msg = creditdata[credit_hash]["msg"];
-    if (msg.proof_of_work.proof.DifficultyAchieved() >= msg.mined_credit.network_state.diurnal_difficulty)
+    if (msg.mined_credit.network_state.diurnal_difficulty == 0)
+        is_calend = false;
+    else if (msg.proof_of_work.proof.DifficultyAchieved() >= msg.mined_credit.network_state.diurnal_difficulty)
     {
         creditdata[credit_hash]["is_calend"] = true;
         is_calend = true;
@@ -302,6 +304,7 @@ EncodedNetworkState CreditSystem::SucceedingNetworkState(MinedCredit mined_credi
         next_state.previous_diurn_root = SymmetricCombine(prev_state.previous_diurn_root, prev_state.diurnal_block_root);
     else
         next_state.previous_diurn_root = prev_state.previous_diurn_root;
+
     next_state.network_id = prev_state.network_id;
 
     // message_list_hash, spent_chain_hash, batch_size, batch_root, timestamp

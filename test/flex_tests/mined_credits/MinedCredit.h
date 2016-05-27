@@ -18,11 +18,16 @@ public:
         READWRITE(network_state);
     )
 
-    uint160 GetHash160()
+    uint160 BranchBridge()
     {
         CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
         ss << *this;
         return Hash160(ss.begin(), ss.end());
+    }
+
+    uint160 GetHash160()
+    {
+        return SymmetricCombine(BranchBridge(), network_state.batch_root);
     }
 
     uint256 GetHash()

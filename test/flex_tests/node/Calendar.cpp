@@ -74,6 +74,7 @@ void Calendar::PopulateDiurn(uint160 credit_hash, CreditSystem* credit_system)
     std::reverse(msgs.begin(), msgs.end());
     for (auto msg_ : msgs)
         current_diurn.Add(msg_);
+    current_diurn.previous_diurn_root = Calend(msgs[0]).Root();
 }
 
 void Calendar::PopulateCalends(uint160 credit_hash, CreditSystem *credit_system)
@@ -358,5 +359,70 @@ bool Calendar::CheckProofsOfWork(CreditSystem *credit_system)
     return calends_ok and diurns_ok and extra_work_ok;
 }
 
+void Calendar::AddToTip(MinedCreditMessage &msg, CreditSystem* credit_system)
+{
+    if (msg.mined_credit.network_state.previous_mined_credit_hash != LastMinedCreditHash())
+        throw(std::runtime_error("Calendar: Attempt to add wrong mined credit to tip"));
+    if (not credit_system->IsCalend(msg.mined_credit.GetHash160()))
+    {
+        current_diurn.Add(msg);
+        return;
+    }
+    else
+    {
+        calends.push_back(msg);
+        current_diurn = Diurn();
+        current_diurn.previous_diurn_root = calends.back().Root();
+        current_diurn.Add(msg);
+        PopulateTopUpWork(msg.mined_credit.GetHash160(), credit_system);
+    }
+}
 
+void Calendar::RemoveLast(CreditSystem* credit_system)
+{
+    if (current_diurn.Size() == 0)
+            return;
+    MinedCredit last_credit = LastMinedCredit();
+    *this = Calendar(last_credit.network_state.previous_mined_credit_hash, credit_system);
+}
+
+bool Calendar::ValidateCreditInBatchUsingCurrentDiurn(CreditInBatch credit_in_batch)
+{
+    if (credit_in_batch.branch.size() == 0)
+        return false;
+    uint160 batch_root = credit_in_batch.branch.back();
+    bool ok = VerifyBranchFromOrderedHashTree((uint32_t) credit_in_batch.position, ((Credit)credit_in_batch).getvch(),
+                                              credit_in_batch.branch, batch_root);
+    if (not ok)
+        return false;
+
+    for (auto msg : current_diurn.credits_in_diurn)
+        if (msg.mined_credit.network_state.batch_root == batch_root)
+            return true;
+
+    return false;
+}
+
+bool Calendar::ValidateCreditInBatchUsingPreviousDiurn(CreditInBatch credit_in_batch, std::vector<uint160> long_branch)
+{
+    uint160 diurn_root = long_branch.back();
+
+    bool ok = VerifyBranchFromOrderedHashTree((uint32_t) credit_in_batch.position, ((Credit)credit_in_batch).getvch(),
+                                              long_branch, diurn_root);
+    if (not ok)
+        return false;
+
+    return ContainsDiurn(diurn_root);
+}
+
+bool Calendar::ValidateCreditInBatch(CreditInBatch credit_in_batch)
+{
+    if (credit_in_batch.diurn_branch.size() == 0)
+        return ValidateCreditInBatchUsingCurrentDiurn(credit_in_batch);
+
+    auto long_branch = credit_in_batch.branch;
+    long_branch.pop_back();
+    long_branch.insert(long_branch.end(), credit_in_batch.diurn_branch.begin(), credit_in_batch.diurn_branch.end());
+    return ValidateCreditInBatchUsingPreviousDiurn(credit_in_batch, long_branch);
+}
 

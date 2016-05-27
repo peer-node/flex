@@ -2,6 +2,7 @@
 #define FLEX_CALENDAR_H
 
 
+#include <src/credits/CreditInBatch.h>
 #include "Calend.h"
 #include "Diurn.h"
 
@@ -80,6 +81,16 @@ public:
     bool CheckProofsOfWorkInExtraWork(CreditSystem *credit_system);
 
     bool CheckProofsOfWork(CreditSystem *credit_system);
+
+    void AddToTip(MinedCreditMessage &msg, CreditSystem *credit_system);
+
+    void RemoveLast(CreditSystem *credit_system);
+
+    bool ValidateCreditInBatch(CreditInBatch credit_in_batch);
+
+    bool ValidateCreditInBatchUsingCurrentDiurn(CreditInBatch credit_in_batch);
+
+    bool ValidateCreditInBatchUsingPreviousDiurn(CreditInBatch credit_in_batch, std::vector<uint160> long_branch);
 };
 
 
