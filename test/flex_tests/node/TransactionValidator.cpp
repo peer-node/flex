@@ -5,7 +5,7 @@ void TransactionValidator::SetCreditSystem(CreditSystem *credit_system_)
     credit_system = credit_system_;
 }
 
-bool TransactionValidator::CheckForOverflow(SignedTransaction &tx)
+bool TransactionValidator::OutputsOverflow(SignedTransaction &tx)
 {
     uint64_t total = 0;
     for (auto credit : tx.rawtx.outputs)

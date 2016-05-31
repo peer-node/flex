@@ -5,7 +5,7 @@ class CDataStream;
 class CNode;
 class MainFlexNode;
 
-class CreditMessageHandler
+class CreditMessageHandler_
 {
 public:
     uint64_t messages_received{0};

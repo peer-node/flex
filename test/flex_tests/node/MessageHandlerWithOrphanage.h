@@ -30,7 +30,7 @@ public:
     {
         std::set<uint160> missing_dependencies;
 
-        for (auto dependency : message.dependencies)
+        for (auto dependency : message.Dependencies())
         {
             if (dependency != 0 and not msgdata[dependency]["received"])
                 missing_dependencies.insert(dependency);
@@ -61,12 +61,17 @@ public:
     {
         uint160 message_hash = message.GetHash160();
 
+        bool already_received = msgdata[message_hash]["received"];
         msgdata[message_hash]["received"] = true;
         msgdata[message_hash]["type"] = message.Type();
         msgdata[message_hash][message.Type()] = message;
         msgdata[message_hash].Location("received_at") = GetTimeMicros();
         if (peer != NULL)
+        {
             msgdata[message_hash]["peer"] = peer->id;
+            if (network == NULL)
+                network = &peer->network;
+        }
 
         RegisterAsOrphanIfAppropriate(message);
         RemoveFromMissingDependenciesAndRecordNewNonOrphans(message_hash);

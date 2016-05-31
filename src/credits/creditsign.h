@@ -130,7 +130,6 @@ inline Signature SignTx(UnsignedTransaction unsigned_tx, MemoryDataStore& keydat
         if (unsigned_tx.inputs[i].keydata.size() == 20)
         {
             uint160 keyhash(unsigned_tx.inputs[i].keydata);
-            log_ << "looking up privkey for keyhash " << keyhash << "\n";
             CBigNum privkey_ = keydata[keyhash]["privkey"];
             privkey = privkey_;
         }
@@ -139,22 +138,13 @@ inline Signature SignTx(UnsignedTransaction unsigned_tx, MemoryDataStore& keydat
             Point pubkey;
             pubkey.setvch(unsigned_tx.inputs[i].keydata);
             CBigNum privkey_ = keydata[pubkey]["privkey"];
-            log_ << "looking for privkey for pubkey " << pubkey << "\n";
             privkey = privkey_;
         }
-#ifndef _PRODUCTION_BUILD
-        log_ << "SignTx: privkeykey is " << privkey << "\n";
-#endif
         hash_ = Hash(BEGIN(hash_), END(hash_));
-        signing_key = (signing_key + ((CBigNum(hash_) % modulus)) * privkey) 
-                        % modulus;
+        signing_key = (signing_key + ((CBigNum(hash_) % modulus)) * privkey) % modulus;
     }
     Point pubkey(SECP256K1, signing_key);
     keydata[pubkey]["privkey"] = signing_key;
-#ifndef _PRODUCTION_BUILD
-    log_ << "signing key is " << signing_key << "\n";
-    log_ << "corresponding public key is " << pubkey << "\n";
-#endif
     
     Signature sig = SignCreditTx(signing_key, CBigNum(hash));
     

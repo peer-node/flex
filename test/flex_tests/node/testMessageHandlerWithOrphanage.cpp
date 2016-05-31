@@ -4,6 +4,7 @@
 #include <src/net/net_cnode.h>
 #include "gmock/gmock.h"
 #include "MessageHandlerWithOrphanage.h"
+#include "TestPeer.h"
 
 using namespace ::testing;
 using namespace std;
@@ -73,20 +74,6 @@ TEST_F(AMessageHandlerWithOrphanage, RegistersTheOrphansOfAGivenMessageHash)
     std::set<uint160> orphans_of_message1 = message_handler->GetOrphans(message1.GetHash160());
     ASSERT_TRUE(orphans_of_message1.count(message2.GetHash160()));
 }
-
-class TestPeer : public CNode
-{
-public:
-    vector<uint160> dependencies_requested;
-    Network dummy_network;
-
-    TestPeer(): CNode(dummy_network) { dummy_network.vNodes.push_back(this); }
-
-    virtual void FetchDependencies(set<uint160> dependencies)
-    {
-        dependencies_requested = vector<uint160>(dependencies.begin(), dependencies.end());
-    }
-};
 
 TEST_F(AMessageHandlerWithOrphanage, RegistersIncomingMessages)
 {

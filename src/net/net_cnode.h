@@ -95,6 +95,9 @@ public:
     // Network
     Network& network;
 
+    // Misbehavior
+    uint32_t recent_misbehavior{0};
+
     bool connected_node_signals{false};
 
     CNode(Network& network): network(network), ssSend(SER_NETWORK, INIT_PROTO_VERSION)
@@ -171,6 +174,11 @@ private:
     static uint64_t nTotalBytesSent;
 
 public:
+
+    void Misbehaving(uint32_t howmuch)
+    {
+        recent_misbehavior += howmuch;
+    }
 
     NodeId GetId() const {
       return id;
@@ -512,6 +520,11 @@ public:
     }
 
     virtual void FetchDependencies(std::set<uint160> dependencies)
+    {
+
+    }
+
+    virtual void FetchFailedListExpansion(uint160 mined_credit_hash)
     {
 
     }

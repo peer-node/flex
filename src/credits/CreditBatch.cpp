@@ -22,10 +22,21 @@ extern string_t ByteString(vch_t bytes);
 
     CreditBatch::CreditBatch(const CreditBatch& other)
     {
+        std::cout << "copying batch\n";
         previous_credit_hash = other.previous_credit_hash;
         tree.offset = other.tree.offset;
-        foreach_(Credit credit, other.credits)
+        for (auto credit : other.credits)
             Add(credit);
+    }
+
+    CreditBatch& CreditBatch::operator=(const CreditBatch& other)
+    {
+        std::cout << "copying batch\n";
+        previous_credit_hash = other.previous_credit_hash;
+        tree.offset = other.tree.offset;
+        for (auto credit : other.credits)
+            Add(credit);
+        return *this;
     }
 
     uint64_t CreditBatch::size()
@@ -43,7 +54,7 @@ extern string_t ByteString(vch_t bytes);
            << "== Offset: " << tree.offset << "\n"
            << "==" << "\n"
            << "== Credits:" << "\n";
-        foreach_(Credit credit, credits)
+        for (auto credit : credits)
         {
             ss << "== " << ByteString(credit.keydata) << " "
                << credit.amount << "\n";
@@ -71,13 +82,13 @@ extern string_t ByteString(vch_t bytes);
 
     bool CreditBatch::AddCredits(std::vector<Credit> credits_)
     {
-        foreach_(const Credit& credit, credits_)
+        for (auto credit : credits_)
         {
             vch_t serialized_credit = credit.getvch();
             if (VectorContainsEntry(serialized_credits, serialized_credit))
                 return false;
         }
-        foreach_(const Credit& credit, credits_)
+        for (auto credit : credits_)
             Add(credit);
         return true;
     }

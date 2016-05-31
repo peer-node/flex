@@ -32,7 +32,7 @@ inline int64_t GetTimeMillis()
             boost::posix_time::ptime(boost::gregorian::date(1970,1,1))).total_milliseconds();
 }
 
-inline int64_t GetTimeMicros()
+inline uint64_t GetTimeMicros()
 {
     if (nMockTimeMicros != 0)
         return nMockTimeMicros;

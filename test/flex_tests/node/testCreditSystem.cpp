@@ -7,6 +7,7 @@
 #include <test/flex_tests/mining/MiningHashTree.h>
 #include "gmock/gmock.h"
 #include "CreditSystem.h"
+#include "Diurn.h"
 
 using namespace ::testing;
 using namespace std;
@@ -83,7 +84,6 @@ EncodedNetworkState ExampleNetworkState()
 
     network_state.batch_number = 2;
     network_state.previous_mined_credit_hash = 1;
-    network_state.previous_diurn_root = 1;
     network_state.difficulty = 100;
     network_state.diurnal_difficulty = 1000;
     network_state.batch_offset = 1;
@@ -229,6 +229,32 @@ TEST_F(ACreditSystem, UsesTheCachedResultOfAProofOfWorkCheck)
     creditdata[msg.GetHash160()]["quickcheck_bad"] = true;
     bool ok = credit_system->QuickCheckProofOfWorkInMinedCreditMessage(msg);
     ASSERT_THAT(ok, Eq(false));
+}
+
+TEST_F(ACreditSystem, DeterminesTheNextPreviousDiurnRoot)
+{
+    MinedCreditMessage msg;
+    msg.mined_credit.network_state.previous_diurn_root = 1;
+    msg.mined_credit.network_state.diurnal_block_root = 2;
+    uint160 next_previous_diurn_root = credit_system->GetNextPreviousDiurnRoot(msg.mined_credit);
+    ASSERT_THAT(next_previous_diurn_root, Eq(1));
+    creditdata[msg.mined_credit.GetHash160()]["is_calend"] = true;
+    next_previous_diurn_root = credit_system->GetNextPreviousDiurnRoot(msg.mined_credit);
+    ASSERT_THAT(next_previous_diurn_root, Eq(SymmetricCombine(1, 2)));
+}
+
+TEST_F(ACreditSystem, DeterminesTheNextDiurnalBlockRoot)
+{
+    Diurn diurn;
+    MinedCreditMessage msg;
+    msg.mined_credit.network_state.previous_diurn_root = 1;
+    msg.mined_credit.network_state.batch_root = 1;
+    credit_system->StoreMinedCreditMessage(msg);
+
+    diurn.Add(msg);
+
+    uint160 next_diurnal_block_root = credit_system->GetNextDiurnalBlockRoot(msg.mined_credit);
+    ASSERT_THAT(next_diurnal_block_root, Eq(diurn.BlockRoot()));
 }
 
 class ACreditSystemWithAStoredTransaction : public ACreditSystem

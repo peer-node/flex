@@ -11,7 +11,6 @@ using namespace std;
 
 bool MainRoutine::SendMessages(CNode* pto)
 {
-    bool fSendTrickle = false;
     {
         // Don't send anything until we get their version message
         if (pto->nVersion == 0)
@@ -21,7 +20,8 @@ bool MainRoutine::SendMessages(CNode* pto)
         // Message: ping
         //
         bool pingSend = false;
-        if (pto->fPingQueued) {
+        if (pto->fPingQueued)
+        {
             // RPC ping request by user
             pingSend = true;
         }
@@ -29,22 +29,18 @@ bool MainRoutine::SendMessages(CNode* pto)
             // Ping automatically sent as a keepalive
             pingSend = true;
         }
-        if (pingSend) {
+        if (pingSend)
+        {
             uint64_t nonce = 0;
-            while (nonce == 0) {
+            while (nonce == 0)
                 RAND_bytes((unsigned char*)&nonce, sizeof(nonce));
-            }
+
             pto->nPingNonceSent = nonce;
             pto->fPingQueued = false;
-            if (pto->nVersion > BIP0031_VERSION) {
-                // Take timestamp as close as possible before transmitting ping
-                pto->nPingUsecStart = GetTimeMicros();
-                pto->PushMessage("ping", nonce);
-            } else {
-                // Peer is too old to support ping command with nonce, pong will never arrive, disable timing
-                pto->nPingUsecStart = 0;
-                pto->PushMessage("ping");
-            }
+
+            // Take timestamp as close as possible before transmitting ping
+            pto->nPingUsecStart = GetTimeMicros();
+            pto->PushMessage("ping", nonce);
         }
 
         TRY_LOCK(cs_main, lockMain); // Acquire cs_main for IsInitialBlockDownload() and CNodeState()
@@ -75,38 +71,16 @@ bool MainRoutine::SendMessages(CNode* pto)
             nLastRebroadcast = GetTime();
         }
 
-        //
-        // Message: addr
-        //
-        if (fSendTrickle)
-        {
-            vector<CAddress> vAddr;
-            vAddr.reserve(pto->vAddrToSend.size());
-            BOOST_FOREACH(const CAddress& addr, pto->vAddrToSend)
-            {
-                // returns true if wasn't already contained in the set
-                if (pto->setAddrKnown.insert(addr).second)
-                {
-                    vAddr.push_back(addr);
-                    // receiver rejects addr messages larger than 1000
-                    if (vAddr.size() >= 1000)
-                    {
-                        pto->PushMessage("addr", vAddr);
-                        vAddr.clear();
-                    }
-                }
-            }
-            pto->vAddrToSend.clear();
-            if (!vAddr.empty())
-                pto->PushMessage("addr", vAddr);
-        }
+        Misbehaving(pto->GetId(), pto->recent_misbehavior);
+        pto->recent_misbehavior = 0;
 
         CNodeState &state = *StateOfNode(pto->GetId());
-        if (state.fShouldBan) {
+        if (state.fShouldBan)
+        {
             if (pto->addr.IsLocal())
-                log_ << "Warning: not banning local node "
-                     << pto->addr << "\n";
-            else {
+                log_ << "Warning: not banning local node " << pto->addr << "\n";
+            else
+            {
                 std::cout << "main_send_messages.cpp: banning\n";
                 pto->fDisconnect = true;
                 CNode::Ban(pto->addr);
@@ -140,24 +114,6 @@ bool MainRoutine::SendMessages(CNode* pto)
             {
                 if (pto->setInventoryKnown.count(inv))
                     continue;
-
-                // trickle out tx inv to protect privacy
-                if (inv.type == MSG_TX && !fSendTrickle)
-                {
-                    // 1/4 of tx invs blast to all immediately
-                    static uint256 hashSalt;
-                    if (hashSalt == 0)
-                        hashSalt = GetRandHash();
-                    uint256 hashRand = inv.hash ^ hashSalt;
-                    hashRand = Hash(BEGIN(hashRand), END(hashRand));
-                    bool fTrickleWait = ((hashRand & 3) != 0);
-
-                    if (fTrickleWait)
-                    {
-                        vInvWait.push_back(inv);
-                        continue;
-                    }
-                }
 
                 // returns true if wasn't already contained in the set
                 if (pto->setInventoryKnown.insert(inv).second)
@@ -203,13 +159,12 @@ bool MainRoutine::SendMessages(CNode* pto)
         //
         vector<CInv> vGetData;
         while (!pto->fDisconnect && state.nBlocksToDownload
-                && state.nBlocksInFlight < MAX_BLOCKS_IN_TRANSIT_PER_PEER) {
+                && state.nBlocksInFlight < MAX_BLOCKS_IN_TRANSIT_PER_PEER)
+        {
             uint256 hash = state.vBlocksToDownload.front();
-            log_ << "popped hash " << hash << "\n";
             vGetData.push_back(CInv(MSG_BLOCK, hash));
             MarkBlockAsInFlight(pto->GetId(), hash);
-            log_ << "net: Requesting block " << hash
-                 << " from " << state.name << "\n";
+            log_ << "net: Requesting block " << hash << " from " << state.name << "\n";
 
             if (vGetData.size() >= 1000)
             {

@@ -29,7 +29,7 @@ public:
 TEST_F(AMinedCreditConstructor, ConstructsAMinedCreditWithAnAmountOfOne)
 {
     MinedCredit mined_credit = mined_credit_constructor->ConstructMinedCredit();
-    ASSERT_THAT(mined_credit.amount, Eq(1));
+    ASSERT_THAT(mined_credit.amount, Eq(ONE_CREDIT));
 }
 
 TEST_F(AMinedCreditConstructor, ConstructsAMinedCreditWithAPublicKeyWhosePrivateKeyIsKnown)

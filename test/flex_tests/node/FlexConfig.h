@@ -4,6 +4,8 @@
 
 #include <string>
 #include <map>
+#include "FlexConfigDefaults.h"
+
 
 class FlexConfig
 {
@@ -11,7 +13,7 @@ public:
     unsigned long size();
     std::string& operator[](std::string key);
 
-    std::map<std::string, std::string> settings;
+    std::map<std::string, std::string> settings{default_settings};
 
     void ReadFromStream(std::stringstream &config_stream);
 

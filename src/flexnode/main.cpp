@@ -9,6 +9,7 @@ void MainRoutine::SetNetwork(Network& network_)
 {
     network = &network_;
     RegisterNodeSignals(network->GetNodeSignals());
+    network->main_routine = this;
 }
 
 void MainRoutine::SetFlexNode(MainFlexNode& flexnode_)

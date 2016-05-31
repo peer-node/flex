@@ -100,6 +100,8 @@ public:
     std::string network_name;
     boost::thread_group threadGroup;
 
+    MainRoutine *main_routine;
+
     unsigned short listen_port;
     CSemaphore *semOutbound = NULL;
     bool fDiscover = true;

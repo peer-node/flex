@@ -1,3 +1,4 @@
+#include <src/base/util_time.h>
 #include "gmock/gmock.h"
 #include "CreditSystem.h"
 #include "MinedCreditMessageValidator.h"
@@ -43,6 +44,7 @@ public:
         CreditBatch batch;
         batch.Add(tx.rawtx.outputs[0]);
         msg.mined_credit.network_state.batch_root = batch.Root();
+        msg.mined_credit.network_state.difficulty = INITIAL_DIFFICULTY;
         return msg;
     }
 };
@@ -133,5 +135,125 @@ TEST_F(AMinedCreditMessageValidator, ChecksTheSpentChainHash)
     ASSERT_THAT(ok, Eq(true));
     msg.mined_credit.network_state.spent_chain_hash = spent_chain.GetHash160() + 1;
     ok = validator.CheckSpentChainHash(msg);
+    ASSERT_THAT(ok, Eq(false));
+}
+
+TEST_F(AMinedCreditMessageValidator, ChecksTheTimeStampSucceedsThePreviousTimestamp)
+{
+    auto msg = MinedCreditMessageWithABatch();
+    msg.mined_credit.network_state.timestamp = (uint64_t) GetTimeMicros();
+    credit_system->StoreMinedCreditMessage(msg);
+
+    MinedCreditMessage next_msg;
+    next_msg.mined_credit.network_state = credit_system->SucceedingNetworkState(msg.mined_credit);
+    next_msg.mined_credit.network_state.timestamp = (uint64_t) (GetTimeMicros() - 1e15);
+    bool ok = validator.CheckTimeStampSucceedsPreviousTimestamp(next_msg);
+    ASSERT_THAT(ok, Eq(false));
+    next_msg.mined_credit.network_state.timestamp = (uint64_t) (GetTimeMicros() + 1e6);
+    ok = validator.CheckTimeStampSucceedsPreviousTimestamp(next_msg);
+    ASSERT_THAT(ok, Eq(true));
+}
+
+TEST_F(AMinedCreditMessageValidator, ChecksTheTimeStampIsNotInTheFuture)
+{
+    auto msg = MinedCreditMessageWithABatch();
+    msg.mined_credit.network_state.timestamp = (uint64_t) (GetTimeMicros() + 1e6);
+    credit_system->StoreMinedCreditMessage(msg);
+
+    bool ok = validator.CheckTimeStampIsNotInFuture(msg);
+    ASSERT_THAT(ok, Eq(false));
+    msg.mined_credit.network_state.timestamp = (uint64_t) (GetTimeMicros() - 1e6);
+    ok = validator.CheckTimeStampIsNotInFuture(msg);
+    ASSERT_THAT(ok, Eq(true));
+}
+
+TEST_F(AMinedCreditMessageValidator, ChecksThePreviousTotalWork)
+{
+    auto msg = MinedCreditMessageWithABatch();
+    msg.mined_credit.network_state.previous_total_work = 10;
+    msg.mined_credit.network_state.difficulty = 2;
+    credit_system->StoreMinedCreditMessage(msg);
+
+    MinedCreditMessage next_msg;
+    next_msg.mined_credit.network_state.previous_mined_credit_hash = msg.mined_credit.GetHash160();
+    next_msg.mined_credit.network_state.previous_total_work = 11;
+    bool ok = validator.CheckPreviousTotalWork(next_msg);
+    ASSERT_THAT(ok, Eq(false));
+    next_msg.mined_credit.network_state.previous_total_work = 12;
+    ok = validator.CheckPreviousTotalWork(next_msg);
+    ASSERT_THAT(ok, Eq(true));
+}
+
+TEST_F(AMinedCreditMessageValidator, ChecksTheDifficulty)
+{
+    auto msg = MinedCreditMessageWithABatch();
+    msg.mined_credit.network_state.difficulty = INITIAL_DIFFICULTY;
+    credit_system->StoreMinedCreditMessage(msg);
+
+    MinedCreditMessage next_msg;
+    next_msg.mined_credit.network_state.previous_mined_credit_hash = msg.mined_credit.GetHash160();
+
+    next_msg.mined_credit.network_state.difficulty = credit_system->GetNextDifficulty(msg.mined_credit);;
+    bool ok = validator.CheckDifficulty(next_msg);
+    ASSERT_THAT(ok, Eq(true));
+    next_msg.mined_credit.network_state.difficulty += 1;
+    ok = validator.CheckDifficulty(next_msg);
+    ASSERT_THAT(ok, Eq(false));
+}
+
+TEST_F(AMinedCreditMessageValidator, ChecksTheDiurnalDifficulty)
+{
+    auto msg = MinedCreditMessageWithABatch();
+    msg.mined_credit.network_state.diurnal_difficulty = INITIAL_DIURNAL_DIFFICULTY;
+    credit_system->StoreMinedCreditMessage(msg);
+
+    MinedCreditMessage next_msg;
+    next_msg.mined_credit.network_state.previous_mined_credit_hash = msg.mined_credit.GetHash160();
+
+    next_msg.mined_credit.network_state.diurnal_difficulty = INITIAL_DIURNAL_DIFFICULTY;
+    bool ok = validator.CheckDiurnalDifficulty(next_msg);
+    ASSERT_THAT(ok, Eq(true));
+    next_msg.mined_credit.network_state.diurnal_difficulty = INITIAL_DIURNAL_DIFFICULTY + 1;
+    ok = validator.CheckDiurnalDifficulty(next_msg);
+    ASSERT_THAT(ok, Eq(false));
+    creditdata[msg.mined_credit.GetHash160()]["is_calend"] = true;
+    ok = validator.CheckDiurnalDifficulty(next_msg);
+    ASSERT_THAT(ok, Eq(false));
+    next_msg.mined_credit.network_state.diurnal_difficulty = credit_system->GetNextDiurnalDifficulty(msg.mined_credit);
+    ok = validator.CheckDiurnalDifficulty(next_msg);
+    ASSERT_THAT(ok, Eq(true));
+}
+
+TEST_F(AMinedCreditMessageValidator, ChecksThePreviousDiurnRoot)
+{
+    auto msg = MinedCreditMessageWithABatch();
+    msg.mined_credit.network_state.previous_diurn_root = 1;
+    credit_system->StoreMinedCreditMessage(msg);
+
+    MinedCreditMessage next_msg;
+    next_msg.mined_credit.network_state.previous_mined_credit_hash = msg.mined_credit.GetHash160();
+    next_msg.mined_credit.network_state.previous_diurn_root = 1;
+
+    bool ok = validator.CheckPreviousDiurnRoot(next_msg);
+    ASSERT_THAT(ok, Eq(true));
+    next_msg.mined_credit.network_state.previous_diurn_root = 2;
+    ok = validator.CheckPreviousDiurnRoot(next_msg);
+    ASSERT_THAT(ok, Eq(false));
+}
+
+TEST_F(AMinedCreditMessageValidator, ChecksTheDiurnalBlockRoot)
+{
+    auto msg = MinedCreditMessageWithABatch();
+    msg.mined_credit.network_state.previous_diurn_root = 1;
+    credit_system->StoreMinedCreditMessage(msg);
+
+    MinedCreditMessage next_msg;
+    next_msg.mined_credit.network_state.previous_mined_credit_hash = msg.mined_credit.GetHash160();
+    next_msg.mined_credit.network_state.diurnal_block_root = credit_system->GetNextDiurnalBlockRoot(msg.mined_credit);
+
+    bool ok = validator.CheckDiurnalBlockRoot(next_msg);
+    ASSERT_THAT(ok, Eq(true));
+    next_msg.mined_credit.network_state.diurnal_block_root = 2;
+    ok = validator.CheckDiurnalBlockRoot(next_msg);
     ASSERT_THAT(ok, Eq(false));
 }

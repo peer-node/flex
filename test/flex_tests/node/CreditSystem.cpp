@@ -126,7 +126,6 @@ uint160 CreditSystem::PreviousCreditHash(uint160 credit_hash)
 uint160 CreditSystem::FindFork(uint160 credit_hash1, uint160 credit_hash2)
 {
     set<uint160> seen;
-
     while (not seen.count(credit_hash1) and not seen.count(credit_hash2))
     {
         if (credit_hash1 == credit_hash2)
@@ -304,6 +303,7 @@ EncodedNetworkState CreditSystem::SucceedingNetworkState(MinedCredit mined_credi
         next_state.previous_diurn_root = SymmetricCombine(prev_state.previous_diurn_root, prev_state.diurnal_block_root);
     else
         next_state.previous_diurn_root = prev_state.previous_diurn_root;
+    next_state.diurnal_block_root = GetNextDiurnalBlockRoot(mined_credit);
 
     next_state.network_id = prev_state.network_id;
 
@@ -386,6 +386,38 @@ bool CreditSystem::QuickCheckProofOfWorkInCalend(Calend calend)
 
     return ok;
 }
+
+uint160 CreditSystem::GetNextPreviousDiurnRoot(MinedCredit &mined_credit)
+{
+    if (creditdata[mined_credit.GetHash160()]["is_calend"])
+        return SymmetricCombine(mined_credit.network_state.previous_diurn_root,
+                                mined_credit.network_state.diurnal_block_root);
+    else
+        return mined_credit.network_state.previous_diurn_root;
+}
+
+uint160 CreditSystem::GetNextDiurnalBlockRoot(MinedCredit mined_credit)
+{
+    std::vector<uint160> credit_hashes;
+    uint160 credit_hash = mined_credit.GetHash160();
+    if (mined_credit.network_state.batch_number > 0)
+        credit_hashes.push_back(credit_hash);
+    while (not IsCalend(credit_hash) and credit_hash != 0)
+    {
+        credit_hash = PreviousCreditHash(credit_hash);
+        if (credit_hash != 0)
+            credit_hashes.push_back(credit_hash);
+    }
+    std::reverse(credit_hashes.begin(), credit_hashes.end());
+    DiurnalBlock block;
+    for (auto hash : credit_hashes)
+        block.Add(hash);
+    return block.Root();
+}
+
+
+
+
 
 
 

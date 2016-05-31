@@ -40,6 +40,8 @@ public:
     CreditInBatch GetCreditInBatch(Credit credit);
 
     std::vector<uint160> Branch(Credit credit);
+
+    CreditBatch &operator=(const CreditBatch &other);
 };
 
 

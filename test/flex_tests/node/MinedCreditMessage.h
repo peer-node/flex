@@ -13,12 +13,16 @@ public:
     ShortHashList<uint160> hash_list;
     NetworkSpecificProofOfWork proof_of_work;
 
+    static std::string Type() { return "msg"; }
+
     IMPLEMENT_SERIALIZE
     (
         READWRITE(mined_credit);
         READWRITE(hash_list);
         READWRITE(proof_of_work);
     )
+
+    DEPENDENCIES();
 
     uint160 GetHash160();
 

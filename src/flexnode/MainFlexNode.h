@@ -3,7 +3,7 @@
 
 #include <src/net/net_cnode.h>
 #include <src/base/sync.h>
-#include <test/flex_tests/main_tests/CreditMessageHandler.h>
+#include <test/flex_tests/main_tests/CreditMessageHandler_.h>
 #include "../../test/flex_tests/flex_data/TestData.h"
 
 
@@ -22,7 +22,7 @@ public:
     void HandleMessage(std::string command, CDataStream &stream, CNode *peer);
 
 
-    CreditMessageHandler *credit_message_handler{NULL};
+    CreditMessageHandler_ *credit_message_handler{NULL};
     uint64_t messages_received{0};
     Mutex mutex;
 

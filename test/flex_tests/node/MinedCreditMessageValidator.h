@@ -27,6 +27,26 @@ public:
     bool CheckMessageListHash(MinedCreditMessage &msg);
 
     bool CheckSpentChainHash(MinedCreditMessage &msg);
+
+    bool CheckTimeStampSucceedsPreviousTimestamp(MinedCreditMessage &msg);
+
+    bool CheckTimeStampIsNotInFuture(MinedCreditMessage &msg);
+
+    bool CheckPreviousTotalWork(MinedCreditMessage &msg);
+
+    bool CheckDiurnalDifficulty(MinedCreditMessage &msg);
+
+    MinedCredit GetPreviousMinedCredit(MinedCreditMessage &msg);
+
+    bool CheckDifficulty(MinedCreditMessage &msg);
+
+    bool CheckPreviousDiurnRoot(MinedCreditMessage &msg);
+
+    bool CheckDiurnalBlockRoot(MinedCreditMessage &msg);
+
+    bool ValidateNetworkState(MinedCreditMessage &msg);
+
+    bool CheckMessageListContainsPreviousMinedCreditHash(MinedCreditMessage &msg);
 };
 
 

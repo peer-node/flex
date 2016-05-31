@@ -42,7 +42,7 @@ void MainRoutine::FinalizeNode(NodeId nodeid) {
     }
 
     BOOST_FOREACH(const uint256& hash, state->vBlocksToDownload)
-                    mapBlocksToDownload.erase(hash);
+        mapBlocksToDownload.erase(hash);
 
     mapNodeState.erase(nodeid);
 }
@@ -94,7 +94,8 @@ bool MainRoutine::AddBlockToQueue(NodeId nodeid, const uint256 &hash) {
 }
 
 // Requires cs_main.
-void MainRoutine::MarkBlockAsInFlight(NodeId nodeid, const uint256 &hash) {
+void MainRoutine::MarkBlockAsInFlight(NodeId nodeid, const uint256 &hash)
+{
     CNodeState *state = StateOfNode(nodeid);
     assert(state != NULL);
 

@@ -83,6 +83,10 @@ public:
     bool QuickCheckProofOfWorkInCalend(Calend calend);
 
     bool CheckHashesSeedsAndThresholdsInMinedCreditMessageProofOfWork(MinedCreditMessage &msg);
+
+    uint160 GetNextPreviousDiurnRoot(MinedCredit &mined_credit);
+
+    uint160 GetNextDiurnalBlockRoot(MinedCredit mined_credit);
 };
 
 

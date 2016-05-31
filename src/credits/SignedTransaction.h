@@ -34,6 +34,8 @@ public:
 
     uint64_t IncludedFees();
 
+    std::vector<uint160> Dependencies() { return std::vector<uint160>(); }
+
     std::vector<uint160> GetMissingCredits(MemoryDataStore &creditdata);
 
     bool operator==(const SignedTransaction& other) const

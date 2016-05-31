@@ -31,7 +31,7 @@ string_t ByteString(vch_t bytes)
     {
         memcpy(&amount, &data[0], 8);
         keydata.resize(data.size() - 8);
-        memcpy(&keydata, &data[8], data.size() - 8);
+        memcpy(&keydata[0], &data[8], data.size() - 8);
     }
 
     string_t Credit::ToString() const

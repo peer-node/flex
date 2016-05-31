@@ -50,6 +50,7 @@ public:
         CreditBatch batch = credit_system->ReconstructBatch(msg);
         msg.mined_credit.network_state.batch_root = batch.Root();
         msg.mined_credit.network_state.batch_size = 1;
+        msg.mined_credit.network_state.difficulty = INITIAL_DIFFICULTY;
         credit_system->StoreMinedCreditMessage(msg);
         credit_system->AddToMainChain(msg);
 
@@ -60,7 +61,7 @@ public:
 TEST_F(ATransactionValidator, DetectsWhenTheSumOfTheOutputsOverflows)
 {
     auto tx = ATransactionWhoseOutputsOverflow();
-    bool overflow = transaction_validator.CheckForOverflow(tx);
+    bool overflow = transaction_validator.OutputsOverflow(tx);
     ASSERT_THAT(overflow, Eq(true));
 }
 
@@ -68,7 +69,7 @@ TEST_F(ATransactionValidator, DetectsWhenTheSumOfTheOutputsDoesntOverflow)
 {
     auto tx = ATransactionWhoseOutputsOverflow();
     tx.rawtx.outputs[0].amount = 5;
-    bool overflow = transaction_validator.CheckForOverflow(tx);
+    bool overflow = transaction_validator.OutputsOverflow(tx);
     ASSERT_THAT(overflow, Eq(false));
 }
 

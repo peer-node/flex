@@ -8,7 +8,7 @@
 MinedCredit MinedCreditConstructor::ConstructMinedCredit()
 {
     MinedCredit mined_credit;
-    mined_credit.amount = 1;
+    mined_credit.amount = ONE_CREDIT;
     Point public_key = NewPublicKey();
     mined_credit.keydata = public_key.getvch();
     return mined_credit;

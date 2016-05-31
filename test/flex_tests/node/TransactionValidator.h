@@ -11,7 +11,7 @@ public:
 
     void SetCreditSystem(CreditSystem *credit_system_);
 
-    bool CheckForOverflow(SignedTransaction &tx);
+    bool OutputsOverflow(SignedTransaction &tx);
 
     bool CheckIfCreditInBatchIsInTheMainChain(CreditInBatch &credit_in_batch);
 
