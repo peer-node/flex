@@ -16,35 +16,20 @@ void Network::RelayTransaction(const SignedTransaction& tx, const uint256& hash)
     RelayTransaction(tx, hash, ss);
 }
 
-void Network::RelayTransaction(const SignedTransaction& tx, const uint256& hash,
-                      const CDataStream& ss)
+void Network::RelayTransaction(const SignedTransaction& tx, const uint256& hash, const CDataStream& ss)
 {
     CInv inv(MSG_TX, hash);
     {
         LOCK(cs_mapRelay);
-        // Expire old relay messages
-        while (!vRelayExpiration.empty() &&
-               vRelayExpiration.front().first < GetTime())
-        {
-            mapRelay.erase(vRelayExpiration.front().second);
-            vRelayExpiration.pop_front();
-        }
-
-        // Save original serialized message so newer versions are preserved
-        mapRelay.insert(std::make_pair(inv, ss));
-        vRelayExpiration.push_back(std::make_pair(GetTime() + 15 * 60, inv));
+        ExpireOldRelayMessages();
+        SaveSerializedMessage(inv, ss);
     }
     LOCK(cs_vNodes);
-    BOOST_FOREACH(CNode* pnode, vNodes)
-    {
-        if(!pnode->fRelayTxes)
-            continue;
+    for (auto pnode : vNodes)
         pnode->PushInventory(inv);
-    }
 }
 
-void Network::TellNodeAboutTransaction(CNode* pnode,
-                              const SignedTransaction& tx)
+void Network::TellNodeAboutTransaction(CNode* pnode, const SignedTransaction& tx)
 {
     uint256 hash = tx.GetHash();
     CInv inv(MSG_TX, hash);
@@ -69,29 +54,33 @@ void Network::RelayMinedCredit(const MinedCreditMessage& message)
     RelayMinedCredit(message, hash, ss);
 }
 
-void Network::RelayMinedCredit(const MinedCreditMessage& message, const uint256& hash,
-                      const CDataStream& ss)
+void Network::ExpireOldRelayMessages()
+{
+    while (!vRelayExpiration.empty() &&
+           vRelayExpiration.front().first < GetTime())
+    {
+        mapRelay.erase(vRelayExpiration.front().second);
+        vRelayExpiration.pop_front();
+    }
+}
+
+void Network::SaveSerializedMessage(const CInv inv, const CDataStream& ss)
+{
+    mapRelay.insert(std::make_pair(inv, ss));
+    vRelayExpiration.push_back(std::make_pair(GetTime() + 15 * 60, inv));
+}
+
+void Network::RelayMinedCredit(const MinedCreditMessage& message, const uint256& hash, const CDataStream& ss)
 {
     CInv inv(MSG_BLOCK, hash);
     {
         LOCK(cs_mapRelay);
-        // Expire old relay messages
-        while (!vRelayExpiration.empty() &&
-               vRelayExpiration.front().first < GetTime())
-        {
-            mapRelay.erase(vRelayExpiration.front().second);
-            vRelayExpiration.pop_front();
-        }
-
-        // Save original serialized message so newer versions are preserved
-        mapRelay.insert(std::make_pair(inv, ss));
-        vRelayExpiration.push_back(std::make_pair(GetTime() + 15 * 60, inv));
+        ExpireOldRelayMessages();
+        SaveSerializedMessage(inv, ss);
     }
     LOCK(cs_vNodes);
-    BOOST_FOREACH(CNode* pnode, vNodes)
-    {
+    for(auto pnode : vNodes)
         pnode->PushInventory(inv);
-    }
 }
 
 void Network::RelayMessage(const CDataStream& ss, int type)
@@ -100,23 +89,17 @@ void Network::RelayMessage(const CDataStream& ss, int type)
     CInv inv(type, hash);
     {
         LOCK(cs_mapRelay);
-        // Expire old relay messages
-        while (!vRelayExpiration.empty() &&
-               vRelayExpiration.front().first < GetTime())
-        {
-            mapRelay.erase(vRelayExpiration.front().second);
-            vRelayExpiration.pop_front();
-        }
-
-        // Save original serialized message so newer versions are preserved
-        mapRelay.insert(std::make_pair(inv, ss));
-        vRelayExpiration.push_back(std::make_pair(GetTime() + 15 * 60, inv));
+        ExpireOldRelayMessages();
+        SaveSerializedMessage(inv, ss);
     }
     LOCK(cs_vNodes);
-    BOOST_FOREACH(CNode* pnode, vNodes)
-    {
+    for (auto pnode : vNodes)
         pnode->PushInventory(inv);
-    }
+}
+
+void Network::RelayMessage(const CDataStream& ss)
+{
+    RelayMessage(ss, MSG_GENERAL);
 }
 
 void Network::RelayTradeMessage(const CDataStream& ss)
@@ -126,7 +109,6 @@ void Network::RelayTradeMessage(const CDataStream& ss)
 
 void Network::RelayDepositMessage(const CDataStream& ss)
 {
-    log_ << "Relaying deposit message: " << ss.str() << "\n";
     RelayMessage(ss, MSG_DEPOSIT);
 }
 

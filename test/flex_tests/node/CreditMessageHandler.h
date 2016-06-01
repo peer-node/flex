@@ -13,6 +13,8 @@
 class CreditMessageHandler : public MessageHandlerWithOrphanage
 {
 public:
+    std::string channel{"credit"};
+
     MemoryDataStore &creditdata, &keydata;
     CreditSystem *credit_system;
     Calendar *calendar;
@@ -29,6 +31,12 @@ public:
             MessageHandlerWithOrphanage(msgdata_),
             creditdata(creditdata_), keydata(keydata_)
     { }
+
+    template <typename T>
+    void Broadcast(T message)
+    {
+        network->Broadcast(channel, message.Type(), message);
+    }
 
     void SetConfig(FlexConfig& config_) { config = config_; }
 

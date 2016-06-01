@@ -110,6 +110,11 @@ class CInv
 
         friend bool operator<(const CInv& a, const CInv& b);
 
+        bool operator==(const CInv& other)
+        {
+            return type == other.type and hash == other.hash;
+        }
+
         bool IsKnownType() const;
         const char* GetCommand() const;
         std::string ToString() const;
@@ -126,7 +131,8 @@ enum
     MSG_BLOCK,
     MSG_TRADE,
     MSG_RELAY,
-    MSG_DEPOSIT
+    MSG_DEPOSIT,
+    MSG_GENERAL
 };
 
 #endif // __INCLUDED_PROTOCOL_H__

@@ -43,7 +43,7 @@ template <typename T>
 CDataStream GetDataStream(T message)
 {
     CDataStream ss(SER_NETWORK, CLIENT_VERSION);
-    ss << message.Type() << message.Type() << message;
+    ss << std::string("credit") << message.Type() << message;
     return ss;
 }
 
@@ -63,7 +63,7 @@ EncodedNetworkState ValidFirstNetworkState()
     network_state.message_list_hash = ShortHashList<uint160>().GetHash160();
     network_state.previous_mined_credit_hash = 0;
     network_state.spent_chain_hash = BitChain().GetHash160();
-    network_state.timestamp = (uint64_t) GetTimeMicros();
+    network_state.timestamp = GetTimeMicros();
 
     return network_state;
 }
@@ -296,4 +296,39 @@ TEST_F(ACreditMessageHandler, AddsToTheSpentChainWhenAddingAMinedCreditMessageCo
     spent_chain.Set(0);
 
     ASSERT_THAT(credit_message_handler->spent_chain->GetHash160(), Eq(spent_chain.GetHash160()));
+}
+
+
+class ACreditMessageHandlerWithTwoPeers : public ACreditMessageHandler
+{
+public:
+    TestPeer other_peer;
+
+    virtual void SetUp()
+    {
+        ACreditMessageHandler::SetUp();
+        peer.dummy_network.vNodes.push_back(&other_peer);
+    }
+
+    virtual void TearDown()
+    {
+        ACreditMessageHandler::TearDown();
+    }
+};
+
+TEST_F(ACreditMessageHandlerWithTwoPeers, RelaysAValidFirstMinedCredit)
+{
+    MinedCreditMessage msg = ValidFirstMinedCreditMessage(credit_system);
+    credit_message_handler->HandleMessage(GetDataStream(msg), &peer);
+    bool received = other_peer.HasBeenInformedAbout("credit", "msg", msg);
+    ASSERT_THAT(received, Eq(true));
+}
+
+
+TEST_F(ACreditMessageHandlerWithTwoPeers, RelaysAValidTransaction)
+{
+    MinedCreditMessage msg = ValidFirstMinedCreditMessage(credit_system);
+    credit_message_handler->HandleMessage(GetDataStream(msg), &peer);
+    bool received = other_peer.HasBeenInformedAbout("credit", "msg", msg);
+    ASSERT_THAT(received, Eq(true));
 }

@@ -21,6 +21,8 @@ void CreditMessageHandler::HandleMinedCreditMessage(MinedCreditMessage msg)
 
     if (not credit_system->QuickCheckProofOfWorkInMinedCreditMessage(msg))
         return RejectMessage(msg_hash);
+
+    Broadcast(msg);
 }
 
 void CreditMessageHandler::FetchFailedListExpansion(uint160 msg_hash)

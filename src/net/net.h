@@ -274,6 +274,19 @@ public:
     void InitializeNode(bool start_threads = true);
 
     void StartThreads();
+
+    void RelayMessage(const CDataStream &ss);
+
+    template <typename T> void Broadcast(std::string channel, std::string command, T message)
+    {
+        CDataStream ss(SER_NETWORK, CLIENT_VERSION);
+        ss << channel << command << message;
+        RelayMessage(ss);
+    }
+
+    void ExpireOldRelayMessages();
+
+    void SaveSerializedMessage(const CInv inv, const CDataStream &ss);
 };
 
 

@@ -21,6 +21,21 @@ public:
     {
         list_expansion_failed_requests.push_back(mined_credit_hash);
     }
+
+    bool HasBeenInformedAbout(CDataStream& ss)
+    {
+        uint256 hash = Hash(ss.begin(), ss.end());
+        CInv inv(MSG_GENERAL, hash);
+        return VectorContainsEntry(vInventoryToSend, inv);
+    }
+
+    template<typename T1>
+    bool HasBeenInformedAbout(const char* command, const char* subcommand, const T1& message)
+    {
+        CDataStream ss(SER_NETWORK, CLIENT_VERSION);
+        ss << std::string(command) << std::string(subcommand) << message;
+        return HasBeenInformedAbout(ss);
+    }
 };
 
 
