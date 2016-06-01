@@ -1,9 +1,7 @@
 #include <src/credits/creditsign.h>
 #include "gmock/gmock.h"
-#include "MessageHandlerWithOrphanage.h"
 #include "CreditMessageHandler.h"
 #include "TestPeer.h"
-#include "Calendar.h"
 
 using namespace ::testing;
 using namespace std;

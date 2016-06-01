@@ -35,7 +35,8 @@ public:
     template <typename T>
     void Broadcast(T message)
     {
-        network->Broadcast(channel, message.Type(), message);
+        if (network != NULL)
+            network->Broadcast(channel, message.Type(), message);
     }
 
     void SetConfig(FlexConfig& config_) { config = config_; }
