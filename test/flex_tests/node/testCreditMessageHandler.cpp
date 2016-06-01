@@ -327,8 +327,13 @@ TEST_F(ACreditMessageHandlerWithTwoPeers, RelaysAValidFirstMinedCredit)
 
 TEST_F(ACreditMessageHandlerWithTwoPeers, RelaysAValidTransaction)
 {
-    MinedCreditMessage msg = ValidFirstMinedCreditMessage(credit_system);
-    credit_message_handler->HandleMessage(GetDataStream(msg), &peer);
-    bool received = other_peer.HasBeenInformedAbout("credit", "msg", msg);
-    ASSERT_THAT(received, Eq(true));
+    auto msg = ValidFirstMinedCreditMessage(credit_system);
+    credit_message_handler->AddToTip(msg);
+    auto second_msg = ValidSecondMinedCreditMessage(credit_system, msg);
+    credit_message_handler->AddToTip(second_msg);
+
+    auto tx = ValidTransaction(credit_system , second_msg);
+    credit_message_handler->HandleMessage(GetDataStream(tx), &peer);
+
+    ASSERT_TRUE(other_peer.HasBeenInformedAbout("credit", "tx", tx));
 }

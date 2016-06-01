@@ -79,7 +79,7 @@ void Network::RelayMinedCredit(const MinedCreditMessage& message, const uint256&
         SaveSerializedMessage(inv, ss);
     }
     LOCK(cs_vNodes);
-    for(auto pnode : vNodes)
+    for (auto pnode : vNodes)
         pnode->PushInventory(inv);
 }
 

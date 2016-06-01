@@ -109,4 +109,6 @@ void CreditMessageHandler::AcceptTransaction(SignedTransaction tx)
     accepted_messages.push_back(tx.GetHash160());
     for (auto input : tx.rawtx.inputs)
         positions_spent_by_accepted_transactions.insert(input.position);
+
+    Broadcast(tx);
 }
