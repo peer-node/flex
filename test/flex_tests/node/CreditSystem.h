@@ -27,7 +27,7 @@ public:
             msgdata(msgdata), creditdata(creditdata)
     { }
 
-    uint160 MostWorkBatch();
+    std::vector<uint160> MostWorkBatches();
 
     void StoreMinedCredit(MinedCredit mined_credit);
 
@@ -87,6 +87,30 @@ public:
     uint160 GetNextPreviousDiurnRoot(MinedCredit &mined_credit);
 
     uint160 GetNextDiurnalBlockRoot(MinedCredit mined_credit);
+
+    bool ProofHasCorrectNumberOfSeedsAndLinks(TwistWorkProof proof);
+
+    void SetChildBatch(uint160 parent_hash, uint160 child_hash);
+
+    void RemoveBlocksAndChildrenFromMainChain(uint160 credit_hash);
+
+    void RemoveFromMainChain(uint160 credit_hash);
+
+    void AcceptMinedCreditAsValidByRecordingTotalWorkAndParent(MinedCredit mined_credit);
+
+    void RecordTotalWork(uint160 credit_hash, uint160 total_work);
+
+    void RemoveBatchAndChildrenFromMainChainAndDeleteRecorOfTotalWork(uint160 credit_hash);
+
+    void RemoveBatchAndChildrenFromMainChainAndDeleteRecordOfTotalWork(uint160 credit_hash);
+
+    void RemoveFromMainChainAndDeleteRecordOfTotalWork(MinedCreditMessage &msg);
+
+    void RemoveFromMainChainAndDeleteRecordOfTotalWork(uint160 credit_hash);
+
+    void SwitchMainChainToOtherBranchOfFork(uint160 current_tip, uint160 new_tip);
+
+    void DeleteRecordOfTotalWork(MinedCreditMessage &msg);
 };
 
 

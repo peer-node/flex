@@ -34,6 +34,12 @@ public:
         dimension.located_serialized_objects[serialized_location_value] = serialized_object_name;
         return *this;
     }
+
+    MockLocation& operator=(const char* value)
+    {
+        *this = std::string(value);
+        return *this;
+    }
 };
 
 

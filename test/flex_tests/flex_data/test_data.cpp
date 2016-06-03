@@ -130,6 +130,15 @@ TEST_F(AMockDataStore, ReturnsALocationIterator)
     scanner = datastore.LocationIterator(x);
 }
 
+TEST_F(AMockDataStore, ReturnsTheObjectAtALocation)
+{
+    datastore["hat"].Location("body") = "head";
+    std::string thing_on_head;
+    datastore.GetObjectAtLocation(thing_on_head, "body", "head");
+    ASSERT_THAT(thing_on_head, Eq("hat"));
+}
+
+
 class ALocationIterator : public Test
 {
 public:
@@ -272,22 +281,4 @@ TEST_F(ALocationIteratorWithUint160Locations, ReturnsObjectsAndLocationsInTheCor
         EXPECT_THAT(object, Eq(1)) << "failed at " << digits;
     }
     ASSERT_FALSE(scanner.GetNextObjectAndLocation(object, location));
-}
-
-class GlobalDatabases : public TestWithGlobalDatabases
-{
-
-};
-
-TEST_F(GlobalDatabases, AreAccessibleInUnitTests)
-{
-    currencydata["hat"]["size"] = 25;
-    int y = currencydata["hat"]["size"];
-    ASSERT_EQ(25, y);
-}
-
-TEST_F(GlobalDatabases, DontRememberDataFromPreviousTests)
-{
-    int y = currencydata["hat"]["size"];
-    ASSERT_EQ(0, y);
 }

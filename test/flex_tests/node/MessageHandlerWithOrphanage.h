@@ -153,6 +153,7 @@ public:
             ss >> message_type;                                                     \
             ss >> message_type;                                                     \
             Handle ## ClassName ## Stream(ss, peer);                                \
+            return;                                                                 \
         }                                                                           \
     }
 

@@ -55,14 +55,11 @@ public:
     void RemoveFromLocation(LOCATION_NAME location_name, LOCATION_VALUE location_value)
     {
         vch_t serialized_location_name = MemoryDataStore::Serialize(location_name);
-
         if (not dimensions.count(serialized_location_name))
             return;
 
         MockDimension& dimension = dimensions[serialized_location_name];
-
         vch_t serialized_location_value = MemoryDataStore::Serialize(location_value);
-
         if (not dimension.located_serialized_objects.count(serialized_location_value))
             return;
 
@@ -74,6 +71,34 @@ public:
     {
         RemoveFromLocation(std::string(location_name), location_value);
     }
+
+    template <typename OBJECT_NAME, typename LOCATION_NAME, typename LOCATION_VALUE>
+    void GetObjectAtLocation(OBJECT_NAME& object_name, LOCATION_NAME location_name, LOCATION_VALUE location_value)
+    {
+        vch_t serialized_location_name = MemoryDataStore::Serialize(location_name);
+        if (not dimensions.count(serialized_location_name))
+            return;
+
+        MockDimension& dimension = dimensions[serialized_location_name];
+        vch_t serialized_location_value = MemoryDataStore::Serialize(location_value);
+        if (not dimension.located_serialized_objects.count(serialized_location_value))
+            return;
+
+        vch_t serialized_object_name = dimension.located_serialized_objects[serialized_location_value];
+        Deserialize(serialized_object_name, object_name);
+    };
+
+    template <typename OBJECT_NAME, typename LOCATION_VALUE>
+    void GetObjectAtLocation(OBJECT_NAME& object_name, const char* location_name, LOCATION_VALUE location_value)
+    {
+        return GetObjectAtLocation(object_name, std::string(location_name), location_value);
+    };
+
+    template <typename OBJECT_NAME>
+    void GetObjectAtLocation(OBJECT_NAME& object_name, const char* location_name, const char* location_value)
+    {
+        return GetObjectAtLocation(object_name, std::string(location_name), std::string(location_value));
+    };
 };
 
 

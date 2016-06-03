@@ -180,14 +180,13 @@ uint160 target_from_difficulty(uint160 difficulty)
 
     TwistWorkCheck TwistWorkProof::SpotCheck()
     {
-        uint32_t num_segments_to_check = num_segments > 4 ? 4 : 1;
-        uint32_t num_links_to_check = num_links > 4 ? 4 : 1;
+        uint32_t num_segments_to_check = num_segments > 2 ? 2 : 1;
+        uint32_t num_links_to_check = num_links > 8 ? 8 : 1;
 
         uint32_t start_segment = RandomNumberLessThan(num_segments + 1 - num_segments_to_check);
         uint32_t start_link = RandomNumberLessThan(num_links + 1 - num_links_to_check);
 
-        return CheckRange(start_segment, num_segments_to_check,
-                          start_link, num_links_to_check);
+        return CheckRange(start_segment, num_segments_to_check, start_link, num_links_to_check);
     }
 
 /*

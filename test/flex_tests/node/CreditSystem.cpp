@@ -8,14 +8,16 @@
 #include "Calend.h"
 
 using std::set;
+using std::vector;
 
-uint160 CreditSystem::MostWorkBatch()
+vector<uint160> CreditSystem::MostWorkBatches()
 {
     LocationIterator work_scanner = creditdata.LocationIterator("total_work");
     work_scanner.SeekEnd();
-    uint160 hash(0), total_work(0);
-    work_scanner.GetPreviousObjectAndLocation(hash, total_work);
-    return hash;
+    vector<uint160> hashes;
+    uint160 total_work(0);
+    work_scanner.GetPreviousObjectAndLocation(hashes, total_work);
+    return hashes;
 }
 
 void CreditSystem::StoreMinedCredit(MinedCredit mined_credit)
@@ -24,6 +26,30 @@ void CreditSystem::StoreMinedCredit(MinedCredit mined_credit)
     StoreHash(credit_hash);
     creditdata[credit_hash]["mined_credit"] = mined_credit;
     msgdata[credit_hash]["type"] = "mined_credit";
+}
+
+void CreditSystem::RecordTotalWork(uint160 credit_hash, uint160 total_work)
+{
+    vector<uint160> hashes_at_location;
+    creditdata.GetObjectAtLocation(hashes_at_location, "total_work", total_work);
+    hashes_at_location.push_back(credit_hash);
+    creditdata[hashes_at_location].Location("total_work") = total_work;
+}
+
+void CreditSystem::AcceptMinedCreditAsValidByRecordingTotalWorkAndParent(MinedCredit mined_credit)
+{
+    uint160 credit_hash = mined_credit.GetHash160();
+    uint160 total_work = mined_credit.network_state.difficulty + mined_credit.network_state.previous_total_work;
+    RecordTotalWork(credit_hash, total_work);
+    SetChildBatch(mined_credit.network_state.previous_mined_credit_hash, credit_hash);
+}
+
+void CreditSystem::SetChildBatch(uint160 parent_hash, uint160 child_hash)
+{
+    std::vector<uint160> children = creditdata[parent_hash]["children"];
+    if (!VectorContainsEntry(children, child_hash))
+        children.push_back(child_hash);
+    creditdata[parent_hash]["children"] = children;
 }
 
 void CreditSystem::StoreTransaction(SignedTransaction tx)
@@ -242,10 +268,75 @@ void CreditSystem::RemoveFromMainChain(MinedCreditMessage &msg)
     creditdata[msg.mined_credit.network_state.batch_root]["credit_hash"] = 0;
 }
 
+void CreditSystem::RemoveFromMainChain(uint160 credit_hash)
+{
+    MinedCreditMessage msg = creditdata[credit_hash]["msg"];
+    RemoveFromMainChain(msg);
+}
+
+void CreditSystem::RemoveFromMainChainAndDeleteRecordOfTotalWork(MinedCreditMessage &msg)
+{
+    RemoveFromMainChain(msg);
+    DeleteRecordOfTotalWork(msg);
+}
+
+void CreditSystem::DeleteRecordOfTotalWork(MinedCreditMessage &msg)
+{
+    uint160 total_work = TotalWork(msg), credit_hash = msg.mined_credit.GetHash160();
+
+    vector<uint160> hashes_with_same_total_work;
+    creditdata.GetObjectAtLocation(hashes_with_same_total_work, "total_work", total_work);
+    if (VectorContainsEntry(hashes_with_same_total_work, credit_hash))
+        EraseEntryFromVector(credit_hash, hashes_with_same_total_work);
+
+    if (hashes_with_same_total_work.size() > 0)
+        creditdata[hashes_with_same_total_work].Location("total_work") = total_work;
+    else
+        creditdata.RemoveFromLocation("total_work", total_work);
+}
+
+void CreditSystem::RemoveFromMainChainAndDeleteRecordOfTotalWork(uint160 credit_hash)
+{
+    MinedCreditMessage msg = creditdata[credit_hash]["msg"];
+    RemoveFromMainChainAndDeleteRecordOfTotalWork(msg);
+}
+
+void CreditSystem::RemoveBatchAndChildrenFromMainChainAndDeleteRecordOfTotalWork(uint160 credit_hash)
+{
+    RemoveFromMainChainAndDeleteRecordOfTotalWork(credit_hash);
+    std::vector<uint160> children = creditdata[credit_hash]["children"];
+    for (auto child : children)
+        RemoveBatchAndChildrenFromMainChainAndDeleteRecordOfTotalWork(child);
+}
+
 bool CreditSystem::IsInMainChain(uint160 credit_hash)
 {
     uint160 recorded_total_work = creditdata[credit_hash].Location("main_chain");
     return recorded_total_work != 0;
+}
+
+void CreditSystem::SwitchMainChainToOtherBranchOfFork(uint160 current_tip, uint160 new_tip)
+{
+    uint160 fork = FindFork(current_tip, new_tip);
+    vector<uint160> to_add_to_main_chain;
+
+    while (current_tip != fork)
+    {
+        RemoveFromMainChain(current_tip);
+        current_tip = PreviousCreditHash(current_tip);
+    }
+    uint160 hash_on_new_branch = new_tip;
+    while (hash_on_new_branch != fork)
+    {
+        to_add_to_main_chain.push_back(hash_on_new_branch);
+        hash_on_new_branch = PreviousCreditHash(hash_on_new_branch);
+    }
+    std::reverse(to_add_to_main_chain.begin(), to_add_to_main_chain.end());
+    for (auto credit_hash : to_add_to_main_chain)
+    {
+        MinedCreditMessage msg = creditdata[credit_hash]["msg"];
+        AddToMainChain(msg);
+    }
 }
 
 uint160 AdjustDifficultyAfterBatchInterval(uint160 earlier_difficulty, uint64_t interval)
@@ -415,15 +506,10 @@ uint160 CreditSystem::GetNextDiurnalBlockRoot(MinedCredit mined_credit)
     return block.Root();
 }
 
-
-
-
-
-
-
-
-
-
-
-
+bool CreditSystem::ProofHasCorrectNumberOfSeedsAndLinks(TwistWorkProof proof)
+{
+    return proof.seeds.size() == FLEX_WORK_NUMBER_OF_SEGMENTS and
+            proof.links.size() == proof.link_lengths.size() and
+            proof.links.size() >= 10;
+}
 

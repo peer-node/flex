@@ -63,19 +63,19 @@ public:
 
 TEST_F(ACreditSystem, InitiallyReportsZeroForTheBatchWithTheMostWork)
 {
-    uint160 credit_hash_of_batch_with_the_most_work = credit_system->MostWorkBatch();
-    ASSERT_THAT(credit_hash_of_batch_with_the_most_work, Eq(0));
+    vector<uint160> credit_hashes_of_batches_with_the_most_work = credit_system->MostWorkBatches();
+    ASSERT_THAT(credit_hashes_of_batches_with_the_most_work.size(), Eq(0));
 }
 
-TEST_F(ACreditSystem, ReportsTheCorrectBatchWithTheMostWork)
+TEST_F(ACreditSystem, ReportsTheCorrectBatchesWithTheMostWork)
 {
     uint160 hash1(123), hash2(23);
 
-    creditdata[hash1].Location("total_work") = hash1;
-    creditdata[hash2].Location("total_work") = hash2;
+    creditdata[vector<uint160>{hash1}].Location("total_work") = hash1;
+    creditdata[vector<uint160>{hash2}].Location("total_work") = hash2;
 
-    uint160 credit_hash_of_batch_with_the_most_work = credit_system->MostWorkBatch();
-    ASSERT_THAT(credit_hash_of_batch_with_the_most_work, Eq(hash1));
+    auto credit_hashes_of_batches_with_the_most_work = credit_system->MostWorkBatches();
+    ASSERT_THAT(credit_hashes_of_batches_with_the_most_work, Eq(vector<uint160>{hash1}));
 }
 
 EncodedNetworkState ExampleNetworkState()
@@ -249,6 +249,7 @@ TEST_F(ACreditSystem, DeterminesTheNextDiurnalBlockRoot)
     MinedCreditMessage msg;
     msg.mined_credit.network_state.previous_diurn_root = 1;
     msg.mined_credit.network_state.batch_root = 1;
+    msg.mined_credit.network_state.batch_number = 1;
     credit_system->StoreMinedCreditMessage(msg);
 
     diurn.Add(msg);

@@ -9,6 +9,7 @@
 #include "MinedCreditMessageValidator.h"
 #include "Calendar.h"
 #include "TransactionValidator.h"
+#include "BadBatchMessage.h"
 
 class CreditMessageHandler : public MessageHandlerWithOrphanage
 {
@@ -49,20 +50,25 @@ public:
     {
         HANDLESTREAM(MinedCreditMessage);
         HANDLESTREAM(SignedTransaction);
+        HANDLESTREAM(BadBatchMessage);
     }
 
     void HandleMessage(uint160 message_hash)
     {
         HANDLEHASH(MinedCreditMessage);
         HANDLEHASH(SignedTransaction);
+        HANDLEHASH(BadBatchMessage);
     }
 
     HANDLECLASS(MinedCreditMessage);
     HANDLECLASS(SignedTransaction);
+    HANDLECLASS(BadBatchMessage);
 
     void HandleMinedCreditMessage(MinedCreditMessage msg);
 
     void HandleSignedTransaction(SignedTransaction tx);
+
+    void HandleBadBatchMessage(BadBatchMessage bad_batch_message);
 
     void SetCreditSystem(CreditSystem *credit_system_);
 
@@ -79,6 +85,20 @@ public:
     bool CheckInputsAreOKAccordingToCalendar(SignedTransaction tx);
 
     void AcceptTransaction(SignedTransaction tx);
+
+    bool PassesSpotCheckOfProofOfWork(MinedCreditMessage &msg);
+
+    BadBatchMessage GetBadBatchMessage(uint160 msg_hash);
+
+    void HandleValidMinedCreditMessage(MinedCreditMessage &msg);
+
+    void RemoveFromMainChainAndSwitchToNewTip(uint160 credit_hash);
+
+    void SwitchToNewTipIfAppropriate();
+
+    void SwitchToTip(uint160 credit_hash);
+
+    void SwitchToTipViaFork(uint160 credit_hash_of_new_tip);
 };
 
 

@@ -4,4 +4,3 @@ void MemoryDataStore::Reset()
 {
     objects = std::map<vch_t, MockObject>();
 }
-

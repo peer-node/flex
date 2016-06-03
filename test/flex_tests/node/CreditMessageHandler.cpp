@@ -1,7 +1,9 @@
 #include <src/credits/creditsign.h>
 #include "CreditMessageHandler.h"
 #include "CreditSystem.h"
+#include "BadBatchMessage.h"
 
+using std::vector;
 
 void CreditMessageHandler::HandleMinedCreditMessage(MinedCreditMessage msg)
 {
@@ -23,6 +25,59 @@ void CreditMessageHandler::HandleMinedCreditMessage(MinedCreditMessage msg)
         return RejectMessage(msg_hash);
 
     Broadcast(msg);
+    credit_system->StoreMinedCreditMessage(msg);
+
+    if (not PassesSpotCheckOfProofOfWork(msg))
+    {
+        uint160 bad_batch_message_hash = GetBadBatchMessage(msg_hash).GetHash160();
+        Broadcast(GetBadBatchMessage(msg_hash));
+    }
+    else
+    {
+        HandleValidMinedCreditMessage(msg);
+    }
+}
+
+void CreditMessageHandler::HandleValidMinedCreditMessage(MinedCreditMessage& msg)
+{
+    credit_system->AcceptMinedCreditAsValidByRecordingTotalWorkAndParent(msg.mined_credit);
+    SwitchToNewTipIfAppropriate();
+}
+
+void CreditMessageHandler::SwitchToNewTipIfAppropriate()
+{
+    vector<uint160> batches_with_the_most_work = credit_system->MostWorkBatches();
+
+    uint160 current_tip = calendar->LastMinedCreditHash();
+    if (VectorContainsEntry(batches_with_the_most_work, current_tip))
+        return;
+
+    if (batches_with_the_most_work.size() == 0)
+        return;
+
+    uint160 new_tip = batches_with_the_most_work[0];
+    SwitchToTip(new_tip);
+}
+
+void CreditMessageHandler::SwitchToTip(uint160 credit_hash_of_new_tip)
+{
+    MinedCreditMessage msg_at_new_tip = creditdata[credit_hash_of_new_tip]["msg"];
+    uint160 current_tip = calendar->LastMinedCreditHash();
+
+    if (msg_at_new_tip.mined_credit.network_state.previous_mined_credit_hash == current_tip)
+        AddToTip(msg_at_new_tip);
+    else
+        SwitchToTipViaFork(credit_hash_of_new_tip);
+}
+
+void CreditMessageHandler::SwitchToTipViaFork(uint160 new_tip)
+{
+    uint160 current_tip = calendar->LastMinedCreditHash();
+
+    *spent_chain = credit_system->GetSpentChainOnOtherProngOfFork(*spent_chain, current_tip, new_tip);
+
+    credit_system->SwitchMainChainToOtherBranchOfFork(current_tip, new_tip);
+    *calendar = Calendar(new_tip, credit_system);
 }
 
 void CreditMessageHandler::FetchFailedListExpansion(uint160 msg_hash)
@@ -49,6 +104,8 @@ void CreditMessageHandler::SetCreditSystem(CreditSystem *credit_system_)
 
 void CreditMessageHandler::AddToTip(MinedCreditMessage &msg)
 {
+    credit_system->StoreMinedCreditMessage(msg);
+    credit_system->AddToMainChain(msg);
     *spent_chain = credit_system->GetSpentChainOnOtherProngOfFork(*spent_chain,
                                                                   calendar->LastMinedCreditHash(),
                                                                   msg.mined_credit.GetHash160());
@@ -111,4 +168,47 @@ void CreditMessageHandler::AcceptTransaction(SignedTransaction tx)
         positions_spent_by_accepted_transactions.insert(input.position);
 
     Broadcast(tx);
+}
+
+bool CreditMessageHandler::PassesSpotCheckOfProofOfWork(MinedCreditMessage &msg)
+{
+    if (not credit_system->ProofHasCorrectNumberOfSeedsAndLinks(msg.proof_of_work.proof))
+        return false;
+    uint160 msg_hash = msg.GetHash160();
+    if (creditdata[msg_hash].HasProperty("spot_check_failure"))
+        return false;
+
+    TwistWorkCheck check = msg.proof_of_work.proof.SpotCheck();
+    if (check.Valid())
+        return true;
+
+    creditdata[msg_hash]["spot_check_failure"] = check;
+    return false;
+}
+
+BadBatchMessage CreditMessageHandler::GetBadBatchMessage(uint160 msg_hash)
+{
+    BadBatchMessage bad_batch_message;
+    bad_batch_message.mined_credit_message_hash = msg_hash;
+    bad_batch_message.check = creditdata[msg_hash]["spot_check_failure"];
+    return bad_batch_message;
+}
+
+void CreditMessageHandler::HandleBadBatchMessage(BadBatchMessage bad_batch_message)
+{
+    uint160 msg_hash = bad_batch_message.mined_credit_message_hash;
+    MinedCreditMessage msg = msgdata[msg_hash]["msg"];
+    if (not bad_batch_message.check.VerifyInvalid(msg.proof_of_work.proof))
+        return RejectMessage(bad_batch_message.GetHash160());
+
+    creditdata[msg_hash]["spot_check_failure"] = bad_batch_message.check;
+    uint160 credit_hash = msg.mined_credit.GetHash160();
+    if (credit_system->IsInMainChain(credit_hash))
+        RemoveFromMainChainAndSwitchToNewTip(credit_hash);
+}
+
+void CreditMessageHandler::RemoveFromMainChainAndSwitchToNewTip(uint160 credit_hash)
+{
+    credit_system->RemoveBatchAndChildrenFromMainChainAndDeleteRecordOfTotalWork(credit_hash);
+    SwitchToNewTipIfAppropriate();
 }
