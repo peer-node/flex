@@ -22,7 +22,6 @@ extern string_t ByteString(vch_t bytes);
 
     CreditBatch::CreditBatch(const CreditBatch& other)
     {
-        std::cout << "copying batch\n";
         previous_credit_hash = other.previous_credit_hash;
         tree.offset = other.tree.offset;
         for (auto credit : other.credits)
@@ -31,7 +30,6 @@ extern string_t ByteString(vch_t bytes);
 
     CreditBatch& CreditBatch::operator=(const CreditBatch& other)
     {
-        std::cout << "copying batch\n";
         previous_credit_hash = other.previous_credit_hash;
         tree.offset = other.tree.offset;
         for (auto credit : other.credits)
@@ -76,7 +74,6 @@ extern string_t ByteString(vch_t bytes);
         }
         serialized_credits.push_back(serialized_credit);
         tree.AddElement(serialized_credits.back());
-        log_ << "CreditBatch(): added credit with amount: " << credit.amount << "\n";
         return true;
     }
 
@@ -118,7 +115,6 @@ extern string_t ByteString(vch_t bytes);
     std::vector<uint160> CreditBatch::Branch(Credit credit)
     {
         std::vector<uint160> branch = tree.Branch(Position(credit));
-        log_ << "creditbatch::Branch(): tree root is " << tree.Root() << "\n";
         Credit raw_credit(credit.keydata, credit.amount);
         vch_t raw_credit_data = raw_credit.getvch();
 
@@ -127,7 +123,6 @@ extern string_t ByteString(vch_t bytes);
         for (uint32_t i = 0; i < branch.size(); i++)
             hash = SymmetricCombine(hash, branch[i]);
 
-        log_ << "evaluate(hash, branch) = " << hash << "\n";
         branch.push_back(previous_credit_hash);
         branch.push_back(Root());
         return branch;

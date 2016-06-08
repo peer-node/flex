@@ -42,6 +42,14 @@ public:
     {
         return rawtx == other.rawtx and signature == other.signature;
     }
+
+    std::set<uint64_t> InputPositions()
+    {
+        std::set<uint64_t> positions;
+        for (auto input : rawtx.inputs)
+            positions.insert(input.position);
+        return positions;
+    }
 };
 
 

@@ -13,6 +13,8 @@ public:
 
     bool OutputsOverflow(SignedTransaction &tx);
 
+    bool ContainsRepeatedInputs(SignedTransaction &tx);
+
     bool CheckIfCreditInBatchIsInTheMainChain(CreditInBatch &credit_in_batch);
 
     uint160 GetMinedCreditHashFromCreditInBatch(CreditInBatch &credit_in_batch);

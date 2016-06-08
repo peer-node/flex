@@ -92,15 +92,11 @@ public:
 
     void SetChildBatch(uint160 parent_hash, uint160 child_hash);
 
-    void RemoveBlocksAndChildrenFromMainChain(uint160 credit_hash);
-
     void RemoveFromMainChain(uint160 credit_hash);
 
     void AcceptMinedCreditAsValidByRecordingTotalWorkAndParent(MinedCredit mined_credit);
 
     void RecordTotalWork(uint160 credit_hash, uint160 total_work);
-
-    void RemoveBatchAndChildrenFromMainChainAndDeleteRecorOfTotalWork(uint160 credit_hash);
 
     void RemoveBatchAndChildrenFromMainChainAndDeleteRecordOfTotalWork(uint160 credit_hash);
 
@@ -111,6 +107,15 @@ public:
     void SwitchMainChainToOtherBranchOfFork(uint160 current_tip, uint160 new_tip);
 
     void DeleteRecordOfTotalWork(MinedCreditMessage &msg);
+
+    std::string MessageType(uint160 hash);
+
+    void GetMessagesOnOldAndNewBranchesOfFork(uint160 old_tip, uint160 new_tip, std::vector<uint160>& messages_on_old_branch,
+                                              std::vector<uint160>& messages_on_new_tip);
+
+    std::vector<uint160> GetMessagesOnBranch(uint160 branch_start, uint160 branch_end);
+
+    std::vector<uint160> GetMessagesInMinedCreditMessage(uint160 msg_hash);
 };
 
 

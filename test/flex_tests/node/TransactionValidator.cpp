@@ -40,6 +40,14 @@ bool TransactionValidator::CheckBranchOfCreditInBatch(CreditInBatch credit_in_ba
 
 }
 
+bool TransactionValidator::ContainsRepeatedInputs(SignedTransaction &tx)
+{
+    std::set<uint64_t> set_of_input_positions = tx.InputPositions();
+    return set_of_input_positions.size() < tx.rawtx.inputs.size();
+}
+
+
+
 
 
 

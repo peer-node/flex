@@ -24,7 +24,6 @@ public:
     MinedCreditMessageValidator mined_credit_message_validator;
     TransactionValidator transaction_validator;
     std::vector<uint160> accepted_messages;
-    std::set<uint64_t> positions_spent_by_accepted_transactions;
 
     CreditMessageHandler(MemoryDataStore &msgdata_,
                          MemoryDataStore &creditdata_,
@@ -99,6 +98,29 @@ public:
     void SwitchToTip(uint160 credit_hash);
 
     void SwitchToTipViaFork(uint160 credit_hash_of_new_tip);
+
+    void UpdateAcceptedMessagesAfterNewTip(MinedCreditMessage &msg);
+
+    void RemoveAcceptedMessageAndSpentPositions(uint160 accepted_message_hash);
+
+    MinedCreditMessage Tip();
+
+    void UpdateAcceptedMessagesAfterFork(uint160 old_tip, uint160 new_tip);
+
+    void UpdateSpentPositionsAndAcceptedMessagesAfterFork(std::vector<uint160> messages_on_old_branch,
+                                                          std::vector<uint160> messages_on_new_branch);
+
+    void UpdateSpentPositionsAfterFork(std::vector<uint160> messages_on_old_branch,
+                                       std::vector<uint160> messages_on_new_branch);
+
+    void UpdateAcceptedMessagesAfterFork(std::vector<uint160> messages_on_old_branch,
+                                         std::vector<uint160> messages_on_new_branch);
+
+    std::set<uint64_t> PositionsSpentByAcceptedTransactions();
+
+    void ValidateAcceptedMessagesAfterFork();
+
+    bool TransactionHasNoSpentInputs(SignedTransaction tx, std::set<uint160> &spent_positions);
 };
 
 

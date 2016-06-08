@@ -9,6 +9,7 @@
 
 using std::set;
 using std::vector;
+using std::string;
 
 vector<uint160> CreditSystem::MostWorkBatches()
 {
@@ -46,7 +47,7 @@ void CreditSystem::AcceptMinedCreditAsValidByRecordingTotalWorkAndParent(MinedCr
 
 void CreditSystem::SetChildBatch(uint160 parent_hash, uint160 child_hash)
 {
-    std::vector<uint160> children = creditdata[parent_hash]["children"];
+    vector<uint160> children = creditdata[parent_hash]["children"];
     if (!VectorContainsEntry(children, child_hash))
         children.push_back(child_hash);
     creditdata[parent_hash]["children"] = children;
@@ -63,7 +64,7 @@ void CreditSystem::StoreTransaction(SignedTransaction tx)
 void CreditSystem::StoreHash(uint160 hash)
 {
     uint32_t short_hash = *(uint32_t*)&hash;
-    std::vector<uint160> matches = msgdata[short_hash]["matches"];
+    vector<uint160> matches = msgdata[short_hash]["matches"];
     if (!VectorContainsEntry(matches, hash))
         matches.push_back(hash);
     msgdata[short_hash]["matches"] = matches;
@@ -81,7 +82,7 @@ void CreditSystem::StoreMinedCreditMessage(MinedCreditMessage msg)
     if (IsCalend(credit_hash))
     {
         uint160 diurn_root = msg.mined_credit.network_state.DiurnRoot();
-        creditdata[diurn_root]["credit_hash"] = credit_hash;
+        creditdata[diurn_root]["calend_credit_hash"] = credit_hash;
     }
 }
 
@@ -89,7 +90,7 @@ uint160 CreditSystem::PrecedingCalendCreditHash(uint160 credit_hash)
 {
     MinedCredit mined_credit = creditdata[credit_hash]["mined_credit"];
     uint160 diurn_root = mined_credit.network_state.previous_diurn_root;
-    uint160 calend_credit_hash = creditdata[diurn_root]["credit_hash"];
+    uint160 calend_credit_hash = creditdata[diurn_root]["calend_credit_hash"];
     return calend_credit_hash;
 }
 
@@ -102,7 +103,7 @@ CreditBatch CreditSystem::ReconstructBatch(MinedCreditMessage &msg)
 
     for (auto message_hash : msg.hash_list.full_hashes)
     {
-        std::string type = msgdata[message_hash]["type"];
+        string type = msgdata[message_hash]["type"];
         if (type == "tx")
         {
             SignedTransaction tx;
@@ -171,9 +172,9 @@ uint160 CreditSystem::FindFork(uint160 credit_hash1, uint160 credit_hash2)
     return 0;
 }
 
-std::set<uint64_t> CreditSystem::GetPositionsOfCreditsSpentInBatch(uint160 credit_hash)
+set<uint64_t> CreditSystem::GetPositionsOfCreditsSpentInBatch(uint160 credit_hash)
 {
-    std::set<uint64_t> spent;
+    set<uint64_t> spent;
 
     MinedCreditMessage msg;
     msg = creditdata[credit_hash]["msg"];
@@ -181,7 +182,7 @@ std::set<uint64_t> CreditSystem::GetPositionsOfCreditsSpentInBatch(uint160 credi
 
     for (auto message_hash : msg.hash_list.full_hashes)
     {
-        std::string type = msgdata[message_hash]["type"];
+        string type = msgdata[message_hash]["type"];
         if (type == "tx")
         {
             SignedTransaction tx;
@@ -304,7 +305,7 @@ void CreditSystem::RemoveFromMainChainAndDeleteRecordOfTotalWork(uint160 credit_
 void CreditSystem::RemoveBatchAndChildrenFromMainChainAndDeleteRecordOfTotalWork(uint160 credit_hash)
 {
     RemoveFromMainChainAndDeleteRecordOfTotalWork(credit_hash);
-    std::vector<uint160> children = creditdata[credit_hash]["children"];
+    vector<uint160> children = creditdata[credit_hash]["children"];
     for (auto child : children)
         RemoveBatchAndChildrenFromMainChainAndDeleteRecordOfTotalWork(child);
 }
@@ -313,6 +314,11 @@ bool CreditSystem::IsInMainChain(uint160 credit_hash)
 {
     uint160 recorded_total_work = creditdata[credit_hash].Location("main_chain");
     return recorded_total_work != 0;
+}
+
+std::string CreditSystem::MessageType(uint160 hash)
+{
+    return msgdata[hash]["type"];
 }
 
 void CreditSystem::SwitchMainChainToOtherBranchOfFork(uint160 current_tip, uint160 new_tip)
@@ -372,7 +378,7 @@ uint160 CreditSystem::GetNextDiurnalDifficulty(MinedCredit credit)
     if (not IsCalend(credit.GetHash160()))
         return credit.network_state.diurnal_difficulty;
 
-    uint160 calend_hash = creditdata[prev_diurn_root]["credit_hash"];
+    uint160 calend_hash = creditdata[prev_diurn_root]["calend_credit_hash"];
     MinedCredit previous_calend_credit = creditdata[calend_hash]["mined_credit"];
     auto prev_state = previous_calend_credit.network_state;
     uint64_t diurn_duration = credit.network_state.timestamp - prev_state.timestamp;
@@ -489,7 +495,7 @@ uint160 CreditSystem::GetNextPreviousDiurnRoot(MinedCredit &mined_credit)
 
 uint160 CreditSystem::GetNextDiurnalBlockRoot(MinedCredit mined_credit)
 {
-    std::vector<uint160> credit_hashes;
+    vector<uint160> credit_hashes;
     uint160 credit_hash = mined_credit.GetHash160();
     if (mined_credit.network_state.batch_number > 0)
         credit_hashes.push_back(credit_hash);
@@ -513,3 +519,30 @@ bool CreditSystem::ProofHasCorrectNumberOfSeedsAndLinks(TwistWorkProof proof)
             proof.links.size() >= 10;
 }
 
+void CreditSystem::GetMessagesOnOldAndNewBranchesOfFork(uint160 old_tip, uint160 new_tip,
+                                                        std::vector<uint160>& messages_on_old_branch,
+                                                        std::vector<uint160>& messages_on_new_branch)
+{
+    uint160 fork = FindFork(old_tip, new_tip);
+    messages_on_old_branch = GetMessagesOnBranch(fork, old_tip);
+    messages_on_new_branch = GetMessagesOnBranch(fork, new_tip);
+}
+
+vector<uint160> CreditSystem::GetMessagesOnBranch(uint160 branch_start, uint160 branch_end)
+{
+    vector<uint160> message_hashes;
+    while (branch_end != branch_start)
+    {
+        auto enclosed_hashes = GetMessagesInMinedCreditMessage(branch_end);
+        message_hashes.insert(message_hashes.end(), enclosed_hashes.begin(), enclosed_hashes.end());
+        branch_end = PreviousCreditHash(branch_end);
+    }
+    return message_hashes;
+}
+
+vector<uint160> CreditSystem::GetMessagesInMinedCreditMessage(uint160 msg_hash)
+{
+    MinedCreditMessage msg = creditdata[msg_hash]["msg"];
+    msg.hash_list.RecoverFullHashes(msgdata);
+    return msg.hash_list.full_hashes;
+}

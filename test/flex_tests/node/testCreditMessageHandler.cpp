@@ -284,7 +284,7 @@ SignedTransaction ValidTransaction(CreditSystem *credit_system, MinedCreditMessa
 {
     CreditBatch batch = credit_system->ReconstructBatch(prev_msg);
 
-    Credit credit = batch.GetCredit(0);
+    Credit credit = batch.credits[0];
 
     CreditInBatch credit_in_batch = batch.GetCreditInBatch(credit);
 
@@ -451,4 +451,153 @@ TEST_F(ACreditMessageHandlerWithTwoPeers, RelaysABadBatchMessage)
     BadBatchMessage bad_batch_message = credit_message_handler->GetBadBatchMessage(msg.GetHash160());
     credit_message_handler->HandleMessage(GetDataStream(msg), &peer);
     ASSERT_TRUE(other_peer.HasBeenInformedAbout("credit", "bad_batch", bad_batch_message));
+}
+
+
+class ACreditMessageHandlerWithAcceptedTransactions : public ACreditMessageHandlerWithTwoPeers
+{
+public:
+    vector<MinedCreditMessage> msgs;
+    uint64_t n{2};
+    MinedCreditMessage message_containing_one_transaction, message_containing_double_spend;
+    SignedTransaction first_transaction, second_transaction, double_spend_of_first_transaction;
+
+    Point GetNextPubKey()
+    {
+        Point pubkey(SECP256K1, n);
+        keydata[pubkey]["privkey"] = CBigNum(n);
+        n++;
+        return pubkey;
+    }
+
+    MinedCreditMessage NextMinedCreditMessage(MinedCreditMessage& prev_msg)
+    {
+        MinedCreditMessage msg;
+        if (prev_msg.mined_credit.network_state.batch_number != 0)
+            msg.hash_list.full_hashes.push_back(prev_msg.mined_credit.GetHash160());
+        msg.hash_list.GenerateShortHashes();
+        msg.mined_credit.network_state = credit_system->SucceedingNetworkState(prev_msg.mined_credit);
+
+        msg.mined_credit.keydata = GetNextPubKey().getvch();
+
+        credit_system->SetBatchRootAndSizeAndMessageListHash(msg);
+        credit_system->StoreMinedCreditMessage(msg);
+        return msg;
+    }
+
+    SignedTransaction GetTransactionUsingMinedCreditAsInput(MinedCreditMessage msg)
+    {
+        CreditBatch batch = credit_system->ReconstructBatch(msg);
+
+        CreditInBatch credit_in_batch = batch.GetCreditInBatch(batch.credits[0]);
+
+        UnsignedTransaction rawtx;
+        rawtx.inputs.push_back(credit_in_batch);
+        return SignTransaction(rawtx, keydata);
+    }
+
+    SignedTransaction GetDoubleSpendTransactionUsingMinedCreditAsInput(MinedCreditMessage msg)
+    {
+        auto tx = GetTransactionUsingMinedCreditAsInput(msg);
+        Credit output(GetNextPubKey().getvch(), ONE_CREDIT);
+        tx.rawtx.outputs.push_back(output);
+        return SignTransaction(tx.rawtx, keydata);
+    }
+
+    virtual void SetUp()
+    {
+        ACreditMessageHandlerWithTwoPeers::SetUp();
+
+        MinedCreditMessage tip;
+
+        for (int i = 0; i < 10; i++)
+        {
+            tip = NextMinedCreditMessage(tip);
+            credit_message_handler->HandleValidMinedCreditMessage(tip);
+            msgs.push_back(tip);
+        }
+        first_transaction = GetTransactionUsingMinedCreditAsInput(msgs[3]);
+        credit_message_handler->AcceptTransaction(first_transaction);
+
+        second_transaction = GetTransactionUsingMinedCreditAsInput(msgs[4]);
+        credit_message_handler->AcceptTransaction(second_transaction);
+
+        double_spend_of_first_transaction = GetDoubleSpendTransactionUsingMinedCreditAsInput(msgs[3]);
+        credit_message_handler->AcceptTransaction(double_spend_of_first_transaction);
+
+        message_containing_one_transaction = GetMinedCreditMessageContainingOneTransaction(first_transaction,
+                                                                                           msgs.back());
+        message_containing_double_spend = GetMinedCreditMessageContainingOneTransaction(double_spend_of_first_transaction,
+                                                                                        msgs.back());
+    }
+
+    void AddSequenceOfMinedCreditMessagesToTip(uint64_t length)
+    {
+        MinedCreditMessage tip = credit_message_handler->Tip();
+
+        for (int i = 0; i < length; i++)
+        {
+            tip = NextMinedCreditMessage(tip);
+            credit_message_handler->HandleValidMinedCreditMessage(tip);
+            msgs.push_back(tip);
+        }
+    }
+
+    MinedCreditMessage GetMinedCreditMessageContainingOneTransaction(SignedTransaction tx, MinedCreditMessage prev_msg)
+    {
+        auto next_tip = NextMinedCreditMessage(prev_msg);
+        next_tip.hash_list.full_hashes.push_back(tx.GetHash160());
+        next_tip.hash_list.GenerateShortHashes();
+        credit_system->SetBatchRootAndSizeAndMessageListHash(next_tip);
+        credit_system->StoreMinedCreditMessage(next_tip);
+        return next_tip;
+    }
+
+    void HandleMessageAndAddNMoreAfterIt(MinedCreditMessage& msg, uint64_t N)
+    {
+        credit_message_handler->HandleValidMinedCreditMessage(msg);
+        auto succeeding_msg = NextMinedCreditMessage(msg);
+        for (int i = 0; i < N; i++)
+        {
+            credit_message_handler->HandleValidMinedCreditMessage(succeeding_msg);
+            succeeding_msg = NextMinedCreditMessage(succeeding_msg);
+        }
+    }
+
+    virtual void TearDown()
+    {
+        ACreditMessageHandlerWithTwoPeers::TearDown();
+    }
+};
+
+TEST_F(ACreditMessageHandlerWithAcceptedTransactions, HasTheCorrectTip)
+{
+    uint160 tip = calendar.LastMinedCreditHash();
+    ASSERT_THAT(tip, Eq(msgs.back().mined_credit.GetHash160()));
+}
+
+TEST_F(ACreditMessageHandlerWithAcceptedTransactions, RetainsTheTransactionsNotIncludedInANewBatchAddedToTheTip)
+{
+    credit_message_handler->HandleValidMinedCreditMessage(message_containing_one_transaction);
+    ASSERT_FALSE(VectorContainsEntry(credit_message_handler->accepted_messages, first_transaction.GetHash160()));
+    ASSERT_TRUE(VectorContainsEntry(credit_message_handler->accepted_messages, second_transaction.GetHash160()));
+}
+
+TEST_F(ACreditMessageHandlerWithAcceptedTransactions, RetainsTransactionsWhenSwitchingAcrossAFork)
+{
+    AddSequenceOfMinedCreditMessagesToTip(2);
+
+    HandleMessageAndAddNMoreAfterIt(message_containing_one_transaction, 3);
+
+    ASSERT_FALSE(VectorContainsEntry(credit_message_handler->accepted_messages, first_transaction.GetHash160()));
+    ASSERT_TRUE(VectorContainsEntry(credit_message_handler->accepted_messages, second_transaction.GetHash160()));
+}
+
+TEST_F(ACreditMessageHandlerWithAcceptedTransactions, DropsTransactionsWithDoubleSpendsWhenSwitchingAcrossAFork)
+{
+    HandleMessageAndAddNMoreAfterIt(message_containing_one_transaction, 3);
+    HandleMessageAndAddNMoreAfterIt(message_containing_double_spend, 4);
+
+    ASSERT_FALSE(VectorContainsEntry(credit_message_handler->accepted_messages, first_transaction.GetHash160()));
+    ASSERT_TRUE(VectorContainsEntry(credit_message_handler->accepted_messages, second_transaction.GetHash160()));
 }
