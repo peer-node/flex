@@ -3,6 +3,7 @@
 #include <src/credits/SignedTransaction.h>
 #include <src/credits/CreditBatch.h>
 #include <test/flex_tests/mining/MiningHashTree.h>
+#include <src/base/util_time.h>
 #include "CreditSystem.h"
 #include "MinedCreditMessage.h"
 #include "Calend.h"
@@ -404,18 +405,42 @@ EncodedNetworkState CreditSystem::SucceedingNetworkState(MinedCredit mined_credi
 
     next_state.network_id = prev_state.network_id;
 
-    // message_list_hash, spent_chain_hash, batch_size, batch_root, timestamp
+    next_state.timestamp = GetTimeMicros();
+    // message_list_hash, spent_chain_hash, batch_size, batch_root
     // depend on external data
 
     return next_state;
 }
 
-void CreditSystem::SetBatchRootAndSizeAndMessageListHash(MinedCreditMessage& msg)
+void CreditSystem::SetBatchRootAndSizeAndMessageListHashAndSpentChainHash(MinedCreditMessage &msg)
 {
     CreditBatch batch = ReconstructBatch(msg);
     msg.mined_credit.network_state.batch_size = (uint32_t) batch.size();
     msg.mined_credit.network_state.batch_root = batch.Root();
     msg.mined_credit.network_state.message_list_hash = msg.hash_list.GetHash160();
+    BitChain spent_chain = ConstructSpentChainFromPreviousSpentChainAndContentsOfMinedCreditMessage(msg);
+    msg.mined_credit.network_state.spent_chain_hash = spent_chain.GetHash160();
+}
+
+BitChain CreditSystem::ConstructSpentChainFromPreviousSpentChainAndContentsOfMinedCreditMessage(MinedCreditMessage& msg)
+{
+    BitChain spent_chain = GetSpentChain(msg.mined_credit.network_state.previous_mined_credit_hash);
+    msg.hash_list.RecoverFullHashes(msgdata);
+    for (auto hash : msg.hash_list.full_hashes)
+    {
+        string type = MessageType(hash);
+        if (type == "mined_credit")
+            spent_chain.Add();
+        else if (type == "tx")
+        {
+            SignedTransaction tx = creditdata[hash]["tx"];
+            for (auto input : tx.rawtx.inputs)
+                spent_chain.Set(input.position);
+            for (auto output : tx.rawtx.outputs)
+                spent_chain.Add();
+        }
+    }
+    return spent_chain;
 }
 
 void CreditSystem::SetExpectedNumberOfMegabytesInMinedCreditProofsOfWork(uint64_t number_of_megabytes)

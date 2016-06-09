@@ -1,13 +1,26 @@
 #include <src/credits/creditsign.h>
+#include <src/crypto/secp256k1point.h>
 #include "CreditMessageHandler.h"
-#include "CreditSystem.h"
-#include "BadBatchMessage.h"
 
 using std::vector;
 using std::string;
 using std::set;
 
 void CreditMessageHandler::HandleMinedCreditMessage(MinedCreditMessage msg)
+{
+    if (not MinedCreditMessagePassesVerification(msg))
+        return;
+
+    Broadcast(msg);
+    credit_system->StoreMinedCreditMessage(msg);
+
+    if (not PassesSpotCheckOfProofOfWork(msg))
+        Broadcast(GetBadBatchMessage(msg.GetHash160()));
+    else
+        HandleValidMinedCreditMessage(msg);
+}
+
+bool CreditMessageHandler::MinedCreditMessagePassesVerification(MinedCreditMessage& msg)
 {
     uint160 msg_hash = msg.GetHash160();
 
@@ -26,15 +39,7 @@ void CreditMessageHandler::HandleMinedCreditMessage(MinedCreditMessage msg)
     if (not credit_system->QuickCheckProofOfWorkInMinedCreditMessage(msg))
         return RejectMessage(msg_hash);
 
-    Broadcast(msg);
-    credit_system->StoreMinedCreditMessage(msg);
-
-    if (not PassesSpotCheckOfProofOfWork(msg))
-    {
-        Broadcast(GetBadBatchMessage(msg_hash));
-    }
-    else
-        HandleValidMinedCreditMessage(msg);
+    return true;
 }
 
 void CreditMessageHandler::HandleValidMinedCreditMessage(MinedCreditMessage& msg)
@@ -119,7 +124,6 @@ void CreditMessageHandler::UpdateAcceptedMessagesAfterFork(vector<uint160> messa
         if (not VectorContainsEntry(accepted_messages, hash))
             accepted_messages.push_back(hash);
 
-
     ValidateAcceptedMessagesAfterFork();
 }
 
@@ -158,19 +162,21 @@ void CreditMessageHandler::ValidateAcceptedMessagesAfterFork()
     }
 }
 
-void CreditMessageHandler::FetchFailedListExpansion(uint160 msg_hash)
+bool CreditMessageHandler::FetchFailedListExpansion(uint160 msg_hash)
 {
     CNode *peer = GetPeer(msg_hash);
     if (peer != NULL)
         peer->FetchFailedListExpansion(msg_hash);
+    return false;
 }
 
-void CreditMessageHandler::RejectMessage(uint160 msg_hash)
+bool CreditMessageHandler::RejectMessage(uint160 msg_hash)
 {
     msgdata[msg_hash]["rejected"] = true;
     CNode *peer = GetPeer(msg_hash);
     if (peer != NULL)
         peer->Misbehaving(30);
+    return false;
 }
 
 void CreditMessageHandler::SetCreditSystem(CreditSystem *credit_system_)
@@ -226,9 +232,12 @@ std::set<uint64_t> CreditMessageHandler::PositionsSpentByAcceptedTransactions()
 bool CreditMessageHandler::CheckInputsAreUnspentByAcceptedTransactions(SignedTransaction tx)
 {
     std::set<uint64_t> spent_positions = PositionsSpentByAcceptedTransactions();
+
     for (auto input : tx.rawtx.inputs)
+    {
         if (spent_positions.count(input.position))
             return false;
+    }
     return true;
 }
 
@@ -244,13 +253,22 @@ void CreditMessageHandler::HandleSignedTransaction(SignedTransaction tx)
 {
     uint160 tx_hash = tx.GetHash160();
 
-    if (VectorContainsEntry(accepted_messages, tx_hash));
+    if (VectorContainsEntry(accepted_messages, tx_hash))
+    {
+        return;
+    }
 
     if (not VerifyTransactionSignature(tx))
-        return RejectMessage(tx_hash);
+    {
+        RejectMessage(tx_hash);
+        return;
+    }
 
     if (transaction_validator.OutputsOverflow(tx) or transaction_validator.ContainsRepeatedInputs(tx))
-        return RejectMessage(tx_hash);
+    {
+        RejectMessage(tx_hash);
+        return;
+    }
 
     if (not CheckInputsAreUnspentAccordingToSpentChain(tx))
         return;
@@ -301,7 +319,10 @@ void CreditMessageHandler::HandleBadBatchMessage(BadBatchMessage bad_batch_messa
     uint160 msg_hash = bad_batch_message.mined_credit_message_hash;
     MinedCreditMessage msg = msgdata[msg_hash]["msg"];
     if (not bad_batch_message.check.VerifyInvalid(msg.proof_of_work.proof))
-        return RejectMessage(bad_batch_message.GetHash160());
+    {
+        RejectMessage(bad_batch_message.GetHash160());
+        return;
+    }
 
     creditdata[msg_hash]["spot_check_failure"] = bad_batch_message.check;
     uint160 credit_hash = msg.mined_credit.GetHash160();
@@ -313,4 +334,34 @@ void CreditMessageHandler::RemoveFromMainChainAndSwitchToNewTip(uint160 credit_h
 {
     credit_system->RemoveBatchAndChildrenFromMainChainAndDeleteRecordOfTotalWork(credit_hash);
     SwitchToNewTipIfAppropriate();
+}
+
+Point GetNewPublicKey(MemoryDataStore& keydata)
+{
+    CBigNum private_key;
+    private_key.Randomize(Secp256k1Point::Modulus());
+    Point public_key(SECP256K1, private_key);
+    keydata[public_key]["privkey"] = private_key;
+    return public_key;
+}
+
+MinedCreditMessage CreditMessageHandler::GenerateMinedCreditMessageWithoutProofOfWork()
+{
+    MinedCreditMessage msg, current_tip = Tip();
+
+    msg.mined_credit.network_state = credit_system->SucceedingNetworkState(current_tip.mined_credit);
+    msg.mined_credit.keydata = GetNewPublicKey(keydata).getvch();
+
+    if (msg.mined_credit.network_state.batch_number > 1)
+        msg.hash_list.full_hashes.push_back(msg.mined_credit.network_state.previous_mined_credit_hash);
+    else
+        msg.mined_credit.network_state.network_id = config.Uint64("network_id");
+
+    for (auto hash : accepted_messages)
+        if (credit_system->MessageType(hash) == "tx")
+            msg.hash_list.full_hashes.push_back(hash);
+    msg.hash_list.GenerateShortHashes();
+
+    credit_system->SetBatchRootAndSizeAndMessageListHashAndSpentChainHash(msg);
+    return msg;
 }

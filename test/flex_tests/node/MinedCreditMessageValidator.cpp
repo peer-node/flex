@@ -39,7 +39,10 @@ bool MinedCreditMessageValidator::CheckMessageListHash(MinedCreditMessage &msg)
 
 bool MinedCreditMessageValidator::CheckSpentChainHash(MinedCreditMessage &msg)
 {
-    BitChain spent_chain = credit_system->GetSpentChain(msg.mined_credit.GetHash160());
+    uint160 credit_hash = msg.mined_credit.GetHash160();
+    if (not credit_system->creditdata[credit_hash].HasProperty("msg"))
+        credit_system->StoreMinedCreditMessage(msg);
+    BitChain spent_chain = credit_system->GetSpentChain(credit_hash);
     return spent_chain.GetHash160() == msg.mined_credit.network_state.spent_chain_hash;
 }
 
@@ -105,23 +108,26 @@ bool MinedCreditMessageValidator::CheckMessageListContainsPreviousMinedCreditHas
 
 bool MinedCreditMessageValidator::ValidateNetworkState(MinedCreditMessage &msg)
 {
-    return true;
+    bool ok = true;
     uint32_t& batch_number = msg.mined_credit.network_state.batch_number;
-    return  batch_number > 0 and
-            CheckBatchNumber(msg) and
-            CheckPreviousTotalWork(msg) and
-            CheckDifficulty(msg) and
-            CheckDiurnalDifficulty(msg) and
-            CheckBatchOffset(msg) and
-            CheckTimeStampIsNotInFuture(msg) and
-            CheckPreviousDiurnRoot(msg) and
-            CheckTimeStampSucceedsPreviousTimestamp(msg) and
-            CheckBatchRoot(msg) and
-            CheckBatchSize(msg) and
-            CheckDiurnalBlockRoot(msg) and
-            CheckSpentChainHash(msg) and
-            CheckMessageListHash(msg) and
-            CheckMessageListContainsPreviousMinedCreditHash(msg);
+
+    ok &= batch_number > 0;
+    ok &= CheckBatchNumber(msg);
+    ok &= CheckPreviousTotalWork(msg);
+    ok &= CheckDifficulty(msg);
+    ok &= CheckDiurnalDifficulty(msg);
+    ok &= CheckBatchOffset(msg);
+    ok &= CheckTimeStampIsNotInFuture(msg);
+    ok &= CheckPreviousDiurnRoot(msg);
+    ok &= CheckTimeStampSucceedsPreviousTimestamp(msg);
+    ok &= CheckBatchRoot(msg);
+    ok &= CheckBatchSize(msg);
+    ok &= CheckDiurnalBlockRoot(msg);
+    ok &= CheckSpentChainHash(msg);
+    ok &= CheckMessageListHash(msg);
+    ok &= CheckMessageListContainsPreviousMinedCreditHash(msg);
+
+    return ok;
 }
 
 

@@ -71,9 +71,9 @@ public:
 
     void SetCreditSystem(CreditSystem *credit_system_);
 
-    void RejectMessage(uint160 msg_hash);
+    bool RejectMessage(uint160 msg_hash);
 
-    void FetchFailedListExpansion(uint160 msg_hash);
+    bool FetchFailedListExpansion(uint160 msg_hash);
 
     void AddToTip(MinedCreditMessage &msg);
 
@@ -121,6 +121,10 @@ public:
     void ValidateAcceptedMessagesAfterFork();
 
     bool TransactionHasNoSpentInputs(SignedTransaction tx, std::set<uint160> &spent_positions);
+
+    MinedCreditMessage GenerateMinedCreditMessageWithoutProofOfWork();
+
+    bool MinedCreditMessagePassesVerification(MinedCreditMessage &msg);
 };
 
 

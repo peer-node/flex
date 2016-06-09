@@ -72,7 +72,7 @@ public:
 
     uint160 GetNextDiurnalDifficulty(MinedCredit credit);
 
-    void SetBatchRootAndSizeAndMessageListHash(MinedCreditMessage& msg);
+    void SetBatchRootAndSizeAndMessageListHashAndSpentChainHash(MinedCreditMessage &msg);
 
     void SetExpectedNumberOfMegabytesInMinedCreditProofsOfWork(uint64_t number_of_megabytes);
 
@@ -116,6 +116,8 @@ public:
     std::vector<uint160> GetMessagesOnBranch(uint160 branch_start, uint160 branch_end);
 
     std::vector<uint160> GetMessagesInMinedCreditMessage(uint160 msg_hash);
+
+    BitChain ConstructSpentChainFromPreviousSpentChainAndContentsOfMinedCreditMessage(MinedCreditMessage &msg);
 };
 
 

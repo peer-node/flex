@@ -703,7 +703,7 @@ TEST_F(ACreditSystemWithAMinedCreditAndATransaction, SetsTheBatchRootAndSizeAndM
     msg.hash_list.full_hashes.push_back(tx.GetHash160());
     msg.hash_list.GenerateShortHashes();
 
-    credit_system->SetBatchRootAndSizeAndMessageListHash(msg);
+    credit_system->SetBatchRootAndSizeAndMessageListHashAndSpentChainHash(msg);
     ASSERT_THAT(msg.mined_credit.network_state.batch_size, Eq(2));
 
     CreditBatch batch(1, 10);
