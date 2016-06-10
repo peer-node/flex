@@ -50,6 +50,10 @@ public:
             positions.insert(input.position);
         return positions;
     }
+
+    uint64_t TotalInputAmount();
+
+    uint64_t TotalOutputAmount();
 };
 
 

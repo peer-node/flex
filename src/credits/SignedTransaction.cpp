@@ -43,17 +43,8 @@ using namespace std;
 
     uint64_t SignedTransaction::IncludedFees()
     {
-        uint64_t total_in = 0, total_out = 0;
-        foreach_(CreditInBatch& credit, rawtx.inputs)
-            total_in += credit.amount;
-
-        foreach_(Credit& credit, rawtx.outputs)
-            total_out += credit.amount;
-
-        if (total_in > total_out)
-            return total_in - total_out;
-
-        return 0;
+        int64_t excess_input = (int64_t) TotalInputAmount() - (int64_t) TotalOutputAmount();
+        return excess_input > 0 ? (uint64_t) excess_input : 0;
     }
 
     bool SignedTransaction::Validate()
@@ -65,13 +56,13 @@ using namespace std;
         if (rawtx.outputs.size() > MAX_OUTPUTS_PER_TRANSACTION)
             return false;
 
-        if (!VerifyTransactionSignature(*this))
+        if (not VerifyTransactionSignature(*this))
         {
             log_ << "ValidateTransaction(): signature verification failed\n";
             return false;
         }
 
-        foreach_(CreditInBatch& credit, rawtx.inputs)
+        for (auto credit : rawtx.inputs)
         {
             log_ << "ValidateTransaction(): considering credit with position "
                  << credit.position << "\n";
@@ -90,28 +81,26 @@ using namespace std;
             }
         }
 
-        foreach_(const Credit& credit, rawtx.outputs)
+        for (auto credit : rawtx.outputs)
         {
             total_out += credit.amount;
         }
 
-        return total_out > MIN_TRANSACTION_SIZE
-               && total_in >= total_out;
+        return total_out > MIN_TRANSACTION_SIZE and total_in >= total_out;
     }
 
     vector<uint160> SignedTransaction::GetMissingCredits(MemoryDataStore& creditdata)
     {
         vector<uint160> missing_credits;
 
-        foreach_(const CreditInBatch& credit, rawtx.inputs)
+        for(auto credit : rawtx.inputs)
         {
             uint160 batch_root = credit.branch.back();
-            uint160 credit_hash = SymmetricCombine(batch_root,
-                                                   credit.diurn_branch[0]);
+            uint160 credit_hash = SymmetricCombine(batch_root, credit.diurn_branch[0]);
             if (credit.diurn_branch.size() == 1)
             {
-                if (!(creditdata[credit_hash]).HasProperty("mined_credit") &&
-                    !(creditdata[credit_hash]).HasProperty("branch"))
+                if (not creditdata[credit_hash].HasProperty("mined_credit") and
+                    not creditdata[credit_hash].HasProperty("branch"))
                 {
                     missing_credits.push_back(credit_hash);
                 }
@@ -119,6 +108,23 @@ using namespace std;
         }
         return missing_credits;
     }
+
+    uint64_t SignedTransaction::TotalInputAmount()
+    {
+        uint64_t total = 0;
+        for (auto input : rawtx.inputs)
+            total += input.amount;
+        return total;
+    }
+
+    uint64_t SignedTransaction::TotalOutputAmount()
+    {
+        uint64_t total = 0;
+        for (auto output : rawtx.outputs)
+            total += output.amount;
+        return total;
+    }
+
 
 /*
  *  SignedTransaction

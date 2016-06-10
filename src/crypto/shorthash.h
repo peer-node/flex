@@ -2,9 +2,11 @@
 #define FLEX_SHORTHASH
 
 #define MAX_HASH_ENTRIES 30000
+#define MAX_HASH_COMBINATIONS 10000000
 
 #include "../../test/flex_tests/flex_data/TestData.h"
-
+#include "src/base/util.h"
+#include "src/crypto/hash.h"
 
 template <typename HASH>
 class ShortHashList
@@ -28,15 +30,25 @@ public:
         disambiguator = xor_of_full_hashes;
     }
 
+    std::vector<std::vector<HASH> > PossibleMatches(MemoryDataStore& hashdata)
+    {
+        std::vector<std::vector<HASH> > possible_matches;
+
+        for (auto short_hash : short_hashes)
+            possible_matches.push_back(hashdata[short_hash]["matches"]);
+
+        return possible_matches;
+    }
+
     bool RecoverFullHashes(MemoryDataStore& hashdata)
     {
         if (short_hashes.size() > MAX_HASH_ENTRIES)
             return false;
 
-        std::vector<std::vector<HASH> > possible_matches;
+        auto possible_matches = PossibleMatches(hashdata);
 
-        for (auto short_hash : short_hashes)
-            possible_matches.push_back(hashdata[short_hash]["matches"]);
+        if (NumberOfCombinations(possible_matches) > MAX_HASH_COMBINATIONS)
+            return TryKnownSolution(hashdata);
 
         std::vector<uint32_t> resulting_match;
 
@@ -53,6 +65,16 @@ public:
         full_hashes.resize(0);
         for (uint64_t i = 0; i < short_hashes.size(); i++)
             full_hashes.push_back(possible_matches[i][specific_matches[i]]);
+    }
+
+    bool TryKnownSolution(MemoryDataStore& hashdata)
+    {
+        uint160 this_list = this->GetHash160();
+        if (not hashdata[this_list].HasProperty("known_solution"))
+            return false;
+        std::vector<HASH> known_solution = hashdata[this_list]["known_solution"];
+        full_hashes = known_solution;
+        return true;
     }
 
     IMPLEMENT_SERIALIZE
@@ -115,6 +137,32 @@ public:
         }
         return false;
     }
+
+    uint64_t NumberOfCombinations(std::vector<std::vector<HASH> >& possible_matches)
+    {
+        uint64_t number_of_combinations = 1;
+        bool overflow = false;
+
+        for (auto full_hashes_matching_individual_short_hash : possible_matches)
+        {
+            uint64_t number_of_matches = full_hashes_matching_individual_short_hash.size();
+            uint64_t product = number_of_combinations * number_of_matches;
+            if (product < number_of_combinations or product < number_of_matches)
+                overflow = true;
+            number_of_combinations = product;
+        }
+        if (overflow)
+            return (uint64_t) -1;
+        return number_of_combinations;
+    }
+
+    uint64_t NumberOfCombinations(MemoryDataStore& hashdata)
+    {
+        auto possible_matches = PossibleMatches(hashdata);
+        return NumberOfCombinations(possible_matches);
+    }
 };
+
+
 
 #endif
