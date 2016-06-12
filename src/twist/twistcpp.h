@@ -28,11 +28,11 @@ twist_dowork(uint8_t *pHashInput,
              std::vector<uint8_t> &vnSeeds,
              std::vector<uint64_t> &vnLinks,
              std::vector<uint32_t> &vnLinkLengths,
-             unsigned char *pfWorking) 
+             unsigned char *pfWorking,
+             uint32_t minimum_number_of_links)
 {
     scrypt_aligned_alloc *V, *VSeeds;
     uint32_t numLinks = 0;
-    uint32_t max_worksteps = (uint32_t) (10 * ((((uint128_t)1ULL) << 127) / target));
     int result;
 
     V = (scrypt_aligned_alloc *)malloc(sizeof(scrypt_aligned_alloc));
@@ -45,7 +45,7 @@ twist_dowork(uint8_t *pHashInput,
                   Nfactor, rfactor, numSegments, V, VSeeds);
     twist_work(pFirstLink, Nfactor, rfactor, numSegments, V, 
                &vnLinks[0], &vnLinkLengths[0], 
-               &numLinks, max_worksteps, link_threshold, target, 
+               &numLinks, minimum_number_of_links, link_threshold, target,
                quick_verifier, pfWorking);
 
     scrypt_free(V);
@@ -73,7 +73,8 @@ twist_doquickcheck(unsigned char *pHashInput,
                    uint32_t numSegments,
                    std::vector<uint8_t> vnSeeds,
                    std::vector<uint64_t> vnLinks,
-                   std::vector<uint32_t> vnLinkLengths)
+                   std::vector<uint32_t> vnLinkLengths,
+                   uint32_t minimum_number_of_links)
 {
     scrypt_aligned_alloc *VSeeds;
     uint64_t *Links = &vnLinks[0];
@@ -86,7 +87,7 @@ twist_doquickcheck(unsigned char *pHashInput,
     result = twist_quickcheck(pHashInput, Nfactor, rfactor, numSegments, 
                               VSeeds, Links, linkLengths,
                               &numLinks, link_threshold, target,
-                              quick_verifier);
+                              quick_verifier, minimum_number_of_links);
     free(VSeeds);
     return result;
 }
@@ -107,7 +108,8 @@ int twist_doverify(uint8_t *pHashInput,
                    uint32_t endCheckLink,
                    uint32_t *workStep,
                    uint32_t *link,
-                   uint32_t *seed)
+                   uint32_t *seed,
+                   uint32_t minimum_number_of_links)
 {
     scrypt_aligned_alloc *VSeeds;
     uint64_t *Links = &vnLinks[0];
@@ -122,7 +124,7 @@ int twist_doverify(uint8_t *pHashInput,
                           Links, linkLengths, &numLinks, 
                           startCheckLink, endCheckLink, 
                           link_threshold, target,
-                          workStep, link, seed);
+                          workStep, link, seed, minimum_number_of_links);
     free(VSeeds);
     return result;
 }

@@ -232,7 +232,7 @@ twist_work(uint8_t *pFirstLink,
            uint64_t *Links, 
            uint32_t *linkLengths, 
            uint32_t *numLinks, 
-           uint32_t W,
+           uint32_t minimum_number_of_links,
            uint128_t T,
            uint128_t Target,
            uint128_t *quick_verifier,
@@ -260,7 +260,7 @@ twist_work(uint8_t *pFirstLink,
                   Links, 
                   linkLengths, 
                   numLinks,
-                  W,
+                  minimum_number_of_links,
                   T,
                   &currentLinkLength,
                   Target,
@@ -286,7 +286,8 @@ twist_verify(uint8_t *pHashInput,
              uint128_t Target,
              uint32_t *workStep,
              uint32_t *link,
-             uint32_t *seed)
+             uint32_t *seed,
+             uint32_t minimum_number_of_links)
 {
 	uint32_t N, r, result, chunk_bytes, segmentSize, j;
     uint32_t bytesPerLink = 8;
@@ -326,7 +327,8 @@ twist_verify(uint8_t *pHashInput,
                              Target,
                              workStep,
                              link,
-                             &j);
+                             &j,
+                             minimum_number_of_links);
     *seed = (bytesPerLink * j) / (segmentSize * chunk_bytes);
 	scrypt_free(&V);
 	scrypt_free(&YX);
@@ -344,7 +346,8 @@ twist_quickcheck(uint8_t *pHashInput,
                  uint32_t *numLinks, 
                  uint128_t T,
                  uint128_t Target,
-                 uint128_t *quick_verifier)
+                 uint128_t *quick_verifier,
+                 uint32_t minimum_number_of_links)
 {
 	uint32_t N, r, chunk_bytes;
     uint128_t result;
@@ -376,7 +379,8 @@ twist_quickcheck(uint8_t *pHashInput,
                                  numLinks,
                                  T,
                                  Target,
-                                 quick_verifier);
+                                 quick_verifier,
+                                 minimum_number_of_links);
 	scrypt_free(&V);
 	scrypt_free(&YX);
     return result;

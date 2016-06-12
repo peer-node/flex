@@ -56,12 +56,14 @@ uint160 target_from_difficulty(uint160 difficulty)
                    uint64_t N_factor, 
                    uint160 target, 
                    uint160 link_threshold,
-                   uint32_t num_segments)
+                   uint32_t num_segments,
+                   uint32_t minimum_number_of_links)
     : memoryseed(memoryseed),
       N_factor(N_factor),
       target(target),
       link_threshold(link_threshold),
       num_segments(num_segments),
+      minimum_number_of_links(minimum_number_of_links),
       difficulty_achieved(0)
     { }
 
@@ -89,7 +91,8 @@ uint160 target_from_difficulty(uint160 difficulty)
                                     uint160to128(link_threshold),
                                     &quick_verifier_,
                                     N_factor, RFACTOR, num_segments, seeds,
-                                    links, link_lengths);
+                                    links, link_lengths,
+                                    minimum_number_of_links);
 
         quick_verifier = uint128to160(quick_verifier_);
 
@@ -132,7 +135,7 @@ uint160 target_from_difficulty(uint160 difficulty)
                                   &quick_verifier_,
                                   N_factor, RFACTOR, num_segments,
                                   seeds, links, link_lengths,
-                                  working);
+                                  working, minimum_number_of_links);
         quick_verifier = uint128to160(quick_verifier_);
         num_links = (uint32_t) links.size();
         return result;
@@ -173,7 +176,8 @@ uint160 target_from_difficulty(uint160 difficulty)
                                                link + links_to_check,
                                                &check.failure_step,
                                                &check.failure_link,
-                                               &check.failure_seed);
+                                               &check.failure_seed,
+                                               minimum_number_of_links);
         return check;
     }
 

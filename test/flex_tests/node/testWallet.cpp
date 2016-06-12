@@ -117,6 +117,7 @@ public:
 
     virtual void TearDown()
     {
+        AWalletWithCredits::TearDown();
         delete credit_system;
     }
 };

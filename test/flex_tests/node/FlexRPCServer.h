@@ -17,7 +17,7 @@ public:
     uint256 network_id;
     std::map<std::string,std::string> headers;
     std::string response{"a response"};
-    FlexLocalServer *flexnode;
+    FlexLocalServer *flex_local_server;
 
     FlexRPCServer(jsonrpc::HttpAuthServer &server) :
             jsonrpc::AbstractServer<FlexRPCServer>(server)
@@ -26,9 +26,10 @@ public:
         BindMethod("getinfo", &FlexRPCServer::GetInfo);
         BindMethod("setnetworkid", &FlexRPCServer::SetNetworkID);
         BindMethod("new_proof", &FlexRPCServer::NewProof);
+        BindMethod("balance", &FlexRPCServer::Balance);
     }
 
-    void SetFlexNode(FlexLocalServer *flexnode_);
+    void SetFlexNode(FlexLocalServer *flex_local_server_);
 
     void Help(const Json::Value& request, Json::Value& response);
 
@@ -37,6 +38,8 @@ public:
     void SetNetworkID(const Json::Value& request, Json::Value& response);
 
     void NewProof(const Json::Value& request, Json::Value& response);
+
+    void Balance(const Json::Value& request, Json::Value& response);
 
     void BindMethod(const char* method_name,
                     void (FlexRPCServer::*method)(const Json::Value &,Json::Value &));

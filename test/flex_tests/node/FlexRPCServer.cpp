@@ -28,10 +28,15 @@ void FlexRPCServer::SetNetworkID(const Json::Value& request, Json::Value& respon
 
 void FlexRPCServer::NewProof(const Json::Value &request, Json::Value &response)
 {
-    flexnode->latest_proof_of_work = NetworkSpecificProofOfWork(request["proof_base64"].asString());
+    flex_local_server->latest_proof_of_work = NetworkSpecificProofOfWork(request["proof_base64"].asString());
 }
 
-void FlexRPCServer::SetFlexNode(FlexLocalServer *flexnode_)
+void FlexRPCServer::Balance(const Json::Value &request, Json::Value &response)
 {
-    flexnode = flexnode_;
+    response = flex_local_server->Balance();
+}
+
+void FlexRPCServer::SetFlexNode(FlexLocalServer *flex_local_server_)
+{
+    flex_local_server = flex_local_server_;
 }

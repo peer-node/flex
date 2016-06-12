@@ -93,7 +93,7 @@ using namespace std;
     {
         vector<uint160> missing_credits;
 
-        for(auto credit : rawtx.inputs)
+        for (auto credit : rawtx.inputs)
         {
             uint160 batch_root = credit.branch.back();
             uint160 credit_hash = SymmetricCombine(batch_root, credit.diurn_branch[0]);

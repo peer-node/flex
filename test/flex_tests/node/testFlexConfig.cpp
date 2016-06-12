@@ -12,16 +12,16 @@ public:
     stringstream stream;
 };
 
-TEST_F(AFlexConfig, IsEmptyInitially)
+TEST_F(AFlexConfig, InitiallyContainsTheDefaultSettings)
 {
     uint64_t size = config.size();
-    ASSERT_THAT(size, Eq(0));
+    ASSERT_THAT(size, Eq(default_settings.size()));
 }
 
-TEST_F(AFlexConfig, IsNotEmptyWhenSomethingIsSet)
+TEST_F(AFlexConfig, IncreasesInSizeWhenSomethingIsSet)
 {
     config["x"] = "y";
-    ASSERT_THAT(config.size(), Eq(1));
+    ASSERT_THAT(config.size(), Gt(default_settings.size()));
 }
 
 TEST_F(AFlexConfig, StoresData)

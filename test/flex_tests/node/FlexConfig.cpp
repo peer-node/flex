@@ -46,7 +46,7 @@ void FlexConfig::ReadFromStream(stringstream &config_stream)
     {
         string key = it->string_key, value = it->value[0];
 
-        bool already_set_from_command_line = settings.count(key) != 0;
+        bool already_set_from_command_line = command_line_settings.count(key) != 0;
 
         if (not already_set_from_command_line)
         {
@@ -78,6 +78,7 @@ void FlexConfig::ParseCommandLineArgument(string argument)
         value = "1";
     }
 
+    command_line_settings[key] = value;
     settings[key] = value;
     InterpretNegativeSetting(key);
 }

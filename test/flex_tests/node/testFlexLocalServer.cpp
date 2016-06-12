@@ -8,6 +8,7 @@
 #include <test/flex_tests/mining/MiningRPCServer.h>
 #include "gmock/gmock.h"
 #include "FlexLocalServer.h"
+#include "FlexNetworkNode.h"
 
 
 using namespace ::testing;
@@ -146,7 +147,7 @@ public:
         flex_local_server.StartRPCServer();
 
         http_client = new HttpClient("http://localhost:8383");
-        http_client->AddHeader("x", "y");
+        http_client->AddHeader("Authorization", "Basic flexuser:abcd123");
         client = new Client(*http_client);
     }
 
@@ -166,3 +167,69 @@ TEST_F(AFlexLocalServerWithRPCSettings, StartsAnRPCServer)
     auto result = client->CallMethod("help", params);
     ASSERT_THAT(result.asString(), Ne(""));
 }
+
+
+class AFlexLocalServerWithRPCSettingsAndAFlexNetworkNode : public AFlexLocalServerWithRPCSettings
+{
+public:
+    FlexNetworkNode flex_network_node;
+
+    virtual void SetUp()
+    {
+        AFlexLocalServerWithRPCSettings::SetUp();
+        flex_local_server.SetNetworkNode(&flex_network_node);
+    }
+
+    virtual void TearDown()
+    {
+        AFlexLocalServerWithRPCSettings::TearDown();
+    }
+};
+
+TEST_F(AFlexLocalServerWithRPCSettingsAndAFlexNetworkNode, ProvidesABalance)
+{
+    Json::Value params;
+
+    auto result = client->CallMethod("balance", params);
+    ASSERT_THAT(result.asDouble(), Eq(0));
+}
+
+
+class AFlexLocalServerWithAMiningRPCServerAndAFlexNetworkNode : public AFlexLocalServerWithAMiningRPCServer
+{
+public:
+    HttpClient *http_client;
+    Client *client;
+    FlexNetworkNode flex_network_node;
+
+    virtual void SetUp()
+    {
+        AFlexLocalServerWithAMiningRPCServer::SetUp();
+        flex_local_server.SetNetworkNode(&flex_network_node);
+        flex_local_server.SetNumberOfMegabytesUsedForMining(1);
+        flex_local_server.SetMiningNetworkInfo();
+        flex_local_server.StartRPCServer();
+
+        http_client = new HttpClient("http://localhost:8383");
+        http_client->AddHeader("Authorization", "Basic flexuser:abcd123");
+        client = new Client(*http_client);
+    }
+
+    virtual void TearDown()
+    {
+        AFlexLocalServerWithAMiningRPCServer::TearDown();
+        delete client;
+        delete http_client;
+        flex_local_server.StopRPCServer();
+    }
+};
+
+TEST_F(AFlexLocalServerWithAMiningRPCServerAndAFlexNetworkNode, StartsMining)
+{
+    client->CallMethod("start_mining", Json::Value());
+    flex_local_server.StopRPCServer();
+    NetworkSpecificProofOfWork proof = flex_local_server.GetLatestProofOfWork();
+    ASSERT_THAT(proof.MegabytesUsed(), Eq(1));
+    ASSERT_TRUE(proof.IsValid());
+}
+

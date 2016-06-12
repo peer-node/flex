@@ -3,6 +3,7 @@
 
 #include "ConfigParser.h"
 #include "FlexRPCServer.h"
+#include "FlexNetworkNode.h"
 #include <jsonrpccpp/server/connectors/httpserver.h>
 #include <test/flex_tests/mining/NetworkSpecificProofOfWork.h>
 
@@ -14,6 +15,7 @@ public:
     FlexConfig config;
     FlexRPCServer *rpc_server;
     jsonrpc::HttpAuthServer *http_server;
+    FlexNetworkNode *flex_network_node;
 
     void StartRPCServer();
 
@@ -44,6 +46,10 @@ public:
     NetworkSpecificProofOfWork GetLatestProofOfWork();
 
     NetworkSpecificProofOfWork latest_proof_of_work;
+
+    void SetNetworkNode(FlexNetworkNode *flex_network_node_);
+
+    double Balance();
 };
 
 

@@ -4,6 +4,7 @@
 #include <jsonrpccpp/client.h>
 #include <test/flex_tests/mining/NetworkSpecificProofOfWork.h>
 #include "FlexLocalServer.h"
+#include "FlexNetworkNode.h"
 
 using jsonrpc::HttpAuthServer;
 
@@ -109,15 +110,15 @@ NetworkSpecificProofOfWork FlexLocalServer::GetLatestProofOfWork()
     return latest_proof_of_work;
 }
 
+void FlexLocalServer::SetNetworkNode(FlexNetworkNode *flex_network_node_)
+{
+    flex_network_node = flex_network_node_;
+}
 
-
-
-
-
-
-
-
-
+double FlexLocalServer::Balance()
+{
+    return flex_network_node->Balance();
+}
 
 
 

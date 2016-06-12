@@ -12,6 +12,7 @@
 #define LOG_CATEGORY "work.h"
 
 #define FLEX_WORK_NUMBER_OF_LINKS 128
+#define FLEX_WORK_MINIMUM_NUMBER_OF_LINKS 10
 #define FLEX_WORK_NUMBER_OF_SEGMENTS 32
 
 uint160 target_from_difficulty(uint160 difficulty);
@@ -35,13 +36,15 @@ public:
     std::vector<uint64_t> links;
     std::vector<uint32_t> link_lengths;
     uint160 difficulty_achieved;
+    uint32_t minimum_number_of_links{FLEX_WORK_MINIMUM_NUMBER_OF_LINKS};
 
     TwistWorkProof();
     TwistWorkProof(uint256 memoryseed, 
                    uint64_t N_factor, 
                    uint160 target, 
                    uint160 link_threshold,
-                   uint32_t num_segments);
+                   uint32_t num_segments,
+                   uint32_t minimum_number_of_links=FLEX_WORK_MINIMUM_NUMBER_OF_LINKS);
 
     uint160 DifficultyAchieved();
 
