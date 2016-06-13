@@ -14,7 +14,7 @@ void CreditMessageHandler::HandleMinedCreditMessage(MinedCreditMessage msg)
     Broadcast(msg);
     credit_system->StoreMinedCreditMessage(msg);
 
-    if (not PassesSpotCheckOfProofOfWork(msg))
+    if (do_spot_checks and not PassesSpotCheckOfProofOfWork(msg))
         Broadcast(GetBadBatchMessage(msg.GetHash160()));
     else
         HandleValidMinedCreditMessage(msg);
@@ -194,6 +194,7 @@ void CreditMessageHandler::AddToTip(MinedCreditMessage &msg)
                                                                   calendar->LastMinedCreditHash(),
                                                                   msg.mined_credit.GetHash160());
     calendar->AddToTip(msg, credit_system);
+    wallet->AddBatchToTip(msg, credit_system);
     UpdateAcceptedMessagesAfterNewTip(msg);
 }
 

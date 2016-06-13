@@ -391,8 +391,11 @@ EncodedNetworkState CreditSystem::SucceedingNetworkState(MinedCredit mined_credi
 {
     EncodedNetworkState next_state, prev_state = mined_credit.network_state;
 
-    next_state.previous_mined_credit_hash = mined_credit.GetHash160();
     next_state.batch_number = prev_state.batch_number + 1;
+    if (prev_state.batch_number == 0)
+        next_state.previous_mined_credit_hash = 0;
+    else
+        next_state.previous_mined_credit_hash = mined_credit.GetHash160();
     next_state.batch_offset = prev_state.batch_offset + prev_state.batch_size;
     next_state.previous_total_work = prev_state.previous_total_work + prev_state.difficulty;
     next_state.difficulty = GetNextDifficulty(mined_credit);

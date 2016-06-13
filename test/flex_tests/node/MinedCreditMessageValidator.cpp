@@ -110,23 +110,37 @@ bool MinedCreditMessageValidator::ValidateNetworkState(MinedCreditMessage &msg)
 {
     bool ok = true;
     uint32_t& batch_number = msg.mined_credit.network_state.batch_number;
-
+    
     ok &= batch_number > 0;
+    
     ok &= CheckBatchNumber(msg);
+    
     ok &= CheckPreviousTotalWork(msg);
+    
     ok &= CheckDifficulty(msg);
+    
     ok &= CheckDiurnalDifficulty(msg);
+    
     ok &= CheckBatchOffset(msg);
+    
     ok &= CheckTimeStampIsNotInFuture(msg);
+    
     ok &= CheckPreviousDiurnRoot(msg);
+    
     ok &= CheckTimeStampSucceedsPreviousTimestamp(msg);
+    
     ok &= CheckBatchRoot(msg);
+    
     ok &= CheckBatchSize(msg);
+    
     ok &= CheckDiurnalBlockRoot(msg);
+    
     ok &= CheckSpentChainHash(msg);
+    
     ok &= CheckMessageListHash(msg);
+    
     ok &= CheckMessageListContainsPreviousMinedCreditHash(msg);
-
+    
     return ok;
 }
 

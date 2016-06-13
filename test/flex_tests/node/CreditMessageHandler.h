@@ -10,6 +10,7 @@
 #include "Calendar.h"
 #include "TransactionValidator.h"
 #include "BadBatchMessage.h"
+#include "Wallet.h"
 
 class CreditMessageHandler : public MessageHandlerWithOrphanage
 {
@@ -20,10 +21,12 @@ public:
     CreditSystem *credit_system;
     Calendar *calendar;
     BitChain *spent_chain;
+    Wallet *wallet;
     FlexConfig config;
     MinedCreditMessageValidator mined_credit_message_validator;
     TransactionValidator transaction_validator;
     std::vector<uint160> accepted_messages;
+    bool do_spot_checks{true};
 
     CreditMessageHandler(MemoryDataStore &msgdata_,
                          MemoryDataStore &creditdata_,
@@ -44,6 +47,8 @@ public:
     void SetCalendar(Calendar& calendar_) { calendar = &calendar_; }
 
     void SetSpentChain(BitChain& spent_chain_) { spent_chain = &spent_chain_; }
+
+    void SetWallet(Wallet& wallet_) { wallet = &wallet_; }
 
     void HandleMessage(CDataStream ss, CNode* peer)
     {

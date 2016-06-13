@@ -331,6 +331,14 @@ TEST_F(ACreditSystemWithAStoredMinedCredit, GeneratesASucceedingNetworkState)
     ASSERT_THAT(next_state.batch_number, Eq(prev_state.batch_number + 1));
 }
 
+TEST_F(ACreditSystemWithAStoredMinedCredit, GeneratesASucceedingNetworkStateWithAPreviousMinedCreditHashOfZero)
+{
+    MinedCredit blank_mined_credit;
+    EncodedNetworkState next_state = credit_system->SucceedingNetworkState(blank_mined_credit);
+
+    ASSERT_THAT(next_state.previous_mined_credit_hash, Eq(0));
+}
+
 
 class ACreditSystemWithASmallIntervalBetweenMinedCredits: public ACreditSystem
 {
