@@ -13,9 +13,11 @@ class FlexLocalServer
 public:
     ConfigParser config_parser;
     FlexConfig config;
-    FlexRPCServer *rpc_server;
-    jsonrpc::HttpAuthServer *http_server;
-    FlexNetworkNode *flex_network_node;
+    FlexRPCServer *rpc_server{NULL};
+    jsonrpc::HttpAuthServer *http_server{NULL};
+    FlexNetworkNode *flex_network_node{NULL};
+    NetworkSpecificProofOfWork latest_proof_of_work;
+
 
     void StartRPCServer();
 
@@ -45,11 +47,15 @@ public:
 
     NetworkSpecificProofOfWork GetLatestProofOfWork();
 
-    NetworkSpecificProofOfWork latest_proof_of_work;
-
     void SetNetworkNode(FlexNetworkNode *flex_network_node_);
 
     double Balance();
+
+    void StartMining();
+
+    void HandleNewProof(NetworkSpecificProofOfWork proof);
+
+    uint160 MiningDifficulty(uint256 mining_seed);
 };
 
 

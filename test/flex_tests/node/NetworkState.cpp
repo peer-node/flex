@@ -31,8 +31,3 @@ void NetworkState::AddTransaction(SignedTransaction transaction)
 {
     transactions.push_back(transaction);
 }
-
-bool NetworkState::ValidateIncomingMinedCredit(MinedCredit incoming_mined_credit)
-{
-    return false;
-}

@@ -15,6 +15,7 @@ public:
     CreditMessageHandler *credit_message_handler;
     Calendar calendar;
     BitChain spent_chain;
+    Wallet *wallet;
     TestPeer peer;
 
     virtual void SetUp()
@@ -24,6 +25,8 @@ public:
         credit_message_handler->SetCreditSystem(credit_system);
         credit_message_handler->SetCalendar(calendar);
         credit_message_handler->SetSpentChain(spent_chain);
+        wallet = new Wallet(keydata);
+        credit_message_handler->SetWallet(*wallet);
     }
 
     virtual void TearDown()

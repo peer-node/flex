@@ -483,7 +483,10 @@ bool CreditSystem::QuickCheckProofOfWorkInMinedCreditMessage(MinedCreditMessage 
     TwistWorkProof& proof = msg.proof_of_work.proof;
 
     if (not CheckHashesSeedsAndThresholdsInMinedCreditMessageProofOfWork(msg))
+    {
+        std::cout << "bad hash seeds or thresholds\n";
         ok = false;
+    }
 
     if (ok and msg.proof_of_work.proof.DifficultyAchieved() < msg.mined_credit.network_state.difficulty)
         ok = false;

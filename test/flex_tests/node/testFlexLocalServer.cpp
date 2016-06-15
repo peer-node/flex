@@ -227,9 +227,17 @@ public:
 TEST_F(AFlexLocalServerWithAMiningRPCServerAndAFlexNetworkNode, StartsMining)
 {
     client->CallMethod("start_mining", Json::Value());
-    flex_local_server.StopRPCServer();
     NetworkSpecificProofOfWork proof = flex_local_server.GetLatestProofOfWork();
     ASSERT_THAT(proof.MegabytesUsed(), Eq(1));
     ASSERT_TRUE(proof.IsValid());
+}
+
+TEST_F(AFlexLocalServerWithAMiningRPCServerAndAFlexNetworkNode, AddsAMinedCreditMessageToTheTipWhenMined)
+{
+    client->CallMethod("start_mining", Json::Value());
+    NetworkSpecificProofOfWork proof = flex_local_server.GetLatestProofOfWork();
+    MinedCreditMessage tip = flex_local_server.flex_network_node->Tip();
+    ASSERT_THAT(tip.proof_of_work, Eq(proof));
+    ASSERT_THAT(proof.branch[0], Eq(tip.mined_credit.GetHash()));
 }
 

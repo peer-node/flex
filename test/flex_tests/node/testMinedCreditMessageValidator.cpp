@@ -43,6 +43,7 @@ public:
         msg.hash_list.GenerateShortHashes();
         CreditBatch batch;
         batch.Add(tx.rawtx.outputs[0]);
+        msg.mined_credit.network_state.batch_number = 1;
         msg.mined_credit.network_state.batch_root = batch.Root();
         msg.mined_credit.network_state.difficulty = INITIAL_DIFFICULTY;
         return msg;

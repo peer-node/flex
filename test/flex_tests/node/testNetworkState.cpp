@@ -71,13 +71,3 @@ TEST_F(ANetworkState, AddsThePrecedingMinedCreditToTheCreditBatchWhenSet)
     ASSERT_THAT(network_state.previous_mined_credit, Eq(previous_mined_credit));
     ASSERT_THAT(network_state.credit_batch.size(), Eq(1));
 }
-
-TEST_F(ANetworkState, ValidatesIncomingMinedCredits)
-{
-    MinedCredit incoming_mined_credit;
-    Point pubkey(2);
-    incoming_mined_credit.keydata = pubkey.getvch();
-    incoming_mined_credit.amount = 100000000;
-    bool ok = network_state.ValidateIncomingMinedCredit(incoming_mined_credit);
-    ASSERT_THAT(ok, Eq(true));
-}

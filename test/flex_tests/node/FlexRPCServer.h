@@ -27,6 +27,7 @@ public:
         BindMethod("setnetworkid", &FlexRPCServer::SetNetworkID);
         BindMethod("new_proof", &FlexRPCServer::NewProof);
         BindMethod("balance", &FlexRPCServer::Balance);
+        BindMethod("start_mining", &FlexRPCServer::StartMining);
     }
 
     void SetFlexNode(FlexLocalServer *flex_local_server_);
@@ -40,6 +41,8 @@ public:
     void NewProof(const Json::Value& request, Json::Value& response);
 
     void Balance(const Json::Value& request, Json::Value& response);
+
+    void StartMining(const Json::Value& request, Json::Value& response);
 
     void BindMethod(const char* method_name,
                     void (FlexRPCServer::*method)(const Json::Value &,Json::Value &));

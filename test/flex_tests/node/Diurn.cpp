@@ -92,9 +92,9 @@ uint160 Diurn::Root()
     return SymmetricCombine(previous_diurn_root, BlockRoot());
 }
 
-bool Diurn::VerifyBranch(uint160 credit_hash, std::vector<uint160> branch)
+bool Diurn::VerifyBranch(uint160 batch_root, std::vector<uint160> branch)
 {
-    uint160 branch_evaluation = EvaluateBranchWithHash(branch, credit_hash);
+    uint160 branch_evaluation = EvaluateBranchWithHash(branch, batch_root);
     return branch_evaluation == branch.back();
 }
 

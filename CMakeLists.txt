@@ -1,0 +1,1007 @@
+cmake_minimum_required(VERSION 3.3)
+project(flex)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -lboost_system -DSCRYPT_SALSA64 -DSCRYPT_BLAKE512 -lssl -lboost_thread -pthread -O3")
+
+set(SOURCE_FILES
+    src/base/allocators.cpp
+    src/base/allocators.h
+    src/base/base58.cpp
+    src/base/base58.h
+    src/base/chainparams.cpp
+    src/base/chainparams.h
+    src/base/clientversion.h
+    src/base/core.cpp
+    src/base/core.h
+    src/base/limitedmap.h
+    src/base/mruset.h
+    src/base/noui.cpp
+    src/base/noui.h
+    src/base/protocol.cpp
+    src/base/protocol.h
+    src/base/serialize.h
+    src/base/sync.cpp
+    src/base/sync.h
+    src/base/threadsafety.h
+    src/base/tinyformat.h
+    src/base/ui_interface.h
+    src/base/util.cpp
+    src/base/util.h
+    src/base/version.cpp
+    src/base/version.h
+    src/compat/glibc_compat.cpp
+    src/compat/glibcxx_compat.cpp
+    src/credits/credits.cpp
+    src/credits/credits.h
+    src/credits/creditsign.h
+    src/credits/creditutil.cpp
+    src/credits/creditutil.h
+        src/credits/Credit.cpp
+        src/credits/Credit.h
+        src/credits/MinedCredit.cpp
+        src/credits/MinedCredit.h
+        src/credits/CreditInBatch.cpp
+        src/credits/CreditInBatch.h
+        src/credits/MinedCreditMessage.cpp
+        src/credits/MinedCreditMessage.h
+    src/crypto/25519/curve25519-donna-32bit.h
+    src/crypto/25519/curve25519-donna-64bit.h
+    src/crypto/25519/curve25519-donna-helpers.h
+    src/crypto/25519/curve25519-donna-sse2.h
+    src/crypto/25519/ed25519-donna-32bit-sse2.h
+    src/crypto/25519/ed25519-donna-32bit-tables.h
+    src/crypto/25519/ed25519-donna-64bit-sse2.h
+    src/crypto/25519/ed25519-donna-64bit-tables.h
+    src/crypto/25519/ed25519-donna-64bit-x86-32bit.h
+    src/crypto/25519/ed25519-donna-64bit-x86.h
+    src/crypto/25519/ed25519-donna-basepoint-table.h
+    src/crypto/25519/ed25519-donna-batchverify.h
+    src/crypto/25519/ed25519-donna-impl-base.h
+    src/crypto/25519/ed25519-donna-impl-sse2.h
+    src/crypto/25519/ed25519-donna-portable-identify.h
+    src/crypto/25519/ed25519-donna-portable.h
+    src/crypto/25519/ed25519-donna.h
+    src/crypto/25519/ed25519-hash-custom.h
+    src/crypto/25519/ed25519-hash.h
+    src/crypto/25519/ed25519-randombytes-custom.h
+    src/crypto/25519/ed25519-randombytes.h
+    src/crypto/25519/ed25519.cpp
+    src/crypto/25519/ed25519.h
+    src/crypto/25519/modm-donna-32bit.h
+    src/crypto/25519/modm-donna-64bit.h
+    src/crypto/25519/regression.h
+    src/crypto/25519points.h
+    src/crypto/bignum.h
+    src/crypto/crypter.cpp
+    src/crypto/crypter.h
+    src/crypto/flexcrypto.cpp
+    src/crypto/flexcrypto.h
+    src/crypto/hash.cpp
+    src/crypto/hash.h
+    src/crypto/hashtrees.h
+    src/crypto/key.cpp
+    src/crypto/key.h
+    src/crypto/point.cpp
+    src/crypto/point.h
+    src/crypto/polynomial.cpp
+    src/crypto/polynomial.h
+    src/crypto/secp256k1point.h
+    src/crypto/shorthash.h
+    src/crypto/signature.h
+    src/crypto/uint256.h
+    src/currencies/currencies.cpp
+    src/currencies/currencies.h
+    src/database/data.h
+    src/database/datastore.h
+    src/database/keystore.cpp
+    src/database/keystore.h
+    src/database/memdb.h
+    src/deposit/deposit_messages.h
+    src/deposit/deposit_secret.cpp
+    src/deposit/deposit_secret.h
+    src/deposit/deposits.cpp
+    src/deposit/deposits.h
+    src/deposit/disclosure.cpp
+    src/deposit/disclosure_messages.h
+    src/deposit/transfer.cpp
+    src/deposit/transfer_messages.h
+    src/deposit/withdraw.cpp
+    src/deposit/withdrawal_messages.h
+    src/flexnode/calendar.cpp
+    src/flexnode/calendar.h
+    src/flexnode/eventnotifier.cpp
+    src/flexnode/eventnotifier.h
+    src/flexnode/flexnode.cpp
+    src/flexnode/flexnode.h
+    src/flexnode/init.cpp
+    src/flexnode/init.h
+    src/flexnode/main.cpp
+    src/flexnode/main.h
+    src/flexnode/message_handler.h
+    src/flexnode/orphanage.h
+    src/flexnode/schedule.h
+    src/flexnode/wallet.cpp
+    src/flexnode/wallet.h
+    src/flexnode/MessageValidator.cpp
+    src/flexnode/MessageValidator.h
+    src/initialize/datamessages.cpp
+    src/initialize/datamessages.h
+    src/initialize/dataserver.cpp
+    src/initialize/dataserver.h
+    src/initialize/downloader.cpp
+    src/initialize/downloader.h
+    src/json/json_spirit.h
+    src/json/json_spirit_error_position.h
+    src/json/json_spirit_reader.cpp
+    src/json/json_spirit_reader.h
+    src/json/json_spirit_reader_template.h
+    src/json/json_spirit_stream_reader.h
+    src/json/json_spirit_utils.h
+    src/json/json_spirit_value.cpp
+    src/json/json_spirit_value.h
+    src/json/json_spirit_writer.cpp
+    src/json/json_spirit_writer.h
+    src/json/json_spirit_writer_template.h
+    src/leveldb/db/builder.cc
+    src/leveldb/db/builder.h
+    src/leveldb/db/c.cc
+    src/leveldb/db/db_impl.cc
+    src/leveldb/db/db_impl.h
+    src/leveldb/db/db_iter.cc
+    src/leveldb/db/db_iter.h
+    src/leveldb/db/dbformat.cc
+    src/leveldb/db/dbformat.h
+    src/leveldb/db/filename.cc
+    src/leveldb/db/filename.h
+    src/leveldb/db/log_format.h
+    src/leveldb/db/log_reader.cc
+    src/leveldb/db/log_reader.h
+    src/leveldb/db/log_writer.cc
+    src/leveldb/db/log_writer.h
+    src/leveldb/db/memtable.cc
+    src/leveldb/db/memtable.h
+    src/leveldb/db/repair.cc
+    src/leveldb/db/skiplist.h
+    src/leveldb/db/snapshot.h
+    src/leveldb/db/table_cache.cc
+    src/leveldb/db/table_cache.h
+    src/leveldb/db/version_edit.cc
+    src/leveldb/db/version_edit.h
+    src/leveldb/db/version_set.cc
+    src/leveldb/db/version_set.h
+    src/leveldb/db/write_batch.cc
+    src/leveldb/db/write_batch_internal.h
+    src/leveldb/helpers/memenv/memenv.cc
+    src/leveldb/helpers/memenv/memenv.h
+    src/leveldb/include/leveldb/c.h
+    src/leveldb/include/leveldb/cache.h
+    src/leveldb/include/leveldb/comparator.h
+    src/leveldb/include/leveldb/db.h
+    src/leveldb/include/leveldb/env.h
+    src/leveldb/include/leveldb/filter_policy.h
+    src/leveldb/include/leveldb/iterator.h
+    src/leveldb/include/leveldb/options.h
+    src/leveldb/include/leveldb/slice.h
+    src/leveldb/include/leveldb/status.h
+    src/leveldb/include/leveldb/table.h
+    src/leveldb/include/leveldb/table_builder.h
+    src/leveldb/include/leveldb/write_batch.h
+    src/leveldb/port/win/stdint.h
+    src/leveldb/port/atomic_pointer.h
+    src/leveldb/port/port.h
+    src/leveldb/port/port_posix.cc
+    src/leveldb/port/port_posix.h
+    src/leveldb/port/thread_annotations.h
+    src/leveldb/table/block.cc
+    src/leveldb/table/block.h
+    src/leveldb/table/block_builder.cc
+    src/leveldb/table/block_builder.h
+    src/leveldb/table/filter_block.cc
+    src/leveldb/table/filter_block.h
+    src/leveldb/table/format.cc
+    src/leveldb/table/format.h
+    src/leveldb/table/iterator.cc
+    src/leveldb/table/iterator_wrapper.h
+    src/leveldb/table/merger.cc
+    src/leveldb/table/merger.h
+    src/leveldb/table/table.cc
+    src/leveldb/table/table_builder.cc
+    src/leveldb/table/two_level_iterator.cc
+    src/leveldb/table/two_level_iterator.h
+    src/leveldb/util/arena.cc
+    src/leveldb/util/arena.h
+    src/leveldb/util/bloom.cc
+    src/leveldb/util/cache.cc
+    src/leveldb/util/coding.cc
+    src/leveldb/util/coding.h
+    src/leveldb/util/comparator.cc
+    src/leveldb/util/crc32c.cc
+    src/leveldb/util/crc32c.h
+    src/leveldb/util/env.cc
+    src/leveldb/util/env_posix.cc
+    src/leveldb/util/env_win.cc
+    src/leveldb/util/filter_policy.cc
+    src/leveldb/util/hash.cc
+    src/leveldb/util/hash.h
+    src/leveldb/util/histogram.cc
+    src/leveldb/util/histogram.h
+    src/leveldb/util/logging.cc
+    src/leveldb/util/logging.h
+    src/leveldb/util/mutexlock.h
+    src/leveldb/util/options.cc
+    src/leveldb/util/posix_logger.h
+    src/leveldb/util/random.h
+    src/leveldb/util/status.cc
+    src/mining/pit.cpp
+    src/mining/pit.h
+    src/mining/work.cpp
+    src/mining/work.h
+    src/net/addrman.cpp
+    src/net/addrman.h
+    src/net/net.cpp
+    src/net/net.h
+    src/net/netbase.cpp
+    src/net/netbase.h
+    src/net/resourcemonitor.cpp
+    src/net/resourcemonitor.h
+    src/relays/relay_admission.cpp
+    src/relays/relay_admission.h
+    src/relays/relay_inheritance.cpp
+    src/relays/relay_inheritance.h
+    src/relays/relay_messages.cpp
+    src/relays/relay_messages.h
+    src/relays/relays.cpp
+    src/relays/relays.h
+    src/relays/relaystate.cpp
+    src/relays/relaystate.h
+    src/relays/successionsecret.cpp
+    src/relays/successionsecret.h
+    src/rpc/rpcblockchain.cpp
+    src/rpc/rpcclient.cpp
+    src/rpc/rpcclient.h
+    src/rpc/rpcdump.cpp
+    src/rpc/rpcmining.cpp
+    src/rpc/rpcmisc.cpp
+    src/rpc/rpcnet.cpp
+    src/rpc/rpcobjects.cpp
+    src/rpc/rpcobjects.h
+    src/rpc/rpcprotocol.cpp
+    src/rpc/rpcprotocol.h
+    src/rpc/rpcrawtransaction.cpp
+    src/rpc/rpcserver.cpp
+    src/rpc/rpcserver.h
+    src/rpc/rpcwallet.cpp
+    src/trade/market.cpp
+    src/trade/market.h
+    src/trade/relay.cpp
+    src/trade/relay.h
+    src/trade/thirdparty.cpp
+    src/trade/thirdparty.h
+    src/trade/trade.cpp
+    src/trade/trade.h
+    src/trade/trade_messages.cpp
+    src/trade/trade_messages.h
+    src/trade/trader.cpp
+    src/trade/trader.h
+    src/trade/tradesecret.h
+    src/twist/code/scrypt-conf.h
+    src/twist/code/scrypt-jane-chacha.h
+    src/twist/code/scrypt-jane-hash.h
+    src/twist/code/scrypt-jane-hash_blake256.h
+    src/twist/code/scrypt-jane-hash_blake512.h
+    src/twist/code/scrypt-jane-hash_keccak.h
+    src/twist/code/scrypt-jane-hash_sha256.h
+    src/twist/code/scrypt-jane-hash_sha512.h
+    src/twist/code/scrypt-jane-hash_skein512.h
+    src/twist/code/scrypt-jane-mix_chacha-avx.h
+    src/twist/code/scrypt-jane-mix_chacha-sse2.h
+    src/twist/code/scrypt-jane-mix_chacha-ssse3.h
+    src/twist/code/scrypt-jane-mix_chacha-xop.h
+    src/twist/code/scrypt-jane-mix_chacha.h
+    src/twist/code/scrypt-jane-mix_salsa-avx.h
+    src/twist/code/scrypt-jane-mix_salsa-sse2.h
+    src/twist/code/scrypt-jane-mix_salsa-xop.h
+    src/twist/code/scrypt-jane-mix_salsa.h
+    src/twist/code/scrypt-jane-mix_salsa64-avx.h
+    src/twist/code/scrypt-jane-mix_salsa64-avx2.h
+    src/twist/code/scrypt-jane-mix_salsa64-sse2.h
+    src/twist/code/scrypt-jane-mix_salsa64-ssse3.h
+    src/twist/code/scrypt-jane-mix_salsa64-xop.h
+    src/twist/code/scrypt-jane-mix_salsa64.h
+    src/twist/code/scrypt-jane-pbkdf2.h
+    src/twist/code/scrypt-jane-portable-x86.h
+    src/twist/code/scrypt-jane-portable.h
+    src/twist/code/scrypt-jane-romix-basic.h
+    src/twist/code/scrypt-jane-romix.h
+    src/twist/code/scrypt-jane-salsa.h
+    src/twist/code/scrypt-jane-salsa64.h
+    src/twist/code/scrypt-jane-test-vectors.h
+    src/twist/code/twist-romix.h
+    src/twist/code/twist-salsa64.h
+    src/twist/code/twist-template.h
+    src/twist/alloc.h
+    src/twist/scrypt-jane-twist.h
+    src/twist/twist-jane.h
+    src/twist/twist.h
+    src/twist/twistcpp.h
+    src/compat.h
+    src/define.h
+    src/leveldbwrapper.cpp
+    src/leveldbwrapper.h
+    src/log.h)
+
+add_subdirectory(test)
+add_subdirectory(test/flex_tests)
+add_subdirectory(test/lib/googlemock)
+
+include_directories(test/lib/googletest/include
+        test/lib/googletest
+        test/lib/googlemock/include
+        test/lib/googlemock
+        .
+        src/leveldb/include
+        src/leveldb/helpers/memenv
+        src/leveldb
+        src)
+
+set(TEST_SOURCE_FILES
+        ${SOURCE_FILES}
+        test/flex_tests/test_main.cpp
+        test/flex_tests/crypto/test_point.cpp
+        test/flex_tests/crypto/test_secret.cpp)
+
+set(MESSAGING_FILES
+        src/net/addrman.cpp
+        src/net/addrman.h
+        src/net/net.cpp
+        src/net/net.h
+        src/net/netbase.cpp
+        src/net/netbase.h
+        src/flexnode/main.h
+        src/flexnode/main_signals.cpp
+        src/flexnode/main_send_messages.cpp
+        src/flexnode/main_process_messages.cpp
+        src/flexnode/MainFlexNode.h
+        src/flexnode/MockInit.h
+        src/flexnode/MockInit.cpp
+        src/net/net_caddrdb.cpp
+        src/net/net_cnode.cpp
+        src/net/net_relay.cpp
+        src/net/net_cnode.h
+        src/net/net_relay.h
+        src/net/net_caddrdb.h
+        src/net/net_services.cpp
+        src/net/net_services.h
+        src/net/net_externalip.cpp
+        src/net/net_externalip.h
+        src/net/net_sockets.h
+        src/net/net_sockets.cpp
+        src/net/net_connections.h
+        src/net/net_connections.cpp
+        src/net/net_cnetmessage.cpp
+        src/net/net_cnetmessage.h
+        src/net/net_addresses.cpp
+        src/net/net_addresses.h
+        src/net/net_startstop.cpp
+        src/net/net_startstop.h
+        src/net/net_messagehandler.cpp
+        src/net/net_messagehandler.h
+        src/net/net_cleanup.cpp
+        src/net/net_sync.h
+        src/net/net_sync.cpp
+        src/net/net_upnp.cpp
+        src/flexnode/MainFlexNode.cpp
+        test/flex_tests/main_tests/testCreditMessageHandler.cpp
+        test/flex_tests/main_tests/CreditMessageHandler_.cpp
+        test/flex_tests/main_tests/CreditMessageHandler_.h
+        test/flex_tests/main_tests/Communicator.cpp
+        test/flex_tests/main_tests/Communicator.h test/flex_tests/main_tests/testCommunicator.cpp)
+
+set(DATABASE_FILES
+        src/database/datastore.h
+        src/database/memdb.h
+        src/leveldb/db/builder.cc
+        src/leveldb/db/builder.h
+        src/leveldb/db/c.cc
+        src/leveldb/db/db_impl.cc
+        src/leveldb/db/db_impl.h
+        src/leveldb/db/db_iter.cc
+        src/leveldb/db/db_iter.h
+        src/leveldb/db/dbformat.cc
+        src/leveldb/db/dbformat.h
+        src/leveldb/db/filename.cc
+        src/leveldb/db/filename.h
+        src/leveldb/db/log_format.h
+        src/leveldb/db/log_reader.cc
+        src/leveldb/db/log_reader.h
+        src/leveldb/db/log_writer.cc
+        src/leveldb/db/log_writer.h
+        src/leveldb/db/memtable.cc
+        src/leveldb/db/memtable.h
+        src/leveldb/db/repair.cc
+        src/leveldb/db/skiplist.h
+        src/leveldb/db/snapshot.h
+        src/leveldb/db/table_cache.cc
+        src/leveldb/db/table_cache.h
+        src/leveldb/db/version_edit.cc
+        src/leveldb/db/version_edit.h
+        src/leveldb/db/version_set.cc
+        src/leveldb/db/version_set.h
+        src/leveldb/db/write_batch.cc
+        src/leveldb/db/write_batch_internal.h
+        src/leveldb/helpers/memenv/memenv.cc
+        src/leveldb/helpers/memenv/memenv.h
+        src/leveldb/include/leveldb/c.h
+        src/leveldb/include/leveldb/cache.h
+        src/leveldb/include/leveldb/comparator.h
+        src/leveldb/include/leveldb/db.h
+        src/leveldb/include/leveldb/env.h
+        src/leveldb/include/leveldb/filter_policy.h
+        src/leveldb/include/leveldb/iterator.h
+        src/leveldb/include/leveldb/options.h
+        src/leveldb/include/leveldb/slice.h
+        src/leveldb/include/leveldb/status.h
+        src/leveldb/include/leveldb/table.h
+        src/leveldb/include/leveldb/table_builder.h
+        src/leveldb/include/leveldb/write_batch.h
+        src/leveldb/port/win/stdint.h
+        src/leveldb/port/atomic_pointer.h
+        src/leveldb/port/port.h
+        src/leveldb/port/port_posix.cc
+        src/leveldb/port/port_posix.h
+        src/leveldb/port/thread_annotations.h
+        src/leveldb/table/block.cc
+        src/leveldb/table/block.h
+        src/leveldb/table/block_builder.cc
+        src/leveldb/table/block_builder.h
+        src/leveldb/table/filter_block.cc
+        src/leveldb/table/filter_block.h
+        src/leveldb/table/format.cc
+        src/leveldb/table/format.h
+        src/leveldb/table/iterator.cc
+        src/leveldb/table/iterator_wrapper.h
+        src/leveldb/table/merger.cc
+        src/leveldb/table/merger.h
+        src/leveldb/table/table.cc
+        src/leveldb/table/table_builder.cc
+        src/leveldb/table/two_level_iterator.cc
+        src/leveldb/table/two_level_iterator.h
+        src/leveldb/util/arena.cc
+        src/leveldb/util/arena.h
+        src/leveldb/util/bloom.cc
+        src/leveldb/util/cache.cc
+        src/leveldb/util/coding.cc
+        src/leveldb/util/coding.h
+        src/leveldb/util/comparator.cc
+        src/leveldb/util/crc32c.cc
+        src/leveldb/util/crc32c.h
+        src/leveldb/util/env.cc
+        src/leveldb/util/env_posix.cc
+        src/leveldb/util/env_win.cc
+        src/leveldb/util/filter_policy.cc
+        src/leveldb/util/hash.cc
+        src/leveldb/util/hash.h
+        src/leveldb/util/histogram.cc
+        src/leveldb/util/histogram.h
+        src/leveldb/util/logging.cc
+        src/leveldb/util/logging.h
+        src/leveldb/util/mutexlock.h
+        src/leveldb/util/options.cc
+        src/leveldb/util/posix_logger.h
+        src/leveldb/util/random.h
+        src/leveldb/util/status.cc
+        src/leveldbwrapper.cpp
+        src/leveldbwrapper.h
+        test/flex_tests/flex_data/MockProperty.cpp
+        test/flex_tests/flex_data/MockProperty.h
+        test/flex_tests/flex_data/MockData.cpp
+        test/flex_tests/flex_data/MockData.h
+        test/flex_tests/flex_data/LocationIterator.cpp
+        test/flex_tests/flex_data/LocationIterator.h
+        test/flex_tests/flex_data/MockDimension.cpp
+        test/flex_tests/flex_data/MockDimension.h)
+
+set(BASE_FILES
+        src/base/allocators.cpp
+        src/base/allocators.h
+        src/base/base58.cpp
+        src/base/base58.h
+        src/base/chainparams.cpp
+        src/base/chainparams.h
+        src/base/clientversion.h
+        src/base/core.cpp
+        src/base/core.h
+        src/base/limitedmap.h
+        src/base/mruset.h
+        src/base/noui.cpp
+        src/base/noui.h
+        src/base/protocol.h
+        src/base/serialize.h
+        src/base/sync.cpp
+        src/base/sync.h
+        src/base/threadsafety.h
+        src/base/tinyformat.h
+        src/base/ui_interface.h
+        src/base/util.cpp
+        src/base/util_log.cpp
+        src/base/util.h
+        src/base/version.cpp
+        src/base/version.h)
+
+SET(REMAINING_BASE_FILES
+        src/base/allocators.cpp
+        src/base/allocators.h
+        src/base/base58.cpp
+        src/base/base58.h
+        src/base/base64.cpp
+        src/base/base64.h
+        src/base/clientversion.h
+        src/base/chainparams.cpp
+        src/base/limitedmap.h
+        src/base/mruset.h
+        src/base/noui.cpp
+        src/base/noui.h
+        src/base/protocol.h
+        src/base/protocol.cpp
+        src/base/serialize.h
+        src/base/sync.cpp
+        src/base/sync.h
+        src/base/threadsafety.h
+        src/base/tinyformat.h
+        src/base/ui_interface.h
+        src/base/util.h
+        src/base/version.cpp
+        src/base/version.h
+        src/base/util_log.cpp
+        src/base/util_file.cpp
+        src/base/util_args.cpp
+        src/base/util_hex.cpp
+        src/base/util_money.cpp
+        src/base/util_data.cpp
+        src/base/util_pid.cpp
+        src/base/util_rand.cpp
+        src/base/util_time.cpp
+        src/net/netbase.cpp
+        src/base/util_format.cpp
+        src/base/util_init.cpp
+        src/base/util_init.h
+        src/base/util_log.h
+        src/base/util_time.h
+        src/base/util_hex.h
+        src/base/util_rand.h
+        src/base/util_format.h
+        src/base/util_file.h
+        src/base/util_data.h
+        src/base/util_args.h
+        src/base/util_compare.h)
+
+set(MINCRYPTO_FILES
+        src/crypto/25519/curve25519-donna-32bit.h
+        src/crypto/25519/curve25519-donna-64bit.h
+        src/crypto/25519/curve25519-donna-helpers.h
+        src/crypto/25519/curve25519-donna-sse2.h
+        src/crypto/25519/ed25519-donna-32bit-sse2.h
+        src/crypto/25519/ed25519-donna-32bit-tables.h
+        src/crypto/25519/ed25519-donna-64bit-sse2.h
+        src/crypto/25519/ed25519-donna-64bit-tables.h
+        src/crypto/25519/ed25519-donna-64bit-x86-32bit.h
+        src/crypto/25519/ed25519-donna-64bit-x86.h
+        src/crypto/25519/ed25519-donna-basepoint-table.h
+        src/crypto/25519/ed25519-donna-batchverify.h
+        src/crypto/25519/ed25519-donna-impl-base.h
+        src/crypto/25519/ed25519-donna-impl-sse2.h
+        src/crypto/25519/ed25519-donna-portable-identify.h
+        src/crypto/25519/ed25519-donna-portable.h
+        src/crypto/25519/ed25519-donna.h
+        src/crypto/25519/ed25519-hash-custom.h
+        src/crypto/25519/ed25519-hash.h
+        src/crypto/25519/ed25519-randombytes-custom.h
+        src/crypto/25519/ed25519-randombytes.h
+        src/crypto/25519/ed25519.cpp
+        src/crypto/25519/ed25519.h
+        src/crypto/25519/modm-donna-32bit.h
+        src/crypto/25519/modm-donna-64bit.h
+        src/crypto/25519/regression.h
+        src/crypto/25519points.h
+        src/crypto/bignum.h
+        src/crypto/hash.cpp
+        src/crypto/hash.h
+        src/crypto/hashtrees.h
+        src/crypto/point.cpp
+        src/crypto/point.h
+        src/crypto/polynomial.cpp
+        src/crypto/polynomial.h
+        src/crypto/secp256k1point.h
+        src/crypto/shorthash.h
+        src/crypto/signature.h
+        src/crypto/uint256.h)
+
+set(CRYPTO_FILES
+        ${MINCRYPTO_FILES}
+    src/crypto/flexcrypto.cpp
+    src/crypto/flexcrypto.h
+        test/flex_tests/crypto/DistributedSecret.cpp
+        test/flex_tests/crypto/DistributedSecret.h
+        test/flex_tests/crypto/EncryptedSecret.cpp
+        test/flex_tests/crypto/EncryptedSecret.h)
+
+set(WORK_FILES
+        src/mining/work.cpp
+        src/mining/work.h
+        src/twist/code/scrypt-conf.h
+        src/twist/code/scrypt-jane-chacha.h
+        src/twist/code/scrypt-jane-hash.h
+        src/twist/code/scrypt-jane-hash_blake256.h
+        src/twist/code/scrypt-jane-hash_blake512.h
+        src/twist/code/scrypt-jane-hash_keccak.h
+        src/twist/code/scrypt-jane-hash_sha256.h
+        src/twist/code/scrypt-jane-hash_sha512.h
+        src/twist/code/scrypt-jane-hash_skein512.h
+        src/twist/code/scrypt-jane-mix_chacha-avx.h
+        src/twist/code/scrypt-jane-mix_chacha-sse2.h
+        src/twist/code/scrypt-jane-mix_chacha-ssse3.h
+        src/twist/code/scrypt-jane-mix_chacha-xop.h
+        src/twist/code/scrypt-jane-mix_chacha.h
+        src/twist/code/scrypt-jane-mix_salsa-avx.h
+        src/twist/code/scrypt-jane-mix_salsa-sse2.h
+        src/twist/code/scrypt-jane-mix_salsa-xop.h
+        src/twist/code/scrypt-jane-mix_salsa.h
+        src/twist/code/scrypt-jane-mix_salsa64-avx.h
+        src/twist/code/scrypt-jane-mix_salsa64-avx2.h
+        src/twist/code/scrypt-jane-mix_salsa64-sse2.h
+        src/twist/code/scrypt-jane-mix_salsa64-ssse3.h
+        src/twist/code/scrypt-jane-mix_salsa64-xop.h
+        src/twist/code/scrypt-jane-mix_salsa64.h
+        src/twist/code/scrypt-jane-pbkdf2.h
+        src/twist/code/scrypt-jane-portable-x86.h
+        src/twist/code/scrypt-jane-portable.h
+        src/twist/code/scrypt-jane-romix-basic.h
+        src/twist/code/scrypt-jane-romix.h
+        src/twist/code/scrypt-jane-salsa.h
+        src/twist/code/scrypt-jane-salsa64.h
+        src/twist/code/scrypt-jane-test-vectors.h
+        src/twist/code/twist-romix.h
+        src/twist/code/twist-salsa64.h
+        src/twist/code/twist-template.h
+        src/twist/alloc.h
+        src/twist/scrypt-jane-twist.h
+        src/twist/twist-jane.h
+        src/twist/twist.h
+        src/twist/twistcpp.h)
+
+set(RELAY_FILES
+        test/flex_tests/relays/RelayState_.cpp
+        test/flex_tests/relays/RelayState_.h
+        test/flex_tests/relays/Relay.cpp
+        test/flex_tests/relays/Relay.h)
+
+set(CREDITS_FILES
+        ${WORK_FILES}
+        src/credits/Credit.cpp
+        src/credits/Credit.h
+        src/credits/MinedCredit.cpp
+        src/credits/MinedCredit.h
+        src/credits/CreditInBatch.cpp
+        src/credits/CreditInBatch.h
+        src/credits/MinedCreditMessage.cpp
+        src/credits/MinedCreditMessage.h
+        src/credits/CreditBatch.cpp
+        src/credits/CreditBatch.h
+        src/credits/UnsignedTransaction.cpp
+        src/credits/UnsignedTransaction.h
+        src/vector_tools.h
+        src/credits/SignedTransaction.cpp
+        src/credits/SignedTransaction.h
+        src/credits/creditsign.h)
+
+set(NEW_CREDITS_FILES
+        ${WORK_FILES}
+        src/credits/Credit.cpp
+        src/credits/Credit.h
+        src/credits/CreditInBatch.cpp
+        src/credits/CreditInBatch.h
+        src/credits/CreditBatch.cpp
+        src/credits/CreditBatch.h
+        src/credits/UnsignedTransaction.cpp
+        src/credits/UnsignedTransaction.h
+        src/vector_tools.h
+        src/credits/SignedTransaction.cpp
+        src/credits/SignedTransaction.h
+        src/credits/creditsign.h
+        test/flex_tests/node/testCreditSystem.cpp
+        test/flex_tests/node/CreditSystem.cpp
+        test/flex_tests/node/CreditSystem.h
+        test/flex_tests/node/testMinedCreditMessageValidator.cpp
+        test/flex_tests/node/MinedCreditMessageValidator.cpp
+        test/flex_tests/node/MinedCreditMessageValidator.h
+        test/flex_tests/node/testTransactionValidator.cpp
+        test/flex_tests/node/TransactionValidator.cpp
+        test/flex_tests/node/TransactionValidator.h
+        test/flex_tests/node/testDiurn.cpp
+        test/flex_tests/node/Diurn.cpp
+        test/flex_tests/node/Diurn.h
+        test/flex_tests/node/testCalendar.cpp
+        test/flex_tests/node/Calendar.cpp
+        test/flex_tests/node/Calendar.h
+        test/flex_tests/node/testCalend.cpp
+        test/flex_tests/node/Calend.cpp
+        test/flex_tests/node/Calend.h
+        test/flex_tests/node/testCreditMessageHandler.cpp
+        test/flex_tests/node/CreditMessageHandler.cpp
+        test/flex_tests/node/CreditMessageHandler.h
+        test/flex_tests/node/TestPeer.h test/flex_tests/node/BadBatchMessage.cpp test/flex_tests/node/BadBatchMessage.h test/flex_tests/node/testWallet.cpp test/flex_tests/node/Wallet.cpp test/flex_tests/node/Wallet.h test/flex_tests/node/testShortHashList.cpp test/flex_tests/node/testFlexNetworkNode.cpp test/flex_tests/node/FlexNetworkNode.cpp test/flex_tests/node/FlexNetworkNode.h)
+
+add_executable(runRPCTests
+        test/flex_tests/test_main.cpp
+        test/flex_tests/rpc/test_rpc.cpp)
+
+add_executable(runCryptoTests
+        test/flex_tests/flex_data/TestData.h
+        ${BASE_FILES}
+        test/flex_tests/flex_data/MemoryDataStore.cpp
+        ${DATABASE_FILES}
+        ${CREDITS_FILES}
+        ${MINCRYPTO_FILES}
+        test/flex_tests/test_main.cpp
+        test/flex_tests/crypto/test_point.cpp
+        test/flex_tests/crypto/test_secret.cpp)
+
+add_executable(runTwistWorkProofTests
+        test/flex_tests/flex_data/TestData.h
+        ${REMAINING_BASE_FILES}
+        ${MINCRYPTO_FILES}
+        test/flex_tests/flex_data/MemoryDataStore.cpp
+        ${DATABASE_FILES}
+        ${WORK_FILES}
+        test/flex_tests/test_main.cpp
+        test/flex_tests/mining/testTwistWorkProof.cpp)
+
+add_executable(runNetworkSpecificProofOfWorkTests
+        ${REMAINING_BASE_FILES}
+        ${MINCRYPTO_FILES}
+        ${WORK_FILES}
+        test/flex_tests/test_main.cpp
+        test/flex_tests/mining/testNetworkSpecificProofOfWork.cpp
+        test/flex_tests/mining/NetworkSpecificProofOfWork.cpp
+        test/flex_tests/mining/NetworkSpecificProofOfWork.h)
+
+add_executable(runMiningTests
+        ${WORK_FILES}
+        test/flex_tests/test_main.cpp
+        test/flex_tests/mining/test_mining.cpp
+        test/flex_tests/mining/FlexMiner.cpp
+        test/flex_tests/mining/FlexMiner.h
+        test/flex_tests/mining/NetworkMiningInfo.cpp
+        test/flex_tests/mining/NetworkMiningInfo.h
+        test/flex_tests/mining/MiningHashTree.cpp
+        test/flex_tests/mining/MiningHashTree.h
+        test/flex_tests/mining/testMiningRPCServer.cpp
+        test/flex_tests/mining/MiningRPCServer.cpp
+        test/flex_tests/mining/MiningRPCServer.h
+        test/flex_tests/mining/testNetworkSpecificProofOfWork.cpp
+        test/flex_tests/mining/NetworkSpecificProofOfWork.cpp
+        test/flex_tests/mining/NetworkSpecificProofOfWork.h
+        test/flex_tests/mining/server_key.h
+        test/flex_tests/node/HttpAuthServer.cpp
+        test/flex_tests/node/HttpAuthServer.h)
+
+add_executable(miner_cli
+        ${WORK_FILES}
+        test/flex_tests/mining/FlexMiner.cpp
+        test/flex_tests/mining/FlexMiner.h
+        test/flex_tests/mining/NetworkMiningInfo.cpp
+        test/flex_tests/mining/NetworkMiningInfo.h
+        test/flex_tests/mining/MiningHashTree.cpp
+        test/flex_tests/mining/MiningHashTree.h
+        test/flex_tests/mining/MiningRPCServer.cpp
+        test/flex_tests/mining/MiningRPCServer.h
+        test/flex_tests/mining/NetworkSpecificProofOfWork.cpp
+        test/flex_tests/mining/NetworkSpecificProofOfWork.h
+        test/flex_tests/mining/miner_cli.cpp
+        test/flex_tests/node/HttpAuthServer.cpp
+        test/flex_tests/node/HttpAuthServer.h)
+
+add_executable(runCreditTests
+        test/flex_tests/flex_data/TestData.h
+        ${REMAINING_BASE_FILES}
+        ${MINCRYPTO_FILES}
+        ${CREDITS_FILES}
+        test/flex_tests/flex_data/MemoryDataStore.cpp
+        ${DATABASE_FILES}
+        test/flex_tests/test_main.cpp
+        test/flex_tests/credits/test_credits.cpp
+        src/base/util_rand.cpp
+        src/base/util_hex.cpp)
+
+add_executable(runMinedCreditTests
+        test/flex_tests/flex_data/TestData.h
+        test/flex_tests/flex_data/MemoryDataStore.cpp
+        src/base/util.cpp
+        src/base/util_log.cpp
+        src/base/util_file.cpp
+        src/base/util_args.cpp
+        src/base/util_data.cpp
+        src/base/util_time.cpp
+        src/base/util_format.cpp
+        src/base/allocators.cpp
+        src/credits/CreditBatch.cpp
+        src/credits/CreditInBatch.cpp
+        src/credits/Credit.cpp
+        src/crypto/point.cpp
+        src/crypto/25519/ed25519.cpp
+        ${DATABASE_FILES}
+        test/flex_tests/test_main.cpp
+        test/flex_tests/mined_credits/testMinedCredit.cpp
+        test/flex_tests/mined_credits/EncodedNetworkState.cpp
+        test/flex_tests/mined_credits/EncodedNetworkState.h
+        test/flex_tests/mined_credits/MinedCredit.cpp
+        test/flex_tests/mined_credits/MinedCredit.h
+        test/flex_tests/mined_credits/testCreditBatch.cpp)
+
+add_executable(runSchedulerTests
+        test/flex_tests/flex_data/TestData.h
+        ${REMAINING_BASE_FILES}
+        ${MINCRYPTO_FILES}
+        test/flex_tests/flex_data/MemoryDataStore.cpp
+        ${DATABASE_FILES}
+        test/flex_tests/test_main.cpp
+        test/flex_tests/scheduler/test_scheduler.cpp)
+
+add_executable(runRelayTests
+        test/flex_tests/flex_data/TestData.h
+        ${REMAINING_BASE_FILES}
+        ${MINCRYPTO_FILES}
+        test/flex_tests/flex_data/MemoryDataStore.cpp
+        ${DATABASE_FILES}
+        ${CREDIT_FILES}
+        test/flex_tests/test_main.cpp
+        test/flex_tests/relays/test_relays.cpp
+        test/flex_tests/relays/Relay.h
+        test/flex_tests/relays/Relay.cpp
+        test/flex_tests/relays/RelayState_.cpp
+        test/flex_tests/relays/RelayState_.h
+        test/flex_tests/relays/RelayQueue.cpp
+        test/flex_tests/relays/RelayQueue.h
+        test/flex_tests/relays/RelayQueueAdmitter.cpp
+        test/flex_tests/relays/RelayQueueAdmitter.h
+        test/flex_tests/relays/RelayJoinMessage.cpp
+        test/flex_tests/relays/RelayJoinMessage.h
+        test/flex_tests/relays/RelayKeyPublication.cpp
+        test/flex_tests/relays/RelayKeyPublication.h
+        test/flex_tests/relays/RelayKeyShareMessage.cpp
+        test/flex_tests/relays/RelayKeyShareMessage.h
+        test/flex_tests/relays/RelayKeyShare.cpp
+        test/flex_tests/relays/RelayKeyShare.h
+        test/flex_tests/relays/RelayKeyDisclosureMessage.cpp
+        test/flex_tests/relays/RelayKeyDisclosureMessage.h
+        test/flex_tests/relays/RelayKeyDisclosure.cpp
+        test/flex_tests/relays/RelayKeyDisclosure.h
+        test/flex_tests/relays/RelayMessageHandler.cpp
+        test/flex_tests/relays/RelayMessageHandler.h)
+
+add_executable(runDataTests
+        test/flex_tests/flex_data/TestData.h
+        ${REMAINING_BASE_FILES}
+        ${MINCRYPTO_FILES}
+        ${DATABASE_FILES}
+        test/flex_tests/test_main.cpp
+        test/flex_tests/flex_data/test_data.cpp
+        test/flex_tests/flex_data/MemoryDataStore.cpp
+        test/flex_tests/flex_data/MockLocation.cpp
+        test/flex_tests/flex_data/MockLocation.h)
+
+add_executable(runNodeTests
+        test/flex_tests/flex_data/TestData.h
+        ${REMAINING_BASE_FILES}
+        ${MINCRYPTO_FILES}
+        ${NEW_CREDITS_FILES}
+        test/flex_tests/flex_data/MemoryDataStore.cpp
+        ${DATABASE_FILES}
+        ${WORK_FILES}
+        test/flex_tests/test_main.cpp
+        test/flex_tests/node/testFlexRPCServer.cpp
+        test/flex_tests/node/FlexRPCServer.cpp
+        test/flex_tests/node/FlexRPCServer.h
+        test/flex_tests/node/testFlexConfig.cpp
+        test/flex_tests/node/FlexConfig.cpp
+        test/flex_tests/node/FlexConfig.h
+        test/flex_tests/node/FlexConfigDefaults.h
+        test/flex_tests/node/testConfigParser.cpp
+        test/flex_tests/node/ConfigParser.cpp
+        test/flex_tests/node/ConfigParser.h
+        test/flex_tests/node/testFlexLocalServer.cpp
+        test/flex_tests/node/FlexLocalServer.cpp
+        test/flex_tests/node/FlexLocalServer.h
+        src/net/netbase.cpp
+        src/net/net_cleanup.cpp
+        src/net/net_relay.cpp
+        src/base/base58.cpp
+        src/base/base58.h
+        test/flex_tests/node/testHttpAuthServer.cpp
+        test/flex_tests/node/HttpAuthServer.cpp
+        test/flex_tests/node/HttpAuthServer.h
+        test/flex_tests/mining/FlexMiner.cpp
+        test/flex_tests/mining/FlexMiner.h
+        test/flex_tests/mining/NetworkMiningInfo.cpp
+        test/flex_tests/mining/NetworkMiningInfo.h
+        test/flex_tests/mining/MiningHashTree.cpp
+        test/flex_tests/mining/MiningHashTree.h
+        test/flex_tests/mining/MiningRPCServer.cpp
+        test/flex_tests/mining/MiningRPCServer.h
+        test/flex_tests/mining/NetworkSpecificProofOfWork.cpp
+        test/flex_tests/mining/NetworkSpecificProofOfWork.h
+        test/flex_tests/node/MinedCreditMessage.cpp
+        test/flex_tests/node/MinedCreditMessage.h
+        test/flex_tests/node/testMinedCreditMessage.cpp
+        test/flex_tests/node/testMessageHandlerWithOrphanage.cpp
+        test/flex_tests/node/MessageHandlerWithOrphanage.cpp
+        test/flex_tests/node/MessageHandlerWithOrphanage.h
+        test/flex_tests/node/testMinedCreditConstructor.cpp
+        test/flex_tests/node/MinedCreditConstructor.cpp
+        test/flex_tests/node/MinedCreditConstructor.h
+        test/flex_tests/node/testNetworkStateConstructor.cpp
+        test/flex_tests/node/NetworkStateConstructor.cpp
+        test/flex_tests/node/NetworkStateConstructor.h
+        test/flex_tests/node/testNetworkState.cpp
+        test/flex_tests/node/NetworkState.cpp
+        test/flex_tests/node/NetworkState.h)
+
+add_executable(runMainTests
+        test/flex_tests/flex_data/TestData.h
+        ${REMAINING_BASE_FILES}
+        ${MINCRYPTO_FILES}
+        test/flex_tests/flex_data/MemoryDataStore.cpp
+        ${DATABASE_FILES}
+        ${WORK_FILES}
+        ${MESSAGING_FILES}
+        src/credits/SignedTransaction.cpp
+        src/credits/UnsignedTransaction.cpp
+        src/credits/CreditInBatch.cpp
+        src/credits/CreditBatch.cpp
+        src/credits/Credit.cpp
+        src/flexnode/main.cpp
+        src/flexnode/main.h
+        test/flex_tests/test_main.cpp
+        test/flex_tests/main_tests/testNetwork.cpp)
+
+target_link_libraries(runRPCTests gmock gmock_main ssl crypto boost_system boost_program_options
+        boost_filesystem boost_thread jsoncpp microhttpd jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client)
+
+target_link_libraries(runMainTests gmock gmock_main ssl crypto boost_system boost_program_options
+        boost_filesystem boost_thread jsoncpp microhttpd jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
+        curl curl)
+
+target_link_libraries(runNodeTests gmock gmock_main ssl crypto boost_system boost_program_options
+        boost_filesystem boost_thread jsoncpp microhttpd jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
+        curl curl)
+
+target_link_libraries(runMiningTests gmock gmock_main ssl crypto boost_system boost_program_options
+        boost_filesystem boost_thread jsoncpp microhttpd jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
+        curl curl)
+
+target_link_libraries(miner_cli ssl crypto boost_system boost_program_options
+        boost_filesystem boost_thread jsoncpp microhttpd jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client)
+
+target_link_libraries(runCryptoTests gmock gmock_main ssl crypto boost_system boost_program_options
+        boost_filesystem boost_thread)
+
+target_link_libraries(runNetworkSpecificProofOfWorkTests gmock gmock_main ssl crypto boost_system boost_program_options
+        boost_filesystem boost_thread)
+
+target_link_libraries(runTwistWorkProofTests gmock gmock_main ssl crypto boost_system boost_program_options
+        boost_filesystem boost_thread)
+
+target_link_libraries(runCreditTests gmock gmock_main ssl crypto boost_system boost_program_options
+        boost_filesystem boost_thread)
+
+target_link_libraries(runMinedCreditTests gmock gmock_main ssl crypto boost_system boost_program_options
+        boost_filesystem boost_thread)
+
+target_link_libraries(runSchedulerTests gmock gmock_main ssl crypto boost_system boost_program_options
+        boost_filesystem boost_thread)
+
+target_link_libraries(runRelayTests gmock gmock_main ssl crypto boost_system boost_program_options
+        boost_filesystem boost_thread)
+
+target_link_libraries(runDataTests gmock gmock_main ssl crypto boost_system boost_program_options
+        boost_filesystem boost_thread)

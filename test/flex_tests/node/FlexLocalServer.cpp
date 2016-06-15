@@ -50,7 +50,10 @@ void FlexLocalServer::StopRPCServer()
 
 uint256 FlexLocalServer::MiningSeed()
 {
-    return uint256();
+    if (flex_network_node == NULL)
+        return 0;
+    MinedCreditMessage msg = flex_network_node->GenerateMinedCreditMessageWithoutProofOfWork();
+    return msg.mined_credit.GetHash();
 }
 
 std::string FlexLocalServer::MiningAuthorization()
@@ -71,9 +74,12 @@ uint256 FlexLocalServer::NetworkID()
     return uint256(config.String("network_id", "1"));
 }
 
-uint160 FlexLocalServer::MiningDifficulty()
+uint160 FlexLocalServer::MiningDifficulty(uint256 mining_seed)
 {
-    return 20;
+    if (flex_network_node == NULL)
+        return INITIAL_DIFFICULTY;
+    auto msg = flex_network_node->RecallGeneratedMinedCreditMessage(mining_seed);
+    return msg.mined_credit.network_state.difficulty;
 }
 
 uint64_t FlexLocalServer::RPCPort()
@@ -89,13 +95,21 @@ std::string FlexLocalServer::ExternalIPAddress()
 void FlexLocalServer::SetMiningNetworkInfo()
 {
     Json::Value request;
+
+    uint256 mining_seed = MiningSeed();
     request["network_id"] = NetworkID().ToString();
     request["network_port"] = (Json::Value::UInt64)RPCPort();
-    request["network_seed"] = MiningSeed().ToString();
-    request["network_difficulty"] = MiningDifficulty().ToString();
+    request["network_seed"] = mining_seed.ToString();
+    request["network_difficulty"] = MiningDifficulty(mining_seed).ToString();
     request["network_host"] = ExternalIPAddress();
 
     MakeRequestToMiningRPCServer("set_mining_information", request);
+}
+
+void FlexLocalServer::StartMining()
+{
+    Json::Value parameters;
+    MakeRequestToMiningRPCServer("start_mining", parameters);
 }
 
 void FlexLocalServer::SetNumberOfMegabytesUsedForMining(uint32_t number_of_megabytes)
@@ -103,6 +117,8 @@ void FlexLocalServer::SetNumberOfMegabytesUsedForMining(uint32_t number_of_megab
     Json::Value request;
     request["megabytes_used"] = number_of_megabytes;
     MakeRequestToMiningRPCServer("set_megabytes_used", request);
+    if (flex_network_node != NULL)
+        flex_network_node->credit_system->SetExpectedNumberOfMegabytesInMinedCreditProofsOfWork(number_of_megabytes);
 }
 
 NetworkSpecificProofOfWork FlexLocalServer::GetLatestProofOfWork()
@@ -119,6 +135,15 @@ double FlexLocalServer::Balance()
 {
     return flex_network_node->Balance();
 }
+
+void FlexLocalServer::HandleNewProof(NetworkSpecificProofOfWork proof)
+{
+    latest_proof_of_work = proof;
+    if (flex_network_node != NULL)
+        flex_network_node->HandleNewProof(proof);
+}
+
+
 
 
 

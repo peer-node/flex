@@ -28,9 +28,11 @@ TEST_F(ADiurn, ProvidesAValidBranchForAMinedCreditHash)
     msg2.mined_credit.amount = 2;
     diurn.Add(msg1);
     diurn.Add(msg2);
+    uint160 batch2_root = msg2.mined_credit.network_state.batch_root;
     uint160 credit2_hash = msg2.mined_credit.GetHash160();
     vector<uint160> branch = diurn.Branch(credit2_hash);
-    bool valid_branch = Diurn::VerifyBranch(credit2_hash, branch);
+
+    bool valid_branch = Diurn::VerifyBranch(batch2_root, branch);
     ASSERT_THAT(valid_branch, Eq(true));
 }
 

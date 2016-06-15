@@ -9,7 +9,9 @@ using std::set;
 void CreditMessageHandler::HandleMinedCreditMessage(MinedCreditMessage msg)
 {
     if (not MinedCreditMessagePassesVerification(msg))
+    {
         return;
+    }
 
     Broadcast(msg);
     credit_system->StoreMinedCreditMessage(msg);
