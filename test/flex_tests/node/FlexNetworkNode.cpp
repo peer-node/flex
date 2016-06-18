@@ -42,6 +42,15 @@ void FlexNetworkNode::HandleNewProof(NetworkSpecificProofOfWork proof)
     credit_message_handler->HandleMinedCreditMessage(msg);
 }
 
+uint160 FlexNetworkNode::SendCreditsToPublicKey(Point public_key, uint64_t amount)
+{
+    SignedTransaction tx = wallet->GetSignedTransaction(public_key, amount);
+    credit_message_handler->HandleSignedTransaction(tx);
+    return tx.GetHash160();
+}
+
+
+
 
 
 

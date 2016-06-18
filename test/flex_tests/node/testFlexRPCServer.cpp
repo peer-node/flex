@@ -1,6 +1,9 @@
 #include "gmock/gmock.h"
 #include "FlexRPCServer.h"
 #include "HttpAuthServer.h"
+#include "FlexNetworkNode.h"
+#include "FlexLocalServer.h"
+#include "TestPeer.h"
 
 #include <jsonrpccpp/client.h>
 
@@ -68,3 +71,72 @@ TEST_F(AFlexRPCServer, SetsTheNetworkID)
     ASSERT_THAT(network_id, Eq(1));
 }
 
+class AFlexRPCServerWithAFlexNetworkNode : public AFlexRPCServer
+{
+public:
+    FlexNetworkNode flex_network_node;
+    FlexLocalServer flex_local_server;
+
+    virtual void SetUp()
+    {
+        AFlexRPCServer::SetUp();
+        flex_network_node.credit_message_handler->do_spot_checks = false;
+        flex_local_server.SetNetworkNode(&flex_network_node);
+        server->SetFlexLocalServer(&flex_local_server);
+    }
+
+    virtual void TearDown()
+    {
+        AFlexRPCServer::TearDown();
+    }
+};
+
+TEST_F(AFlexRPCServerWithAFlexNetworkNode, ProvidesABalance)
+{
+    auto result = client->CallMethod("balance", parameters);
+    ASSERT_THAT(result.asDouble(), Eq(0));
+}
+
+class AFlexRPCServerWithAFlexNetworkNodeAndABalance : public AFlexRPCServerWithAFlexNetworkNode
+{
+public:
+    TestPeer peer;
+
+    template <typename T>
+    CDataStream GetDataStream(string channel, T message)
+    {
+        CDataStream ss(SER_NETWORK, CLIENT_VERSION);
+        ss << channel << message.Type() << message;
+        return ss;
+    }
+
+    void AddABatchToTheTip()
+    {
+        auto msg = flex_network_node.credit_message_handler->GenerateMinedCreditMessageWithoutProofOfWork();
+        MarkProofAsValid(msg);
+        flex_network_node.HandleMessage(string("credit"), GetDataStream("credit", msg), (CNode*)&peer);
+    }
+
+    void MarkProofAsValid(MinedCreditMessage msg)
+    {
+        flex_network_node.credit_message_handler->creditdata[msg.GetHash160()]["quickcheck_ok"] = true;
+    }
+
+    virtual void SetUp()
+    {
+        AFlexRPCServerWithAFlexNetworkNode::SetUp();
+        AddABatchToTheTip();
+        AddABatchToTheTip();
+    }
+
+    virtual void TearDown()
+    {
+        AFlexRPCServerWithAFlexNetworkNode::TearDown();
+    }
+};
+
+TEST_F(AFlexRPCServerWithAFlexNetworkNodeAndABalance, HasABalance)
+{
+    auto result = client->CallMethod("balance", parameters);
+    ASSERT_THAT(result.asDouble(), Eq(1));
+}

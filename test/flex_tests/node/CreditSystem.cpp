@@ -484,7 +484,6 @@ bool CreditSystem::QuickCheckProofOfWorkInMinedCreditMessage(MinedCreditMessage 
 
     if (not CheckHashesSeedsAndThresholdsInMinedCreditMessageProofOfWork(msg))
     {
-        std::cout << "bad hash seeds or thresholds\n";
         ok = false;
     }
 

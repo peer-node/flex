@@ -29,7 +29,7 @@ void FlexLocalServer::ThrowUsernamePasswordException()
     throw(std::runtime_error(message));
 }
 
-void FlexLocalServer::StartRPCServer()
+bool FlexLocalServer::StartRPCServer()
 {
     if (config["rpcuser"] == "" or config["rpcpassword"] == "")
         ThrowUsernamePasswordException();
@@ -37,8 +37,8 @@ void FlexLocalServer::StartRPCServer()
     uint64_t port = RPCPort();
     http_server = new HttpAuthServer((int) port, config["rpcuser"], config["rpcpassword"]);
     rpc_server = new FlexRPCServer(*http_server);
-    rpc_server->SetFlexNode(this);
-    rpc_server->StartListening();
+    rpc_server->SetFlexLocalServer(this);
+    return rpc_server->StartListening();
 }
 
 void FlexLocalServer::StopRPCServer()
@@ -108,8 +108,16 @@ void FlexLocalServer::SetMiningNetworkInfo()
 
 void FlexLocalServer::StartMining()
 {
+    SetMiningNetworkInfo();
     Json::Value parameters;
     MakeRequestToMiningRPCServer("start_mining", parameters);
+}
+
+void FlexLocalServer::StartMiningAsynchronously()
+{
+    SetMiningNetworkInfo();
+    Json::Value parameters;
+    MakeRequestToMiningRPCServer("start_mining_asynchronously", parameters);
 }
 
 void FlexLocalServer::SetNumberOfMegabytesUsedForMining(uint32_t number_of_megabytes)
@@ -133,6 +141,8 @@ void FlexLocalServer::SetNetworkNode(FlexNetworkNode *flex_network_node_)
 
 double FlexLocalServer::Balance()
 {
+    if (flex_network_node == NULL)
+        return 0;
     return flex_network_node->Balance();
 }
 

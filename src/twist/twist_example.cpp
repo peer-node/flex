@@ -54,6 +54,7 @@ int main(void)
     uint128_t quick_verifier;
 
     uint8_t  fWorking = 1;
+    uint32_t minimum_number_of_links = 10;
 
     uint32_t failureWorkStep, failureLink, failureSeed;
 
@@ -62,7 +63,8 @@ int main(void)
     twist_dowork(pHashInput, (uint8_t *)&nFirstLink,
                  Target, LinkThreshold, &quick_verifier,
                  Nfactor, rfactor, numSegments,
-                 vnSeeds, vnLinks, vnLinkLengths, &fWorking);
+                 vnSeeds, vnLinks, vnLinkLengths, &fWorking,
+                 minimum_number_of_links);
     saytime_();
 
     /* quick verification */
@@ -71,7 +73,8 @@ int main(void)
             twist_doquickcheck(pHashInput,
                 Target, LinkThreshold, &quick_verifier,
                 Nfactor, rfactor, numSegments,
-                vnSeeds, vnLinks, vnLinkLengths)));
+                vnSeeds, vnLinks, vnLinkLengths,
+                               minimum_number_of_links)));
     saytime_();
     
     /* spot checks */
@@ -87,7 +90,8 @@ int main(void)
                            numSegments, vnSeeds, vnLinks, vnLinkLengths,
                            spotCheckStartSeed, 1, 
                            spotCheckStartLink, spotCheckStartLink + 1, 
-                           &failureWorkStep, &failureLink, &failureSeed));
+                           &failureWorkStep, &failureLink, &failureSeed,
+                           minimum_number_of_links));
         saytime_();
     }
 
@@ -96,7 +100,8 @@ int main(void)
         twist_doverify(pHashInput, Target, LinkThreshold, Nfactor, rfactor, 
                        numSegments, vnSeeds, vnLinks, vnLinkLengths,
                        0, numSegments, 0, numLinks,
-                       &failureWorkStep, &failureLink, &failureSeed));
+                       &failureWorkStep, &failureLink, &failureSeed,
+                       minimum_number_of_links));
     saytime_();
 
 	return 0;

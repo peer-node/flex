@@ -27,7 +27,7 @@ variables_map GetCommandLineArguments(int argc, char** argv, options_description
 
 void run_server(int port, string ssl_key_file, string ssl_cert_file)
 {
-    HttpServer http_server(port, ssl_cert_file, ssl_key_file);
+    HttpAuthServer http_server(port, ssl_cert_file, ssl_key_file);
     MiningRPCServer mining_rpc_server(http_server);
     if (mining_rpc_server.StartListening())
     {

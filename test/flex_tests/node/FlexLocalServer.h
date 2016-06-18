@@ -19,7 +19,7 @@ public:
     NetworkSpecificProofOfWork latest_proof_of_work;
 
 
-    void StartRPCServer();
+    bool StartRPCServer();
 
     void ThrowUsernamePasswordException();
 
@@ -41,8 +41,6 @@ public:
 
     uint64_t RPCPort();
 
-    uint160 MiningDifficulty();
-
     std::string ExternalIPAddress();
 
     NetworkSpecificProofOfWork GetLatestProofOfWork();
@@ -56,6 +54,8 @@ public:
     void HandleNewProof(NetworkSpecificProofOfWork proof);
 
     uint160 MiningDifficulty(uint256 mining_seed);
+
+    void StartMiningAsynchronously();
 };
 
 

@@ -48,6 +48,8 @@ public:
     void HandleNewProof(NetworkSpecificProofOfWork proof);
 
     MinedCreditMessage RecallGeneratedMinedCreditMessage(uint256 credit_hash);
+
+    uint160 SendCreditsToPublicKey(Point public_key, uint64_t amount);
 };
 
 

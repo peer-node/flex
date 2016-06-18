@@ -7,10 +7,10 @@
 #include <src/crypto/hashtrees.h>
 
 #ifndef INITIAL_DIFFICULTY
-#define INITIAL_DIFFICULTY 10000
+#define INITIAL_DIFFICULTY 10000000
 #endif
 #ifndef INITIAL_DIURNAL_DIFFICULTY
-#define INITIAL_DIURNAL_DIFFICULTY 100000
+#define INITIAL_DIURNAL_DIFFICULTY 100000000
 #endif
 
 class EncodedNetworkState
