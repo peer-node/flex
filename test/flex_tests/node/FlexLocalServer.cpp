@@ -153,6 +153,14 @@ void FlexLocalServer::HandleNewProof(NetworkSpecificProofOfWork proof)
         flex_network_node->HandleNewProof(proof);
 }
 
+uint160 FlexLocalServer::SendToPublicKey(Point public_key, int64_t amount)
+{
+    uint160 tx_hash = flex_network_node->SendCreditsToPublicKey(public_key, (uint64_t) amount);
+    return tx_hash;
+}
+
+
+
 
 
 

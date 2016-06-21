@@ -93,8 +93,7 @@ inline Point GetTransactionVerificationKey(UnsignedTransaction &unsigned_tx)
     uint256 hash = unsigned_tx.GetHash();
     Point key(SECP256K1, 0);
     uint32_t n = 0;
-    log_ << "GetTransactionVerificationKey() for " << unsigned_tx << "\n";
-    
+
     for (uint32_t i = 0; i < unsigned_tx.inputs.size(); i++)
     {
         Point pubkey;
@@ -112,7 +111,6 @@ inline Point GetTransactionVerificationKey(UnsignedTransaction &unsigned_tx)
         hash = Hash(BEGIN(hash), END(hash));
         key = key + pubkey * (CBigNum(hash) % key.Modulus());
     }
-    log_ << "GetTransactionVerificationKey: returning " << key << "\n";
     return key;
 }
 
@@ -130,7 +128,8 @@ inline Signature SignTx(UnsignedTransaction unsigned_tx, MemoryDataStore& keydat
         if (unsigned_tx.inputs[i].keydata.size() == 20)
         {
             uint160 keyhash(unsigned_tx.inputs[i].keydata);
-            CBigNum privkey_ = keydata[keyhash]["privkey"];
+            Point pubkey = keydata[keyhash]["pubkey"];
+            CBigNum privkey_ = keydata[pubkey]["privkey"];
             privkey = privkey_;
         }
         else
@@ -190,9 +189,6 @@ inline bool VerifyCreditTransferSignature(UnsignedTransaction unsigned_tx,
                                           Signature signature)
 {
     Point verification_key = GetTransactionVerificationKey(unsigned_tx);
-    log_ << "VerifyCreditTransferSignature(): verification_key is "
-         << verification_key << "\n";
-    
     uint256 hash = unsigned_tx.GetHash();
     
     return VerifySignatureOfHash(signature, hash, verification_key);
@@ -202,7 +198,9 @@ inline bool VerifyCreditTransferSignature(UnsignedTransaction unsigned_tx,
 inline bool VerifyTransactionSignature(SignedTransaction tx)
 {
     if (!CheckKeyHashes(tx.rawtx))
+    {
         return false;
+    }
     return VerifyCreditTransferSignature(tx.rawtx, tx.signature);
 }
 

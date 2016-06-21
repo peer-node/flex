@@ -12,6 +12,7 @@
 #include <vector>
 #include <string>
 #include <boost/variant/apply_visitor.hpp>
+#include <src/crypto/key.h>
 
 
 /** base58-encoded Bitcoin addresses.
@@ -25,15 +26,13 @@ class CBitcoinAddress : public CBase58Data {
 public:
     bool Set(const CKeyID &id);
     bool Set(const CScriptID &id);
-    bool Set(const CTxDestination &dest);
     bool IsValid() const;
 
     CBitcoinAddress() {}
-    CBitcoinAddress(const CTxDestination &dest) { Set(dest); }
     CBitcoinAddress(const std::string& strAddress) { SetString(strAddress); }
     CBitcoinAddress(const char* pszAddress) { SetString(pszAddress); }
+    CBitcoinAddress(const CKeyID &id) { Set(id); }
 
-    CTxDestination Get() const;
     bool GetKeyID(CKeyID &keyID) const;
     bool IsScript() const;
 };

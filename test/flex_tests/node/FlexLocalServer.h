@@ -56,6 +56,8 @@ public:
     uint160 MiningDifficulty(uint256 mining_seed);
 
     void StartMiningAsynchronously();
+
+    uint160 SendToPublicKey(Point public_key, int64_t amount);
 };
 
 

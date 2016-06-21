@@ -5,6 +5,9 @@
 #include <test/flex_tests/flex_data/MemoryDataStore.h>
 #include <src/crypto/point.h>
 #include <src/credits/SignedTransaction.h>
+#include <src/credits/creditsign.h>
+#include <src/crypto/key.h>
+#include <src/base/BitcoinAddress.h>
 #include "MinedCreditMessage.h"
 #include "CreditSystem.h"
 
@@ -47,7 +50,14 @@ public:
     void AddTransactionInputsSpentInRemovedBatchToCredits(MinedCreditMessage &msg, CreditSystem *credit_system);
 
     void RemoveCreditsFromRemovedBatch(MinedCreditMessage &msg, CreditSystem *credit_system);
+
+    bool PrivateKeyIsKnown(uint160 key_hash);
+
+    bool PrivateKeyIsKnown(Point public_key);
 };
 
+uint160 GetKeyHashFromAddress(std::string address_string);
+
+std::string GetAddressFromPublicKey(Point public_key);
 
 #endif //FLEX_WALLET_H

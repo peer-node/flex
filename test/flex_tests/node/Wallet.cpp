@@ -19,6 +19,8 @@ Point Wallet::GetNewPublicKey()
     private_key.Randomize(Secp256k1Point::Modulus());
     Point public_key(SECP256K1, private_key);
     keydata[public_key]["privkey"] = private_key;
+    uint160 key_hash = KeyHash(public_key);
+    keydata[key_hash]["pubkey"] = public_key;
     return public_key;
 }
 
@@ -32,9 +34,27 @@ void Wallet::HandleCreditInBatch(CreditInBatch credit_in_batch)
 
 bool Wallet::PrivateKeyIsKnown(CreditInBatch credit_in_batch)
 {
+    if (credit_in_batch.keydata.size() == 20)
+    {
+        uint160 key_hash(credit_in_batch.keydata);
+        return PrivateKeyIsKnown(key_hash);
+    }
     Point pubkey;
     pubkey.setvch(credit_in_batch.keydata);
-    return keydata[pubkey].HasProperty("privkey");
+    return PrivateKeyIsKnown(pubkey);
+}
+
+bool Wallet::PrivateKeyIsKnown(Point public_key)
+{
+    return keydata[public_key].HasProperty("privkey");
+}
+
+bool Wallet::PrivateKeyIsKnown(uint160 key_hash)
+{
+    if (not keydata[key_hash].HasProperty("pubkey"))
+        return false;
+    Point pubkey = keydata[key_hash]["pubkey"];
+    return PrivateKeyIsKnown(pubkey);
 }
 
 bool Wallet::HaveCreditInBatchAlready(CreditInBatch credit_in_batch)
@@ -61,6 +81,11 @@ UnsignedTransaction Wallet::GetUnsignedTransaction(vch_t key_data, uint64_t amou
     {
         raw_tx.inputs.push_back(credit);
         amount_in += credit.amount;
+        if (credit.keydata.size() == 20)
+        {
+            uint160 key_hash(credit.keydata);
+            raw_tx.pubkeys.push_back(keydata[key_hash]["pubkey"]);
+        }
         if (amount_in >= amount)
             break;
     }
@@ -79,7 +104,6 @@ UnsignedTransaction Wallet::GetUnsignedTransaction(vch_t key_data, uint64_t amou
         Point change_pubkey = GetNewPublicKey();
         raw_tx.outputs.push_back(Credit(change_pubkey.getvch(), (uint64_t) change));
     }
-
     return raw_tx;
 }
 
@@ -98,8 +122,12 @@ void Wallet::RemoveTransactionInputsSpentInBatchFromCredits(MinedCreditMessage& 
         {
             SignedTransaction tx = credit_system->creditdata[hash]["tx"];
             for (auto input : tx.rawtx.inputs)
+            {
                 if (VectorContainsEntry(credits, input))
+                {
                     EraseEntryFromVector(input, credits);
+                }
+            }
         }
 }
 
@@ -151,4 +179,19 @@ void Wallet::RemoveCreditsFromRemovedBatch(MinedCreditMessage& msg, CreditSystem
         if (VectorContainsEntry(credits, credit_in_batch))
             EraseEntryFromVector(credit_in_batch, credits);
     }
+}
+
+uint160 GetKeyHashFromAddress(std::string address_string)
+{
+    CBitcoinAddress address(address_string);
+    CKeyID keyID;
+    address.GetKeyID(keyID);
+    vch_t hash_bytes(BEGIN(keyID), END(keyID));
+    uint160 hash(hash_bytes);
+    return hash;
+}
+std::string GetAddressFromPublicKey(Point public_key)
+{
+    CKeyID keyID(KeyHash(public_key));
+    return CBitcoinAddress(keyID).ToString();
 }

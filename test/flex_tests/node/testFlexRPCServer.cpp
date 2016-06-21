@@ -9,6 +9,8 @@
 
 #define private public // to allow access to HttpClient.curl
 #include <jsonrpccpp/client/connectors/httpclient.h>
+#include <src/base/util_hex.h>
+
 #undef private
 
 
@@ -16,6 +18,7 @@ using namespace ::testing;
 using namespace jsonrpc;
 using namespace std;
 
+uint32_t port{8388};
 
 class AFlexRPCServer : public Test
 {
@@ -28,10 +31,11 @@ public:
 
     virtual void SetUp()
     {
-        http_server = new HttpAuthServer(8388, "username", "password");
+        uint32_t this_port = port++;
+        http_server = new HttpAuthServer(this_port, "username", "password");
         server = new FlexRPCServer(*http_server);
         server->StartListening();
-        http_client = new HttpClient("http://localhost:8388");
+        http_client = new HttpClient("http://localhost:" + PrintToString(this_port));
         http_client->AddHeader("Authorization", "Basic username:password");
         client = new Client(*http_client);
     }
@@ -114,7 +118,7 @@ public:
     {
         auto msg = flex_network_node.credit_message_handler->GenerateMinedCreditMessageWithoutProofOfWork();
         MarkProofAsValid(msg);
-        flex_network_node.HandleMessage(string("credit"), GetDataStream("credit", msg), (CNode*)&peer);
+        flex_network_node.HandleMessage(string("credit"), GetDataStream("credit", msg), NULL);
     }
 
     void MarkProofAsValid(MinedCreditMessage msg)
@@ -131,12 +135,80 @@ public:
 
     virtual void TearDown()
     {
-        AFlexRPCServerWithAFlexNetworkNode::TearDown();
+       AFlexRPCServerWithAFlexNetworkNode::TearDown();
     }
 };
 
 TEST_F(AFlexRPCServerWithAFlexNetworkNodeAndABalance, HasABalance)
 {
     auto result = client->CallMethod("balance", parameters);
+    ASSERT_THAT(result.asDouble(), Eq(1));
+}
+
+TEST_F(AFlexRPCServerWithAFlexNetworkNodeAndABalance, SendsCreditsToAPublicKey)
+{
+    Point public_key(SECP256K1, 2);
+    string encoded_public_key = HexStr(public_key.getvch());
+    parameters.append(encoded_public_key);
+    parameters.append("1");
+    auto result = client->CallMethod("sendtopublickey", parameters); // balance -1
+    AddABatchToTheTip(); // balance +1
+    result = client->CallMethod("balance", parameters);
+    ASSERT_THAT(result.asDouble(), Eq(1));
+}
+
+TEST_F(AFlexRPCServerWithAFlexNetworkNodeAndABalance, GetsANewAddress)
+{
+    auto result = client->CallMethod("getnewaddress", parameters);
+    ASSERT_THAT(result.asString().size(), Eq(34));
+}
+
+TEST_F(AFlexRPCServerWithAFlexNetworkNodeAndABalance, SendsCreditsToAnAddress)
+{
+    Point public_key(SECP256K1, 2);
+    string address = GetAddressFromPublicKey(public_key);
+    parameters.append(address);
+    parameters.append("1");
+    auto result = client->CallMethod("sendtoaddress", parameters); // balance -1
+    AddABatchToTheTip(); // balance +1
+    result = client->CallMethod("balance", parameters);
+    ASSERT_THAT(result.asDouble(), Eq(1));
+}
+
+class AFlexRPCServerWithCreditsSentToAnAddressWhosePrivateKeyIsKnown : public AFlexRPCServerWithAFlexNetworkNodeAndABalance
+{
+public:
+    virtual void SetUp()
+    {
+        Json::Value parameters;
+        AFlexRPCServerWithAFlexNetworkNodeAndABalance::SetUp();
+        auto result = client->CallMethod("getnewaddress", parameters);
+        auto address = result.asString();
+        parameters.append(address);
+        parameters.append("1");
+        client->CallMethod("sendtoaddress", parameters); // balance -1 +1
+        AddABatchToTheTip(); // balance +1
+    }
+
+    virtual void TearDown()
+    {
+        AFlexRPCServerWithAFlexNetworkNodeAndABalance::TearDown();
+    }
+};
+
+TEST_F(AFlexRPCServerWithCreditsSentToAnAddressWhosePrivateKeyIsKnown, ReceivesTheCredits)
+{
+    auto result = client->CallMethod("balance", parameters);
+    ASSERT_THAT(result.asDouble(), Eq(2));
+}
+
+TEST_F(AFlexRPCServerWithCreditsSentToAnAddressWhosePrivateKeyIsKnown, CanSpendTheCredits)
+{
+    Point public_key(SECP256K1, 2);
+    parameters.append(HexStr(public_key.getvch()));
+    parameters.append("2");
+    auto result = client->CallMethod("sendtopublickey", parameters); // balance -2
+    AddABatchToTheTip(); // balance +1
+    result = client->CallMethod("balance", parameters);
     ASSERT_THAT(result.asDouble(), Eq(1));
 }

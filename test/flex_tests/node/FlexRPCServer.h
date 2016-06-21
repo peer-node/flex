@@ -30,6 +30,9 @@ public:
         BindMethod("balance", &FlexRPCServer::Balance);
         BindMethod("start_mining", &FlexRPCServer::StartMining);
         BindMethod("start_mining_asynchronously", &FlexRPCServer::StartMiningAsynchronously);
+        BindMethod("sendtopublickey", &FlexRPCServer::SendToPublicKey);
+        BindMethod("getnewaddress", &FlexRPCServer::GetNewAddress);
+        BindMethod("sendtoaddress", &FlexRPCServer::SendToAddress);
     }
 
     void SetFlexLocalServer(FlexLocalServer *flex_local_server_);
@@ -53,6 +56,11 @@ public:
     void BindMethod(const char* method_name,
                     void (FlexRPCServer::*method)(const Json::Value &,Json::Value &));
 
+    void SendToPublicKey(const Json::Value &request, Json::Value &response);
+
+    void GetNewAddress(const Json::Value &request, Json::Value &response);
+
+    void SendToAddress(const Json::Value &request, Json::Value &response);
 };
 
 

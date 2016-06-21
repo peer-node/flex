@@ -49,14 +49,18 @@ uint160 FlexNetworkNode::SendCreditsToPublicKey(Point public_key, uint64_t amoun
     return tx.GetHash160();
 }
 
+Point FlexNetworkNode::GetNewPublicKey()
+{
+    return wallet->GetNewPublicKey();
+}
 
-
-
-
-
-
-
-
+uint160 FlexNetworkNode::SendToAddress(std::string address, int64_t amount)
+{
+    uint160 key_hash = GetKeyHashFromAddress(address);
+    SignedTransaction tx = wallet->GetSignedTransaction(key_hash, amount);
+    credit_message_handler->HandleSignedTransaction(tx);
+    return tx.GetHash160();
+}
 
 
 

@@ -697,6 +697,10 @@ set(CREDITS_FILES
 
 set(NEW_CREDITS_FILES
         ${WORK_FILES}
+        src/crypto/key.h
+        src/crypto/key.cpp
+        src/base/BitcoinAddress.cpp
+        src/base/BitcoinAddress.h
         src/credits/Credit.cpp
         src/credits/Credit.h
         src/credits/CreditInBatch.cpp

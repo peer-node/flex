@@ -10,7 +10,11 @@ public:
 
     Network dummy_network;
 
-    TestPeer(): CNode(dummy_network) { dummy_network.vNodes.push_back(this); }
+    TestPeer(): CNode(dummy_network)
+    {
+        hSocket = INVALID_SOCKET;
+        dummy_network.vNodes.push_back(this);
+    }
 
     virtual void FetchDependencies(std::set<uint160> dependencies)
     {
