@@ -60,7 +60,7 @@ TEST_F(AFlexNetworkNode, IncreasesTheBalanceWhenItHandlesMinedCreditMessages)
     msg = flex_network_node.credit_message_handler->GenerateMinedCreditMessageWithoutProofOfWork();
     MarkProofAsValid(msg);
     flex_network_node.HandleMessage(string("credit"), GetDataStream("credit", msg), (CNode*)&peer);
-    ASSERT_THAT(flex_network_node.Balance(), Eq(1.0));
+    ASSERT_THAT(flex_network_node.Balance(), Eq(ONE_CREDIT));
 }
 
 TEST_F(AFlexNetworkNode, RemembersMinedCreditMessagesWithoutProofsOfWorkThatItGenerates)
@@ -97,7 +97,7 @@ public:
 
 TEST_F(AFlexNetworkNodeWithABalance, HasABalance)
 {
-    ASSERT_THAT(flex_network_node.Balance(), Eq(1.0));
+    ASSERT_THAT(flex_network_node.Balance(), Eq(ONE_CREDIT));
 }
 
 TEST_F(AFlexNetworkNodeWithABalance, SendsCreditsToAPublicKey)
@@ -105,7 +105,7 @@ TEST_F(AFlexNetworkNodeWithABalance, SendsCreditsToAPublicKey)
     Point pubkey(SECP256K1, 2);
     flex_network_node.SendCreditsToPublicKey(pubkey, ONE_CREDIT); // balance -1
     AddABatchToTheTip();  // balance +1
-    ASSERT_THAT(flex_network_node.Balance(), Eq(1));
+    ASSERT_THAT(flex_network_node.Balance(), Eq(ONE_CREDIT));
 }
 
 TEST_F(AFlexNetworkNodeWithABalance, ReceivesCreditsSentToAPublicKeyWhosePrivateKeyIsKnown)
@@ -114,5 +114,5 @@ TEST_F(AFlexNetworkNodeWithABalance, ReceivesCreditsSentToAPublicKeyWhosePrivate
     flex_network_node.keydata[pubkey]["privkey"] = CBigNum(2);
     flex_network_node.SendCreditsToPublicKey(pubkey, ONE_CREDIT); // balance -1 +1
     AddABatchToTheTip();  // balance +1
-    ASSERT_THAT(flex_network_node.Balance(), Eq(2));
+    ASSERT_THAT(flex_network_node.Balance(), Eq(2 * ONE_CREDIT));
 }

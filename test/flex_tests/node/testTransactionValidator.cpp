@@ -50,7 +50,7 @@ public:
         CreditBatch batch = credit_system->ReconstructBatch(msg);
         msg.mined_credit.network_state.batch_root = batch.Root();
         msg.mined_credit.network_state.batch_size = 1;
-        msg.mined_credit.network_state.difficulty = INITIAL_DIFFICULTY;
+        msg.mined_credit.network_state.difficulty = credit_system->initial_difficulty;
         credit_system->StoreMinedCreditMessage(msg);
         credit_system->AddToMainChain(msg);
 

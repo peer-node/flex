@@ -286,7 +286,7 @@ public:
     {
         MinedCreditMessage starting_msg, msg;
         starting_msg.mined_credit.network_state.batch_number = 1;
-        starting_msg.mined_credit.network_state.difficulty = INITIAL_DIFFICULTY;
+        starting_msg.mined_credit.network_state.difficulty = credit_system->initial_difficulty;
         starting_msg.mined_credit.network_state.diurnal_difficulty = INITIAL_DIURNAL_DIFFICULTY;
         credit_system->StoreMinedCreditMessage(starting_msg);
 

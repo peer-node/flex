@@ -356,7 +356,7 @@ uint160 AdjustDifficultyAfterBatchInterval(uint160 earlier_difficulty, uint64_t 
 uint160 CreditSystem::GetNextDifficulty(MinedCredit credit)
 {
     if (credit.network_state.difficulty == 0)
-        return INITIAL_DIFFICULTY;
+        return initial_difficulty;
     uint160 prev_hash = credit.network_state.previous_mined_credit_hash;
     MinedCredit preceding_credit = creditdata[prev_hash]["mined_credit"];
     uint64_t batch_interval = credit.network_state.timestamp - preceding_credit.network_state.timestamp;
@@ -576,3 +576,9 @@ vector<uint160> CreditSystem::GetMessagesInMinedCreditMessage(uint160 msg_hash)
     msg.hash_list.RecoverFullHashes(msgdata);
     return msg.hash_list.full_hashes;
 }
+
+uint160 CreditSystem::InitialDifficulty()
+{
+    return initial_difficulty;
+}
+

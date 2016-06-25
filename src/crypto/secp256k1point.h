@@ -231,7 +231,7 @@ public:
         return vchPoint;
     }
 
-    void setvch(const vch_t& vchPoint)
+    bool setvch(const vch_t& vchPoint)
     {
         bool empty = true;
         for (uint32_t i = 0; i < vchPoint.size(); i++)
@@ -241,14 +241,10 @@ public:
                 break;
             }
         if (empty)
-            return;
+            return false;
 
-        if (!EC_POINT_oct2point(curve_group.group, point, 
-                                &vchPoint[0], 33, context))
-        {
-            log_ << "Failed to set point!\n";
-        }
-        
+        return EC_POINT_oct2point(curve_group.group, point,
+                                  &vchPoint[0], 33, context) != 0;
     }
 
     operator vch_t()

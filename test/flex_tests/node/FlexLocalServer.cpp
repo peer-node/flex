@@ -77,7 +77,7 @@ uint256 FlexLocalServer::NetworkID()
 uint160 FlexLocalServer::MiningDifficulty(uint256 mining_seed)
 {
     if (flex_network_node == NULL)
-        return INITIAL_DIFFICULTY;
+        return flex_network_node->credit_system->initial_difficulty;
     auto msg = flex_network_node->RecallGeneratedMinedCreditMessage(mining_seed);
     return msg.mined_credit.network_state.difficulty;
 }
@@ -139,7 +139,7 @@ void FlexLocalServer::SetNetworkNode(FlexNetworkNode *flex_network_node_)
     flex_network_node = flex_network_node_;
 }
 
-double FlexLocalServer::Balance()
+uint64_t FlexLocalServer::Balance()
 {
     if (flex_network_node == NULL)
         return 0;

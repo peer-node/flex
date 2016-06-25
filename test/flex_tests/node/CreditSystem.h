@@ -22,6 +22,7 @@ class CreditSystem
 {
 public:
     MemoryDataStore &msgdata, &creditdata;
+    uint64_t initial_difficulty{INITIAL_DIFFICULTY};
 
     CreditSystem(MemoryDataStore &msgdata, MemoryDataStore &creditdata):
             msgdata(msgdata), creditdata(creditdata)
@@ -67,6 +68,8 @@ public:
     uint160 PrecedingCalendCreditHash(uint160 credit_hash);
 
     EncodedNetworkState SucceedingNetworkState(MinedCredit mined_credit);
+
+    uint160 InitialDifficulty();
 
     uint160 GetNextDifficulty(MinedCredit credit);
 

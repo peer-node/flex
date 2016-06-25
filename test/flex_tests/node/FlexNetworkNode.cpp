@@ -6,9 +6,9 @@ Calendar FlexNetworkNode::GetCalendar()
     return calendar;
 }
 
-double FlexNetworkNode::Balance()
+uint64_t FlexNetworkNode::Balance()
 {
-    return wallet->Balance() * 1.0 / ONE_CREDIT;
+    return wallet->Balance();
 }
 
 void FlexNetworkNode::HandleMessage(std::string channel, CDataStream stream, CNode *peer)

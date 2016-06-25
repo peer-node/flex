@@ -234,13 +234,14 @@ public:
         return bytes;
     }
 
-    void setvch(const vch_t& bytes)
+    bool setvch(const vch_t& bytes)
     {
         if (bytes.size() != 32)
-            return;
+            return false;
         ed25519_public_key key;
         memcpy(&key, &bytes[0], 32);
         ge25519_unpack_negative_vartime(&group_element, key);
+        return true;
     }
 
     operator vch_t()
@@ -414,10 +415,13 @@ public:
         return bytes;
     }
 
-    void setvch(const vch_t& bytes)
+    bool setvch(const vch_t& bytes)
     {
+        if (bytes.size() != 33)
+            return false;
         memcpy(x, &bytes[0], 32);
         parity = bytes[32];
+        return true;
     }
 
     operator vch_t()

@@ -19,13 +19,17 @@ using namespace std;
 class AFlexLocalServer : public Test
 {
 public:
+    MemoryDataStore creditdata, msgdata;
     FlexLocalServer flex_local_server;
+    FlexNetworkNode flex_network_node;
     string config_filename;
     int argc = 2;
     const char *argv[2] = {"", "-conf=flex_tmp_config_k5i4jn5u.conf"};
 
     virtual void SetUp()
     {
+        flex_network_node.credit_system->initial_difficulty = 10000;
+        flex_local_server.SetNetworkNode(&flex_network_node);
         config_filename = flex_local_server.config_parser.GetDataDir().string() + "/flex_tmp_config_k5i4jn5u.conf";
     }
 
@@ -168,30 +172,12 @@ TEST_F(AFlexLocalServerWithRPCSettings, StartsAnRPCServer)
     ASSERT_THAT(result.asString(), Ne(""));
 }
 
-
-class AFlexLocalServerWithRPCSettingsAndAFlexNetworkNode : public AFlexLocalServerWithRPCSettings
-{
-public:
-    FlexNetworkNode flex_network_node;
-
-    virtual void SetUp()
-    {
-        AFlexLocalServerWithRPCSettings::SetUp();
-        flex_local_server.SetNetworkNode(&flex_network_node);
-    }
-
-    virtual void TearDown()
-    {
-        AFlexLocalServerWithRPCSettings::TearDown();
-    }
-};
-
-TEST_F(AFlexLocalServerWithRPCSettingsAndAFlexNetworkNode, ProvidesABalance)
+TEST_F(AFlexLocalServerWithRPCSettings, ProvidesABalance)
 {
     Json::Value params;
 
     auto result = client->CallMethod("balance", params);
-    ASSERT_THAT(result.asDouble(), Eq(0));
+    ASSERT_THAT(result.asString(), Eq("0.00"));
 }
 
 
@@ -200,12 +186,10 @@ class AFlexLocalServerWithAMiningRPCServerAndAFlexNetworkNode : public AFlexLoca
 public:
     HttpClient *http_client;
     Client *client;
-    FlexNetworkNode flex_network_node;
 
     virtual void SetUp()
     {
         AFlexLocalServerWithAMiningRPCServer::SetUp();
-        flex_local_server.SetNetworkNode(&flex_network_node);
         flex_local_server.SetNumberOfMegabytesUsedForMining(1);
         flex_local_server.SetMiningNetworkInfo();
         flex_local_server.StartRPCServer();

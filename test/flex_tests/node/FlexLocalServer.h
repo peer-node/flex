@@ -47,7 +47,7 @@ public:
 
     void SetNetworkNode(FlexNetworkNode *flex_network_node_);
 
-    double Balance();
+    uint64_t Balance();
 
     void StartMining();
 

@@ -69,7 +69,7 @@ public:
 
     vch_t getvch() const;
 
-    void setvch(const vch_t& bytes);
+    bool setvch(const vch_t& bytes);
 
     unsigned int GetSerializeSize(int nType=0, int nVersion=PROTOCOL_VERSION) 
     const

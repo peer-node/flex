@@ -37,7 +37,7 @@ public:
 
     Calendar GetCalendar();
 
-    double Balance();
+    uint64_t Balance();
 
     void HandleMessage(std::string channel, CDataStream stream, CNode *peer);
 

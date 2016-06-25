@@ -21,6 +21,7 @@ public:
     virtual void SetUp()
     {
         credit_system = new CreditSystem(msgdata, creditdata);
+        credit_system->initial_difficulty = 10000;
         credit_message_handler = new CreditMessageHandler(msgdata, creditdata, keydata);
         credit_message_handler->SetCreditSystem(credit_system);
         credit_message_handler->SetCalendar(calendar);
@@ -54,7 +55,7 @@ EncodedNetworkState ValidFirstNetworkState()
     EncodedNetworkState network_state;
 
     network_state.network_id = 1;
-    network_state.difficulty = INITIAL_DIFFICULTY;
+    network_state.difficulty = 10000;
     network_state.diurnal_difficulty = INITIAL_DIURNAL_DIFFICULTY;
     network_state.previous_diurn_root = 0;
     network_state.diurnal_block_root = Diurn().BlockRoot();
@@ -467,10 +468,7 @@ public:
 
     Point GetNextPubKey()
     {
-        Point pubkey(SECP256K1, n);
-        keydata[pubkey]["privkey"] = CBigNum(n);
-        n++;
-        return pubkey;
+        return wallet->GetNewPublicKey();
     }
 
     MinedCreditMessage NextMinedCreditMessage(MinedCreditMessage& prev_msg)
@@ -595,6 +593,20 @@ TEST_F(ACreditMessageHandlerWithAcceptedTransactions, RetainsTransactionsWhenSwi
 
     ASSERT_FALSE(VectorContainsEntry(credit_message_handler->accepted_messages, first_transaction.GetHash160()));
     ASSERT_TRUE(VectorContainsEntry(credit_message_handler->accepted_messages, second_transaction.GetHash160()));
+}
+
+TEST_F(ACreditMessageHandlerWithAcceptedTransactions, UpdatesTheWalletWhenSwitchingAcrossAFork)
+{
+    MinedCreditMessage fork = credit_message_handler->Tip();
+    uint64_t balance_at_fork = wallet->Balance();
+
+    AddSequenceOfMinedCreditMessagesToTip(2);
+    uint64_t balance_at_tip_of_first_branch = wallet->Balance();
+    HandleMessageAndAddNMoreAfterIt(fork, 3);
+    uint64_t balance_at_tip_of_second_branch = wallet->Balance();
+
+    ASSERT_THAT(balance_at_tip_of_first_branch, Eq(balance_at_fork + 2 * ONE_CREDIT));
+    ASSERT_THAT(balance_at_tip_of_second_branch, Eq(balance_at_fork + 3 * ONE_CREDIT));
 }
 
 TEST_F(ACreditMessageHandlerWithAcceptedTransactions, DropsTransactionsWithDoubleSpendsWhenSwitchingAcrossAFork)

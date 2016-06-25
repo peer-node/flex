@@ -89,6 +89,7 @@ void CreditMessageHandler::SwitchToTipViaFork(uint160 new_tip)
     credit_system->SwitchMainChainToOtherBranchOfFork(current_tip, new_tip);
     *calendar = Calendar(new_tip, credit_system);
     UpdateAcceptedMessagesAfterFork(old_tip, new_tip);
+    wallet->SwitchAcrossFork(old_tip, new_tip, credit_system);
 }
 
 void CreditMessageHandler::UpdateAcceptedMessagesAfterFork(uint160 old_tip, uint160 new_tip)

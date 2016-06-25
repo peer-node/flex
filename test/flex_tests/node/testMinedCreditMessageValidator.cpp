@@ -45,7 +45,7 @@ public:
         batch.Add(tx.rawtx.outputs[0]);
         msg.mined_credit.network_state.batch_number = 1;
         msg.mined_credit.network_state.batch_root = batch.Root();
-        msg.mined_credit.network_state.difficulty = INITIAL_DIFFICULTY;
+        msg.mined_credit.network_state.difficulty = credit_system->initial_difficulty;
         return msg;
     }
 };
@@ -188,7 +188,7 @@ TEST_F(AMinedCreditMessageValidator, ChecksThePreviousTotalWork)
 TEST_F(AMinedCreditMessageValidator, ChecksTheDifficulty)
 {
     auto msg = MinedCreditMessageWithABatch();
-    msg.mined_credit.network_state.difficulty = INITIAL_DIFFICULTY;
+    msg.mined_credit.network_state.difficulty = credit_system->initial_difficulty;
     credit_system->StoreMinedCreditMessage(msg);
 
     MinedCreditMessage next_msg;

@@ -263,14 +263,14 @@
         return bytes;
     }
 
-    void Point::setvch(const vch_t& bytes)
+    bool Point::setvch(const vch_t& bytes)
     {
         if (bytes.size() == 0)
         {
             curve = SECP256K1;
             if (s_point == NULL)
                 s_point = new Secp256k1Point();
-            return;
+            return false;
         }
         curve = bytes[0];
         vch_t point_bytes(&bytes[1], &bytes[bytes.size()]);
@@ -278,20 +278,21 @@
         {
             if (s_point == NULL)
                 s_point = new Secp256k1Point();
-            (*s_point).setvch(point_bytes);
+            return (*s_point).setvch(point_bytes);
         }
         else if (curve == CURVE25519)
         {
             if (c_point == NULL)
                 c_point = new Curve25519Point();
-            (*c_point).setvch(point_bytes);
+            return (*c_point).setvch(point_bytes);
         }
         else if (curve == ED25519)
         {
             if (e_point == NULL)
                 e_point = new Ed25519Point();
-            (*e_point).setvch(point_bytes);
+            return (*e_point).setvch(point_bytes);
         }
+        return false;
     }
 
 

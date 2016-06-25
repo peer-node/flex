@@ -1,4 +1,5 @@
 #include <src/base/util_hex.h>
+#include <jsonrpccpp/client.h>
 #include "FlexRPCServer.h"
 #include "FlexLocalServer.h"
 
@@ -20,7 +21,7 @@ void FlexRPCServer::GetInfo(const Json::Value& request, Json::Value& response)
     response["network_id"] = network_id.ToString();
     if (flex_local_server == NULL)
         return;
-    response["balance"] = flex_local_server->Balance();
+    response["balance"] = FormatMoney(flex_local_server->Balance());
 
     uint160 latest_mined_credit_hash{0};
     auto latest_mined_credit = flex_local_server->flex_network_node->Tip().mined_credit;
@@ -44,7 +45,7 @@ void FlexRPCServer::NewProof(const Json::Value &request, Json::Value &response)
 
 void FlexRPCServer::Balance(const Json::Value &request, Json::Value &response)
 {
-    response = flex_local_server->Balance();
+    response = FormatMoney((int64_t) flex_local_server->Balance());
 }
 
 void FlexRPCServer::SetFlexLocalServer(FlexLocalServer *flex_local_server_)
@@ -72,11 +73,18 @@ void FlexRPCServer::SendToPublicKey(const Json::Value &request, Json::Value &res
 {
     std::string pubkey_hex = request[0].asString();
     Point public_key;
-    public_key.setvch(ParseHex(pubkey_hex));
+    if (not public_key.setvch(ParseHex(pubkey_hex)))
+    {
+        throw jsonrpc::JsonRpcException(-32099, "bad public key");
+    }
     std::string amount_string = request[1].asString();
     int64_t amount;
-    if (!ParseMoney(amount_string, amount))
-        response = "Can't parse " + amount_string + "\n";
+    if (not ParseMoney(amount_string, amount))
+        throw jsonrpc::JsonRpcException(-32099, "bad amount");
+
+    if (amount > flex_local_server->Balance())
+        throw jsonrpc::JsonRpcException(-32099, "insufficient balance");
+
     response = flex_local_server->SendToPublicKey(public_key, amount).ToString();
 }
 
@@ -89,15 +97,19 @@ void FlexRPCServer::GetNewAddress(const Json::Value &request, Json::Value &respo
 void FlexRPCServer::SendToAddress(const Json::Value &request, Json::Value &response)
 {
     int64_t amount;
-    ParseMoney(request[1].asString(), amount);
+    if (not ParseMoney(request[1].asString(), amount))
+        throw jsonrpc::JsonRpcException(-32099, "bad amount");
+
     std::string address = request[0].asString();
+    vch_t pubkey_hash_bytes;
+
+    if (not DecodeBase58Check(address, pubkey_hash_bytes) or pubkey_hash_bytes.size() != 21)
+        throw jsonrpc::JsonRpcException(-32099, "bad address");
+
+    if (amount > flex_local_server->Balance())
+        throw jsonrpc::JsonRpcException(-32099, "insufficient balance");
+
     uint160 tx_hash = flex_local_server->flex_network_node->SendToAddress(address, amount);
     response = tx_hash.ToString();
 }
-
-
-
-
-
-
 

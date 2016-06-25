@@ -9,9 +9,9 @@
 
 #define private public // to allow access to HttpClient.curl
 #include <jsonrpccpp/client/connectors/httpclient.h>
-#include <src/base/util_hex.h>
-
 #undef private
+
+#include <src/base/util_hex.h>
 
 
 using namespace ::testing;
@@ -37,7 +37,7 @@ public:
         server->StartListening();
         http_client = new HttpClient("http://localhost:" + PrintToString(this_port));
         http_client->AddHeader("Authorization", "Basic username:password");
-        client = new Client(*http_client);
+        client = new Client(*http_client, JSONRPC_CLIENT_V2);
     }
 
     virtual void TearDown()
@@ -98,7 +98,7 @@ public:
 TEST_F(AFlexRPCServerWithAFlexNetworkNode, ProvidesABalance)
 {
     auto result = client->CallMethod("balance", parameters);
-    ASSERT_THAT(result.asDouble(), Eq(0));
+    ASSERT_THAT(result.asString(), Eq("0.00"));
 }
 
 class AFlexRPCServerWithAFlexNetworkNodeAndABalance : public AFlexRPCServerWithAFlexNetworkNode
@@ -142,7 +142,7 @@ public:
 TEST_F(AFlexRPCServerWithAFlexNetworkNodeAndABalance, HasABalance)
 {
     auto result = client->CallMethod("balance", parameters);
-    ASSERT_THAT(result.asDouble(), Eq(1));
+    ASSERT_THAT(result.asString(), Eq("1.00"));
 }
 
 TEST_F(AFlexRPCServerWithAFlexNetworkNodeAndABalance, SendsCreditsToAPublicKey)
@@ -154,13 +154,29 @@ TEST_F(AFlexRPCServerWithAFlexNetworkNodeAndABalance, SendsCreditsToAPublicKey)
     auto result = client->CallMethod("sendtopublickey", parameters); // balance -1
     AddABatchToTheTip(); // balance +1
     result = client->CallMethod("balance", parameters);
-    ASSERT_THAT(result.asDouble(), Eq(1));
+    ASSERT_THAT(result.asString(), Eq("1.00"));
+}
+
+TEST_F(AFlexRPCServerWithAFlexNetworkNodeAndABalance, ThrowsAnErrorIfABadPublicKeyIsGiven)
+{
+    parameters.append("00");
+    parameters.append("1");
+    EXPECT_ANY_THROW(client->CallMethod("sendtopublickey", parameters));
+}
+
+TEST_F(AFlexRPCServerWithAFlexNetworkNodeAndABalance, ThrowsAnErrorIfThereIsInsufficientBalance)
+{
+    parameters.append(HexStr(Point(SECP256K1, 2).getvch()));
+    parameters.append("100");
+    EXPECT_ANY_THROW(client->CallMethod("sendtopublickey", parameters));
 }
 
 TEST_F(AFlexRPCServerWithAFlexNetworkNodeAndABalance, GetsANewAddress)
 {
     auto result = client->CallMethod("getnewaddress", parameters);
-    ASSERT_THAT(result.asString().size(), Eq(34));
+    uint64_t address_length = result.asString().size();
+    bool length_ok = address_length == 34 or address_length == 33;
+    ASSERT_TRUE(length_ok);
 }
 
 TEST_F(AFlexRPCServerWithAFlexNetworkNodeAndABalance, SendsCreditsToAnAddress)
@@ -172,7 +188,16 @@ TEST_F(AFlexRPCServerWithAFlexNetworkNodeAndABalance, SendsCreditsToAnAddress)
     auto result = client->CallMethod("sendtoaddress", parameters); // balance -1
     AddABatchToTheTip(); // balance +1
     result = client->CallMethod("balance", parameters);
-    ASSERT_THAT(result.asDouble(), Eq(1));
+    ASSERT_THAT(result.asString(), Eq("1.00"));
+}
+
+TEST_F(AFlexRPCServerWithAFlexNetworkNodeAndABalance, ThrowsAnErrorIfABadAddressIsGiven)
+{
+    string address = GetAddressFromPublicKey(Point(SECP256K1, 2));
+    string bad_address = address + "1";
+    parameters.append(bad_address);
+    parameters.append("1");
+    EXPECT_ANY_THROW(client->CallMethod("sendtopublickey", parameters));
 }
 
 class AFlexRPCServerWithCreditsSentToAnAddressWhosePrivateKeyIsKnown : public AFlexRPCServerWithAFlexNetworkNodeAndABalance
@@ -199,7 +224,7 @@ public:
 TEST_F(AFlexRPCServerWithCreditsSentToAnAddressWhosePrivateKeyIsKnown, ReceivesTheCredits)
 {
     auto result = client->CallMethod("balance", parameters);
-    ASSERT_THAT(result.asDouble(), Eq(2));
+    ASSERT_THAT(result.asString(), Eq("2.00"));
 }
 
 TEST_F(AFlexRPCServerWithCreditsSentToAnAddressWhosePrivateKeyIsKnown, CanSpendTheCredits)
@@ -210,5 +235,5 @@ TEST_F(AFlexRPCServerWithCreditsSentToAnAddressWhosePrivateKeyIsKnown, CanSpendT
     auto result = client->CallMethod("sendtopublickey", parameters); // balance -2
     AddABatchToTheTip(); // balance +1
     result = client->CallMethod("balance", parameters);
-    ASSERT_THAT(result.asDouble(), Eq(1));
+    ASSERT_THAT(result.asString(), Eq("1.00"));
 }
