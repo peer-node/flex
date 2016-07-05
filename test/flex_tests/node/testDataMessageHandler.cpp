@@ -158,13 +158,3 @@ TEST_F(ADataMessageHandlerWithSomeBatches, RespondsToCalendarRequestsWithCalenda
     CalendarMessage calendar_message(calendar_request, credit_system);
     ASSERT_TRUE(peer.HasReceived("data", "calendar", calendar_message));
 }
-
-TEST_F(ADataMessageHandlerWithSomeBatches, Scrutinizes)
-{
-    MinedCredit mined_credit_at_tip = calendar->LastMinedCredit();
-    CalendarRequestMessage calendar_request(mined_credit_at_tip);
-    data_message_handler->HandleMessage(GetDataStream(calendar_request), &peer);
-    CalendarMessage calendar_message(calendar_request, credit_system);
-    ASSERT_TRUE(peer.HasReceived("data", "calendar", calendar_message));
-}
-

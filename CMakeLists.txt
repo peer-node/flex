@@ -128,8 +128,6 @@ set(SOURCE_FILES
     src/initialize/datamessages.h
     src/initialize/dataserver.cpp
     src/initialize/dataserver.h
-    src/initialize/downloader.cpp
-    src/initialize/downloader.h
     src/json/json_spirit.h
     src/json/json_spirit_error_position.h
     src/json/json_spirit_reader.cpp
@@ -960,9 +958,17 @@ add_executable(runNodeTests
         test/flex_tests/node/testNetworkState.cpp
         test/flex_tests/node/NetworkState.cpp
         test/flex_tests/node/NetworkState.h
-        test/flex_tests/node/testDownloader.cpp
-        test/flex_tests/node/Downloader.cpp
-        test/flex_tests/node/Downloader.h test/flex_tests/node/testDataMessageHandler.cpp test/flex_tests/node/DataMessageHandler.cpp test/flex_tests/node/DataMessageHandler.h test/flex_tests/node/TipRequestMessage.cpp test/flex_tests/node/TipRequestMessage.h test/flex_tests/node/TipMessage.cpp test/flex_tests/node/TipMessage.h test/flex_tests/node/CalendarRequestMessage.cpp test/flex_tests/node/CalendarRequestMessage.h test/flex_tests/node/CalendarMessage.cpp test/flex_tests/node/CalendarMessage.h)
+        test/flex_tests/node/testDataMessageHandler.cpp
+        test/flex_tests/node/DataMessageHandler.cpp
+        test/flex_tests/node/DataMessageHandler.h
+        test/flex_tests/node/TipRequestMessage.cpp
+        test/flex_tests/node/TipRequestMessage.h
+        test/flex_tests/node/TipMessage.cpp
+        test/flex_tests/node/TipMessage.h
+        test/flex_tests/node/CalendarRequestMessage.cpp
+        test/flex_tests/node/CalendarRequestMessage.h
+        test/flex_tests/node/CalendarMessage.cpp
+        test/flex_tests/node/CalendarMessage.h)
 
 add_executable(flexnetd
         test/flex_tests/flex_data/TestData.h
