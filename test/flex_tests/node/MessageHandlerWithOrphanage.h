@@ -11,10 +11,18 @@ class MessageHandlerWithOrphanage
 public:
     MemoryDataStore& msgdata;
     Network *network{NULL};
+    std::string channel;
 
     void SetNetwork(Network &network_)
     {
         network = &network_;
+    }
+
+    template <typename T>
+    void Broadcast(T message)
+    {
+        if (network != NULL)
+            network->Broadcast(channel, message.Type(), message);
     }
 
     MessageHandlerWithOrphanage(MemoryDataStore &msgdata);
@@ -115,6 +123,15 @@ public:
         return type;
     }
 
+    bool RejectMessage(uint160 msg_hash)
+    {
+        msgdata[msg_hash]["rejected"] = true;
+        CNode *peer = GetPeer(msg_hash);
+        if (peer != NULL)
+            peer->Misbehaving(30);
+        return false;
+    }
+
     virtual void HandleMessage(uint160 message_hash)
     {
         // populate with HANDLEHASH
@@ -141,6 +158,13 @@ public:
                     return peer;
             }
         return NULL;
+    }
+
+    template<typename T>
+    void SendMessageToPeer(T message, CNode* peer)
+    {
+        msgdata[message.GetHash160()][message.Type()] = message;
+        peer->PushMessage(channel.c_str(), message.Type(), message);
     }
 };
 

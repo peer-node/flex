@@ -350,20 +350,13 @@ set(TEST_SOURCE_FILES
         test/flex_tests/crypto/test_point.cpp
         test/flex_tests/crypto/test_secret.cpp)
 
-set(MESSAGING_FILES
+set(NET_FILES
         src/net/addrman.cpp
         src/net/addrman.h
         src/net/net.cpp
         src/net/net.h
         src/net/netbase.cpp
         src/net/netbase.h
-        src/flexnode/main.h
-        src/flexnode/main_signals.cpp
-        src/flexnode/main_send_messages.cpp
-        src/flexnode/main_process_messages.cpp
-        src/flexnode/MainFlexNode.h
-        src/flexnode/MockInit.h
-        src/flexnode/MockInit.cpp
         src/net/net_caddrdb.cpp
         src/net/net_cnode.cpp
         src/net/net_relay.cpp
@@ -389,7 +382,17 @@ set(MESSAGING_FILES
         src/net/net_cleanup.cpp
         src/net/net_sync.h
         src/net/net_sync.cpp
-        src/net/net_upnp.cpp
+        src/net/net_upnp.cpp)
+
+set(MESSAGING_FILES
+        ${NET_FILES}
+        src/flexnode/main.h
+        src/flexnode/main_signals.cpp
+        src/flexnode/main_send_messages.cpp
+        src/flexnode/main_process_messages.cpp
+        src/flexnode/MainFlexNode.h
+        src/flexnode/MockInit.h
+        src/flexnode/MockInit.cpp
         src/flexnode/MainFlexNode.cpp
         test/flex_tests/main_tests/testCreditMessageHandler.cpp
         test/flex_tests/main_tests/CreditMessageHandler_.cpp
@@ -619,8 +622,8 @@ set(MINCRYPTO_FILES
 
 set(CRYPTO_FILES
         ${MINCRYPTO_FILES}
-    src/crypto/flexcrypto.cpp
-    src/crypto/flexcrypto.h
+        src/crypto/flexcrypto.cpp
+        src/crypto/flexcrypto.h
         test/flex_tests/crypto/DistributedSecret.cpp
         test/flex_tests/crypto/DistributedSecret.h
         test/flex_tests/crypto/EncryptedSecret.cpp
@@ -909,6 +912,7 @@ add_executable(runNodeTests
         ${REMAINING_BASE_FILES}
         ${MINCRYPTO_FILES}
         ${NEW_CREDITS_FILES}
+        ${NET_FILES}
         test/flex_tests/flex_data/MemoryDataStore.cpp
         ${DATABASE_FILES}
         ${WORK_FILES}
@@ -926,9 +930,6 @@ add_executable(runNodeTests
         test/flex_tests/node/testFlexLocalServer.cpp
         test/flex_tests/node/FlexLocalServer.cpp
         test/flex_tests/node/FlexLocalServer.h
-        src/net/netbase.cpp
-        src/net/net_cleanup.cpp
-        src/net/net_relay.cpp
         src/base/base58.cpp
         src/base/base58.h
         test/flex_tests/node/testHttpAuthServer.cpp
@@ -958,7 +959,10 @@ add_executable(runNodeTests
         test/flex_tests/node/NetworkStateConstructor.h
         test/flex_tests/node/testNetworkState.cpp
         test/flex_tests/node/NetworkState.cpp
-        test/flex_tests/node/NetworkState.h)
+        test/flex_tests/node/NetworkState.h
+        test/flex_tests/node/testDownloader.cpp
+        test/flex_tests/node/Downloader.cpp
+        test/flex_tests/node/Downloader.h test/flex_tests/node/testDataMessageHandler.cpp test/flex_tests/node/DataMessageHandler.cpp test/flex_tests/node/DataMessageHandler.h test/flex_tests/node/TipRequestMessage.cpp test/flex_tests/node/TipRequestMessage.h test/flex_tests/node/TipMessage.cpp test/flex_tests/node/TipMessage.h test/flex_tests/node/CalendarRequestMessage.cpp test/flex_tests/node/CalendarRequestMessage.h test/flex_tests/node/CalendarMessage.cpp test/flex_tests/node/CalendarMessage.h)
 
 add_executable(flexnetd
         test/flex_tests/flex_data/TestData.h

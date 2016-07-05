@@ -173,15 +173,6 @@ bool CreditMessageHandler::FetchFailedListExpansion(uint160 msg_hash)
     return false;
 }
 
-bool CreditMessageHandler::RejectMessage(uint160 msg_hash)
-{
-    msgdata[msg_hash]["rejected"] = true;
-    CNode *peer = GetPeer(msg_hash);
-    if (peer != NULL)
-        peer->Misbehaving(30);
-    return false;
-}
-
 void CreditMessageHandler::SetCreditSystem(CreditSystem *credit_system_)
 {
     credit_system = credit_system_;

@@ -37,6 +37,11 @@ public:
         return Hash(ss.begin(), ss.end());
     }
 
+    uint160 ReportedWork()
+    {
+        return network_state.previous_total_work + network_state.difficulty;
+    }
+
     Point PublicKey()
     {
         if (keydata.size() == 34)

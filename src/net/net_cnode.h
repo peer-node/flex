@@ -297,7 +297,7 @@ public:
         LogPrint("net", "(aborted)\n");
     }
 
-    void EndMessage() UNLOCK_FUNCTION(cs_vSend)
+    virtual void EndMessage() UNLOCK_FUNCTION(cs_vSend)
     {
         if (ssSend.size() == 0)
             return;
@@ -343,7 +343,7 @@ public:
         }
     }
 
-    void PushMessage(const char* pszCommand, const char* pszSubCommand)
+    virtual void PushMessage(const char* pszCommand, const char* pszSubCommand)
     {
         try
         {

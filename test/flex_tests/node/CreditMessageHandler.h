@@ -15,8 +15,6 @@
 class CreditMessageHandler : public MessageHandlerWithOrphanage
 {
 public:
-    std::string channel{"credit"};
-
     MemoryDataStore &creditdata, &keydata;
     CreditSystem *credit_system;
     Calendar *calendar;
@@ -33,13 +31,8 @@ public:
                          MemoryDataStore &keydata_):
             MessageHandlerWithOrphanage(msgdata_),
             creditdata(creditdata_), keydata(keydata_)
-    { }
-
-    template <typename T>
-    void Broadcast(T message)
     {
-        if (network != NULL)
-            network->Broadcast(channel, message.Type(), message);
+        channel = "credit";
     }
 
     void SetConfig(FlexConfig& config_) { config = config_; }
@@ -75,8 +68,6 @@ public:
     void HandleBadBatchMessage(BadBatchMessage bad_batch_message);
 
     void SetCreditSystem(CreditSystem *credit_system_);
-
-    bool RejectMessage(uint160 msg_hash);
 
     bool FetchFailedListExpansion(uint160 msg_hash);
 
