@@ -2,6 +2,10 @@
 #include "CalendarRequestMessage.h"
 #include "CalendarMessage.h"
 
+#include "log.h"
+#define LOG_CATEGORY "DataMessageHandler.cpp"
+
+
 void DataMessageHandler::SetCreditSystem(CreditSystem *credit_system_)
 {
     credit_system = credit_system_;
@@ -50,20 +54,21 @@ uint160 DataMessageHandler::RequestTips()
     return tip_request_hash;
 }
 
-void DataMessageHandler::RequestCalendarOfTipWithTheMostWork()
+uint160 DataMessageHandler::RequestCalendarOfTipWithTheMostWork()
 {
     TipMessage tip = TipWithTheMostWork();
     uint160 tip_message_hash = tip.GetHash160();
     CNode *peer = GetPeer(tip_message_hash);
     if (peer == NULL)
-        return;
-    SendCalendarRequestToPeer(peer, tip.mined_credit);
+        return 0;
+    return SendCalendarRequestToPeer(peer, tip.mined_credit);
 }
 
 uint160 DataMessageHandler::SendCalendarRequestToPeer(CNode *peer, MinedCredit mined_credit)
 {
     CalendarRequestMessage calendar_request(mined_credit);
     uint160 calendar_request_hash = calendar_request.GetHash160();
+    msgdata[calendar_request_hash]["is_calendar_request"] = true;
     peer->PushMessage("data", "calendar_request", calendar_request);
     msgdata[calendar_request_hash]["calendar_request"] = calendar_request;
     return calendar_request_hash;
@@ -95,4 +100,13 @@ void DataMessageHandler::HandleCalendarRequestMessage(CalendarRequestMessage req
     CNode *peer = GetPeer(request.GetHash160());
     if (peer != NULL)
         SendMessageToPeer(calendar_message, peer);
+}
+
+void DataMessageHandler::HandleCalendarMessage(CalendarMessage calendar_message)
+{
+    if (not msgdata[calendar_message.request_hash]["is_calendar_request"])
+    {
+        RejectMessage(calendar_message.GetHash160());
+        return;
+    }
 }

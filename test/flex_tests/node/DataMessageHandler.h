@@ -9,6 +9,7 @@
 #include "Calendar.h"
 #include "TipMessage.h"
 #include "CalendarRequestMessage.h"
+#include "CalendarMessage.h"
 
 
 class DataMessageHandler : public MessageHandlerWithOrphanage
@@ -29,6 +30,7 @@ public:
         HANDLESTREAM(TipRequestMessage);
         HANDLESTREAM(TipMessage);
         HANDLESTREAM(CalendarRequestMessage);
+        HANDLESTREAM(CalendarMessage);
     }
 
     void HandleMessage(uint160 message_hash)
@@ -36,11 +38,13 @@ public:
         HANDLEHASH(TipRequestMessage);
         HANDLEHASH(TipMessage);
         HANDLEHASH(CalendarRequestMessage);
+        HANDLEHASH(CalendarMessage);
     }
 
     HANDLECLASS(TipRequestMessage);
     HANDLECLASS(TipMessage);
     HANDLECLASS(CalendarRequestMessage);
+    HANDLECLASS(CalendarMessage);
 
     void HandleTipRequestMessage(TipRequestMessage request);
 
@@ -54,7 +58,7 @@ public:
 
     uint160 RequestTips();
 
-    void RequestCalendarOfTipWithTheMostWork();
+    uint160 RequestCalendarOfTipWithTheMostWork();
 
     TipMessage TipWithTheMostWork();
 
@@ -64,6 +68,7 @@ public:
 
     void RecordReportedTotalWorkOfTip(uint160 tip_message_hash, uint160 total_work);
 
+    void HandleCalendarMessage(CalendarMessage calendar_message);
 };
 
 

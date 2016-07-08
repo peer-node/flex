@@ -158,3 +158,26 @@ TEST_F(ADataMessageHandlerWithSomeBatches, RespondsToCalendarRequestsWithCalenda
     CalendarMessage calendar_message(calendar_request, credit_system);
     ASSERT_TRUE(peer.HasReceived("data", "calendar", calendar_message));
 }
+
+TEST_F(ADataMessageHandlerWithSomeBatches, RejectsIncomingCalendarMessagesThatWerentRequested)
+{
+    MinedCredit mined_credit_at_tip = calendar->LastMinedCredit();
+    CalendarRequestMessage calendar_request(mined_credit_at_tip);
+    CalendarMessage calendar_message(calendar_request, credit_system);
+
+    data_message_handler->HandleMessage(GetDataStream(calendar_message), &peer);
+    bool rejected = msgdata[calendar_message.GetHash160()]["rejected"];
+    ASSERT_THAT(rejected, Eq(true));
+}
+
+TEST_F(ADataMessageHandlerWithSomeBatches, AcceptsIncomingCalendarMessagesThatWereRequested)
+{
+    uint160 request_hash = data_message_handler->RequestCalendarOfTipWithTheMostWork();
+
+    CalendarRequestMessage calendar_request = msgdata[request_hash]["calendar_request"];
+    CalendarMessage calendar_message(calendar_request, credit_system);
+
+    data_message_handler->HandleMessage(GetDataStream(calendar_message), &peer);
+    bool rejected = msgdata[calendar_message.GetHash160()]["rejected"];
+    ASSERT_THAT(rejected, Eq(false));
+}

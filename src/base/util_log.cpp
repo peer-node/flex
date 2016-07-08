@@ -15,7 +15,7 @@ using namespace std;
 CClientUIInterface uiInterface;
 bool fDebug = false;
 bool fNoListen = false;
-bool fPrintToConsole = false;
+bool fPrintToConsole = true;
 bool fPrintToDebugLog = true;
 bool fLogTimestamps = false;
 volatile bool fReopenDebugLog = false;
@@ -41,6 +41,7 @@ static void DebugPrintInit()
     if (fileout) setbuf(fileout, NULL); // unbuffered
 
     mutexDebugLog = new boost::mutex();
+    fPrintToConsole = true;
 }
 
 void DebugPrintStop()
@@ -92,7 +93,7 @@ int LogPrintStr(const std::string &str)
     if (fPrintToConsole)
     {
         // print to console
-        ret = fwrite(str.data(), 1, str.size(), stdout);
+        ret = (int) fwrite(str.data(), 1, str.size(), stdout);
     }
     else if (fPrintToDebugLog)
     {

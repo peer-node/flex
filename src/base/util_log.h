@@ -46,7 +46,7 @@ TINYFORMAT_FOREACH_ARGNUM(MAKE_ERROR_AND_LOG_FUNC)
  */
 static inline int LogPrint(const char* category, const char* format)
 {
-    if(!LogAcceptCategory(category)) return 0;
+    if(category != NULL and not LogAcceptCategory(category)) return 0;
     return LogPrintStr(format);
 }
 static inline bool error(const char* format)

@@ -28,6 +28,8 @@ public:
         READWRITE(request_hash);
     )
 
+    DEPENDENCIES();
+
     uint160 GetHash160()
     {
         CDataStream ss(SER_NETWORK, CLIENT_VERSION);

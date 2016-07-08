@@ -109,7 +109,7 @@ public:
 
     Logger& operator<<(const char* value)
     {
-        LogPrint(LOG_CATEGORY, value);
+        LogPrint(NULL, value);
         return *this;
     }
 };
