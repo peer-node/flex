@@ -95,8 +95,6 @@ class TwistWorkCheck
 {
 public:
     uint256 proof_hash;
-    uint32_t start_link;
-    uint32_t end_link;
     uint8_t valid;
     uint32_t failure_step;
     uint32_t failure_link;
@@ -108,8 +106,6 @@ public:
 
     IMPLEMENT_SERIALIZE(
         READWRITE(proof_hash);
-        READWRITE(start_link);
-        READWRITE(end_link);
         READWRITE(valid);
         READWRITE(failure_link);
         READWRITE(failure_step);

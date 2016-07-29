@@ -5,6 +5,7 @@
 #include <src/credits/CreditInBatch.h>
 #include "Calend.h"
 #include "Diurn.h"
+#include "CalendarFailureDetails.h"
 
 class CreditSystem;
 
@@ -26,6 +27,16 @@ public:
         READWRITE(current_diurn);
         READWRITE(extra_work);
     )
+
+    bool operator==(const Calendar& other) const
+    {
+        return calends == other.calends and current_diurn == other.current_diurn and extra_work == other.extra_work;
+    }
+
+    bool operator!=(const Calendar& other) const
+    {
+        return not (*this == other);
+    }
 
     uint160 CalendWork();
 
@@ -91,6 +102,14 @@ public:
     bool ValidateCreditInBatchUsingCurrentDiurn(CreditInBatch credit_in_batch);
 
     bool ValidateCreditInBatchUsingPreviousDiurn(CreditInBatch credit_in_batch, std::vector<uint160> long_branch);
+
+    bool CheckCalendDifficulties(CreditSystem *credit_system);
+
+    bool CheckDifficulties(CreditSystem *credit_system);
+
+    bool CheckRootsAndDifficulties(CreditSystem *credit_system);
+
+    bool SpotCheckWork(CalendarFailureDetails &details);
 };
 
 

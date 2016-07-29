@@ -10,6 +10,7 @@
 #include "MinedCreditMessage.h"
 #include "Calend.h"
 
+
 #define TARGET_BATCH_INTERVAL 60000000ULL // one minute
 #define TARGET_DIURN_LENGTH (24 * 60 * 60 * 1000000ULL) // one day
 
@@ -18,11 +19,14 @@
 uint160 AdjustDifficultyAfterBatchInterval(uint160 earlier_difficulty, uint64_t interval);
 uint160 AdjustDiurnalDifficultyAfterDiurnDuration(uint160 earlier_diurnal_difficulty, uint64_t duration);
 
+class CalendarMessage;
+
 class CreditSystem
 {
 public:
     MemoryDataStore &msgdata, &creditdata;
     uint64_t initial_difficulty{INITIAL_DIFFICULTY};
+    uint64_t initial_diurnal_difficulty{INITIAL_DIURNAL_DIFFICULTY};
 
     CreditSystem(MemoryDataStore &msgdata, MemoryDataStore &creditdata):
             msgdata(msgdata), creditdata(creditdata)
@@ -121,6 +125,18 @@ public:
     std::vector<uint160> GetMessagesInMinedCreditMessage(uint160 msg_hash);
 
     BitChain ConstructSpentChainFromPreviousSpentChainAndContentsOfMinedCreditMessage(MinedCreditMessage &msg);
+
+    void AddIncompleteProofOfWork(MinedCreditMessage &msg);
+
+    void RecordCalendarReportedWork(CalendarMessage calendar_message, uint160 reported_work);
+
+    uint160 MaximumReportedCalendarWork();
+
+    CalendarMessage CalendarMessageWithMaximumReportedWork();
+
+    CalendarMessage CalendarMessageWithMaximumScrutinizedWork();
+
+    void RecordCalendarScrutinizedWork(CalendarMessage calendar_message, uint160 scrutinized_work);
 };
 
 

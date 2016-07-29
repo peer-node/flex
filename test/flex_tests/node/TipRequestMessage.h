@@ -19,7 +19,7 @@ public:
 
     TipRequestMessage()
     {
-        timestamp = GetTimeMicros();
+       timestamp = GetTimeMicros();
     }
 
     IMPLEMENT_SERIALIZE

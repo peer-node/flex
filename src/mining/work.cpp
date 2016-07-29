@@ -159,8 +159,6 @@ uint160 target_from_difficulty(uint160 difficulty)
                                               uint32_t link, uint32_t links_to_check)
     {
         TwistWorkCheck check(*this);
-        check.start_link = link;
-        check.end_link = link + links_to_check;
         check.valid = (uint8_t) twist_doverify(UBEGIN(memoryseed),
                                                uint160to128(target),
                                                uint160to128(link_threshold),

@@ -307,7 +307,7 @@ TEST_F(ACalendarWithMinedCreditsWhoseDifficultiesVary, ChecksTheCalendDifficulti
 {
     uint160 credit_hash = CreditHashAtTipOfChainContainingCalends();
     calendar = Calendar(credit_hash, credit_system);
-    bool ok = calendar.CheckCalendDifficulties();
+    bool ok = calendar.CheckCalendDifficulties(credit_system);
     ASSERT_THAT(ok, Eq(true));
 }
 
@@ -331,7 +331,7 @@ TEST_F(ACalendarWithMinedCreditsWhoseDifficultiesVary, ChecksAllTheDifficulties)
 {
     uint160 credit_hash = CreditHashAtTipOfChainContainingCalends();
     calendar = Calendar(credit_hash, credit_system);
-    bool ok = calendar.CheckDifficulties();
+    bool ok = calendar.CheckDifficulties(credit_system);
     ASSERT_THAT(ok, Eq(true));
 }
 

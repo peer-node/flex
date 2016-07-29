@@ -6,6 +6,9 @@
 #include "CreditSystem.h"
 #include "Calendar.h"
 
+#include "log.h"
+#define LOG_CATEGORY "CalendarMessage.h"
+
 class CalendarMessage
 {
 public:

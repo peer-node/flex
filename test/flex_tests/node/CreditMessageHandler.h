@@ -97,17 +97,9 @@ public:
 
     void UpdateAcceptedMessagesAfterNewTip(MinedCreditMessage &msg);
 
-    void RemoveAcceptedMessageAndSpentPositions(uint160 accepted_message_hash);
-
     MinedCreditMessage Tip();
 
     void UpdateAcceptedMessagesAfterFork(uint160 old_tip, uint160 new_tip);
-
-    void UpdateSpentPositionsAndAcceptedMessagesAfterFork(std::vector<uint160> messages_on_old_branch,
-                                                          std::vector<uint160> messages_on_new_branch);
-
-    void UpdateSpentPositionsAfterFork(std::vector<uint160> messages_on_old_branch,
-                                       std::vector<uint160> messages_on_new_branch);
 
     void UpdateAcceptedMessagesAfterFork(std::vector<uint160> messages_on_old_branch,
                                          std::vector<uint160> messages_on_new_branch);

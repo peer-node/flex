@@ -10,6 +10,7 @@
 #include "TipMessage.h"
 #include "CalendarRequestMessage.h"
 #include "CalendarMessage.h"
+#include "CalendarFailureDetails.h"
 
 
 class DataMessageHandler : public MessageHandlerWithOrphanage
@@ -69,6 +70,26 @@ public:
     void RecordReportedTotalWorkOfTip(uint160 tip_message_hash, uint160 total_work);
 
     void HandleCalendarMessage(CalendarMessage calendar_message);
+
+    bool ScrutinizeCalendarWithTheMostWork();
+
+    bool CheckDifficultiesRootsAndProofsOfWork(Calendar &calendar);
+
+    bool Scrutinize(Calendar calendar, CalendarFailureDetails &details);
+
+    bool Scrutinize(Calendar calendar, uint64_t scrutiny_time, CalendarFailureDetails &details);
+
+    void HandleIncomingCalendar(Calendar incoming_calendar);
+
+    void HandleIncomingCalendar(CalendarMessage incoming_calendar);
+
+    bool ValidateCalendarMessage(CalendarMessage calendar_message);
+
+    void SwitchToCalendarWithTheMostWorkWhichHasSurvivedScrutiny();
+
+    Calendar CalendarWithTheMostWorkWhichHasSurvivedScrutiny();
+
+    void SwitchToCalendar(Calendar new_calendar);
 };
 
 

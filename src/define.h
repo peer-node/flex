@@ -107,7 +107,13 @@ typedef std::string string_t;
         return result;                                          \
     }              
 
-
+#define HASH160()                                               \
+    uint160 GetHash160()                                        \
+    {                                                           \
+        CDataStream ss(SER_NETWORK, CLIENT_VERSION);            \
+        ss << *this;                                            \
+        return Hash160(ss.begin(), ss.end());                   \
+    }
 
 #define RELAY_FEE 1000000
 

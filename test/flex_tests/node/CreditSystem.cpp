@@ -7,6 +7,10 @@
 #include "CreditSystem.h"
 #include "MinedCreditMessage.h"
 #include "Calend.h"
+#include "CalendarMessage.h"
+
+#include "log.h"
+#define LOG_CATEGORY "CreditSystem.cpp"
 
 using std::set;
 using std::vector;
@@ -374,7 +378,7 @@ uint160 CreditSystem::GetNextDiurnalDifficulty(MinedCredit credit)
 {
     uint160 prev_diurn_root = credit.network_state.previous_diurn_root;
     if (prev_diurn_root == 0)
-        return INITIAL_DIURNAL_DIFFICULTY;
+        return initial_diurnal_difficulty;
 
     if (not IsCalend(credit.GetHash160()))
         return credit.network_state.diurnal_difficulty;
@@ -460,13 +464,13 @@ bool CreditSystem::CheckHashesSeedsAndThresholdsInMinedCreditMessageProofOfWork(
 
     if (branch.size() == 0 or branch[0] != msg.mined_credit.GetHash())
         ok = false;
-    else if (MiningHashTree::EvaluateBranch(branch) != msg.proof_of_work.proof.memoryseed)
+    if (MiningHashTree::EvaluateBranch(branch) != msg.proof_of_work.proof.memoryseed)
         ok = false;
-    else if (proof.N_factor != expected_memory_factor_for_mined_credit_proofs_of_work)
+    if (proof.N_factor != expected_memory_factor_for_mined_credit_proofs_of_work)
         ok = false;
-    else if (proof.seeds.size() != FLEX_WORK_NUMBER_OF_SEGMENTS)
+    if (proof.seeds.size() != FLEX_WORK_NUMBER_OF_SEGMENTS)
         ok = false;
-    else if (proof.link_threshold != proof.target * FLEX_WORK_NUMBER_OF_LINKS)
+    if (proof.link_threshold != proof.target * FLEX_WORK_NUMBER_OF_LINKS)
         ok = false;
 
     return ok;
@@ -582,3 +586,72 @@ uint160 CreditSystem::InitialDifficulty()
     return initial_difficulty;
 }
 
+void CreditSystem::AddIncompleteProofOfWork(MinedCreditMessage& msg)
+{
+    NetworkSpecificProofOfWork enclosed_proof;
+    enclosed_proof.branch.push_back(msg.mined_credit.GetHash());
+    uint256 memory_seed = MiningHashTree::EvaluateBranch(enclosed_proof.branch);
+    uint64_t memory_factor = expected_memory_factor_for_mined_credit_proofs_of_work;
+    TwistWorkProof proof(memory_seed, memory_factor, msg.mined_credit.network_state.difficulty);
+    enclosed_proof.proof = proof;
+    msg.proof_of_work = enclosed_proof;
+}
+
+void CreditSystem::RecordCalendarReportedWork(CalendarMessage calendar_message, uint160 reported_work)
+{
+    vector<uint160> calendar_message_hashes;
+    creditdata.GetObjectAtLocation(calendar_message_hashes, "reported_calendar_work", reported_work);
+    calendar_message_hashes.push_back(calendar_message.GetHash160());
+    creditdata[calendar_message_hashes].Location("reported_calendar_work") = reported_work;
+}
+
+void CreditSystem::RecordCalendarScrutinizedWork(CalendarMessage calendar_message, uint160 scrutinized_work)
+{
+    vector<uint160> calendar_message_hashes;
+    creditdata.GetObjectAtLocation(calendar_message_hashes, "scrutinized_calendar_work", scrutinized_work);
+    calendar_message_hashes.push_back(calendar_message.GetHash160());
+    creditdata[calendar_message_hashes].Location("scrutinized_calendar_work") = scrutinized_work;
+}
+
+uint160 CreditSystem::MaximumReportedCalendarWork()
+{
+    vector<uint160> calendar_message_hashes;
+    uint160 reported_work = 0;
+    LocationIterator work_scanner = creditdata.LocationIterator("reported_calendar_work");
+    work_scanner.SeekEnd();
+    work_scanner.GetPreviousObjectAndLocation(calendar_message_hashes, reported_work);
+    return reported_work;
+}
+
+CalendarMessage CreditSystem::CalendarMessageWithMaximumReportedWork()
+{
+    vector<uint160> calendar_message_hashes;
+    uint160 reported_work = 0;
+    LocationIterator work_scanner = creditdata.LocationIterator("reported_calendar_work");
+    work_scanner.SeekEnd();
+    work_scanner.GetPreviousObjectAndLocation(calendar_message_hashes, reported_work);
+
+    if (calendar_message_hashes.size() == 0)
+        return CalendarMessage();
+
+    CalendarMessage calendar_message = msgdata[calendar_message_hashes[0]]["calendar"];
+    return calendar_message;
+}
+
+CalendarMessage CreditSystem::CalendarMessageWithMaximumScrutinizedWork()
+{
+    vector<uint160> calendar_message_hashes;
+    uint160 reported_work = 0;
+    LocationIterator work_scanner = creditdata.LocationIterator("scrutinized_calendar_work");
+    work_scanner.SeekEnd();
+    work_scanner.GetPreviousObjectAndLocation(calendar_message_hashes, reported_work);
+
+    if (calendar_message_hashes.size() == 0)
+    {
+        log_ << "no hashes at location\n";
+        return CalendarMessage();
+    }
+
+    CalendarMessage calendar_message = msgdata[calendar_message_hashes[0]]["calendar"];
+    return calendar_message;
+}

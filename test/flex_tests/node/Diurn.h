@@ -28,6 +28,11 @@ public:
         READWRITE(credits_in_diurn);
     )
 
+    bool operator==(const Diurn& other) const
+    {
+        return previous_diurn_root == other.previous_diurn_root and credits_in_diurn == other.credits_in_diurn;
+    }
+
     std::vector<uint160> Branch(uint160 credit_hash);
 
     static bool VerifyBranch(uint160 credit_hash, std::vector<uint160> branch);

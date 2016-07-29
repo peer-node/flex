@@ -2,6 +2,12 @@
 #include "CreditSystem.h"
 #include <boost/range/adaptor/reversed.hpp>
 
+#include "log.h"
+#include "CalendarFailureDetails.h"
+
+#define LOG_CATEGORY "Calendar.cpp"
+
+
 Calendar::Calendar() { }
 
 Calendar::Calendar(uint160 credit_hash, CreditSystem *credit_system)
@@ -125,19 +131,23 @@ void Calendar::AddTopUpWorkInDiurn(uint160 credit_work_in_diurn,
     uint160 calend_work = calend.mined_credit.network_state.diurnal_difficulty;
     EncodedNetworkState network_state = calend.mined_credit.network_state;
 
-    uint160 previous_hash, remaining_credit_work_in_diurn = credit_work_in_diurn;
+    uint160 credit_hash, remaining_credit_work_in_diurn = credit_work_in_diurn;
 
-    while (remaining_credit_work_in_diurn > calend_work && total_credit_work > total_calendar_work)
+    MinedCreditMessage msg = (MinedCreditMessage)calend;
+
+    while (remaining_credit_work_in_diurn > calend_work and total_credit_work > total_calendar_work)
     {
-        previous_hash = network_state.previous_mined_credit_hash;
-        if (previous_hash == 0)
-            break;
-        MinedCreditMessage msg = credit_system->creditdata[previous_hash]["msg"];
         network_state = msg.mined_credit.network_state;
         extra_work_in_diurn.push_back(msg);
         remaining_credit_work_in_diurn -= network_state.difficulty;
         total_calendar_work += network_state.difficulty;
+
+        credit_hash = network_state.previous_mined_credit_hash;
+        if (credit_hash == 0)
+            break;
+        msg = credit_system->creditdata[credit_hash]["msg"];
     }
+    std::reverse(extra_work_in_diurn.begin(), extra_work_in_diurn.end());
     extra_work.push_back(extra_work_in_diurn);
 }
 
@@ -173,12 +183,17 @@ bool Calendar::CheckCreditHashesInExtraWork()
 {
     if (extra_work.size() != calends.size())
         return false;
+
     for (uint32_t i = 0; i < extra_work.size(); i++)
     {
         if (not CheckCreditHashesInSequenceOfConsecutiveMinedCreditMessages(extra_work[i]))
+        {
             return false;
+        }
         if (extra_work[i].size() > 0 and extra_work[i].back().mined_credit != calends[i].mined_credit)
+        {
             return false;
+        }
     }
     return true;
 }
@@ -187,7 +202,9 @@ bool Calendar::CheckCreditHashesInSequenceOfConsecutiveMinedCreditMessages(std::
 {
     for (uint32_t i = 1 ; i < msgs.size() ; i++)
         if (msgs[i].mined_credit.network_state.previous_mined_credit_hash != msgs[i-1].mined_credit.GetHash160())
+        {
             return false;
+        }
     return true;
 }
 
@@ -286,7 +303,7 @@ bool Calendar::CheckCurrentDiurnDifficulties()
     return CheckDifficultiesOfConsecutiveSequenceOfMinedCreditMessages(current_diurn.credits_in_diurn);
 }
 
-bool Calendar::CheckCalendDifficulties()
+bool Calendar::CheckCalendDifficulties(CreditSystem* credit_system)
 {
     uint64_t calend_number = 0, previous_timestamp = 0, preceding_timestamp = 0;
     uint160 previous_difficulty = 0;
@@ -297,7 +314,7 @@ bool Calendar::CheckCalendDifficulties()
 
         if (calend_number < 2)
         {
-            if (diurnal_difficulty != INITIAL_DIURNAL_DIFFICULTY)
+            if (diurnal_difficulty != credit_system->initial_diurnal_difficulty)
                 return false;
         }
         else
@@ -315,21 +332,37 @@ bool Calendar::CheckCalendDifficulties()
     return true;
 }
 
-bool Calendar::CheckDifficulties()
+bool Calendar::CheckDifficulties(CreditSystem* credit_system)
 {
-    return CheckCalendDifficulties() and CheckCurrentDiurnDifficulties() and CheckExtraWorkDifficulties();
+    if (calends.size() == 0 and current_diurn.Size() > 0)
+    {
+        MinedCredit first_mined_credit = current_diurn.credits_in_diurn.front().mined_credit;
+        EncodedNetworkState first_network_state = first_mined_credit.network_state;
+        if (first_network_state.difficulty != credit_system->initial_difficulty)
+            return false;
+    }
+    return CheckCalendDifficulties(credit_system) and CheckCurrentDiurnDifficulties()
+                                                  and CheckExtraWorkDifficulties();
 }
 
 bool Calendar::CheckRootsAndDifficulties()
 {
-    return CheckDiurnRootsAndCreditHashes() and CheckDifficulties();
+    return CheckDiurnRootsAndCreditHashes() ;
+}
+
+
+bool Calendar::CheckRootsAndDifficulties(CreditSystem* credit_system)
+{
+    return CheckDiurnRootsAndCreditHashes() and CheckDifficulties(credit_system);
 }
 
 bool Calendar::CheckProofsOfWorkInCurrentDiurn(CreditSystem* credit_system)
 {
     for (auto msg : current_diurn.credits_in_diurn)
+    {
         if (not credit_system->QuickCheckProofOfWorkInMinedCreditMessage(msg))
             return false;
+    }
     return true;
 }
 
@@ -425,4 +458,24 @@ bool Calendar::ValidateCreditInBatch(CreditInBatch credit_in_batch)
     long_branch.insert(long_branch.end(), credit_in_batch.diurn_branch.begin(), credit_in_batch.diurn_branch.end());
     return ValidateCreditInBatchUsingPreviousDiurn(credit_in_batch, long_branch);
 }
+
+bool Calendar::SpotCheckWork(CalendarFailureDetails &details)
+{
+    for (uint32_t i = 0; i < calends.size(); i++)
+    {
+        TwistWorkCheck check = calends[i].proof_of_work.proof.SpotCheck();
+
+        if (!check.Valid())
+        {
+            uint160 diurn_root = calends[i].Root();
+            details.diurn_root = diurn_root;
+            details.credit_hash = calends[i].mined_credit.GetHash160();
+            details.check = check;
+            return false;
+        }
+    }
+    return true;
+}
+
+
 
