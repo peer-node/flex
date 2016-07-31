@@ -33,6 +33,11 @@ public:
         return mined_credit == other.mined_credit and hash_list == other.hash_list
                                                   and proof_of_work == other.proof_of_work;
     }
+
+    bool operator!=(const MinedCreditMessage &other) const
+    {
+        return not (*this == other);
+    }
 };
 
 

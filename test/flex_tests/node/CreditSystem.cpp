@@ -68,11 +68,16 @@ void CreditSystem::StoreTransaction(SignedTransaction tx)
 
 void CreditSystem::StoreHash(uint160 hash)
 {
+    StoreHash(hash, msgdata);
+}
+
+void CreditSystem::StoreHash(uint160 hash, MemoryDataStore& hashdata)
+{
     uint32_t short_hash = *(uint32_t*)&hash;
-    vector<uint160> matches = msgdata[short_hash]["matches"];
+    vector<uint160> matches = hashdata[short_hash]["matches"];
     if (!VectorContainsEntry(matches, hash))
         matches.push_back(hash);
-    msgdata[short_hash]["matches"] = matches;
+    hashdata[short_hash]["matches"] = matches;
 }
 
 void CreditSystem::StoreMinedCreditMessage(MinedCreditMessage msg)
@@ -648,7 +653,6 @@ CalendarMessage CreditSystem::CalendarMessageWithMaximumScrutinizedWork()
 
     if (calendar_message_hashes.size() == 0)
     {
-        log_ << "no hashes at location\n";
         return CalendarMessage();
     }
 

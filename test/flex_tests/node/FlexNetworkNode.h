@@ -34,7 +34,6 @@ public:
         delete wallet;
     }
 
-
     Calendar GetCalendar();
 
     uint64_t Balance();
@@ -54,6 +53,7 @@ public:
     Point GetNewPublicKey();
 
     uint160 SendToAddress(std::string address, int64_t amount);
+
 };
 
 

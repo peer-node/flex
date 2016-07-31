@@ -854,10 +854,6 @@ inline bool VerifyBranchFromOrderedHashTree(uint32_t position,
 {
     if ((!branch.size()) || root != branch.back())
     {
-        if (!branch.size())
-            log_ << "VerifyBranchFromOrderedHashTree(): no branch!!\n";
-        else
-            log_ << "root != branch[branch.size() - 1]\n";
         return false;
     }
 
@@ -865,14 +861,10 @@ inline bool VerifyBranchFromOrderedHashTree(uint32_t position,
     bool verified;
     if (EvaluateBranchWithHash(branch, hash) != root)
     {
-        log_ << "VerifyBranchFromOrderedHashTree(): failed!\n";
-        log_ << EvaluateBranchWithHash(branch, hash) << " vs "
-             << root << "\n";
         verified = false;
     }
     else
     {
-        log_ << "VerifyBranchFromOrderedHashTree(): succeeded!\n";
         verified = true;
     }
     return verified;

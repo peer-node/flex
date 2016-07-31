@@ -137,6 +137,8 @@ public:
     CalendarMessage CalendarMessageWithMaximumScrutinizedWork();
 
     void RecordCalendarScrutinizedWork(CalendarMessage calendar_message, uint160 scrutinized_work);
+
+    void StoreHash(uint160 hash, MemoryDataStore &hashdata);
 };
 
 

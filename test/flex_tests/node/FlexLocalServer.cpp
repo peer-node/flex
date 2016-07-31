@@ -15,16 +15,20 @@ void FlexLocalServer::LoadConfig(int argc, const char **argv)
     config = config_parser.GetConfig();
 }
 
-void FlexLocalServer::ThrowUsernamePasswordException()
+std::string RandomPassword()
 {
     unsigned char rand_pwd[32];
     RAND_bytes(rand_pwd, 32);
-    std::string random_password = EncodeBase58(&rand_pwd[0], &rand_pwd[0]+32);
-    std::string message = "To use Flex you must set the value of rpcpassword in the configuration file:\n"
+    return EncodeBase58(&rand_pwd[0], &rand_pwd[0]+32);
+}
+
+void FlexLocalServer::ThrowUsernamePasswordException()
+{
+    std::string message = "To use flexnet you must set the value of rpcpassword in the configuration file:\n"
                           + config_parser.ConfigFileName().string() + "\n"
                           "It is recommended you use the following random password:\n"
                           "rpcuser=flexrpc\n"
-                          "rpcpassword=" + random_password + "\n"
+                          "rpcpassword=" + RandomPassword() + "\n"
                           "(you do not need to remember this password)\n";
     throw(std::runtime_error(message));
 }

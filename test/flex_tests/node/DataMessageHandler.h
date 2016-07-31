@@ -11,6 +11,11 @@
 #include "CalendarRequestMessage.h"
 #include "CalendarMessage.h"
 #include "CalendarFailureDetails.h"
+#include "InitialDataRequestMessage.h"
+#include "InitialDataMessage.h"
+
+
+#define CALENDAR_SCRUTINY_TIME 5000000 // microseconds
 
 
 class DataMessageHandler : public MessageHandlerWithOrphanage
@@ -19,6 +24,7 @@ public:
     MemoryDataStore &msgdata, &creditdata;
     CreditSystem *credit_system{NULL};
     Calendar *calendar{NULL};
+    uint64_t calendar_scrutiny_time{CALENDAR_SCRUTINY_TIME};
 
     DataMessageHandler(MemoryDataStore &msgdata_, MemoryDataStore &creditdata_):
             MessageHandlerWithOrphanage(msgdata_), msgdata(msgdata_), creditdata(creditdata_)
@@ -32,6 +38,8 @@ public:
         HANDLESTREAM(TipMessage);
         HANDLESTREAM(CalendarRequestMessage);
         HANDLESTREAM(CalendarMessage);
+        HANDLESTREAM(InitialDataRequestMessage);
+        HANDLESTREAM(InitialDataMessage);
     }
 
     void HandleMessage(uint160 message_hash)
@@ -40,18 +48,26 @@ public:
         HANDLEHASH(TipMessage);
         HANDLEHASH(CalendarRequestMessage);
         HANDLEHASH(CalendarMessage);
+        HANDLEHASH(InitialDataRequestMessage);
+        HANDLEHASH(InitialDataMessage);
     }
 
     HANDLECLASS(TipRequestMessage);
     HANDLECLASS(TipMessage);
     HANDLECLASS(CalendarRequestMessage);
     HANDLECLASS(CalendarMessage);
+    HANDLECLASS(InitialDataRequestMessage);
+    HANDLECLASS(InitialDataMessage);
 
     void HandleTipRequestMessage(TipRequestMessage request);
 
     void HandleTipMessage(TipMessage message);
 
     void HandleCalendarRequestMessage(CalendarRequestMessage request);
+
+    void HandleInitialDataRequestMessage(InitialDataRequestMessage request);
+
+    void HandleInitialDataMessage(InitialDataMessage request);
 
     void SetCreditSystem(CreditSystem *credit_system_);
 
@@ -75,11 +91,7 @@ public:
 
     bool CheckDifficultiesRootsAndProofsOfWork(Calendar &calendar);
 
-    bool Scrutinize(Calendar calendar, CalendarFailureDetails &details);
-
     bool Scrutinize(Calendar calendar, uint64_t scrutiny_time, CalendarFailureDetails &details);
-
-    void HandleIncomingCalendar(Calendar incoming_calendar);
 
     void HandleIncomingCalendar(CalendarMessage incoming_calendar);
 
@@ -90,6 +102,20 @@ public:
     Calendar CalendarWithTheMostWorkWhichHasSurvivedScrutiny();
 
     void SwitchToCalendar(Calendar new_calendar);
+
+    void RequestInitialDataMessage(CalendarMessage calendar_message);
+
+    bool CheckSpentChainInInitialDataMessage(InitialDataMessage message);
+
+    bool EnclosedMessagesArePresentInInitialDataMessage(InitialDataMessage &message);
+
+    MemoryDataStore GetEnclosedMessageHashes(InitialDataMessage &message);
+
+    bool InitialDataMessageMatchesRequestedCalendar(InitialDataMessage &initial_data_message);
+
+    Calendar GetRequestedCalendar(InitialDataMessage &initial_data_message);
+
+    bool InitialDataMessageMatchesCalendar(InitialDataMessage &message, Calendar calendar);
 };
 
 

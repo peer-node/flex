@@ -1,14 +1,10 @@
 #include "DataMessageHandler.h"
-#include "CalendarRequestMessage.h"
-#include "CalendarMessage.h"
-
-#include "log.h"
-#include "CalendarFailureDetails.h"
 #include "CalendarFailureMessage.h"
 
+#include "log.h"
 #define LOG_CATEGORY "DataMessageHandler.cpp"
 
-#define CALENDAR_SCRUTINY_TIME 5000000
+
 
 void DataMessageHandler::SetCreditSystem(CreditSystem *credit_system_)
 {
@@ -156,9 +152,25 @@ void DataMessageHandler::HandleIncomingCalendar(CalendarMessage calendar_message
         }
         else
         {
-            SwitchToCalendarWithTheMostWorkWhichHasSurvivedScrutiny();
+            RequestInitialDataMessage(calendar_message);
         }
     }
+}
+
+void DataMessageHandler::RequestInitialDataMessage(CalendarMessage calendar_message)
+{
+
+    InitialDataRequestMessage request(calendar_message);
+
+    uint160 request_hash = request.GetHash160();
+    uint160 calendar_message_hash = calendar_message.GetHash160();
+
+    msgdata[request_hash]["is_data_request"] = true;
+    msgdata[request_hash]["calendar_message_hash"] = calendar_message_hash;
+
+    CNode *peer = GetPeer(calendar_message_hash);
+    if (peer != NULL)
+        peer->PushMessage("data", "initial_data_request", request);
 }
 
 void DataMessageHandler::SwitchToCalendarWithTheMostWorkWhichHasSurvivedScrutiny()
@@ -185,7 +197,7 @@ bool DataMessageHandler::ScrutinizeCalendarWithTheMostWork()
 
     uint160 message_hash = calendar_message.GetHash160();
 
-    bool ok = Scrutinize(calendar_message.calendar, CALENDAR_SCRUTINY_TIME, details);
+    bool ok = Scrutinize(calendar_message.calendar, calendar_scrutiny_time, details);
     if (not ok)
     {
         creditdata[message_hash]["failure_details"] = details;
@@ -214,3 +226,97 @@ bool DataMessageHandler::Scrutinize(Calendar calendar, uint64_t scrutiny_time, C
     return true;
 }
 
+void DataMessageHandler::HandleInitialDataRequestMessage(InitialDataRequestMessage request)
+{
+    InitialDataMessage initial_data_message(request, credit_system);
+    CNode *peer = GetPeer(request.GetHash160());
+    peer->PushMessage("data", "initial_data", initial_data_message);
+}
+
+void DataMessageHandler::HandleInitialDataMessage(InitialDataMessage initial_data_message)
+{
+    uint160 message_hash = initial_data_message.GetHash160();
+    if (not msgdata[initial_data_message.request_hash]["is_data_request"])
+    {
+        RejectMessage(message_hash);
+        return;
+    }
+}
+
+bool DataMessageHandler::CheckSpentChainInInitialDataMessage(InitialDataMessage initial_data_message)
+{
+    Calend calend = initial_data_message.GetLastCalend();
+    return calend.mined_credit.network_state.spent_chain_hash == initial_data_message.spent_chain.GetHash160();
+}
+
+MemoryDataStore DataMessageHandler::GetEnclosedMessageHashes(InitialDataMessage &message)
+{
+    MemoryDataStore hashdata;
+    for (auto mined_credit_message : message.mined_credit_messages_in_current_diurn)
+    {
+        credit_system->StoreHash(mined_credit_message.mined_credit.GetHash160(), hashdata);
+    }
+    for (uint32_t i = 0; i < message.enclosed_message_types.size(); i++)
+    {
+        std::string type = message.enclosed_message_types[i];
+        vch_t content = message.enclosed_message_contents[i];
+
+        uint160 enclosed_message_hash;
+        if (type != "mined_credit")
+            enclosed_message_hash = Hash160(content.begin(), content.end());
+        else
+        {
+            CDataStream ss(content, SER_NETWORK, CLIENT_VERSION);
+            MinedCredit mined_credit;
+            ss >> mined_credit;
+            enclosed_message_hash = mined_credit.GetHash160();
+        }
+        credit_system->StoreHash(enclosed_message_hash, hashdata);
+    }
+    return hashdata;
+}
+
+bool DataMessageHandler::EnclosedMessagesArePresentInInitialDataMessage(InitialDataMessage &message)
+{
+    MemoryDataStore enclosed_message_hashes = GetEnclosedMessageHashes(message);
+    for (auto mined_credit_message : message.mined_credit_messages_in_current_diurn)
+    {
+        if (not mined_credit_message.hash_list.RecoverFullHashes(enclosed_message_hashes))
+            return false;
+    }
+    return true;
+}
+
+bool DataMessageHandler::InitialDataMessageMatchesRequestedCalendar(InitialDataMessage &initial_data_message)
+{
+    Calendar requested_calendar = GetRequestedCalendar(initial_data_message);
+    return InitialDataMessageMatchesCalendar(initial_data_message, requested_calendar);
+}
+
+Calendar DataMessageHandler::GetRequestedCalendar(InitialDataMessage &initial_data_message)
+{
+    uint160 request_hash = initial_data_message.request_hash;
+    uint160 calendar_message_hash = msgdata[request_hash]["calendar_message_hash"];
+    CalendarMessage calendar_message = msgdata[calendar_message_hash]["calendar"];
+    return calendar_message.calendar;
+}
+
+bool DataMessageHandler::InitialDataMessageMatchesCalendar(InitialDataMessage &data_message, Calendar calendar)
+{
+    if (calendar.current_diurn.Size() > 1 or calendar.calends.size() == 0)
+    {
+        if (data_message.mined_credit_messages_in_current_diurn != calendar.current_diurn.credits_in_diurn)
+        {
+            return false;
+        }
+    }
+    else if (calendar.current_diurn.Size() == 1)
+    {
+        if (data_message.mined_credit_messages_in_current_diurn.back() != calendar.current_diurn.credits_in_diurn[0])
+            return false;
+    }
+    else if (calendar.current_diurn.Size() == 0)
+        return false;
+
+    return true;
+}

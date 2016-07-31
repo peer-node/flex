@@ -61,7 +61,3 @@ uint160 FlexNetworkNode::SendToAddress(std::string address, int64_t amount)
     credit_message_handler->HandleSignedTransaction(tx);
     return tx.GetHash160();
 }
-
-
-
-
