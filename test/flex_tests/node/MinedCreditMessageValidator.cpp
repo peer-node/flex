@@ -1,6 +1,9 @@
 #include <src/base/util_time.h>
 #include "MinedCreditMessageValidator.h"
 
+#include "log.h"
+#define LOG_CATEGORY "MinedCreditMessageValidator.cpp"
+
 bool MinedCreditMessageValidator::HasMissingData(MinedCreditMessage& msg)
 {
     bool succeeded = msg.hash_list.RecoverFullHashes(credit_system->msgdata);
@@ -95,8 +98,16 @@ bool MinedCreditMessageValidator::CheckPreviousDiurnRoot(MinedCreditMessage &msg
 bool MinedCreditMessageValidator::CheckDiurnalBlockRoot(MinedCreditMessage &msg)
 {
     auto previous_mined_credit = GetPreviousMinedCredit(msg);
+//    log_ << "check diurnal block root for " << msg.mined_credit.GetHash160() << "\n";
+//    log_ << "credit is calend: " << credit_system->IsCalend(msg.mined_credit.GetHash160()) << "\n";
+//    log_ << "previous credit is calend: " << credit_system->IsCalend(msg.mined_credit.network_state.previous_mined_credit_hash) << "\n";
+
     uint160 diurnal_block_root = msg.mined_credit.network_state.diurnal_block_root;
-    return diurnal_block_root == credit_system->GetNextDiurnalBlockRoot(previous_mined_credit);
+    uint160 block_root_succeeding_previous = credit_system->GetNextDiurnalBlockRoot(previous_mined_credit);
+//    log_ << "diurnal block root: " << diurnal_block_root << " vs " << block_root_succeeding_previous << "\n";
+//    log_ << "preceding was: " << previous_mined_credit.network_state.diurnal_block_root << "\n";
+
+    return diurnal_block_root == block_root_succeeding_previous;
 }
 
 bool MinedCreditMessageValidator::CheckMessageListContainsPreviousMinedCreditHash(MinedCreditMessage &msg)
@@ -110,53 +121,62 @@ bool MinedCreditMessageValidator::ValidateNetworkState(MinedCreditMessage &msg)
 {
     bool ok = true;
     uint32_t& batch_number = msg.mined_credit.network_state.batch_number;
-    
+  //  log_ << "start\n";
     ok &= batch_number > 0;
-    
+   // log_ << ok << "\n";
     ok &= CheckBatchNumber(msg);
-    
+  //  log_ << ok << "\n";
     ok &= CheckPreviousTotalWork(msg);
-    
-    ok &= CheckDifficulty(msg);
-    
+  //  log_ << ok << "\n";
+    if (DataRequiredToCalculateDifficultyIsPresent(msg))
+    {
+     //   log_ << "checking difficulty\n";
+        ok &= CheckDifficulty(msg);
+    }
+  //  log_ << ok << "\n";
     ok &= CheckDiurnalDifficulty(msg);
-    
+  //  log_ << ok << "\n";
     ok &= CheckBatchOffset(msg);
-    
+  //  log_ << ok << "\n";
     ok &= CheckTimeStampIsNotInFuture(msg);
-    
+  //  log_ << ok << "\n";
     ok &= CheckPreviousDiurnRoot(msg);
-    
+  //  log_ << ok << "\n";
     ok &= CheckTimeStampSucceedsPreviousTimestamp(msg);
-    
+  //  log_ << ok << "\n";
     ok &= CheckBatchRoot(msg);
-    
+  //  log_ << ok << "\n";
     ok &= CheckBatchSize(msg);
-    
-    ok &= CheckDiurnalBlockRoot(msg);
-    
+   // log_ << ok << "\n";
+    if (DataRequiredToCalculateDiurnalBlockRootIsPresent(msg))
+    {
+   //     log_ << "checking diurnal block root\n";
+        ok &= CheckDiurnalBlockRoot(msg);
+    }
+   // log_ << ok << "\n";
     ok &= CheckSpentChainHash(msg);
-    
+   // log_ << ok << "\n";
     ok &= CheckMessageListHash(msg);
-    
+   // log_ << ok << "\n";
     ok &= CheckMessageListContainsPreviousMinedCreditHash(msg);
-    
+   // log_ << ok << "\n";
     return ok;
 }
 
+bool MinedCreditMessageValidator::DataRequiredToCalculateDifficultyIsPresent(MinedCreditMessage &msg)
+{
+    if (msg.mined_credit.network_state.batch_number < 4)
+        return true;
+    uint160 previous_credit_hash = msg.mined_credit.network_state.previous_mined_credit_hash;
 
+    MinedCredit previous_credit = credit_system->creditdata[previous_credit_hash]["msg"];
+    uint160 preceding_hash = previous_credit.network_state.previous_mined_credit_hash;
 
+    return credit_system->creditdata[preceding_hash].HasProperty("mined_credit");
+}
 
-
-
-
-
-
-
-
-
-
-
-
-
+bool MinedCreditMessageValidator::DataRequiredToCalculateDiurnalBlockRootIsPresent(MinedCreditMessage &msg)
+{
+    return credit_system->DataIsPresentFromMinedCreditToPrecedingCalendOrStart(msg.mined_credit);
+}
 

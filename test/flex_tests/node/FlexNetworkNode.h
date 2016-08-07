@@ -5,6 +5,7 @@
 #include "Calendar.h"
 #include "Wallet.h"
 #include "CreditMessageHandler.h"
+#include "DataMessageHandler.h"
 
 class FlexNetworkNode
 {
@@ -13,6 +14,7 @@ public:
     Calendar calendar;
     Wallet *wallet;
     CreditMessageHandler *credit_message_handler;
+    DataMessageHandler *data_message_handler;
     CreditSystem *credit_system;
     BitChain spent_chain;
 
@@ -25,6 +27,10 @@ public:
         credit_message_handler->SetCalendar(calendar);
         credit_message_handler->SetSpentChain(spent_chain);
         credit_message_handler->SetWallet(*wallet);
+
+        data_message_handler = new DataMessageHandler(msgdata, creditdata);
+        data_message_handler->SetCreditSystem(credit_system);
+        data_message_handler->SetCalendar(&calendar);
     }
 
     ~FlexNetworkNode()

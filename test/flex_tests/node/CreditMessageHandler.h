@@ -19,7 +19,7 @@ public:
     CreditSystem *credit_system;
     Calendar *calendar;
     BitChain *spent_chain;
-    Wallet *wallet;
+    Wallet *wallet{NULL};
     FlexConfig config;
     MinedCreditMessageValidator mined_credit_message_validator;
     TransactionValidator transaction_validator;

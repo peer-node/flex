@@ -630,6 +630,7 @@ TEST_F(ACreditMessageHandlerWithAcceptedTransactions, GeneratesAValidMinedCredit
 {
     MinedCreditMessage msg = credit_message_handler->GenerateMinedCreditMessageWithoutProofOfWork();
     creditdata[msg.GetHash160()]["quickcheck_ok"] = true;
+    creditdata[msg.mined_credit.network_state.previous_mined_credit_hash]["passed_verification"] = true;
     ASSERT_TRUE(credit_message_handler->MinedCreditMessagePassesVerification(msg));
 }
 

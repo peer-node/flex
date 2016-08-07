@@ -2,6 +2,9 @@
 #include <src/crypto/secp256k1point.h>
 #include "CreditMessageHandler.h"
 
+#include "log.h"
+#define LOG_CATEGORY "CreditMessageHandler.cpp"
+
 using std::vector;
 using std::string;
 using std::set;
@@ -25,6 +28,8 @@ void CreditMessageHandler::HandleMinedCreditMessage(MinedCreditMessage msg)
 bool CreditMessageHandler::MinedCreditMessagePassesVerification(MinedCreditMessage& msg)
 {
     uint160 msg_hash = msg.GetHash160();
+    uint160 credit_hash = msg.mined_credit.GetHash160();
+    uint160 previous_hash = msg.mined_credit.network_state.previous_mined_credit_hash;
 
     if (msg.mined_credit.amount != ONE_CREDIT)
         return RejectMessage(msg_hash);
@@ -41,6 +46,22 @@ bool CreditMessageHandler::MinedCreditMessagePassesVerification(MinedCreditMessa
     if (not credit_system->QuickCheckProofOfWorkInMinedCreditMessage(msg))
         return RejectMessage(msg_hash);
 
+    bool predecessor_passed_verification = creditdata[msg.mined_credit.network_state.previous_mined_credit_hash]["passed_verification"];
+
+    bool first_message = creditdata[credit_hash]["first_in_data_message"];
+
+    if (msg.mined_credit.network_state.batch_number != 1 and not first_message)
+    {
+        bool have_data_for_preceding_mined_credit = creditdata[previous_hash].HasProperty("msg");
+        MinedCreditMessage prev_msg = creditdata[previous_hash]["msg"];
+        if (have_data_for_preceding_mined_credit or not credit_system->IsCalend(credit_hash))
+            if (not predecessor_passed_verification)
+            {
+                return false;
+            }
+    }
+
+    creditdata[credit_hash]["passed_verification"] = true;
     return true;
 }
 
@@ -89,7 +110,8 @@ void CreditMessageHandler::SwitchToTipViaFork(uint160 new_tip)
     credit_system->SwitchMainChainToOtherBranchOfFork(current_tip, new_tip);
     *calendar = Calendar(new_tip, credit_system);
     UpdateAcceptedMessagesAfterFork(old_tip, new_tip);
-    wallet->SwitchAcrossFork(old_tip, new_tip, credit_system);
+    if (wallet != NULL)
+        wallet->SwitchAcrossFork(old_tip, new_tip, credit_system);
 }
 
 void CreditMessageHandler::UpdateAcceptedMessagesAfterFork(uint160 old_tip, uint160 new_tip)
@@ -188,7 +210,8 @@ void CreditMessageHandler::AddToTip(MinedCreditMessage &msg)
                                                                   calendar->LastMinedCreditHash(),
                                                                   msg.mined_credit.GetHash160());
     calendar->AddToTip(msg, credit_system);
-    wallet->AddBatchToTip(msg, credit_system);
+    if (wallet != NULL)
+        wallet->AddBatchToTip(msg, credit_system);
     UpdateAcceptedMessagesAfterNewTip(msg);
 }
 

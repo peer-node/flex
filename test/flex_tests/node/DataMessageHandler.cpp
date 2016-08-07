@@ -1,10 +1,13 @@
 #include "DataMessageHandler.h"
 #include "CalendarFailureMessage.h"
 
+
+#include "CreditMessageHandler.h"
+
 #include "log.h"
 #define LOG_CATEGORY "DataMessageHandler.cpp"
 
-
+using std::vector;
 
 void DataMessageHandler::SetCreditSystem(CreditSystem *credit_system_)
 {
@@ -159,7 +162,6 @@ void DataMessageHandler::HandleIncomingCalendar(CalendarMessage calendar_message
 
 void DataMessageHandler::RequestInitialDataMessage(CalendarMessage calendar_message)
 {
-
     InitialDataRequestMessage request(calendar_message);
 
     uint160 request_hash = request.GetHash160();
@@ -171,23 +173,6 @@ void DataMessageHandler::RequestInitialDataMessage(CalendarMessage calendar_mess
     CNode *peer = GetPeer(calendar_message_hash);
     if (peer != NULL)
         peer->PushMessage("data", "initial_data_request", request);
-}
-
-void DataMessageHandler::SwitchToCalendarWithTheMostWorkWhichHasSurvivedScrutiny()
-{
-    Calendar calendar_with_most_scrutinized_work = CalendarWithTheMostWorkWhichHasSurvivedScrutiny();
-    SwitchToCalendar(calendar_with_most_scrutinized_work);
-}
-
-Calendar DataMessageHandler::CalendarWithTheMostWorkWhichHasSurvivedScrutiny()
-{
-    CalendarMessage calendar_message = credit_system->CalendarMessageWithMaximumScrutinizedWork();
-    return calendar_message.calendar;
-}
-
-void DataMessageHandler::SwitchToCalendar(Calendar new_calendar)
-{
-    *calendar = new_calendar;
 }
 
 bool DataMessageHandler::ScrutinizeCalendarWithTheMostWork()
@@ -306,17 +291,129 @@ bool DataMessageHandler::InitialDataMessageMatchesCalendar(InitialDataMessage &d
     if (calendar.current_diurn.Size() > 1 or calendar.calends.size() == 0)
     {
         if (data_message.mined_credit_messages_in_current_diurn != calendar.current_diurn.credits_in_diurn)
-        {
             return false;
-        }
     }
     else if (calendar.current_diurn.Size() == 1)
     {
-        if (data_message.mined_credit_messages_in_current_diurn.back() != calendar.current_diurn.credits_in_diurn[0])
+        auto enclosed_messages = data_message.mined_credit_messages_in_current_diurn;
+
+        if (not SequenceOfMinedCreditMessagesIsValidAndHasValidProofsOfWork(enclosed_messages))
+            return false;
+        if (enclosed_messages.back() != calendar.current_diurn.credits_in_diurn[0])
+            return false;
+        if (calendar.calends.size() > 1 and enclosed_messages.front() != calendar.calends[calendar.calends.size() - 2])
             return false;
     }
     else if (calendar.current_diurn.Size() == 0)
         return false;
 
     return true;
+}
+
+bool DataMessageHandler::SequenceOfMinedCreditMessagesIsValidAndHasValidProofsOfWork(vector<MinedCreditMessage> msgs)
+{
+    return SequenceOfMinedCreditMessagesIsValid(msgs) and SequenceOfMinedCreditMessagesHasValidProofsOfWork(msgs);
+}
+
+bool DataMessageHandler::SequenceOfMinedCreditMessagesIsValid(std::vector<MinedCreditMessage> msgs)
+{
+    return Calendar::CheckCreditHashesInSequenceOfConsecutiveMinedCreditMessages(msgs) and
+            Calendar::CheckDifficultiesOfConsecutiveSequenceOfMinedCreditMessages(msgs);
+}
+
+void DataMessageHandler::StoreDataFromInitialDataMessageInCreditSystem(InitialDataMessage &initial_data_message,
+                                                                       CreditSystem &credit_system)
+{
+    uint160 calend_hash = initial_data_message.mined_credit_messages_in_current_diurn[0].mined_credit.GetHash160();
+    credit_system.creditdata[calend_hash]["first_in_data_message"] = true;
+
+    Calendar calendar = GetRequestedCalendar(initial_data_message);
+
+    for (auto calend : calendar.calends)
+        credit_system.StoreMinedCreditMessage(calend);
+
+    for (auto mined_credit_message : initial_data_message.mined_credit_messages_in_current_diurn)
+        credit_system.StoreMinedCreditMessage(mined_credit_message);
+
+    for (uint32_t i = 0; i < initial_data_message.enclosed_message_types.size(); i++)
+    {
+        std::string type = initial_data_message.enclosed_message_types[i];
+        vch_t content = initial_data_message.enclosed_message_contents[i];
+        StoreMessageInCreditSystem(type, content, credit_system);
+    }
+}
+
+void DataMessageHandler::StoreMessageInCreditSystem(std::string type, vch_t content, CreditSystem &credit_system)
+{
+    if (type == "mined_credit")
+    {
+        CDataStream ss(content, SER_NETWORK, CLIENT_VERSION);
+        MinedCredit mined_credit;
+        ss >> mined_credit;
+        credit_system.StoreMinedCredit(mined_credit);
+    }
+    else if (type == "tx")
+    {
+        CDataStream ss(content, SER_NETWORK, CLIENT_VERSION);
+        SignedTransaction tx;
+        ss >> tx;
+        credit_system.StoreTransaction(tx);
+    }
+}
+
+bool DataMessageHandler::SequenceOfMinedCreditMessagesHasValidProofsOfWork(std::vector<MinedCreditMessage> msgs)
+{
+    for (auto mined_credit_message : msgs)
+    {
+        if (not credit_system->QuickCheckProofOfWorkInMinedCreditMessage(mined_credit_message))
+            return false;
+    }
+    return true;
+}
+
+void DataMessageHandler::SetMiningParametersForInitialDataMessageValidation(uint64_t number_of_megabytes_,
+                                                                            uint160 initial_difficulty_,
+                                                                            uint160 initial_diurnal_difficulty_)
+{
+    number_of_megabytes_for_mining = number_of_megabytes_;
+    initial_difficulty = initial_difficulty_;
+    initial_diurnal_difficulty = initial_diurnal_difficulty_;
+}
+
+bool DataMessageHandler::ValidateMinedCreditMessagesInInitialDataMessage(InitialDataMessage initial_data_message)
+{
+    MemoryDataStore msgdata_, creditdata_, keydata_;
+    CreditSystem credit_system_(msgdata_, creditdata_);
+
+    credit_system_.SetMiningParameters(number_of_megabytes_for_mining, initial_difficulty, initial_diurnal_difficulty);
+    StoreDataFromInitialDataMessageInCreditSystem(initial_data_message, credit_system_);
+
+    CreditMessageHandler credit_message_handler(msgdata_, creditdata_, keydata_);
+    credit_message_handler.SetCreditSystem(&credit_system_);
+
+    BitChain spent_chain = initial_data_message.spent_chain;
+    credit_message_handler.SetSpentChain(spent_chain);
+
+    Calendar validation_calendar = GetRequestedCalendar(initial_data_message);
+    TrimLastDiurnFromCalendar(validation_calendar, &credit_system_);
+    credit_message_handler.SetCalendar(validation_calendar);
+
+    for (auto mined_credit_message : initial_data_message.mined_credit_messages_in_current_diurn)
+        credit_message_handler.Handle(mined_credit_message, NULL);
+
+    return TipOfCalendarMatchesTipOfInitialDataMessage(validation_calendar, initial_data_message);
+}
+
+bool DataMessageHandler::TipOfCalendarMatchesTipOfInitialDataMessage(Calendar &calendar, InitialDataMessage &message)
+{
+    return calendar.current_diurn.credits_in_diurn.back() == message.mined_credit_messages_in_current_diurn.back();
+}
+
+void DataMessageHandler::TrimLastDiurnFromCalendar(Calendar& calendar, CreditSystem *credit_system)
+{
+    if (calendar.current_diurn.Size() == 1 and calendar.calends.size() > 0)
+        calendar.RemoveLast(credit_system);
+
+    while (calendar.current_diurn.Size() > 1)
+        calendar.RemoveLast(credit_system);
 }

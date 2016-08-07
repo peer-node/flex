@@ -122,5 +122,6 @@ typedef std::string string_t;
 
 #define RFACTOR 4
 
+#define FLEX_WORK_NUMBER_OF_MEGABYTES 4096
 
 #endif

@@ -2,9 +2,13 @@
 #include "Calendar.h"
 #include "FlexNetworkNode.h"
 #include "TestPeer.h"
+#include "TestPeerWithNetworkNode.h"
 
 using namespace ::testing;
 using namespace std;
+
+#include "log.h"
+#define LOG_CATEGORY "test"
 
 class AFlexNetworkNode : public Test
 {
@@ -115,4 +119,62 @@ TEST_F(AFlexNetworkNodeWithABalance, ReceivesCreditsSentToAPublicKeyWhosePrivate
     flex_network_node.SendCreditsToPublicKey(pubkey, ONE_CREDIT); // balance -1 +1
     AddABatchToTheTip();  // balance +1
     ASSERT_THAT(flex_network_node.Balance(), Eq(2 * ONE_CREDIT));
+}
+
+TEST_F(AFlexNetworkNode, SendsDataMessagesToTheDataMessageHandler)
+{
+    TipRequestMessage dummy_request;
+    TipMessage tip_message(dummy_request, &flex_network_node.calendar); // unrequested tip
+    flex_network_node.HandleMessage(string("data"), GetDataStream("data", tip_message), (CNode*)&peer);
+    bool rejected = flex_network_node.msgdata[tip_message.GetHash160()]["rejected"];
+    ASSERT_THAT(rejected, Eq(true));
+}
+
+class TwoFlexNetworkNodesConnectedViaPeers : public Test
+{
+public:
+    TestPeerWithNetworkNode peer1, peer2;
+    FlexNetworkNode node1, node2;
+
+    virtual void SetUp()
+    {
+        node1.credit_message_handler->do_spot_checks = false;
+        node2.credit_message_handler->do_spot_checks = false;
+
+        peer1.SetNetworkNode(&node1);
+        peer2.SetNetworkNode(&node2);
+        peer1.network.vNodes.push_back(&peer2);
+        peer2.network.vNodes.push_back(&peer1);
+
+        AddABatchToTheTip(&node1);
+        AddABatchToTheTip(&node1);
+
+        AddABatchToTheTip(&node2);
+    }
+
+    virtual void TearDown()
+    { }
+
+    template <typename T> CDataStream GetDataStream(string channel, T message)
+    {
+        CDataStream ss(SER_NETWORK, CLIENT_VERSION);
+        ss << channel << message.Type() << message;
+        return ss;
+    }
+
+    void AddABatchToTheTip(FlexNetworkNode *flex_network_node)
+    {
+        auto msg = flex_network_node->credit_message_handler->GenerateMinedCreditMessageWithoutProofOfWork();
+        flex_network_node->credit_message_handler->creditdata[msg.GetHash160()]["quickcheck_ok"] = true;
+        flex_network_node->HandleMessage(string("credit"), GetDataStream("credit", msg), NULL);
+    }
+};
+
+TEST_F(TwoFlexNetworkNodesConnectedViaPeers, PassMessagesToOneAnother)
+{
+    TipRequestMessage tip_request;
+    node1.HandleMessage(string("data"), GetDataStream("data", tip_request), (CNode*)&peer2);
+    ASSERT_TRUE(peer2.HasReceived("data", "tip", TipMessage(tip_request, &node1.calendar)));
+    ASSERT_FALSE(peer2.HasReceived("data", "tip", TipMessage(tip_request, &node2.calendar)));
+    ASSERT_FALSE(peer1.HasReceived("data", "tip", TipMessage(tip_request, &node2.calendar)));
 }

@@ -25,8 +25,8 @@ class CreditSystem
 {
 public:
     MemoryDataStore &msgdata, &creditdata;
-    uint64_t initial_difficulty{INITIAL_DIFFICULTY};
-    uint64_t initial_diurnal_difficulty{INITIAL_DIURNAL_DIFFICULTY};
+    uint160 initial_difficulty{INITIAL_DIFFICULTY};
+    uint160 initial_diurnal_difficulty{INITIAL_DIURNAL_DIFFICULTY};
 
     CreditSystem(MemoryDataStore &msgdata, MemoryDataStore &creditdata):
             msgdata(msgdata), creditdata(creditdata)
@@ -139,6 +139,11 @@ public:
     void RecordCalendarScrutinizedWork(CalendarMessage calendar_message, uint160 scrutinized_work);
 
     void StoreHash(uint160 hash, MemoryDataStore &hashdata);
+
+    bool DataIsPresentFromMinedCreditToPrecedingCalendOrStart(MinedCredit mined_credit);
+
+    void
+    SetMiningParameters(uint64_t number_of_megabytes_, uint160 initial_difficulty_, uint160 initial_diurnal_difficulty_);
 };
 
 

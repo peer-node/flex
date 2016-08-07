@@ -7,7 +7,6 @@
 #include "NetworkMiningInfo.h"
 #include "MiningHashTree.h"
 
-#define FLEX_WORK_NUMBER_OF_MEGABYTES 4096
 
 
 

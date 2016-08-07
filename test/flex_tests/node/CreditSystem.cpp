@@ -134,6 +134,7 @@ bool CreditSystem::IsCalend(uint160 credit_hash)
         return true;
     if (creditdata[credit_hash]["is_not_calend"])
         return false;
+
     bool is_calend;
     MinedCreditMessage msg = creditdata[credit_hash]["msg"];
     if (msg.mined_credit.network_state.diurnal_difficulty == 0)
@@ -386,13 +387,19 @@ uint160 CreditSystem::GetNextDiurnalDifficulty(MinedCredit credit)
         return initial_diurnal_difficulty;
 
     if (not IsCalend(credit.GetHash160()))
+    {
+        uint160 credit_hash = credit.GetHash160();
+        MinedCreditMessage msg = creditdata[credit_hash]["msg"];
         return credit.network_state.diurnal_difficulty;
+    }
 
     uint160 calend_hash = creditdata[prev_diurn_root]["calend_credit_hash"];
+
     MinedCredit previous_calend_credit = creditdata[calend_hash]["mined_credit"];
     auto prev_state = previous_calend_credit.network_state;
     uint64_t diurn_duration = credit.network_state.timestamp - prev_state.timestamp;
     uint160 earlier_diurnal_difficulty = credit.network_state.diurnal_difficulty;
+
     return AdjustDiurnalDifficultyAfterDiurnDuration(earlier_diurnal_difficulty, diurn_duration);
 }
 
@@ -459,6 +466,15 @@ void CreditSystem::SetExpectedNumberOfMegabytesInMinedCreditProofsOfWork(uint64_
 {
     uint64_t memory_factor = MemoryFactorFromNumberOfMegabytes(number_of_megabytes);
     expected_memory_factor_for_mined_credit_proofs_of_work = memory_factor;
+}
+
+void CreditSystem::SetMiningParameters(uint64_t number_of_megabytes_,
+                                       uint160 initial_difficulty_,
+                                       uint160 initial_diurnal_difficulty_)
+{
+    SetExpectedNumberOfMegabytesInMinedCreditProofsOfWork(number_of_megabytes_);
+    initial_difficulty = initial_difficulty_;
+    initial_diurnal_difficulty = initial_diurnal_difficulty_;
 }
 
 bool CreditSystem::CheckHashesSeedsAndThresholdsInMinedCreditMessageProofOfWork(MinedCreditMessage& msg)
@@ -548,7 +564,26 @@ uint160 CreditSystem::GetNextDiurnalBlockRoot(MinedCredit mined_credit)
     DiurnalBlock block;
     for (auto hash : credit_hashes)
         block.Add(hash);
+
     return block.Root();
+}
+
+bool CreditSystem::DataIsPresentFromMinedCreditToPrecedingCalendOrStart(MinedCredit mined_credit)
+{
+    uint160 credit_hash = mined_credit.GetHash160();
+    while (credit_hash != 0)
+    {
+        uint160 previous_credit_hash = PreviousCreditHash(credit_hash);
+        if (previous_credit_hash == 0)
+        {
+            mined_credit = creditdata[credit_hash]["mined_credit"];
+            return mined_credit.network_state.batch_number == 1;
+        }
+        credit_hash = previous_credit_hash;
+        if (IsCalend(credit_hash) and creditdata[credit_hash].HasProperty("msg"))
+            return true;
+    }
+    return false;
 }
 
 bool CreditSystem::ProofHasCorrectNumberOfSeedsAndLinks(TwistWorkProof proof)

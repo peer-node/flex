@@ -4,6 +4,7 @@
 #include "DataMessageHandler.h"
 #include "CalendarFailureMessage.h"
 #include "CreditMessageHandler.h"
+#include "FlexNetworkNode.h"
 
 using namespace ::testing;
 using namespace std;
@@ -50,6 +51,7 @@ public:
         credit_system->SetExpectedNumberOfMegabytesInMinedCreditProofsOfWork(1);
         credit_system->initial_difficulty = 100;
         credit_system->initial_diurnal_difficulty = 500;
+        data_message_handler->SetMiningParametersForInitialDataMessageValidation(1, 100, 500);
     }
 
     virtual void TearDown()
@@ -408,4 +410,19 @@ TEST_F(ADataMessageHandlerWithACalendarWithCalends, DetectsIfTheInitialDataMessa
     initial_data_message.mined_credit_messages_in_current_diurn.pop_back();
     bool data_matches_calendar = data_message_handler->InitialDataMessageMatchesRequestedCalendar(initial_data_message);
     ASSERT_THAT(data_matches_calendar, Eq(false));
+}
+
+TEST_F(ADataMessageHandlerWithACalendarWithCalends, DetectsIfTheMinedCreditMessagesInTheInitialDataMessageAreValid)
+{
+    auto initial_data_message = AValidInitialDataMessageThatWasRequested();
+    bool msgs_ok = data_message_handler->ValidateMinedCreditMessagesInInitialDataMessage(initial_data_message);
+    ASSERT_THAT(msgs_ok, Eq(true));
+}
+
+TEST_F(ADataMessageHandlerWithACalendarWithCalends, DetectsIfTheMinedCreditMessagesInTheInitialDataMessageAreInvalid)
+{
+    auto initial_data_message = AValidInitialDataMessageThatWasRequested();
+    initial_data_message.mined_credit_messages_in_current_diurn[0].hash_list.short_hashes.pop_back();
+    bool msgs_ok = data_message_handler->ValidateMinedCreditMessagesInInitialDataMessage(initial_data_message);
+    ASSERT_THAT(msgs_ok, Eq(false));
 }

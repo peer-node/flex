@@ -47,6 +47,10 @@ public:
     bool ValidateNetworkState(MinedCreditMessage &msg);
 
     bool CheckMessageListContainsPreviousMinedCreditHash(MinedCreditMessage &msg);
+
+    bool DataRequiredToCalculateDifficultyIsPresent(MinedCreditMessage &msg);
+
+    bool DataRequiredToCalculateDiurnalBlockRootIsPresent(MinedCreditMessage &msg);
 };
 
 

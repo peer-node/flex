@@ -1,5 +1,5 @@
-#ifndef FLEX_DATAREQUESTMESSAGEHANDLER_H
-#define FLEX_DATAREQUESTMESSAGEHANDLER_H
+#ifndef FLEX_DATAMESSAGEHANDLER_H
+#define FLEX_DATAMESSAGEHANDLER_H
 
 
 #include <test/flex_tests/flex_data/MemoryDataStore.h>
@@ -25,6 +25,9 @@ public:
     CreditSystem *credit_system{NULL};
     Calendar *calendar{NULL};
     uint64_t calendar_scrutiny_time{CALENDAR_SCRUTINY_TIME};
+    uint64_t number_of_megabytes_for_mining{FLEX_WORK_NUMBER_OF_MEGABYTES};
+    uint160 initial_difficulty{INITIAL_DIFFICULTY};
+    uint160 initial_diurnal_difficulty{INITIAL_DIURNAL_DIFFICULTY};
 
     DataMessageHandler(MemoryDataStore &msgdata_, MemoryDataStore &creditdata_):
             MessageHandlerWithOrphanage(msgdata_), msgdata(msgdata_), creditdata(creditdata_)
@@ -97,12 +100,6 @@ public:
 
     bool ValidateCalendarMessage(CalendarMessage calendar_message);
 
-    void SwitchToCalendarWithTheMostWorkWhichHasSurvivedScrutiny();
-
-    Calendar CalendarWithTheMostWorkWhichHasSurvivedScrutiny();
-
-    void SwitchToCalendar(Calendar new_calendar);
-
     void RequestInitialDataMessage(CalendarMessage calendar_message);
 
     bool CheckSpentChainInInitialDataMessage(InitialDataMessage message);
@@ -116,7 +113,27 @@ public:
     Calendar GetRequestedCalendar(InitialDataMessage &initial_data_message);
 
     bool InitialDataMessageMatchesCalendar(InitialDataMessage &message, Calendar calendar);
+
+    bool SequenceOfMinedCreditMessagesIsValidAndHasValidProofsOfWork(std::vector<MinedCreditMessage> vector);
+
+    bool SequenceOfMinedCreditMessagesIsValid(std::vector<MinedCreditMessage> msgs);
+
+    bool SequenceOfMinedCreditMessagesHasValidProofsOfWork(std::vector<MinedCreditMessage> msgs);
+
+    bool ValidateMinedCreditMessagesInInitialDataMessage(InitialDataMessage initial_data_message);
+
+    void StoreDataFromInitialDataMessageInCreditSystem(InitialDataMessage &initial_data_message,
+                                                       CreditSystem &credit_system);
+
+    void TrimLastDiurnFromCalendar(Calendar &calendar, CreditSystem *credit_system);
+
+    void SetMiningParametersForInitialDataMessageValidation(uint64_t number_of_megabytes, uint160 initial_difficulty,
+                                                            uint160 initial_diurnal_difficulty);
+
+    bool TipOfCalendarMatchesTipOfInitialDataMessage(Calendar &calendar, InitialDataMessage &message);
+
+    void StoreMessageInCreditSystem(std::string type, vch_t content, CreditSystem &credit_system);
 };
 
 
-#endif //FLEX_DATAREQUESTMESSAGEHANDLER_H
+#endif //FLEX_DATAMESSAGEHANDLER_H

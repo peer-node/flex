@@ -65,11 +65,7 @@ public:
 
     bool CheckDiurnRootsAndCreditHashes();
 
-    bool CheckDifficulties();
-
     bool CheckCurrentDiurnDifficulties();
-
-    bool CheckCalendDifficulties();
 
     bool CheckExtraWorkDifficulties();
 
@@ -81,9 +77,9 @@ public:
 
     bool CheckExtraWorkDifficultiesForDiurn(Calend calend, std::vector<MinedCreditMessage> msgs);
 
-    bool CheckDifficultiesOfConsecutiveSequenceOfMinedCreditMessages(std::vector<MinedCreditMessage> msgs);
+    static bool CheckDifficultiesOfConsecutiveSequenceOfMinedCreditMessages(std::vector<MinedCreditMessage> msgs);
 
-    bool CheckCreditHashesInSequenceOfConsecutiveMinedCreditMessages(std::vector<MinedCreditMessage> msgs);
+    static bool CheckCreditHashesInSequenceOfConsecutiveMinedCreditMessages(std::vector<MinedCreditMessage> msgs);
 
     bool CheckProofsOfWorkInCurrentDiurn(CreditSystem* credit_system);
 

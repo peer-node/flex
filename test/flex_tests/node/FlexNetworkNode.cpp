@@ -15,6 +15,9 @@ void FlexNetworkNode::HandleMessage(std::string channel, CDataStream stream, CNo
 {
     if (channel == "credit")
         credit_message_handler->HandleMessage(stream, peer);
+
+    if (channel == "data")
+        data_message_handler->HandleMessage(stream, peer);
 }
 
 MinedCreditMessage FlexNetworkNode::Tip()
