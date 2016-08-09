@@ -16,7 +16,7 @@ public:
         MilliSleep(100);
         network.SetName(network_name);
         network.SetListenPort(port);
-        main_node.node_name = network_name;
+        main_node.routine_name = network_name;
     }
 
     bool StartListening()

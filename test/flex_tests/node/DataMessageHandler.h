@@ -32,7 +32,7 @@ public:
     DataMessageHandler(MemoryDataStore &msgdata_, MemoryDataStore &creditdata_):
             MessageHandlerWithOrphanage(msgdata_), msgdata(msgdata_), creditdata(creditdata_)
     {
-        channel = "data";
+        channel = std::string("data");
     }
 
     void HandleMessage(CDataStream ss, CNode* peer)

@@ -26,6 +26,7 @@ public:
 
     virtual void SetUp()
     {
+        peer.id = 1;
         data_message_handler = new DataMessageHandler(msgdata, creditdata);
         data_message_handler->SetNetwork(peer.network);
         credit_system = new CreditSystem(msgdata, creditdata);

@@ -34,6 +34,7 @@ public:
     {
         delete credit_message_handler;
         delete credit_system;
+        delete wallet;
     }
 };
 

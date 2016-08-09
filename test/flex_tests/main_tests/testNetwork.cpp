@@ -45,12 +45,12 @@ TEST_F(ANetwork, ListensOnTheSpecifiedPort)
     network1.StartListening(str_error);
     network2.StartListening(str_error);
 
-    MainRoutine main_node1, main_node2;
-    main_node1.node_name = "main_node1";
-    main_node1.node_name = "main_node2";
+    MainRoutine main_routine1, main_routine2;
+    main_routine1.routine_name = "main_routine1";
+    main_routine1.routine_name = "main_routine2";
 
-    main_node1.SetNetwork(network1);
-    main_node2.SetNetwork(network2);
+    main_routine1.SetNetwork(network1);
+    main_routine2.SetNetwork(network2);
 
     network1.AddNode("127.0.0.1:" + PrintToString(port2));
 

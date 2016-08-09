@@ -90,7 +90,7 @@ class MainRoutine
 {
 public:
     CMainSignals g_signals;
-    std::string node_name;
+    std::string routine_name;
     Network *network;
     MainFlexNode *flexnode = NULL;
 

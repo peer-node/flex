@@ -13,7 +13,7 @@
 class Credit
 {
 public:
-    uint64_t amount;
+    uint64_t amount{0};
     vch_t keydata;
 
     Credit(): amount(0) { }

@@ -37,7 +37,7 @@ public:
     {
         MinedCreditMessage msg;
         SignedTransaction tx;
-        tx.rawtx.outputs.push_back(Credit(Point(2).getvch(), 1));
+        tx.rawtx.outputs.push_back(Credit(Point(SECP256K1, 2).getvch(), 1));
         credit_system->StoreTransaction(tx);
         msg.hash_list.full_hashes.push_back(tx.GetHash160());
         msg.hash_list.GenerateShortHashes();

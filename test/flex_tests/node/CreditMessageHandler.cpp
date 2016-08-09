@@ -11,6 +11,7 @@ using std::set;
 
 void CreditMessageHandler::HandleMinedCreditMessage(MinedCreditMessage msg)
 {
+    LOCK(calendar_mutex);
     if (not MinedCreditMessagePassesVerification(msg))
     {
         return;
@@ -60,7 +61,6 @@ bool CreditMessageHandler::MinedCreditMessagePassesVerification(MinedCreditMessa
                 return false;
             }
     }
-
     creditdata[credit_hash]["passed_verification"] = true;
     return true;
 }

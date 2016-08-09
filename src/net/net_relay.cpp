@@ -1,7 +1,8 @@
 #include "net.h"
 #include "net_cnode.h"
-#include "net_relay.h"
 
+#include "log.h"
+#define LOG_CATEGORY "net_relay.cpp"
 
 void Network::TellNodeAboutTransaction(CNode* pnode, const SignedTransaction& tx)
 {
@@ -20,8 +21,7 @@ void Network::TellNodeAboutTransaction(CNode* pnode, const SignedTransaction& tx
 
 void Network::ExpireOldRelayMessages()
 {
-    while (!vRelayExpiration.empty() &&
-           vRelayExpiration.front().first < GetTime())
+    while (not vRelayExpiration.empty() and vRelayExpiration.front().first < GetTime())
     {
         mapRelay.erase(vRelayExpiration.front().second);
         vRelayExpiration.pop_front();
@@ -45,7 +45,13 @@ void Network::RelayMessage(const CDataStream& ss, int type)
     }
     LOCK(cs_vNodes);
     for (auto pnode : vNodes)
+    {
+        if (pnode == vNodes[0] and vNodes.size() > 1)
+        {
+            continue;
+        }
         pnode->PushInventory(inv);
+    }
 }
 
 void Network::RelayMessage(const CDataStream& ss)

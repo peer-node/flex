@@ -101,7 +101,8 @@ MinedCredit ExampleMinedCredit()
 {
     MinedCredit credit;
     credit.amount = ONE_CREDIT;
-    credit.keydata = Point(SECP256K1, 2).getvch();
+    Point pubkey(SECP256K1, 2);
+    credit.keydata = pubkey.getvch();
     credit.network_state = ExampleNetworkState();
     return credit;
 }
@@ -130,7 +131,7 @@ TEST_F(ACreditSystem, RecordsTheTypeAsMinedCreditWhenItStoresAMinedCredit)
 SignedTransaction ExampleTransaction()
 {
     SignedTransaction tx;
-    tx.rawtx.outputs.push_back(Credit(Point(2).getvch(), 1000));
+    tx.rawtx.outputs.push_back(Credit(Point(SECP256K1, 2).getvch(), 1000));
     return tx;
 }
 

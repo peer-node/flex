@@ -35,6 +35,7 @@ public:
 
     ~FlexNetworkNode()
     {
+        delete data_message_handler;
         delete credit_message_handler;
         delete credit_system;
         delete wallet;

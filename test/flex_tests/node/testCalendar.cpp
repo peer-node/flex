@@ -491,7 +491,7 @@ TEST_F(ACalendarWithACreditSystemContainingCalends, RemovesTheLastMinedCreditFro
 SignedTransaction TransactionWithAnOutput(CreditSystem* credit_system)
 {
     SignedTransaction tx;
-    Credit credit(Point(2), ONE_CREDIT);
+    Credit credit(Point(SECP256K1, 2), ONE_CREDIT);
     tx.rawtx.outputs.push_back(credit);
     credit_system->StoreTransaction(tx);
     return tx;

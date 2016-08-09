@@ -100,7 +100,7 @@ bool MainRoutine::ProcessMessage(CNode* pfrom, string strCommand, CDataStream& v
 {
     if (flexnode == NULL)
     {
-        log_ << node_name << " no flex_local_server available to process message: " << strCommand << "\n";
+        log_ << routine_name << " no flex_local_server available to process message: " << strCommand << "\n";
         return true;
     }
     LOCK(flexnode->mutex);

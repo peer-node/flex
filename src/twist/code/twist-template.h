@@ -355,6 +355,7 @@ TWIST_WORK_FN(scrypt_mix_word_t *X_in,
             links[*number_of_links] = *((uint64_t *)&V[j]);
             (*number_of_links)++;
             memcpy(quick_verifier, X, 16);
+            free(X);
             return;
         }
 
@@ -374,6 +375,7 @@ TWIST_WORK_FN(scrypt_mix_word_t *X_in,
         }
 	}
     *quick_verifier = 0;
+    free(X);
 }
 
 /*
@@ -450,6 +452,8 @@ TWIST_VERIFY_FN(
     TWIST_PREPARESEGMENTS_FN(X_original, V, seeds, start_seed, number_of_seeds_to_use,
                              words_per_chunk, segment_size, &number_of_seeds, memory_size_in_chunks, r,
                              number_of_segments);
+
+    free(X_original);
 
     start_of_data_to_check = start_seed * segment_size * words_per_chunk;
     end_of_data_to_check = (start_seed + number_of_seeds_to_use) * segment_size * words_per_chunk;
@@ -584,6 +588,8 @@ TWIST_QUICKCHECK_FN(
 	for (i = 0; i < segment_size; i++, block += words_per_chunk)
         TWIST_PREPARE_BLOCK_FN(X_original, block, V, seeds, start_seed,
                                &number_of_seeds, memory_size_in_chunks, r, number_of_segments, words_per_chunk, i);
+
+    free(X_original);
 
     Y[0] = X[0] ^ V[j - startCheckData];
     Y[1] = V[j + 1 - startCheckData];

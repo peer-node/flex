@@ -7,8 +7,8 @@
 class Signature
 {
 public:
-    uint256 signature;
-    uint256 exhibit;
+    uint256 signature{0};
+    uint256 exhibit{0};
 
     Signature() { }
 

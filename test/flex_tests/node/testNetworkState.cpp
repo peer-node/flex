@@ -29,7 +29,7 @@ TEST_F(ANetworkState, GeneratesABatchRoot)
 SignedTransaction TransactionWithOneOutput()
 {
     UnsignedTransaction raw_tx;
-    Point pubkey(2);
+    Point pubkey(SECP256K1, 2);
     Credit credit(pubkey.getvch(), 100);
     raw_tx.outputs.push_back(credit);
     SignedTransaction tx;
@@ -64,7 +64,7 @@ TEST_F(ANetworkState, ProvidesAValidBranchForCreditsInTheBatch)
 TEST_F(ANetworkState, AddsThePrecedingMinedCreditToTheCreditBatchWhenSet)
 {
     MinedCredit previous_mined_credit;
-    Point pubkey(2);
+    Point pubkey(SECP256K1, 2);
     previous_mined_credit.keydata = pubkey.getvch();
     previous_mined_credit.amount = 1;
     network_state.SetPreviousMinedCredit(previous_mined_credit);

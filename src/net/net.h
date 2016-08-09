@@ -37,6 +37,9 @@
 #include <src/credits/SignedTransaction.h>
 #include <test/flex_tests/node/MinedCreditMessage.h>
 
+#include "log.h"
+#define LOG_CATEGORY "net.h"
+
 #define MAX_OUTBOUND_CONNECTIONS 8
 
 class CNode;

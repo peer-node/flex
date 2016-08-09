@@ -141,10 +141,7 @@ public:
         node1.credit_message_handler->do_spot_checks = false;
         node2.credit_message_handler->do_spot_checks = false;
 
-        peer1.SetNetworkNode(&node1);
-        peer2.SetNetworkNode(&node2);
-        peer1.network.vNodes.push_back(&peer2);
-        peer2.network.vNodes.push_back(&peer1);
+        ConnectNodesViaPeers();
 
         AddABatchToTheTip(&node1);
         AddABatchToTheTip(&node1);
@@ -152,8 +149,28 @@ public:
         AddABatchToTheTip(&node2);
     }
 
+    void ConnectNodesViaPeers()
+    {
+        peer1.id = 1;
+        peer2.id = 2;
+
+        peer1.SetNetworkNode(&node1);
+        peer2.SetNetworkNode(&node2);
+        peer1.network.vNodes.push_back(&peer2);
+        peer2.network.vNodes.push_back(&peer1);
+
+        node1.credit_message_handler->SetNetwork(peer1.network);
+        node2.credit_message_handler->SetNetwork(peer2.network);
+        node1.data_message_handler->SetNetwork(peer1.network);
+        node2.data_message_handler->SetNetwork(peer2.network);
+    }
+
     virtual void TearDown()
-    { }
+    {
+        peer1.StopGettingMessages();
+        peer2.StopGettingMessages();
+        MilliSleep(100);
+    }
 
     template <typename T> CDataStream GetDataStream(string channel, T message)
     {
@@ -162,9 +179,10 @@ public:
         return ss;
     }
 
-    void AddABatchToTheTip(FlexNetworkNode *flex_network_node)
+    virtual void AddABatchToTheTip(FlexNetworkNode *flex_network_node)
     {
         auto msg = flex_network_node->credit_message_handler->GenerateMinedCreditMessageWithoutProofOfWork();
+        // only this node will accept the proof of work
         flex_network_node->credit_message_handler->creditdata[msg.GetHash160()]["quickcheck_ok"] = true;
         flex_network_node->HandleMessage(string("credit"), GetDataStream("credit", msg), NULL);
     }
@@ -173,8 +191,75 @@ public:
 TEST_F(TwoFlexNetworkNodesConnectedViaPeers, PassMessagesToOneAnother)
 {
     TipRequestMessage tip_request;
-    node1.HandleMessage(string("data"), GetDataStream("data", tip_request), (CNode*)&peer2);
+    node1.HandleMessage(string("data"), GetDataStream("data", tip_request), (CNode*)&peer2); // unrequested
+
     ASSERT_TRUE(peer2.HasReceived("data", "tip", TipMessage(tip_request, &node1.calendar)));
-    ASSERT_FALSE(peer2.HasReceived("data", "tip", TipMessage(tip_request, &node2.calendar)));
-    ASSERT_FALSE(peer1.HasReceived("data", "tip", TipMessage(tip_request, &node2.calendar)));
+    bool rejected = node2.msgdata[TipMessage(tip_request, &node1.calendar).GetHash160()]["rejected"];
+    ASSERT_THAT(rejected, Eq(true));
+}
+
+TEST_F(TwoFlexNetworkNodesConnectedViaPeers, SendTipRequests)
+{
+    uint160 request_hash = node2.data_message_handler->RequestTips();
+    TipRequestMessage tip_request = node2.msgdata[request_hash]["tip_request"];
+    ASSERT_TRUE(peer1.HasBeenInformedAbout("data", "tip_request", tip_request));
+}
+
+TEST_F(TwoFlexNetworkNodesConnectedViaPeers, SendTipsInResponseToRequests)
+{
+    uint160 request_hash = node2.data_message_handler->RequestTips();
+    TipRequestMessage tip_request = node2.msgdata[request_hash]["tip_request"];
+    MilliSleep(50);
+    ASSERT_TRUE(peer2.HasReceived("data", "tip", TipMessage(tip_request, &node1.calendar)));
+}
+
+class TwoFlexNetworkNodesWithValidProofsOfWorkConnectedViaPeers : public TwoFlexNetworkNodesConnectedViaPeers
+{
+public:
+
+    void SetMiningPreferences(FlexNetworkNode &node)
+    {
+        node.credit_system->SetExpectedNumberOfMegabytesInMinedCreditProofsOfWork(1);
+        node.credit_system->initial_difficulty = 100;
+        node.credit_system->initial_diurnal_difficulty = 500;
+        node.data_message_handler->SetMiningParametersForInitialDataMessageValidation(1, 100, 500);
+    }
+
+    virtual void SetUp()
+    {
+        SetMiningPreferences(node1);
+        SetMiningPreferences(node2);
+
+        ConnectNodesViaPeers();
+
+        AddABatchToTheTip(&node1);
+        AddABatchToTheTip(&node1);
+
+        MilliSleep(80); // time for node2 to synchronize with node1
+        AddABatchToTheTip(&node2);
+    }
+
+    virtual void AddABatchToTheTip(FlexNetworkNode *flex_network_node)
+    {
+        auto msg = flex_network_node->credit_message_handler->GenerateMinedCreditMessageWithoutProofOfWork();
+        CompleteProofOfWork(msg);
+        flex_network_node->HandleMessage(string("credit"), GetDataStream("credit", msg), NULL);
+    }
+
+    void CompleteProofOfWork(MinedCreditMessage& msg)
+    {
+        node1.credit_system->AddIncompleteProofOfWork(msg);
+        uint8_t keep_working = 1;
+        msg.proof_of_work.proof.DoWork(&keep_working);
+    }
+};
+
+TEST_F(TwoFlexNetworkNodesWithValidProofsOfWorkConnectedViaPeers, AreSynchronized)
+{
+    MilliSleep(100); // time for node1 to synchronize with node2
+
+    ASSERT_THAT(node1.calendar.LastMinedCreditHash(), Eq(node2.calendar.LastMinedCreditHash()));
+
+    MinedCredit mined_credit = node1.calendar.LastMinedCredit();
+    ASSERT_THAT(mined_credit.network_state.batch_number, Eq(3));
 }

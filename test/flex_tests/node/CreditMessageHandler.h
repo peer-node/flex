@@ -18,6 +18,7 @@ public:
     MemoryDataStore &creditdata, &keydata;
     CreditSystem *credit_system;
     Calendar *calendar;
+    Mutex calendar_mutex;
     BitChain *spent_chain;
     Wallet *wallet{NULL};
     FlexConfig config;
@@ -32,7 +33,7 @@ public:
             MessageHandlerWithOrphanage(msgdata_),
             creditdata(creditdata_), keydata(keydata_)
     {
-        channel = "credit";
+        channel = std::string("credit");
     }
 
     void SetConfig(FlexConfig& config_) { config = config_; }

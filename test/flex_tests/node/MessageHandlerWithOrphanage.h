@@ -5,13 +5,15 @@
 #include <src/crypto/uint256.h>
 #include <src/net/net_cnode.h>
 
+#include "log.h"
+#define LOG_CATEGORY "MessageHandlerWithOrphanage.h"
 
 class MessageHandlerWithOrphanage
 {
 public:
     MemoryDataStore& msgdata;
     Network *network{NULL};
-    std::string channel;
+    std::string channel{""};
 
     void SetNetwork(Network &network_)
     {
@@ -106,6 +108,9 @@ public:
         for (auto non_orphan : new_non_orphans)
         {
             HandleMessage(non_orphan);
+        }
+        for (auto non_orphan : new_non_orphans)
+        {
             new_non_orphans.erase(non_orphan);
         }
         msgdata[message_hash]["new_non_orphans"] = new_non_orphans;

@@ -15,7 +15,7 @@ public:
     vch_t serialized_name;
     std::map<vch_t, MockProperty> properties;
     std::map<vch_t, MockDimension> *dimensions;
-    bool using_internal_dimensions;
+    bool using_internal_dimensions{false};
 
     MockObject(): using_internal_dimensions(true)
     {
@@ -26,6 +26,24 @@ public:
     {
         if (using_internal_dimensions)
             delete dimensions;
+    }
+
+    MockObject* operator=(const MockObject& other)
+    {
+        if (using_internal_dimensions)
+            delete dimensions;
+        serialized_name = other.serialized_name;
+        properties = other.properties;
+        using_internal_dimensions = other.using_internal_dimensions;
+        if (using_internal_dimensions)
+        {
+            dimensions = new std::map<vch_t, MockDimension>;
+            *dimensions = *other.dimensions;
+        }
+        else
+        {
+            dimensions = other.dimensions;
+        }
     }
 
     MockObject(vch_t serialized_name, std::map<vch_t, MockDimension> *dimensions):

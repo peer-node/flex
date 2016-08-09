@@ -1,5 +1,7 @@
 #include "FlexNetworkNode.h"
 
+#include "log.h"
+#define LOG_CATEGORY "FlexNetworkNode.cpp"
 
 Calendar FlexNetworkNode::GetCalendar()
 {

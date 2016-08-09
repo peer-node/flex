@@ -62,12 +62,12 @@ public:
 static CGroup curve_group;
 
 /** C++ wrapper for OpenSSL EC_POINT class, for points on secp256k1 */
-static uint32_t num_points;
+static uint32_t num_points{1};
 
 class Secp256k1Point 
 {
 public:
-    EC_POINT *point;
+    EC_POINT *point{NULL};
     uint32_t number;
     BN_CTX* context;
         
@@ -114,7 +114,7 @@ public:
 
     ~Secp256k1Point()
     {
-        if (number)
+        if (point != NULL)
             EC_POINT_clear_free(point);
         if (context != NULL)
             BN_CTX_free(context);

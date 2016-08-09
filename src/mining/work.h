@@ -95,10 +95,10 @@ class TwistWorkCheck
 {
 public:
     uint256 proof_hash;
-    uint8_t valid;
-    uint32_t failure_step;
-    uint32_t failure_link;
-    uint32_t failure_seed;
+    uint8_t valid{0};
+    uint32_t failure_step{0};
+    uint32_t failure_link{0};
+    uint32_t failure_seed{0};
 
     TwistWorkCheck();
 

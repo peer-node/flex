@@ -22,6 +22,7 @@ void DataMessageHandler::SetCalendar(Calendar *calendar_)
 void DataMessageHandler::HandleTipRequestMessage(TipRequestMessage request)
 {
     uint160 request_hash = request.GetHash160();
+    bool requested_by_me = msgdata[request_hash]["is_tip_request"];
     CNode *peer = GetPeer(request_hash);
     TipMessage tip_message(request, calendar);
     peer->PushMessage("data", "tip", tip_message);
@@ -150,7 +151,6 @@ void DataMessageHandler::HandleIncomingCalendar(CalendarMessage calendar_message
         {
             CalendarFailureDetails details = creditdata[calendar_message.GetHash160()]["failure_details"];
             CalendarFailureMessage failure_message(details);
-
             Broadcast(failure_message);
         }
         else

@@ -57,7 +57,7 @@ public:
     bool fRelayTxes;
     CSemaphoreGrant grantOutbound;
     int nRefCount;
-    NodeId id;
+    NodeId id{0};
 protected:
 
     // Denial-of-service detection/prevention
@@ -155,7 +155,7 @@ public:
         connected_node_signals = true;
     }
 
-    ~CNode()
+    virtual ~CNode()
     {
         if (hSocket != INVALID_SOCKET)
         {
