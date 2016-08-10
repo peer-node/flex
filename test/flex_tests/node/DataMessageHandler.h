@@ -135,5 +135,9 @@ public:
     void StoreMessageInCreditSystem(std::string type, vch_t content, CreditSystem &credit_system);
 };
 
+void LoadHashesIntoDataStoreFromMessageTypesAndContents(MemoryDataStore &hashdata,
+                                                        std::vector<std::string> &types,
+                                                        std::vector<vch_t> &contents,
+                                                        CreditSystem *credit_system);
 
 #endif //FLEX_DATAMESSAGEHANDLER_H

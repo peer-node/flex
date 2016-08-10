@@ -1,6 +1,9 @@
 #include <src/credits/creditsign.h>
 #include <src/crypto/secp256k1point.h>
 #include "CreditMessageHandler.h"
+#include "DataMessageHandler.h"
+
+#include "ListExpansionRequestMessage.h"
 
 #include "log.h"
 #define LOG_CATEGORY "CreditMessageHandler.cpp"
@@ -12,6 +15,18 @@ using std::set;
 void CreditMessageHandler::HandleMinedCreditMessage(MinedCreditMessage msg)
 {
     LOCK(calendar_mutex);
+
+    if (msg.mined_credit.network_state.batch_number > 1 and not PreviousMinedCreditMessageWasHandled(msg))
+    {
+        credit_system->StoreMinedCreditMessage(msg);
+        QueueMinedCreditMessageBehindPrevious(msg);
+    }
+    if (not EnclosedMessagesArePresent(msg))
+    {
+        FetchFailedListExpansion(msg);
+        return;
+    }
+
     if (not MinedCreditMessagePassesVerification(msg))
     {
         return;
@@ -20,11 +35,50 @@ void CreditMessageHandler::HandleMinedCreditMessage(MinedCreditMessage msg)
     Broadcast(msg);
     credit_system->StoreMinedCreditMessage(msg);
 
-    if (do_spot_checks and not PassesSpotCheckOfProofOfWork(msg))
+    if (do_spot_checks and not ProofOfWorkPassesSpotCheck(msg))
         Broadcast(GetBadBatchMessage(msg.GetHash160()));
     else
+    {
         HandleValidMinedCreditMessage(msg);
+        HandleQueuedMinedCreditMessages(msg);
+    }
 }
+
+bool CreditMessageHandler::PreviousMinedCreditMessageWasHandled(MinedCreditMessage& msg)
+{
+    uint160 previous_mined_credit_hash = msg.mined_credit.network_state.previous_mined_credit_hash;
+    uint160 previous_total_work = msg.mined_credit.network_state.previous_total_work;
+    return credit_system->MinedCreditWasRecordedToHaveTotalWork(previous_mined_credit_hash, previous_total_work);
+}
+
+void CreditMessageHandler::QueueMinedCreditMessageBehindPrevious(MinedCreditMessage& msg)
+{
+    uint160 msg_hash = msg.GetHash160();
+    uint160 previous_mined_credit_hash = msg.mined_credit.network_state.previous_mined_credit_hash;
+    std::vector<uint160> queued_messages = creditdata[previous_mined_credit_hash]["queued"];
+    if (not VectorContainsEntry(queued_messages, msg_hash))
+        queued_messages.push_back(msg_hash);
+    creditdata[previous_mined_credit_hash]["queued"] = queued_messages;
+}
+
+void CreditMessageHandler::HandleQueuedMinedCreditMessages(MinedCreditMessage& msg)
+{
+    uint160 credit_hash = msg.mined_credit.GetHash160();
+    std::vector<uint160> queued_messages = creditdata[credit_hash]["queued"];
+    for (auto msg_hash : queued_messages)
+    {
+        HandleMessage(msg_hash);
+        EraseEntryFromVector(msg_hash, queued_messages);
+    }
+    creditdata[credit_hash]["queued"] = queued_messages;
+}
+
+
+bool CreditMessageHandler::EnclosedMessagesArePresent(MinedCreditMessage msg)
+{
+    return msg.hash_list.RecoverFullHashes(msgdata);
+}
+
 
 bool CreditMessageHandler::MinedCreditMessagePassesVerification(MinedCreditMessage& msg)
 {
@@ -37,9 +91,6 @@ bool CreditMessageHandler::MinedCreditMessagePassesVerification(MinedCreditMessa
 
     if (msg.mined_credit.network_state.network_id != config.Uint64("network_id"))
         return RejectMessage(msg_hash);
-
-    if (not msg.hash_list.RecoverFullHashes(msgdata))
-        return FetchFailedListExpansion(msg_hash);
 
     if (not mined_credit_message_validator.ValidateNetworkState(msg))
         return RejectMessage(msg_hash);
@@ -187,12 +238,85 @@ void CreditMessageHandler::ValidateAcceptedMessagesAfterFork()
     }
 }
 
-bool CreditMessageHandler::FetchFailedListExpansion(uint160 msg_hash)
+void CreditMessageHandler::FetchFailedListExpansion(MinedCreditMessage msg)
 {
-    CNode *peer = GetPeer(msg_hash);
-    if (peer != NULL)
-        peer->FetchFailedListExpansion(msg_hash);
-    return false;
+    CNode *peer = GetPeer(msg.GetHash160());
+    if (peer == NULL)
+        return;
+    ListExpansionRequestMessage request(msg);
+    uint160 request_hash = request.GetHash160();
+    msgdata[request_hash]["is_expansion_request"] = true;
+    msgdata[request_hash]["list_expansion_request"] = request;
+    peer->PushMessage("credit", "list_expansion_request", request);
+}
+
+void CreditMessageHandler::HandleListExpansionRequestMessage(ListExpansionRequestMessage request)
+{
+    CNode *peer = GetPeer(request.GetHash160());
+    if (peer == NULL)
+        return;
+
+    ListExpansionMessage list_expansion_message(request, credit_system);
+    peer->PushMessage("credit", "list_expansion", list_expansion_message);
+}
+
+void CreditMessageHandler::HandleListExpansionMessage(ListExpansionMessage list_expansion_message)
+{
+    if (not ValidateListExpansionMessage(list_expansion_message))
+        return;
+    HandleMessagesInListExpansionMessage(list_expansion_message);
+    ListExpansionRequestMessage request = msgdata[list_expansion_message.request_hash]["list_expansion_request"];
+    MinedCreditMessage msg = creditdata[request.mined_credit_hash]["msg"];
+    CDataStream ss(SER_NETWORK, CLIENT_VERSION);
+    ss << std::string("credit") << std::string("msg") << msg;
+    CNode *peer = GetPeer(list_expansion_message.GetHash160());
+    HandleMessage(ss, peer);
+}
+
+void CreditMessageHandler::HandleMessagesInListExpansionMessage(ListExpansionMessage list_expansion_message)
+{
+    CNode *peer = GetPeer(list_expansion_message.GetHash160());
+    for (uint32_t i = 0; i < list_expansion_message.message_types.size(); i++)
+    {
+        HandleMessageWithSpecifiedTypeAndContent(list_expansion_message.message_types[i],
+                                                 list_expansion_message.message_contents[i],
+                                                 peer);
+    }
+}
+
+void CreditMessageHandler::HandleMessageWithSpecifiedTypeAndContent(std::string type, vch_t content, CNode *peer)
+{
+    CDataStream ss(content, SER_NETWORK, CLIENT_VERSION);
+    CDataStream ssReceived(SER_NETWORK, CLIENT_VERSION);
+    std::string message_type = type;
+    if (type == "mined_credit")
+    {
+        MinedCreditMessage msg;
+        ss >> msg;
+        ssReceived << std::string("credit") << std::string("msg") << msg;
+    }
+    else if (type == "tx")
+    {
+        SignedTransaction tx;
+        ss >> tx;
+        ssReceived << std::string("credit") << std::string("tx") << tx;
+    }
+    HandleMessage(ssReceived, peer);
+}
+
+bool CreditMessageHandler::ValidateListExpansionMessage(ListExpansionMessage list_expansion_message)
+{
+    if (not msgdata[list_expansion_message.request_hash]["is_expansion_request"])
+        return false;
+    if (list_expansion_message.message_types.size() != list_expansion_message.message_contents.size())
+        return false;
+    MemoryDataStore hashdata;
+    LoadHashesIntoDataStoreFromMessageTypesAndContents(hashdata,
+                                                       list_expansion_message.message_types,
+                                                       list_expansion_message.message_contents, credit_system);
+    ListExpansionRequestMessage request = msgdata[list_expansion_message.request_hash]["list_expansion_request"];
+    MinedCreditMessage msg = creditdata[request.mined_credit_hash]["msg"];
+    return msg.hash_list.RecoverFullHashes(hashdata);
 }
 
 void CreditMessageHandler::SetCreditSystem(CreditSystem *credit_system_)
@@ -308,7 +432,7 @@ void CreditMessageHandler::AcceptTransaction(SignedTransaction tx)
     Broadcast(tx);
 }
 
-bool CreditMessageHandler::PassesSpotCheckOfProofOfWork(MinedCreditMessage &msg)
+bool CreditMessageHandler::ProofOfWorkPassesSpotCheck(MinedCreditMessage &msg)
 {
     if (not credit_system->ProofHasCorrectNumberOfSeedsAndLinks(msg.proof_of_work.proof))
         return false;

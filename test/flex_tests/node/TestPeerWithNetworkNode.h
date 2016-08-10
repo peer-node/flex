@@ -91,10 +91,11 @@ public:
         ssReceived << channel;
         ssReceived = ssReceived + ssSend;
 
+        ssSend.clear();
+
         if (flex_network_node != NULL)
             flex_network_node->HandleMessage(channel, ssReceived, ConnectedPeerIfThereIsOne());
 
-        ssSend.clear();
         LEAVE_CRITICAL_SECTION(cs_vSend);
     }
 

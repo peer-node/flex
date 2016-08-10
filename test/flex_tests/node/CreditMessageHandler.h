@@ -11,6 +11,7 @@
 #include "TransactionValidator.h"
 #include "BadBatchMessage.h"
 #include "Wallet.h"
+#include "ListExpansionMessage.h"
 
 class CreditMessageHandler : public MessageHandlerWithOrphanage
 {
@@ -49,6 +50,8 @@ public:
         HANDLESTREAM(MinedCreditMessage);
         HANDLESTREAM(SignedTransaction);
         HANDLESTREAM(BadBatchMessage);
+        HANDLESTREAM(ListExpansionRequestMessage);
+        HANDLESTREAM(ListExpansionMessage);
     }
 
     void HandleMessage(uint160 message_hash)
@@ -56,11 +59,15 @@ public:
         HANDLEHASH(MinedCreditMessage);
         HANDLEHASH(SignedTransaction);
         HANDLEHASH(BadBatchMessage);
+        HANDLEHASH(ListExpansionRequestMessage);
+        HANDLEHASH(ListExpansionMessage);
     }
 
     HANDLECLASS(MinedCreditMessage);
     HANDLECLASS(SignedTransaction);
     HANDLECLASS(BadBatchMessage);
+    HANDLECLASS(ListExpansionRequestMessage);
+    HANDLECLASS(ListExpansionMessage);
 
     void HandleMinedCreditMessage(MinedCreditMessage msg);
 
@@ -68,9 +75,13 @@ public:
 
     void HandleBadBatchMessage(BadBatchMessage bad_batch_message);
 
+    void HandleListExpansionRequestMessage(ListExpansionRequestMessage request);
+
+    void HandleListExpansionMessage(ListExpansionMessage message);
+
     void SetCreditSystem(CreditSystem *credit_system_);
 
-    bool FetchFailedListExpansion(uint160 msg_hash);
+    void FetchFailedListExpansion(uint160 msg_hash);
 
     void AddToTip(MinedCreditMessage &msg);
 
@@ -82,7 +93,7 @@ public:
 
     void AcceptTransaction(SignedTransaction tx);
 
-    bool PassesSpotCheckOfProofOfWork(MinedCreditMessage &msg);
+    bool ProofOfWorkPassesSpotCheck(MinedCreditMessage &msg);
 
     BadBatchMessage GetBadBatchMessage(uint160 msg_hash);
 
@@ -114,6 +125,28 @@ public:
     MinedCreditMessage GenerateMinedCreditMessageWithoutProofOfWork();
 
     bool MinedCreditMessagePassesVerification(MinedCreditMessage &msg);
+
+    bool DataRequiredToValidateMinedCreditMessageIsPresent(MinedCreditMessage msg);
+
+    bool EnclosedMessagesArePresent(MinedCreditMessage msg);
+
+    void FetchFailedListExpansion(MinedCreditMessage msg);
+
+    bool ValidateListExpansionMessage(ListExpansionMessage list_expansion_message);
+
+    std::vector<uint160> GetEnclosedMessageHashesFromListExpansion(ListExpansionMessage message);
+
+    void HandleMessagesInListExpansionMessage(ListExpansionMessage list_expansion_message);
+
+    void HandleMessageWithSpecifiedTypeAndContent(std::string type, vch_t content);
+
+    void HandleMessageWithSpecifiedTypeAndContent(std::string type, vch_t content, CNode *peer);
+
+    bool PreviousMinedCreditMessageWasHandled(MinedCreditMessage &msg);
+
+    void QueueMinedCreditMessageBehindPrevious(MinedCreditMessage &msg);
+
+    void HandleQueuedMinedCreditMessages(MinedCreditMessage &msg);
 };
 
 

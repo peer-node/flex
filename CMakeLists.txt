@@ -968,7 +968,7 @@ add_executable(runNodeTests
         test/flex_tests/node/CalendarRequestMessage.cpp
         test/flex_tests/node/CalendarRequestMessage.h
         test/flex_tests/node/CalendarMessage.cpp
-        test/flex_tests/node/CalendarMessage.h test/flex_tests/node/CalendarFailureDetails.cpp test/flex_tests/node/CalendarFailureDetails.h test/flex_tests/node/CalendarFailureMessage.cpp test/flex_tests/node/CalendarFailureMessage.h test/flex_tests/node/InitialDataRequestMessage.cpp test/flex_tests/node/InitialDataRequestMessage.h test/flex_tests/node/InitialDataMessage.cpp test/flex_tests/node/InitialDataMessage.h test/flex_tests/node/TestPeerWithNetworkNode.h)
+        test/flex_tests/node/CalendarMessage.h test/flex_tests/node/CalendarFailureDetails.cpp test/flex_tests/node/CalendarFailureDetails.h test/flex_tests/node/CalendarFailureMessage.cpp test/flex_tests/node/CalendarFailureMessage.h test/flex_tests/node/InitialDataRequestMessage.cpp test/flex_tests/node/InitialDataRequestMessage.h test/flex_tests/node/InitialDataMessage.cpp test/flex_tests/node/InitialDataMessage.h test/flex_tests/node/TestPeerWithNetworkNode.h test/flex_tests/node/ListExpansionRequestMessage.cpp test/flex_tests/node/ListExpansionRequestMessage.h test/flex_tests/node/ListExpansionMessage.cpp test/flex_tests/node/ListExpansionMessage.h)
 
 add_executable(flexnetd
         test/flex_tests/flex_data/TestData.h
@@ -1014,7 +1014,7 @@ add_executable(flexnetd
         test/flex_tests/node/NetworkStateConstructor.cpp
         test/flex_tests/node/NetworkStateConstructor.h
         test/flex_tests/node/NetworkState.cpp
-        test/flex_tests/node/NetworkState.h test/flex_tests/node/flexnetd.cpp)
+        test/flex_tests/node/NetworkState.h test/flex_tests/node/flexnetd.cpp test/flex_tests/node/ListExpansionRequestMessage.cpp test/flex_tests/node/ListExpansionRequestMessage.h test/flex_tests/node/ListExpansionMessage.cpp test/flex_tests/node/ListExpansionMessage.h)
 
 add_executable(runMainTests
         test/flex_tests/flex_data/TestData.h

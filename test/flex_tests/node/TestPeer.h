@@ -3,12 +3,13 @@
 
 #include "net/net_cnode.h"
 
+#include "log.h"
+#define LOG_CATEGORY "TestPeer.h"
+
 class TestPeer : public CNode
 {
 public:
     std::vector<uint160> dependencies_requested;
-    std::vector<uint160> list_expansion_failed_requests;
-    std::vector<uint160> tip_requests;
     std::vector<std::string> pushed_messages;
 
     Network dummy_network;
@@ -22,11 +23,6 @@ public:
     virtual void FetchDependencies(std::set<uint160> dependencies)
     {
         dependencies_requested = std::vector<uint160>(dependencies.begin(), dependencies.end());
-    }
-
-    virtual void FetchFailedListExpansion(uint160 mined_credit_hash)
-    {
-        list_expansion_failed_requests.push_back(mined_credit_hash);
     }
 
     bool HasBeenInformedAbout(CDataStream& ss)

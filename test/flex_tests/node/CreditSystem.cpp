@@ -42,6 +42,13 @@ void CreditSystem::RecordTotalWork(uint160 credit_hash, uint160 total_work)
     creditdata[hashes_at_location].Location("total_work") = total_work;
 }
 
+bool CreditSystem::MinedCreditWasRecordedToHaveTotalWork(uint160 credit_hash, uint160 total_work)
+{
+    vector<uint160> hashes_at_location;
+    creditdata.GetObjectAtLocation(hashes_at_location, "total_work", total_work);
+    return VectorContainsEntry(hashes_at_location, credit_hash);
+}
+
 void CreditSystem::AcceptMinedCreditAsValidByRecordingTotalWorkAndParent(MinedCredit mined_credit)
 {
     uint160 credit_hash = mined_credit.GetHash160();
@@ -222,8 +229,6 @@ bool CreditSystem::GetSpentAndUnspentWhenSwitchingAcrossFork(uint160 from_credit
                                                              set<uint64_t> &spent, set<uint64_t> &unspent)
 {
     uint160 fork = FindFork(from_credit_hash, to_credit_hash);
-    if (fork == 0 and from_credit_hash != 0)
-        return false;
     spent = GetPositionsOfCreditsSpentBetween(fork, to_credit_hash);
     unspent = GetPositionsOfCreditsSpentBetween(fork, from_credit_hash);
     return true;

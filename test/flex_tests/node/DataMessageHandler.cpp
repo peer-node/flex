@@ -234,6 +234,27 @@ bool DataMessageHandler::CheckSpentChainInInitialDataMessage(InitialDataMessage 
     return calend.mined_credit.network_state.spent_chain_hash == initial_data_message.spent_chain.GetHash160();
 }
 
+void LoadHashesIntoDataStoreFromMessageTypesAndContents(MemoryDataStore &hashdata,
+                                                        std::vector<std::string> &types,
+                                                        std::vector<vch_t> &contents,
+                                                        CreditSystem *credit_system)
+{
+    for (uint32_t i = 0; i < types.size(); i++)
+    {
+        uint160 enclosed_message_hash;
+        if (types[i] != "mined_credit")
+            enclosed_message_hash = Hash160(contents[i].begin(), contents[i].end());
+        else
+        {
+            CDataStream ss(contents[i], SER_NETWORK, CLIENT_VERSION);
+            MinedCredit mined_credit;
+            ss >> mined_credit;
+            enclosed_message_hash = mined_credit.GetHash160();
+        }
+        credit_system->StoreHash(enclosed_message_hash, hashdata);
+    }
+}
+
 MemoryDataStore DataMessageHandler::GetEnclosedMessageHashes(InitialDataMessage &message)
 {
     MemoryDataStore hashdata;
@@ -241,23 +262,9 @@ MemoryDataStore DataMessageHandler::GetEnclosedMessageHashes(InitialDataMessage 
     {
         credit_system->StoreHash(mined_credit_message.mined_credit.GetHash160(), hashdata);
     }
-    for (uint32_t i = 0; i < message.enclosed_message_types.size(); i++)
-    {
-        std::string type = message.enclosed_message_types[i];
-        vch_t content = message.enclosed_message_contents[i];
-
-        uint160 enclosed_message_hash;
-        if (type != "mined_credit")
-            enclosed_message_hash = Hash160(content.begin(), content.end());
-        else
-        {
-            CDataStream ss(content, SER_NETWORK, CLIENT_VERSION);
-            MinedCredit mined_credit;
-            ss >> mined_credit;
-            enclosed_message_hash = mined_credit.GetHash160();
-        }
-        credit_system->StoreHash(enclosed_message_hash, hashdata);
-    }
+    LoadHashesIntoDataStoreFromMessageTypesAndContents(hashdata,
+                                                       message.enclosed_message_types,
+                                                       message.enclosed_message_contents, credit_system);
     return hashdata;
 }
 

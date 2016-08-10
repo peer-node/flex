@@ -231,12 +231,6 @@ public:
         SetMiningPreferences(node2);
 
         ConnectNodesViaPeers();
-
-        AddABatchToTheTip(&node1);
-        AddABatchToTheTip(&node1);
-
-        MilliSleep(80); // time for node2 to synchronize with node1
-        AddABatchToTheTip(&node2);
     }
 
     virtual void AddABatchToTheTip(FlexNetworkNode *flex_network_node)
@@ -256,10 +250,42 @@ public:
 
 TEST_F(TwoFlexNetworkNodesWithValidProofsOfWorkConnectedViaPeers, AreSynchronized)
 {
+    AddABatchToTheTip(&node1);
+    AddABatchToTheTip(&node1);
+
+    MilliSleep(80); // time for node2 to synchronize with node1
+    AddABatchToTheTip(&node2);
+
     MilliSleep(100); // time for node1 to synchronize with node2
 
     ASSERT_THAT(node1.calendar.LastMinedCreditHash(), Eq(node2.calendar.LastMinedCreditHash()));
 
     MinedCredit mined_credit = node1.calendar.LastMinedCredit();
     ASSERT_THAT(mined_credit.network_state.batch_number, Eq(3));
+}
+
+
+class TwoFlexNetworkNodesConnectedAfterBatchesAreAdded : public TwoFlexNetworkNodesWithValidProofsOfWorkConnectedViaPeers
+{
+public:
+    virtual void SetUp()
+    {
+        SetMiningPreferences(node1);
+        SetMiningPreferences(node2);
+
+        AddABatchToTheTip(&node1);
+        AddABatchToTheTip(&node1);
+
+        AddABatchToTheTip(&node2);
+
+        ConnectNodesViaPeers();
+    }
+};
+
+TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesAreAdded, SynchronizeThroughSharingMinedCreditMessages)
+{
+    AddABatchToTheTip(&node1);
+    MilliSleep(100); // time for node2 to synchronize with node1
+
+    ASSERT_THAT(node1.calendar.LastMinedCreditHash(), Eq(node2.calendar.LastMinedCreditHash()));
 }

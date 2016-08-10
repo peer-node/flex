@@ -98,14 +98,9 @@ bool MinedCreditMessageValidator::CheckPreviousDiurnRoot(MinedCreditMessage &msg
 bool MinedCreditMessageValidator::CheckDiurnalBlockRoot(MinedCreditMessage &msg)
 {
     auto previous_mined_credit = GetPreviousMinedCredit(msg);
-//    log_ << "check diurnal block root for " << msg.mined_credit.GetHash160() << "\n";
-//    log_ << "credit is calend: " << credit_system->IsCalend(msg.mined_credit.GetHash160()) << "\n";
-//    log_ << "previous credit is calend: " << credit_system->IsCalend(msg.mined_credit.network_state.previous_mined_credit_hash) << "\n";
 
     uint160 diurnal_block_root = msg.mined_credit.network_state.diurnal_block_root;
     uint160 block_root_succeeding_previous = credit_system->GetNextDiurnalBlockRoot(previous_mined_credit);
-//    log_ << "diurnal block root: " << diurnal_block_root << " vs " << block_root_succeeding_previous << "\n";
-//    log_ << "preceding was: " << previous_mined_credit.network_state.diurnal_block_root << "\n";
 
     return diurnal_block_root == block_root_succeeding_previous;
 }
@@ -121,45 +116,43 @@ bool MinedCreditMessageValidator::ValidateNetworkState(MinedCreditMessage &msg)
 {
     bool ok = true;
     uint32_t& batch_number = msg.mined_credit.network_state.batch_number;
-  //  log_ << "start\n";
+
     ok &= batch_number > 0;
-   // log_ << ok << "\n";
+
     ok &= CheckBatchNumber(msg);
-  //  log_ << ok << "\n";
+
     ok &= CheckPreviousTotalWork(msg);
-  //  log_ << ok << "\n";
+
     if (DataRequiredToCalculateDifficultyIsPresent(msg))
     {
-     //   log_ << "checking difficulty\n";
         ok &= CheckDifficulty(msg);
     }
-  //  log_ << ok << "\n";
+
     ok &= CheckDiurnalDifficulty(msg);
-  //  log_ << ok << "\n";
+
     ok &= CheckBatchOffset(msg);
-  //  log_ << ok << "\n";
+
     ok &= CheckTimeStampIsNotInFuture(msg);
-  //  log_ << ok << "\n";
+
     ok &= CheckPreviousDiurnRoot(msg);
-  //  log_ << ok << "\n";
+
     ok &= CheckTimeStampSucceedsPreviousTimestamp(msg);
-  //  log_ << ok << "\n";
+
     ok &= CheckBatchRoot(msg);
-  //  log_ << ok << "\n";
+
     ok &= CheckBatchSize(msg);
-   // log_ << ok << "\n";
+
     if (DataRequiredToCalculateDiurnalBlockRootIsPresent(msg))
     {
-   //     log_ << "checking diurnal block root\n";
         ok &= CheckDiurnalBlockRoot(msg);
     }
-   // log_ << ok << "\n";
+
     ok &= CheckSpentChainHash(msg);
-   // log_ << ok << "\n";
+
     ok &= CheckMessageListHash(msg);
-   // log_ << ok << "\n";
+
     ok &= CheckMessageListContainsPreviousMinedCreditHash(msg);
-   // log_ << ok << "\n";
+
     return ok;
 }
 

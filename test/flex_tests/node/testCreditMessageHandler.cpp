@@ -3,9 +3,13 @@
 #include "gmock/gmock.h"
 #include "CreditMessageHandler.h"
 #include "TestPeer.h"
+#include "ListExpansionRequestMessage.h"
 
 using namespace ::testing;
 using namespace std;
+
+#include "log.h"
+#define LOG_CATEGORY "test"
 
 class ACreditMessageHandler : public Test
 {
@@ -97,8 +101,8 @@ TEST_F(ACreditMessageHandler, RequestsDataIfTheListExpansionFailsForAnIncomingMi
     msg.hash_list.full_hashes.push_back(1);
     msg.hash_list.GenerateShortHashes();
     credit_message_handler->HandleMessage(GetDataStream(msg), &peer);
-    ASSERT_THAT(peer.list_expansion_failed_requests.size(), Eq(1));
-    ASSERT_THAT(peer.list_expansion_failed_requests[0], Eq(msg.GetHash160()));
+
+    ASSERT_TRUE(peer.HasReceived("credit", "list_expansion_request", ListExpansionRequestMessage(msg)));
 }
 
 TEST_F(ACreditMessageHandler, RejectsAMinedCreditMessageIfTheAmountIsNotOneCredit)
@@ -193,7 +197,7 @@ MinedCreditMessage MessageWithAValidProofOfWork(CreditSystem* credit_system)
 TEST_F(ACreditMessageHandler, DoesASpotCheckOfTheProofOfWork)
 {
     auto msg = MessageWithAValidProofOfWork(credit_system);
-    bool ok = credit_message_handler->PassesSpotCheckOfProofOfWork(msg);
+    bool ok = credit_message_handler->ProofOfWorkPassesSpotCheck(msg);
     ASSERT_THAT(ok, Eq(true));
 }
 
@@ -211,7 +215,7 @@ TEST_F(ACreditMessageHandler, FailsASpotCheckOfTheProofOfWorkIfTheProofIsInvalid
     auto msg = MessageWithAProofOfWorkThatFailsSpotChecks(credit_system);
     bool ok{true};
     while (ok)
-        ok = credit_message_handler->PassesSpotCheckOfProofOfWork(msg);
+        ok = credit_message_handler->ProofOfWorkPassesSpotCheck(msg);
     ASSERT_THAT(ok, Eq(false));
 }
 
@@ -220,7 +224,7 @@ TEST_F(ACreditMessageHandler, GeneratesABadBatchMessageForAnInvalidProofOfWork)
     auto msg = MessageWithAProofOfWorkThatFailsSpotChecks(credit_system);
     bool ok{true};
     while (ok)
-        ok = credit_message_handler->PassesSpotCheckOfProofOfWork(msg);
+        ok = credit_message_handler->ProofOfWorkPassesSpotCheck(msg);
     BadBatchMessage bad_batch_message = credit_message_handler->GetBadBatchMessage(msg.GetHash160());
     ASSERT_THAT(bad_batch_message.mined_credit_message_hash, Eq(msg.GetHash160()));
     ASSERT_THAT(bad_batch_message.check.VerifyInvalid(msg.proof_of_work.proof), Eq(true));
@@ -399,7 +403,7 @@ TEST_F(ACreditMessageHandler, RemovesBatchesFromMainChainAndSwitchesToANewTipInR
     auto third_msg = credit_message_handler->calendar->current_diurn.credits_in_diurn.back();
     uint160 second_mined_credit_hash = third_msg.mined_credit.network_state.previous_mined_credit_hash;
 
-    while (credit_message_handler->PassesSpotCheckOfProofOfWork(third_msg)) { }
+    while (credit_message_handler->ProofOfWorkPassesSpotCheck(third_msg)) { }
 
     auto bad_batch_message = credit_message_handler->GetBadBatchMessage(third_msg.GetHash160());
 
@@ -452,7 +456,7 @@ TEST_F(ACreditMessageHandlerWithTwoPeers, RelaysABadBatchMessage)
     auto msg = MessageWithAProofOfWorkThatFailsSpotChecks(credit_system);
     bool ok{true};
     while (ok)
-        ok = credit_message_handler->PassesSpotCheckOfProofOfWork(msg);
+        ok = credit_message_handler->ProofOfWorkPassesSpotCheck(msg);
     BadBatchMessage bad_batch_message = credit_message_handler->GetBadBatchMessage(msg.GetHash160());
     credit_message_handler->HandleMessage(GetDataStream(msg), &peer);
     ASSERT_TRUE(other_peer.HasBeenInformedAbout("credit", "bad_batch", bad_batch_message));
