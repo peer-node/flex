@@ -71,7 +71,6 @@ public:
     {
         uint160 message_hash = message.GetHash160();
 
-        bool already_received = msgdata[message_hash]["received"];
         msgdata[message_hash]["received"] = true;
         msgdata[message_hash]["type"] = message.Type();
         msgdata[message_hash][message.Type()] = message;

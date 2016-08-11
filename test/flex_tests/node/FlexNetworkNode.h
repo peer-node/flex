@@ -27,10 +27,12 @@ public:
         credit_message_handler->SetCalendar(calendar);
         credit_message_handler->SetSpentChain(spent_chain);
         credit_message_handler->SetWallet(*wallet);
+        credit_message_handler->SetNetworkNode(this);
 
         data_message_handler = new DataMessageHandler(msgdata, creditdata);
         data_message_handler->SetCreditSystem(credit_system);
         data_message_handler->SetCalendar(&calendar);
+        data_message_handler->SetNetworkNode(this);
     }
 
     ~FlexNetworkNode()
@@ -61,6 +63,7 @@ public:
 
     uint160 SendToAddress(std::string address, int64_t amount);
 
+    void SwitchToNewCalendarAndSpentChain(Calendar new_calendar, BitChain spent_chain);
 };
 
 

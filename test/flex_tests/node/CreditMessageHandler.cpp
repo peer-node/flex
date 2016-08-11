@@ -6,6 +6,8 @@
 #include "ListExpansionRequestMessage.h"
 
 #include "log.h"
+#include "FlexNetworkNode.h"
+
 #define LOG_CATEGORY "CreditMessageHandler.cpp"
 
 using std::vector;
@@ -14,8 +16,6 @@ using std::set;
 
 void CreditMessageHandler::HandleMinedCreditMessage(MinedCreditMessage msg)
 {
-    LOCK(calendar_mutex);
-
     if (msg.mined_credit.network_state.batch_number > 1 and not PreviousMinedCreditMessageWasHandled(msg))
     {
         credit_system->StoreMinedCreditMessage(msg);
@@ -39,6 +39,7 @@ void CreditMessageHandler::HandleMinedCreditMessage(MinedCreditMessage msg)
         Broadcast(GetBadBatchMessage(msg.GetHash160()));
     else
     {
+        LOCK(calendar_mutex);
         HandleValidMinedCreditMessage(msg);
         HandleQueuedMinedCreditMessages(msg);
     }
@@ -66,19 +67,15 @@ void CreditMessageHandler::HandleQueuedMinedCreditMessages(MinedCreditMessage& m
     uint160 credit_hash = msg.mined_credit.GetHash160();
     std::vector<uint160> queued_messages = creditdata[credit_hash]["queued"];
     for (auto msg_hash : queued_messages)
-    {
         HandleMessage(msg_hash);
-        EraseEntryFromVector(msg_hash, queued_messages);
-    }
-    creditdata[credit_hash]["queued"] = queued_messages;
-}
 
+    creditdata[credit_hash]["queued"] = std::vector<uint160>();
+}
 
 bool CreditMessageHandler::EnclosedMessagesArePresent(MinedCreditMessage msg)
 {
     return msg.hash_list.RecoverFullHashes(msgdata);
 }
-
 
 bool CreditMessageHandler::MinedCreditMessagePassesVerification(MinedCreditMessage& msg)
 {
@@ -98,7 +95,7 @@ bool CreditMessageHandler::MinedCreditMessagePassesVerification(MinedCreditMessa
     if (not credit_system->QuickCheckProofOfWorkInMinedCreditMessage(msg))
         return RejectMessage(msg_hash);
 
-    bool predecessor_passed_verification = creditdata[msg.mined_credit.network_state.previous_mined_credit_hash]["passed_verification"];
+    bool predecessor_passed_verification = creditdata[previous_hash]["passed_verification"];
 
     bool first_message = creditdata[credit_hash]["first_in_data_message"];
 
@@ -288,7 +285,6 @@ void CreditMessageHandler::HandleMessageWithSpecifiedTypeAndContent(std::string 
 {
     CDataStream ss(content, SER_NETWORK, CLIENT_VERSION);
     CDataStream ssReceived(SER_NETWORK, CLIENT_VERSION);
-    std::string message_type = type;
     if (type == "mined_credit")
     {
         MinedCreditMessage msg;
@@ -506,4 +502,9 @@ MinedCreditMessage CreditMessageHandler::GenerateMinedCreditMessageWithoutProofO
 
     credit_system->SetBatchRootAndSizeAndMessageListHashAndSpentChainHash(msg);
     return msg;
+}
+
+void CreditMessageHandler::SetNetworkNode(FlexNetworkNode *flex_network_node_)
+{
+    flex_network_node = flex_network_node_;
 }

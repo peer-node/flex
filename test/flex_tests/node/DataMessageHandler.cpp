@@ -3,6 +3,7 @@
 
 
 #include "CreditMessageHandler.h"
+#include "FlexNetworkNode.h"
 
 #include "log.h"
 #define LOG_CATEGORY "DataMessageHandler.cpp"
@@ -31,12 +32,17 @@ void DataMessageHandler::HandleTipRequestMessage(TipRequestMessage request)
 void DataMessageHandler::HandleTipMessage(TipMessage tip_message)
 {
     uint160 tip_message_hash = tip_message.GetHash160();
+    uint160 reported_work = tip_message.mined_credit.ReportedWork();
     if (not msgdata[tip_message.tip_request_hash]["is_tip_request"])
     {
         RejectMessage(tip_message_hash);
         return;
     }
-    RecordReportedTotalWorkOfTip(tip_message_hash, tip_message.mined_credit.ReportedWork());
+    RecordReportedTotalWorkOfTip(tip_message_hash, reported_work);
+    if (reported_work > calendar->LastMinedCredit().ReportedWork())
+    {
+        RequestCalendarOfTipWithTheMostWork();
+    }
 }
 
 void DataMessageHandler::RecordReportedTotalWorkOfTip(uint160 tip_message_hash, uint160 total_work)
@@ -226,6 +232,44 @@ void DataMessageHandler::HandleInitialDataMessage(InitialDataMessage initial_dat
         RejectMessage(message_hash);
         return;
     }
+    if (not ValidateInitialDataMessage(initial_data_message))
+    {
+        log_ << "bad initial data message\n";
+        return;
+    }
+    auto requested_calendar = GetRequestedCalendar(initial_data_message);
+    if (requested_calendar.LastMinedCredit().ReportedWork() > calendar->LastMinedCredit().ReportedWork())
+        UseInitialDataMessageAndCalendar(initial_data_message, requested_calendar);
+}
+
+void DataMessageHandler::UseInitialDataMessageAndCalendar(InitialDataMessage initial_data_message,
+                                                          Calendar new_calendar)
+{
+    StoreDataFromInitialDataMessageInCreditSystem(initial_data_message, *credit_system);
+    flex_network_node->SwitchToNewCalendarAndSpentChain(new_calendar, initial_data_message.spent_chain);
+}
+
+bool DataMessageHandler::ValidateInitialDataMessage(InitialDataMessage initial_data_message)
+{
+    if (not CheckSpentChainInInitialDataMessage(initial_data_message))
+    {
+        log_ << "bad spent chain included in initial data message\n";
+        return false;
+    }
+
+    if (not InitialDataMessageMatchesRequestedCalendar(initial_data_message))
+    {
+        log_ << "initial data message doesn't match calendar\n";
+        return false;
+    }
+
+    if (not ValidateMinedCreditMessagesInInitialDataMessage(initial_data_message))
+    {
+        log_ << "mined credit messages in initial data message aren't good\n";
+        return false;
+    }
+
+    return true;
 }
 
 bool DataMessageHandler::CheckSpentChainInInitialDataMessage(InitialDataMessage initial_data_message)
@@ -298,7 +342,10 @@ bool DataMessageHandler::InitialDataMessageMatchesCalendar(InitialDataMessage &d
     if (calendar.current_diurn.Size() > 1 or calendar.calends.size() == 0)
     {
         if (data_message.mined_credit_messages_in_current_diurn != calendar.current_diurn.credits_in_diurn)
+        {
+            log_ << "entries in diurn don't match\n";
             return false;
+        }
     }
     else if (calendar.current_diurn.Size() == 1)
     {
@@ -306,7 +353,7 @@ bool DataMessageHandler::InitialDataMessageMatchesCalendar(InitialDataMessage &d
 
         if (not SequenceOfMinedCreditMessagesIsValidAndHasValidProofsOfWork(enclosed_messages))
             return false;
-        if (enclosed_messages.back() != calendar.current_diurn.credits_in_diurn[0])
+        if (enclosed_messages.size() == 0 or enclosed_messages.back() != calendar.current_diurn.credits_in_diurn[0])
             return false;
         if (calendar.calends.size() > 1 and enclosed_messages.front() != calendar.calends[calendar.calends.size() - 2])
             return false;
@@ -423,4 +470,9 @@ void DataMessageHandler::TrimLastDiurnFromCalendar(Calendar& calendar, CreditSys
 
     while (calendar.current_diurn.Size() > 1)
         calendar.RemoveLast(credit_system);
+}
+
+void DataMessageHandler::SetNetworkNode(FlexNetworkNode *flex_network_node_)
+{
+    flex_network_node = flex_network_node_;
 }

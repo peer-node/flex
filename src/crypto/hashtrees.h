@@ -602,6 +602,8 @@ public:
 
     uint160 GetHash160()
     {
+        if (length == 0)
+            return 0;
         uint160 hash = TreeHash(&data[0], (int)ceil(length / 8.));
         return hash;
     }

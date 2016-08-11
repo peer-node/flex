@@ -15,8 +15,10 @@
 #include "InitialDataMessage.h"
 
 
+
 #define CALENDAR_SCRUTINY_TIME 5000000 // microseconds
 
+class FlexNetworkNode;
 
 class DataMessageHandler : public MessageHandlerWithOrphanage
 {
@@ -24,6 +26,7 @@ public:
     MemoryDataStore &msgdata, &creditdata;
     CreditSystem *credit_system{NULL};
     Calendar *calendar{NULL};
+    FlexNetworkNode *flex_network_node{NULL};
     uint64_t calendar_scrutiny_time{CALENDAR_SCRUTINY_TIME};
     uint64_t number_of_megabytes_for_mining{FLEX_WORK_NUMBER_OF_MEGABYTES};
     uint160 initial_difficulty{INITIAL_DIFFICULTY};
@@ -75,6 +78,8 @@ public:
     void SetCreditSystem(CreditSystem *credit_system_);
 
     void SetCalendar(Calendar *calendar_);
+
+    void SetNetworkNode(FlexNetworkNode *flex_network_node_);
 
     uint160 RequestTips();
 
@@ -133,6 +138,10 @@ public:
     bool TipOfCalendarMatchesTipOfInitialDataMessage(Calendar &calendar, InitialDataMessage &message);
 
     void StoreMessageInCreditSystem(std::string type, vch_t content, CreditSystem &credit_system);
+
+    bool ValidateInitialDataMessage(InitialDataMessage initial_data_message);
+
+    void UseInitialDataMessageAndCalendar(InitialDataMessage initial_data_message, Calendar new_calendar);
 };
 
 void LoadHashesIntoDataStoreFromMessageTypesAndContents(MemoryDataStore &hashdata,

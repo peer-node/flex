@@ -13,6 +13,8 @@
 #include "Wallet.h"
 #include "ListExpansionMessage.h"
 
+class FlexNetworkNode;
+
 class CreditMessageHandler : public MessageHandlerWithOrphanage
 {
 public:
@@ -22,6 +24,7 @@ public:
     Mutex calendar_mutex;
     BitChain *spent_chain;
     Wallet *wallet{NULL};
+    FlexNetworkNode *flex_network_node{NULL};
     FlexConfig config;
     MinedCreditMessageValidator mined_credit_message_validator;
     TransactionValidator transaction_validator;
@@ -44,6 +47,8 @@ public:
     void SetSpentChain(BitChain& spent_chain_) { spent_chain = &spent_chain_; }
 
     void SetWallet(Wallet& wallet_) { wallet = &wallet_; }
+
+    void SetNetworkNode(FlexNetworkNode *flex_network_node_);
 
     void HandleMessage(CDataStream ss, CNode* peer)
     {
@@ -80,8 +85,6 @@ public:
     void HandleListExpansionMessage(ListExpansionMessage message);
 
     void SetCreditSystem(CreditSystem *credit_system_);
-
-    void FetchFailedListExpansion(uint160 msg_hash);
 
     void AddToTip(MinedCreditMessage &msg);
 
@@ -126,19 +129,13 @@ public:
 
     bool MinedCreditMessagePassesVerification(MinedCreditMessage &msg);
 
-    bool DataRequiredToValidateMinedCreditMessageIsPresent(MinedCreditMessage msg);
-
     bool EnclosedMessagesArePresent(MinedCreditMessage msg);
 
     void FetchFailedListExpansion(MinedCreditMessage msg);
 
     bool ValidateListExpansionMessage(ListExpansionMessage list_expansion_message);
 
-    std::vector<uint160> GetEnclosedMessageHashesFromListExpansion(ListExpansionMessage message);
-
     void HandleMessagesInListExpansionMessage(ListExpansionMessage list_expansion_message);
-
-    void HandleMessageWithSpecifiedTypeAndContent(std::string type, vch_t content);
 
     void HandleMessageWithSpecifiedTypeAndContent(std::string type, vch_t content, CNode *peer);
 

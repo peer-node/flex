@@ -276,6 +276,17 @@ void CreditSystem::AddToMainChain(MinedCreditMessage &msg)
     creditdata[msg.mined_credit.network_state.batch_root]["credit_hash"] = credit_hash;
 }
 
+void CreditSystem::AddCreditHashAndPredecessorsToMainChain(uint160 credit_hash)
+{
+    MinedCreditMessage msg = creditdata[credit_hash]["msg"];
+    while (not IsInMainChain(credit_hash) and credit_hash != 0)
+    {
+        AddToMainChain(msg);
+        credit_hash = msg.mined_credit.network_state.previous_mined_credit_hash;
+        msg = creditdata[credit_hash]["msg"];
+    }
+}
+
 void CreditSystem::RemoveFromMainChain(MinedCreditMessage &msg)
 {
     uint160 credit_hash = msg.mined_credit.GetHash160();

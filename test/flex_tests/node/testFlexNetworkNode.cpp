@@ -81,7 +81,7 @@ public:
 
     void AddABatchToTheTip()
     {
-        MinedCreditMessage msg = flex_network_node.credit_message_handler->GenerateMinedCreditMessageWithoutProofOfWork();
+        auto msg = flex_network_node.credit_message_handler->GenerateMinedCreditMessageWithoutProofOfWork();
         MarkProofAsValid(msg);
         flex_network_node.HandleMessage(string("credit"), GetDataStream("credit", msg), (CNode*)&peer);
     }
@@ -208,6 +208,8 @@ TEST_F(TwoFlexNetworkNodesConnectedViaPeers, SendTipRequests)
 TEST_F(TwoFlexNetworkNodesConnectedViaPeers, SendTipsInResponseToRequests)
 {
     uint160 request_hash = node2.data_message_handler->RequestTips();
+    // give node2 a very high total work so that the tip message doesn't provoke a calendar request
+    node2.calendar.current_diurn.credits_in_diurn.back().mined_credit.network_state.difficulty = 100000000;
     TipRequestMessage tip_request = node2.msgdata[request_hash]["tip_request"];
     MilliSleep(50);
     ASSERT_TRUE(peer2.HasReceived("data", "tip", TipMessage(tip_request, &node1.calendar)));
@@ -223,6 +225,7 @@ public:
         node.credit_system->initial_difficulty = 100;
         node.credit_system->initial_diurnal_difficulty = 500;
         node.data_message_handler->SetMiningParametersForInitialDataMessageValidation(1, 100, 500);
+        node.data_message_handler->calendar_scrutiny_time = 1 * 10000;
     }
 
     virtual void SetUp()
@@ -285,6 +288,14 @@ public:
 TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesAreAdded, SynchronizeThroughSharingMinedCreditMessages)
 {
     AddABatchToTheTip(&node1);
+    MilliSleep(100); // time for node2 to synchronize with node1
+
+    ASSERT_THAT(node1.calendar.LastMinedCreditHash(), Eq(node2.calendar.LastMinedCreditHash()));
+}
+
+TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesAreAdded, SynchronizeThroughAnInitialDataMessage)
+{
+    node2.data_message_handler->RequestTips();
     MilliSleep(100); // time for node2 to synchronize with node1
 
     ASSERT_THAT(node1.calendar.LastMinedCreditHash(), Eq(node2.calendar.LastMinedCreditHash()));

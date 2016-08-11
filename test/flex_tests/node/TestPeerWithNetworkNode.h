@@ -22,9 +22,7 @@ public:
     }
 
     ~TestPeerWithNetworkNode()
-    {
-
-    }
+    { }
 
     void StopGettingMessages()
     {

@@ -62,7 +62,19 @@ Point FlexNetworkNode::GetNewPublicKey()
 uint160 FlexNetworkNode::SendToAddress(std::string address, int64_t amount)
 {
     uint160 key_hash = GetKeyHashFromAddress(address);
-    SignedTransaction tx = wallet->GetSignedTransaction(key_hash, amount);
+    SignedTransaction tx = wallet->GetSignedTransaction(key_hash, (uint64_t) amount);
     credit_message_handler->HandleSignedTransaction(tx);
     return tx.GetHash160();
+}
+
+void FlexNetworkNode::SwitchToNewCalendarAndSpentChain(Calendar new_calendar, BitChain new_spent_chain)
+{
+    uint160 new_tip_credit_hash = new_calendar.LastMinedCreditHash();
+    uint160 fork = credit_system->FindFork(calendar.LastMinedCreditHash(), new_tip_credit_hash);
+    LOCK(credit_message_handler->calendar_mutex);
+    credit_system->RemoveBatchAndChildrenFromMainChainAndDeleteRecordOfTotalWork(fork);
+    credit_system->AddCreditHashAndPredecessorsToMainChain(new_tip_credit_hash);
+    calendar = new_calendar;
+    spent_chain = new_spent_chain;
+    // TODO: switch wallet
 }

@@ -146,6 +146,8 @@ public:
     SetMiningParameters(uint64_t number_of_megabytes_, uint160 initial_difficulty_, uint160 initial_diurnal_difficulty_);
 
     bool MinedCreditWasRecordedToHaveTotalWork(uint160 credit_hash, uint160 total_work);
+
+    void AddCreditHashAndPredecessorsToMainChain(uint160 credit_hash);
 };
 
 

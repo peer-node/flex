@@ -2,7 +2,6 @@
 #define FLEX_INITIALDATAMESSAGE_H
 
 
-#include <string>
 #include "CreditSystem.h"
 #include "InitialDataRequestMessage.h"
 
@@ -94,6 +93,10 @@ public:
     IMPLEMENT_SERIALIZE
     (
         READWRITE(request_hash);
+        READWRITE(spent_chain);
+        READWRITE(mined_credit_messages_in_current_diurn);
+        READWRITE(enclosed_message_types);
+        READWRITE(enclosed_message_contents);
     )
 
     DEPENDENCIES();
