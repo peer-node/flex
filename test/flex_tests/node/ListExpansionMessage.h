@@ -36,8 +36,13 @@ public:
                 ss << msg;
                 message_content = vch_t(ss.begin(), ss.end());
             }
-            else
-                message_content = credit_system->msgdata[hash][type].serialized_value;
+            else if (type == "tx")
+            {
+                SignedTransaction tx = credit_system->creditdata[hash]["tx"];
+                CDataStream ss(SER_NETWORK, CLIENT_VERSION);
+                ss << tx;
+                message_content = vch_t(ss.begin(), ss.end());
+            }
             message_contents.push_back(message_content);
         }
     }

@@ -247,7 +247,7 @@ public:
     {
         {
             LOCK(cs_inventory);
-            if (!setInventoryKnown.count(inv))
+            if (not setInventoryKnown.count(inv) and not VectorContainsEntry(vInventoryToSend, (CInv)inv))
                 vInventoryToSend.push_back(inv);
         }
     }

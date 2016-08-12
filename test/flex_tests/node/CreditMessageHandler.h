@@ -144,6 +144,8 @@ public:
     void QueueMinedCreditMessageBehindPrevious(MinedCreditMessage &msg);
 
     void HandleQueuedMinedCreditMessages(MinedCreditMessage &msg);
+
+    void HandleMinedCreditMessageWithGivenListExpansion(ListExpansionMessage list_expansion_message);
 };
 
 

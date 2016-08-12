@@ -16,6 +16,10 @@ using std::set;
 
 void CreditMessageHandler::HandleMinedCreditMessage(MinedCreditMessage msg)
 {
+    if (credit_system->MinedCreditWasRecordedToHaveTotalWork(msg.mined_credit.GetHash160(),
+                                                             msg.mined_credit.ReportedWork()))
+        return;
+
     if (msg.mined_credit.network_state.batch_number > 1 and not PreviousMinedCreditMessageWasHandled(msg))
     {
         credit_system->StoreMinedCreditMessage(msg);
@@ -145,9 +149,13 @@ void CreditMessageHandler::SwitchToTip(uint160 credit_hash_of_new_tip)
     uint160 current_tip = calendar->LastMinedCreditHash();
 
     if (msg_at_new_tip.mined_credit.network_state.previous_mined_credit_hash == current_tip)
+    {
         AddToTip(msg_at_new_tip);
+    }
     else
+    {
         SwitchToTipViaFork(credit_hash_of_new_tip);
+    }
 }
 
 void CreditMessageHandler::SwitchToTipViaFork(uint160 new_tip)
@@ -260,8 +268,16 @@ void CreditMessageHandler::HandleListExpansionRequestMessage(ListExpansionReques
 void CreditMessageHandler::HandleListExpansionMessage(ListExpansionMessage list_expansion_message)
 {
     if (not ValidateListExpansionMessage(list_expansion_message))
+    {
+        log_ << "failed to validate list expansion message\n";
         return;
+    }
     HandleMessagesInListExpansionMessage(list_expansion_message);
+    HandleMinedCreditMessageWithGivenListExpansion(list_expansion_message);
+}
+
+void CreditMessageHandler::HandleMinedCreditMessageWithGivenListExpansion(ListExpansionMessage list_expansion_message)
+{
     ListExpansionRequestMessage request = msgdata[list_expansion_message.request_hash]["list_expansion_request"];
     MinedCreditMessage msg = creditdata[request.mined_credit_hash]["msg"];
     CDataStream ss(SER_NETWORK, CLIENT_VERSION);

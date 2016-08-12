@@ -60,7 +60,9 @@ public:
         {
             std::string type = credit_system->MessageType(hash);
             if (type == "tx")
+            {
                 AddTransaction(hash, credit_system);
+            }
             if (type == "mined_credit" and credit_system->IsCalend(msg.mined_credit.GetHash160()))
                 AddMinedCredit(hash, credit_system);
         }

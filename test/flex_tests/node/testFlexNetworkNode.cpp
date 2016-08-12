@@ -256,10 +256,10 @@ TEST_F(TwoFlexNetworkNodesWithValidProofsOfWorkConnectedViaPeers, AreSynchronize
     AddABatchToTheTip(&node1);
     AddABatchToTheTip(&node1);
 
-    MilliSleep(80); // time for node2 to synchronize with node1
+    MilliSleep(200); // time for node2 to synchronize with node1
     AddABatchToTheTip(&node2);
 
-    MilliSleep(100); // time for node1 to synchronize with node2
+    MilliSleep(200); // time for node1 to synchronize with node2
 
     ASSERT_THAT(node1.calendar.LastMinedCreditHash(), Eq(node2.calendar.LastMinedCreditHash()));
 
@@ -294,6 +294,45 @@ TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesAreAdded, SynchronizeThroughShari
 }
 
 TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesAreAdded, SynchronizeThroughAnInitialDataMessage)
+{
+    node2.data_message_handler->RequestTips();
+    MilliSleep(100); // time for node2 to synchronize with node1
+
+    ASSERT_THAT(node1.calendar.LastMinedCreditHash(), Eq(node2.calendar.LastMinedCreditHash()));
+}
+
+class TwoFlexNetworkNodesConnectedAfterBatchesWithTransactionsAreAdded : public TwoFlexNetworkNodesWithValidProofsOfWorkConnectedViaPeers
+{
+public:
+    virtual void SetUp()
+    {
+        SetMiningPreferences(node1);
+        SetMiningPreferences(node2);
+
+        AddABatchToTheTip(&node1);
+
+        AddABatchToTheTip(&node1);
+        Point pubkey = node2.GetNewPublicKey();
+        node1.SendCreditsToPublicKey(pubkey, ONE_CREDIT);
+
+        AddABatchToTheTip(&node2);
+
+        ConnectNodesViaPeers();
+    }
+};
+
+
+TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesWithTransactionsAreAdded, SynchronizeThroughSharingMinedCreditMessages)
+{
+    AddABatchToTheTip(&node1);
+    MilliSleep(100); // time for node2 to synchronize with node1
+
+    ASSERT_THAT(node1.calendar.LastMinedCreditHash(), Eq(node2.calendar.LastMinedCreditHash()));
+    ASSERT_THAT(node1.Balance(), Eq(ONE_CREDIT)); // mined two credits, spent 1
+    ASSERT_THAT(node2.Balance(), Eq(ONE_CREDIT)); // received from transaction
+}
+
+TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesWithTransactionsAreAdded, SynchronizeThroughAnInitialDataMessage)
 {
     node2.data_message_handler->RequestTips();
     MilliSleep(100); // time for node2 to synchronize with node1
