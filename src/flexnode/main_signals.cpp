@@ -102,7 +102,7 @@ void MainRoutine::MarkBlockAsInFlight(NodeId nodeid, const uint256 &hash)
     // Make sure it's not listed somewhere already.
     MarkBlockAsReceived(hash);
 
-    QueuedBlock newentry = {hash, GetTimeMicros(), state->nBlocksInFlight};
+    QueuedBlock newentry = {hash, (int64_t) GetTimeMicros(), state->nBlocksInFlight};
     if (state->nBlocksInFlight == 0)
         state->nLastBlockReceive = newentry.nTime; // Reset when a first request is sent.
     list<QueuedBlock>::iterator it = state->vBlocksInFlight.insert(state->vBlocksInFlight.end(), newentry);
@@ -150,13 +150,13 @@ void MainRoutine::Misbehaving(NodeId pnode, int howmuch)
     if (state->nMisbehavior >= 100)
     {
         log_ << "Misbehaving: " << state->name
-             << " (" << state->nMisbehavior-howmuch << " -> "
+             << " (" << state->nMisbehavior << " -> "
              << state->nMisbehavior << ") BAN THRESHOLD EXCEEDED\n";
         state->fShouldBan = true;
     }
     else
         log_ << "Misbehaving: " << state->name
-             << " (" << state->nMisbehavior-howmuch << ")\n";
+             << " (" << state->nMisbehavior << ")\n";
 }
 
 bool MainRoutine::AbortNode(const std::string &strMessage)

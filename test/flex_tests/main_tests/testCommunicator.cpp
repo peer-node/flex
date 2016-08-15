@@ -1,6 +1,7 @@
 #include "gmock/gmock.h"
 #include <src/net/net.h>
 #include <src/flexnode/main.h>
+#include <test/flex_tests/node/FlexNetworkNode.h>
 #include "Communicator.h"
 
 using namespace ::testing;
@@ -68,32 +69,31 @@ TEST_F(TwoConnectedCommunicators, AreConnected)
 }
 
 
-class TwoConnectedCommunicatorsWithFlexNodes : public TwoConnectedCommunicators
+class TwoConnectedCommunicatorsWithFlexNetworkNodes : public TwoConnectedCommunicators
 {
 public:
-    MainFlexNode *flexnode1;
-    MainFlexNode *flexnode2;
-
+    FlexNetworkNode *flex_network_node1;
+    FlexNetworkNode *flex_network_node2;
 
     virtual void SetUp()
     {
-        flexnode1 = new MainFlexNode();
-        flexnode2 = new MainFlexNode();
+        flex_network_node1 = new FlexNetworkNode();
+        flex_network_node2 = new FlexNetworkNode();
         TwoConnectedCommunicators::SetUp();
-        communicator1->main_node.SetFlexNode(*flexnode1);
-        communicator2->main_node.SetFlexNode(*flexnode2);
+        communicator1->main_node.SetFlexNetworkNode(*flex_network_node1);
+        communicator2->main_node.SetFlexNetworkNode(*flex_network_node2);
     }
 
     virtual void TearDown()
     {
         TwoConnectedCommunicators::TearDown();
-        delete flexnode1;
-        delete flexnode2;
+        delete flex_network_node1;
+        delete flex_network_node2;
     }
 };
 
 
-TEST_F(TwoConnectedCommunicatorsWithFlexNodes, AreConnected)
+TEST_F(TwoConnectedCommunicatorsWithFlexNetworkNodes, AreConnected)
 {
     MilliSleep(100);
     ASSERT_THAT(communicator1->network.vNodes.size(), Eq(1));
@@ -101,15 +101,18 @@ TEST_F(TwoConnectedCommunicatorsWithFlexNodes, AreConnected)
     MilliSleep(50);
 }
 
-TEST_F(TwoConnectedCommunicatorsWithFlexNodes, SendAndReceiveMessages)
+TEST_F(TwoConnectedCommunicatorsWithFlexNetworkNodes, SendAndReceiveMessages)
 {
     MilliSleep(100);
-    ASSERT_THAT(flexnode1->messages_received, Eq(0));
+    //ASSERT_THAT(flex_network_node1->messages_received, Eq(0));
+
+    SignedTransaction tx;
 
     communicator2->Node(0)->WaitForVersion();
-    communicator2->Node(0)->PushMessage("blahblah", "blah");
+    communicator2->Node(0)->PushMessage("credit", "tx", tx);
 
     MilliSleep(100);
-    ASSERT_THAT(flexnode1->messages_received, Eq(1));
+
+    ASSERT_THAT(flex_network_node1->msgdata[tx.GetHash160()].HasProperty("tx"), Eq(true));
 }
 

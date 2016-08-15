@@ -392,12 +392,8 @@ set(MESSAGING_FILES
         src/flexnode/MockInit.h
         src/flexnode/MockInit.cpp
         src/flexnode/MainFlexNode.cpp
-        test/flex_tests/main_tests/testCreditMessageHandler.cpp
-        test/flex_tests/main_tests/CreditMessageHandler_.cpp
-        test/flex_tests/main_tests/CreditMessageHandler_.h
         test/flex_tests/main_tests/Communicator.cpp
-        test/flex_tests/main_tests/Communicator.h
-        test/flex_tests/main_tests/testCommunicator.cpp)
+        test/flex_tests/main_tests/Communicator.h)
 
 set(DATABASE_FILES
         src/database/datastore.h
@@ -914,6 +910,9 @@ add_executable(runNodeTests
         test/flex_tests/flex_data/MemoryDataStore.cpp
         ${DATABASE_FILES}
         ${WORK_FILES}
+        ${MESSAGING_FILES}
+        src/flexnode/main.cpp
+        src/flexnode/main.h
         test/flex_tests/test_main.cpp
         test/flex_tests/node/testFlexRPCServer.cpp
         test/flex_tests/node/FlexRPCServer.cpp
@@ -968,7 +967,22 @@ add_executable(runNodeTests
         test/flex_tests/node/CalendarRequestMessage.cpp
         test/flex_tests/node/CalendarRequestMessage.h
         test/flex_tests/node/CalendarMessage.cpp
-        test/flex_tests/node/CalendarMessage.h test/flex_tests/node/CalendarFailureDetails.cpp test/flex_tests/node/CalendarFailureDetails.h test/flex_tests/node/CalendarFailureMessage.cpp test/flex_tests/node/CalendarFailureMessage.h test/flex_tests/node/InitialDataRequestMessage.cpp test/flex_tests/node/InitialDataRequestMessage.h test/flex_tests/node/InitialDataMessage.cpp test/flex_tests/node/InitialDataMessage.h test/flex_tests/node/TestPeerWithNetworkNode.h test/flex_tests/node/ListExpansionRequestMessage.cpp test/flex_tests/node/ListExpansionRequestMessage.h test/flex_tests/node/ListExpansionMessage.cpp test/flex_tests/node/ListExpansionMessage.h)
+        test/flex_tests/node/CalendarMessage.h
+        test/flex_tests/node/CalendarFailureDetails.cpp
+        test/flex_tests/node/CalendarFailureDetails.h
+        test/flex_tests/node/CalendarFailureMessage.cpp
+        test/flex_tests/node/CalendarFailureMessage.h
+        test/flex_tests/node/InitialDataRequestMessage.cpp
+        test/flex_tests/node/InitialDataRequestMessage.h
+        test/flex_tests/node/InitialDataMessage.cpp
+        test/flex_tests/node/InitialDataMessage.h
+        test/flex_tests/node/TestPeerWithNetworkNode.h
+        test/flex_tests/node/ListExpansionRequestMessage.cpp
+        test/flex_tests/node/ListExpansionRequestMessage.h
+        test/flex_tests/node/ListExpansionMessage.cpp
+        test/flex_tests/node/ListExpansionMessage.h
+        test/flex_tests/main_tests/testNetwork.cpp
+        test/flex_tests/main_tests/testCommunicator.cpp)
 
 add_executable(flexnetd
         test/flex_tests/flex_data/TestData.h
@@ -1014,32 +1028,38 @@ add_executable(flexnetd
         test/flex_tests/node/NetworkStateConstructor.cpp
         test/flex_tests/node/NetworkStateConstructor.h
         test/flex_tests/node/NetworkState.cpp
-        test/flex_tests/node/NetworkState.h test/flex_tests/node/flexnetd.cpp test/flex_tests/node/ListExpansionRequestMessage.cpp test/flex_tests/node/ListExpansionRequestMessage.h test/flex_tests/node/ListExpansionMessage.cpp test/flex_tests/node/ListExpansionMessage.h)
+        test/flex_tests/node/NetworkState.h
+        test/flex_tests/node/flexnetd.cpp
+        test/flex_tests/node/ListExpansionRequestMessage.cpp
+        test/flex_tests/node/ListExpansionRequestMessage.h
+        test/flex_tests/node/ListExpansionMessage.cpp
+        test/flex_tests/node/ListExpansionMessage.h)
 
-add_executable(runMainTests
-        test/flex_tests/flex_data/TestData.h
-        ${REMAINING_BASE_FILES}
-        ${MINCRYPTO_FILES}
-        test/flex_tests/flex_data/MemoryDataStore.cpp
-        ${DATABASE_FILES}
-        ${WORK_FILES}
-        ${MESSAGING_FILES}
-        src/credits/SignedTransaction.cpp
-        src/credits/UnsignedTransaction.cpp
-        src/credits/CreditInBatch.cpp
-        src/credits/CreditBatch.cpp
-        src/credits/Credit.cpp
-        src/flexnode/main.cpp
-        src/flexnode/main.h
-        test/flex_tests/test_main.cpp
-        test/flex_tests/main_tests/testNetwork.cpp)
+#add_executable(runMainTests
+#        test/flex_tests/flex_data/TestData.h
+#        ${REMAINING_BASE_FILES}
+#        ${MINCRYPTO_FILES}
+#        test/flex_tests/flex_data/MemoryDataStore.cpp
+#        ${DATABASE_FILES}
+#        ${WORK_FILES}
+#        ${MESSAGING_FILES}
+#        src/credits/SignedTransaction.cpp
+#        src/credits/UnsignedTransaction.cpp
+#        src/credits/CreditInBatch.cpp
+#        src/credits/CreditBatch.cpp
+#        src/credits/Credit.cpp
+#        src/flexnode/main.cpp
+#        src/flexnode/main.h
+#        test/flex_tests/test_main.cpp
+#        test/flex_tests/main_tests/testNetwork.cpp
+#        test/flex_tests/main_tests/testCommunicator.cpp)
 
 target_link_libraries(runRPCTests gmock gmock_main ssl crypto boost_system boost_program_options
         boost_filesystem boost_thread jsoncpp microhttpd jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client)
 
-target_link_libraries(runMainTests gmock gmock_main ssl crypto boost_system boost_program_options
-        boost_filesystem boost_thread jsoncpp microhttpd jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
-        curl curl)
+#target_link_libraries(runMainTests gmock gmock_main ssl crypto boost_system boost_program_options
+#        boost_filesystem boost_thread jsoncpp microhttpd jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
+#        curl curl)
 
 target_link_libraries(runNodeTests gmock gmock_main ssl crypto boost_system boost_program_options
         boost_filesystem boost_thread jsoncpp microhttpd jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client

@@ -339,3 +339,21 @@ TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesWithTransactionsAreAdded, Synchro
 
     ASSERT_THAT(node1.calendar.LastMinedCreditHash(), Eq(node2.calendar.LastMinedCreditHash()));
 }
+
+class AFlexNetworkNodeWithAConfig : public AFlexNetworkNode
+{
+public:
+    FlexConfig config;
+
+    virtual void SetUp()
+    {
+        config["port"] = PrintToString(10000 + GetRand(1000));
+        flex_network_node.config = &config;
+    }
+};
+
+TEST_F(AFlexNetworkNodeWithAConfig, StartsACommunicatorListening)
+{
+    ASSERT_TRUE(flex_network_node.StartCommunicator());
+    flex_network_node.StopCommunicator();
+}

@@ -8,7 +8,6 @@
 
 #include "crypto/uint256.h"
 #include "net/net.h"
-#include "MainFlexNode.h"
 
 #include <algorithm>
 #include <exception>
@@ -85,14 +84,15 @@ struct CNodeState
 };
 
 class Network;
+class FlexNetworkNode;
 
 class MainRoutine
 {
 public:
     CMainSignals g_signals;
     std::string routine_name;
-    Network *network;
-    MainFlexNode *flexnode = NULL;
+    Network *network = NULL;
+    FlexNetworkNode *flex_network_node = NULL;
 
     CCriticalSection cs_main;
 
@@ -106,7 +106,7 @@ public:
 
     void SetNetwork(Network& network_);
 
-    void SetFlexNode(MainFlexNode& flexnode_);
+    void SetFlexNetworkNode(FlexNetworkNode &flex_network_node_);
 
     bool AddBlockToQueue(NodeId nodeid, const uint256 &hash);
 

@@ -1,3 +1,4 @@
+#include <test/flex_tests/node/FlexNetworkNode.h>
 #include "main.h"
 #include "net/net.h"
 
@@ -12,9 +13,9 @@ void MainRoutine::SetNetwork(Network& network_)
     network->main_routine = this;
 }
 
-void MainRoutine::SetFlexNode(MainFlexNode& flexnode_)
+void MainRoutine::SetFlexNetworkNode(FlexNetworkNode &flex_network_node_)
 {
-    flexnode = &flexnode_;
+    flex_network_node = &flex_network_node_;
 }
 
 class CMainCleanup

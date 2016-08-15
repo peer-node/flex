@@ -141,6 +141,7 @@ NetworkSpecificProofOfWork FlexLocalServer::GetLatestProofOfWork()
 void FlexLocalServer::SetNetworkNode(FlexNetworkNode *flex_network_node_)
 {
     flex_network_node = flex_network_node_;
+    flex_network_node->config = &config;
 }
 
 uint64_t FlexLocalServer::Balance()

@@ -69,6 +69,7 @@ uint160 FlexNetworkNode::SendToAddress(std::string address, int64_t amount)
 
 void FlexNetworkNode::SwitchToNewCalendarAndSpentChain(Calendar new_calendar, BitChain new_spent_chain)
 {
+    uint160 old_tip_credit_hash = calendar.LastMinedCreditHash();
     uint160 new_tip_credit_hash = new_calendar.LastMinedCreditHash();
     uint160 fork = credit_system->FindFork(calendar.LastMinedCreditHash(), new_tip_credit_hash);
     LOCK(credit_message_handler->calendar_mutex);
@@ -76,5 +77,29 @@ void FlexNetworkNode::SwitchToNewCalendarAndSpentChain(Calendar new_calendar, Bi
     credit_system->AddCreditHashAndPredecessorsToMainChain(new_tip_credit_hash);
     calendar = new_calendar;
     spent_chain = new_spent_chain;
-    // TODO: switch wallet
+    if (wallet != NULL)
+        wallet->SwitchAcrossFork(old_tip_credit_hash, new_tip_credit_hash, credit_system);
+}
+
+bool FlexNetworkNode::StartCommunicator()
+{
+    if (config == NULL)
+    {
+        log_ << "Can't start communicator: no config\n";
+        return false;
+    }
+    uint64_t port = config->Uint64("port");
+    communicator = new Communicator("default_communicator", (unsigned short) port);
+    if (not communicator->StartListening())
+    {
+        log_ << "Failed to start communicator. Port " << port << " may already be in use\n";
+        return false;
+    }
+    return true;
+}
+
+void FlexNetworkNode::StopCommunicator()
+{
+    communicator->StopListening();
+    delete communicator;
 }

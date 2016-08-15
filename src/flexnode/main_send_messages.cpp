@@ -71,8 +71,11 @@ bool MainRoutine::SendMessages(CNode* pto)
             nLastRebroadcast = GetTime();
         }
 
-        Misbehaving(pto->GetId(), pto->recent_misbehavior);
-        pto->recent_misbehavior = 0;
+        if (pto->recent_misbehavior != 0)
+        {
+            Misbehaving(pto->GetId(), pto->recent_misbehavior);
+            pto->recent_misbehavior = 0;
+        }
 
         CNodeState &state = *StateOfNode(pto->GetId());
         if (state.fShouldBan)
@@ -81,7 +84,7 @@ bool MainRoutine::SendMessages(CNode* pto)
                 log_ << "Warning: not banning local node " << pto->addr << "\n";
             else
             {
-                std::cout << "main_send_messages.cpp: banning\n";
+                log_ << "main_send_messages.cpp: banning\n";
                 pto->fDisconnect = true;
                 CNode::Ban(pto->addr);
             }
@@ -151,7 +154,6 @@ bool MainRoutine::SendMessages(CNode* pto)
             log_ << "in flight: " << state.nBlocksInFlight;
             log_ << "receive: " << state.nLastBlockReceive;
             log_ << "process: " << state.nLastBlockProcess;
-            std::cout << "main_send_messages.cpp: peer is stalling\n";
             pto->fDisconnect = true;
         }
         //
@@ -182,7 +184,7 @@ bool MainRoutine::SendMessages(CNode* pto)
             if (!AlreadyHave(inv))
             {
                 if (fDebug)
-                    LogPrint("net", "sending getdata: %s\n", inv.ToString());
+                    log_ << "sending getdata: " << inv << "\n";
                 vGetData.push_back(inv);
                 if (vGetData.size() >= 1000)
                 {

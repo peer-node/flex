@@ -2,10 +2,12 @@
 #define FLEX_FLEXNETWORKNODE_H
 
 
+#include <test/flex_tests/main_tests/Communicator.h>
 #include "Calendar.h"
 #include "Wallet.h"
 #include "CreditMessageHandler.h"
 #include "DataMessageHandler.h"
+
 
 class FlexNetworkNode
 {
@@ -17,6 +19,8 @@ public:
     DataMessageHandler *data_message_handler;
     CreditSystem *credit_system;
     BitChain spent_chain;
+    Communicator *communicator;
+    FlexConfig *config;
 
     FlexNetworkNode()
     {
@@ -48,6 +52,10 @@ public:
     uint64_t Balance();
 
     void HandleMessage(std::string channel, CDataStream stream, CNode *peer);
+
+    bool StartCommunicator();
+
+    void StopCommunicator();
 
     MinedCreditMessage Tip();
 

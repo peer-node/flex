@@ -1,10 +1,10 @@
 #include <src/net/net_services.h>
+#include <test/flex_tests/node/FlexNetworkNode.h>
 #include "../../test/flex_tests/flex_data/TestData.h"
 
 #include "flexnode/main.h"
 
 #include "flexnode/init.h"
-#include "flexnode/MainFlexNode.h"
 #include "net/net_cnode.h"
 
 using namespace std;
@@ -16,12 +16,14 @@ using namespace boost;
 
 bool MainRoutine::AlreadyHave(const CInv& inv)
 {
-    return flexnode->HaveInventory(inv);
+    //return flex_network_node->HaveInventory(inv);
+    return false;
 }
 
 bool MainRoutine::IsInitialBlockDownload()
 {
-    return not flexnode->IsFinishedDownloading();
+    //return not flex_network_node->IsFinishedDownloading();
+    return false;
 }
 
 void MainRoutine::ProcessGetData(CNode* pfrom)
@@ -98,17 +100,15 @@ void MainRoutine::ProcessGetData(CNode* pfrom)
 
 bool MainRoutine::ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
 {
-    if (flexnode == NULL)
+    if (flex_network_node == NULL)
     {
-        log_ << routine_name << " no flex_local_server available to process message: " << strCommand << "\n";
+        log_ << routine_name << " no flex_network_node available to process message: " << strCommand << "\n";
         return true;
     }
-    LOCK(flexnode->mutex);
+    LOCK(flex_network_node->credit_message_handler->calendar_mutex);
 
     RandAddSeedPerfmon();
     log_ << "received: " << strCommand << " (" << vRecv.size() << " bytes)\n";
-
-    std::cout << "received: " << strCommand << " (" << vRecv.size() << " bytes)\n";
 
     if (mapArgs.count("-dropmessagestest") && GetRand(atoi(mapArgs["-dropmessagestest"])) == 0)
     {
@@ -459,7 +459,11 @@ bool MainRoutine::ProcessMessage(CNode* pfrom, string strCommand, CDataStream& v
 
     else
     {
-        flexnode->HandleMessage(strCommand, vRecv, pfrom);
+        log_ << "flex network node handling " << strCommand << "\n";
+        CDataStream ss(SER_NETWORK, CLIENT_VERSION);
+        ss << strCommand;
+        ss = ss + vRecv;
+        flex_network_node->HandleMessage(strCommand, ss, pfrom);
     }
 
 
