@@ -46,10 +46,6 @@ void Network::RelayMessage(const CDataStream& ss, int type)
     LOCK(cs_vNodes);
     for (auto pnode : vNodes)
     {
-        if (pnode == vNodes[0] and vNodes.size() > 1)
-        {
-            continue;
-        }
         pnode->PushInventory(inv);
     }
 }

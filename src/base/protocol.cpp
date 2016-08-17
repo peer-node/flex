@@ -19,7 +19,8 @@ static const char* ppszTypeName[] =
     "block",
     "trade",
     "relay",
-    "deposit"
+    "deposit",
+    "general"
 };
 
 CMessageHeader::CMessageHeader()

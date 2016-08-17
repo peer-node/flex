@@ -25,6 +25,8 @@ public:
     {
         if (network != NULL)
             network->Broadcast(channel, message.Type(), message);
+        else
+            log_ << "not broadcasting: no network set\n";
     }
 
     MessageHandlerWithOrphanage(MemoryDataStore &msgdata);

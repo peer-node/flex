@@ -72,6 +72,8 @@ public:
     uint160 SendToAddress(std::string address, int64_t amount);
 
     void SwitchToNewCalendarAndSpentChain(Calendar new_calendar, BitChain spent_chain);
+
+    void AttachCommunicatorNetworkToHandlers();
 };
 
 

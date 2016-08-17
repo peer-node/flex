@@ -10,12 +10,9 @@ using namespace std;
 #include "log.h"
 #define LOG_CATEGORY "test"
 
-class AFlexNetworkNode : public Test
+class TestWithDataStreams : public Test
 {
 public:
-    FlexNetworkNode flex_network_node;
-    TestPeer peer;
-
     template <typename T>
     CDataStream GetDataStream(string channel, T message)
     {
@@ -23,6 +20,13 @@ public:
         ss << channel << message.Type() << message;
         return ss;
     }
+};
+
+class AFlexNetworkNode : public TestWithDataStreams
+{
+public:
+    FlexNetworkNode flex_network_node;
+    TestPeer peer;
 
     virtual void SetUp()
     {
@@ -130,7 +134,7 @@ TEST_F(AFlexNetworkNode, SendsDataMessagesToTheDataMessageHandler)
     ASSERT_THAT(rejected, Eq(true));
 }
 
-class TwoFlexNetworkNodesConnectedViaPeers : public Test
+class TwoFlexNetworkNodesConnectedViaPeers : public TestWithDataStreams
 {
 public:
     TestPeerWithNetworkNode peer1, peer2;
@@ -170,13 +174,6 @@ public:
         peer1.StopGettingMessages();
         peer2.StopGettingMessages();
         MilliSleep(100);
-    }
-
-    template <typename T> CDataStream GetDataStream(string channel, T message)
-    {
-        CDataStream ss(SER_NETWORK, CLIENT_VERSION);
-        ss << channel << message.Type() << message;
-        return ss;
     }
 
     virtual void AddABatchToTheTip(FlexNetworkNode *flex_network_node)
@@ -356,4 +353,93 @@ TEST_F(AFlexNetworkNodeWithAConfig, StartsACommunicatorListening)
 {
     ASSERT_TRUE(flex_network_node.StartCommunicator());
     flex_network_node.StopCommunicator();
+}
+
+
+class TwoFlexNetworkNodesWithCommunicators : public TestWithDataStreams
+{
+public:
+    FlexNetworkNode node1, node2;
+    FlexConfig config1, config2;
+    uint64_t port1, port2;
+
+    virtual void SetUp()
+    {
+        node1.credit_message_handler->do_spot_checks = false;
+        node2.credit_message_handler->do_spot_checks = false;
+
+        port1 = 10000 + GetRand(1000);
+        port2 = port1 + 1;
+        config1["port"] = PrintToString(port1);
+        config2["port"] = PrintToString(port2);
+
+        node1.config = &config1;
+        node2.config = &config2;
+
+        node1.StartCommunicator();
+        node2.StartCommunicator();
+    }
+
+    virtual void TearDown()
+    {
+        node1.StopCommunicator();
+        node2.StopCommunicator();
+    }
+};
+
+TEST_F(TwoFlexNetworkNodesWithCommunicators, ConnectToEachOther)
+{
+    ASSERT_THAT(node1.communicator->network.vNodes.size(), Eq(0));
+    ASSERT_THAT(node2.communicator->network.vNodes.size(), Eq(0));
+
+    string node2_address = string("127.0.0.1:") + PrintToString(port2);
+    node1.communicator->network.AddNode(node2_address);
+    MilliSleep(200);
+
+    ASSERT_THAT(node1.communicator->network.vNodes.size(), Eq(1));
+    ASSERT_THAT(node2.communicator->network.vNodes.size(), Eq(1));
+}
+
+class TwoFlexNetworkNodesConnectedViaCommunicators : public TwoFlexNetworkNodesWithCommunicators
+{
+public:
+
+    virtual void SetUp()
+    {
+        TwoFlexNetworkNodesWithCommunicators::SetUp();
+        node1.communicator->network.AddNode("127.0.0.1:" + PrintToString(port2));
+        SetMiningPreferences(node1);
+        SetMiningPreferences(node2);
+        MilliSleep(200);
+    }
+
+    virtual void AddABatchToTheTip(FlexNetworkNode *flex_network_node)
+    {
+        auto msg = flex_network_node->credit_message_handler->GenerateMinedCreditMessageWithoutProofOfWork();
+        CompleteProofOfWork(msg);
+        flex_network_node->HandleMessage(string("credit"), GetDataStream("credit", msg), NULL);
+    }
+
+    void SetMiningPreferences(FlexNetworkNode &node)
+    {
+        node.credit_system->SetExpectedNumberOfMegabytesInMinedCreditProofsOfWork(1);
+        node.credit_system->initial_difficulty = 100;
+        node.credit_system->initial_diurnal_difficulty = 500;
+        node.data_message_handler->SetMiningParametersForInitialDataMessageValidation(1, 100, 500);
+        node.data_message_handler->calendar_scrutiny_time = 1 * 10000;
+    }
+
+    void CompleteProofOfWork(MinedCreditMessage& msg)
+    {
+        node1.credit_system->AddIncompleteProofOfWork(msg);
+        uint8_t keep_working = 1;
+        msg.proof_of_work.proof.DoWork(&keep_working);
+    }
+};
+
+TEST_F(TwoFlexNetworkNodesConnectedViaCommunicators, SendAndReceiveMessages)
+{
+    AddABatchToTheTip(&node1);
+    MilliSleep(500);
+    ASSERT_THAT(node1.calendar.LastMinedCreditHash(), Eq(node2.calendar.LastMinedCreditHash()));
 }

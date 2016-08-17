@@ -459,11 +459,17 @@ bool MainRoutine::ProcessMessage(CNode* pfrom, string strCommand, CDataStream& v
 
     else
     {
-        log_ << "flex network node handling " << strCommand << "\n";
+        std::string channel = strCommand;
         CDataStream ss(SER_NETWORK, CLIENT_VERSION);
-        ss << strCommand;
+        if (strCommand != "general")
+            ss << strCommand;
+        else
+        {
+            vRecv >> channel;
+            ss << channel;
+        }
         ss = ss + vRecv;
-        flex_network_node->HandleMessage(strCommand, ss, pfrom);
+        flex_network_node->HandleMessage(channel, ss, pfrom);
     }
 
 

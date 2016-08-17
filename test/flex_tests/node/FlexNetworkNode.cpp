@@ -90,6 +90,8 @@ bool FlexNetworkNode::StartCommunicator()
     }
     uint64_t port = config->Uint64("port");
     communicator = new Communicator("default_communicator", (unsigned short) port);
+    communicator->main_node.SetFlexNetworkNode(*this);
+    AttachCommunicatorNetworkToHandlers();
     if (not communicator->StartListening())
     {
         log_ << "Failed to start communicator. Port " << port << " may already be in use\n";
@@ -98,8 +100,16 @@ bool FlexNetworkNode::StartCommunicator()
     return true;
 }
 
+void FlexNetworkNode::AttachCommunicatorNetworkToHandlers()
+{
+    credit_message_handler->SetNetwork(communicator->network);
+    data_message_handler->SetNetwork(communicator->network);
+}
+
 void FlexNetworkNode::StopCommunicator()
 {
     communicator->StopListening();
     delete communicator;
+    credit_message_handler->network = NULL;
+    data_message_handler->network = NULL;
 }
