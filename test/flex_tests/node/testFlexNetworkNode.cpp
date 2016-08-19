@@ -410,7 +410,7 @@ public:
         node1.communicator->network.AddNode("127.0.0.1:" + PrintToString(port2));
         SetMiningPreferences(node1);
         SetMiningPreferences(node2);
-        MilliSleep(200);
+        MilliSleep(150);
     }
 
     virtual void AddABatchToTheTip(FlexNetworkNode *flex_network_node)
@@ -440,6 +440,6 @@ public:
 TEST_F(TwoFlexNetworkNodesConnectedViaCommunicators, SendAndReceiveMessages)
 {
     AddABatchToTheTip(&node1);
-    MilliSleep(500);
+    MilliSleep(200);
     ASSERT_THAT(node1.calendar.LastMinedCreditHash(), Eq(node2.calendar.LastMinedCreditHash()));
 }

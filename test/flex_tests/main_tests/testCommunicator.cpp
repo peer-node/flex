@@ -104,7 +104,6 @@ TEST_F(TwoConnectedCommunicatorsWithFlexNetworkNodes, AreConnected)
 TEST_F(TwoConnectedCommunicatorsWithFlexNetworkNodes, SendAndReceiveMessages)
 {
     MilliSleep(100);
-    //ASSERT_THAT(flex_network_node1->messages_received, Eq(0));
 
     SignedTransaction tx;
 

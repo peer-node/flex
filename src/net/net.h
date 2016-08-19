@@ -157,10 +157,10 @@ public:
 
     ~Network();
 
-    void AddNode(std::string node_address)
+    CNode *AddNode(std::string node_address)
     {
         CAddress addr;
-        ConnectNode(addr, node_address.c_str());
+        return ConnectNode(addr, node_address.c_str());
     }
 
     bool AddLocal(const CService &addr, int nScore);

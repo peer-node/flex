@@ -113,3 +113,12 @@ void FlexRPCServer::SendToAddress(const Json::Value &request, Json::Value &respo
     response = tx_hash.ToString();
 }
 
+void FlexRPCServer::AddNode(const Json::Value &request, Json::Value &response)
+{
+    std::string node_address = request[0].asString();
+    CNode *peer = flex_local_server->flex_network_node->communicator->network.AddNode(node_address);
+
+    if (peer == NULL)
+        throw jsonrpc::JsonRpcException(-32099, "Failed to connect to " + node_address);
+}
+

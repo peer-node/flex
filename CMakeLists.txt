@@ -901,7 +901,7 @@ add_executable(runDataTests
         test/flex_tests/flex_data/MockLocation.cpp
         test/flex_tests/flex_data/MockLocation.h)
 
-add_executable(runNodeTests
+set(NODE_TEST_FILES
         test/flex_tests/flex_data/TestData.h
         ${REMAINING_BASE_FILES}
         ${MINCRYPTO_FILES}
@@ -913,23 +913,21 @@ add_executable(runNodeTests
         ${MESSAGING_FILES}
         src/flexnode/main.cpp
         src/flexnode/main.h
-        test/flex_tests/test_main.cpp
-        test/flex_tests/node/testFlexRPCServer.cpp
+
         test/flex_tests/node/FlexRPCServer.cpp
         test/flex_tests/node/FlexRPCServer.h
-        test/flex_tests/node/testFlexConfig.cpp
         test/flex_tests/node/FlexConfig.cpp
         test/flex_tests/node/FlexConfig.h
         test/flex_tests/node/FlexConfigDefaults.h
-        test/flex_tests/node/testConfigParser.cpp
         test/flex_tests/node/ConfigParser.cpp
         test/flex_tests/node/ConfigParser.h
-        test/flex_tests/node/testFlexLocalServer.cpp
+
+
         test/flex_tests/node/FlexLocalServer.cpp
         test/flex_tests/node/FlexLocalServer.h
         src/base/base58.cpp
         src/base/base58.h
-        test/flex_tests/node/testHttpAuthServer.cpp
+
         test/flex_tests/node/HttpAuthServer.cpp
         test/flex_tests/node/HttpAuthServer.h
         test/flex_tests/mining/FlexMiner.cpp
@@ -944,20 +942,18 @@ add_executable(runNodeTests
         test/flex_tests/mining/NetworkSpecificProofOfWork.h
         test/flex_tests/node/MinedCreditMessage.cpp
         test/flex_tests/node/MinedCreditMessage.h
-        test/flex_tests/node/testMinedCreditMessage.cpp
-        test/flex_tests/node/testMessageHandlerWithOrphanage.cpp
         test/flex_tests/node/MessageHandlerWithOrphanage.cpp
         test/flex_tests/node/MessageHandlerWithOrphanage.h
-        test/flex_tests/node/testMinedCreditConstructor.cpp
+
         test/flex_tests/node/MinedCreditConstructor.cpp
         test/flex_tests/node/MinedCreditConstructor.h
-        test/flex_tests/node/testNetworkStateConstructor.cpp
+
         test/flex_tests/node/NetworkStateConstructor.cpp
         test/flex_tests/node/NetworkStateConstructor.h
-        test/flex_tests/node/testNetworkState.cpp
+
         test/flex_tests/node/NetworkState.cpp
         test/flex_tests/node/NetworkState.h
-        test/flex_tests/node/testDataMessageHandler.cpp
+
         test/flex_tests/node/DataMessageHandler.cpp
         test/flex_tests/node/DataMessageHandler.h
         test/flex_tests/node/TipRequestMessage.cpp
@@ -980,86 +976,32 @@ add_executable(runNodeTests
         test/flex_tests/node/ListExpansionRequestMessage.cpp
         test/flex_tests/node/ListExpansionRequestMessage.h
         test/flex_tests/node/ListExpansionMessage.cpp
-        test/flex_tests/node/ListExpansionMessage.h
+        test/flex_tests/node/ListExpansionMessage.h)
+
+add_executable(runNodeTests
+        ${NODE_TEST_FILES}
+        test/flex_tests/test_main.cpp
+        test/flex_tests/main_tests/testCommunicator.cpp
+        test/flex_tests/node/testDataMessageHandler.cpp
         test/flex_tests/main_tests/testNetwork.cpp
-        test/flex_tests/main_tests/testCommunicator.cpp)
+        test/flex_tests/node/testNetworkState.cpp
+        test/flex_tests/node/testConfigParser.cpp
+        test/flex_tests/node/testFlexLocalServer.cpp
+        test/flex_tests/node/testMinedCreditMessage.cpp
+        test/flex_tests/node/testMessageHandlerWithOrphanage.cpp
+        test/flex_tests/node/testNetworkStateConstructor.cpp
+        test/flex_tests/node/testMinedCreditConstructor.cpp
+        test/flex_tests/node/testHttpAuthServer.cpp
+        test/flex_tests/node/testFlexConfig.cpp
+        test/flex_tests/node/testFlexRPCServer.cpp)
 
 add_executable(flexnetd
         test/flex_tests/flex_data/TestData.h
-        ${REMAINING_BASE_FILES}
-        ${MINCRYPTO_FILES}
-        ${NEW_CREDITS_FILES}
-        test/flex_tests/flex_data/MemoryDataStore.cpp
-        ${DATABASE_FILES}
-        ${WORK_FILES}
-        test/flex_tests/node/FlexRPCServer.cpp
-        test/flex_tests/node/FlexRPCServer.h
-        test/flex_tests/node/FlexConfig.cpp
-        test/flex_tests/node/FlexConfig.h
-        test/flex_tests/node/FlexConfigDefaults.h
-        test/flex_tests/node/ConfigParser.cpp
-        test/flex_tests/node/ConfigParser.h
-        test/flex_tests/node/FlexLocalServer.cpp
-        test/flex_tests/node/FlexLocalServer.h
-        test/flex_tests/node/flexnetd.cpp
-        src/net/netbase.cpp
-        src/net/net_cleanup.cpp
-        src/net/net_relay.cpp
-        src/base/base58.cpp
-        src/base/base58.h
-        test/flex_tests/node/HttpAuthServer.cpp
-        test/flex_tests/node/HttpAuthServer.h
-        test/flex_tests/mining/FlexMiner.cpp
-        test/flex_tests/mining/FlexMiner.h
-        test/flex_tests/mining/NetworkMiningInfo.cpp
-        test/flex_tests/mining/NetworkMiningInfo.h
-        test/flex_tests/mining/MiningHashTree.cpp
-        test/flex_tests/mining/MiningHashTree.h
-        test/flex_tests/mining/MiningRPCServer.cpp
-        test/flex_tests/mining/MiningRPCServer.h
-        test/flex_tests/mining/NetworkSpecificProofOfWork.cpp
-        test/flex_tests/mining/NetworkSpecificProofOfWork.h
-        test/flex_tests/node/MinedCreditMessage.cpp
-        test/flex_tests/node/MinedCreditMessage.h
-        test/flex_tests/node/MessageHandlerWithOrphanage.cpp
-        test/flex_tests/node/MessageHandlerWithOrphanage.h
-        test/flex_tests/node/MinedCreditConstructor.cpp
-        test/flex_tests/node/MinedCreditConstructor.h
-        test/flex_tests/node/NetworkStateConstructor.cpp
-        test/flex_tests/node/NetworkStateConstructor.h
-        test/flex_tests/node/NetworkState.cpp
-        test/flex_tests/node/NetworkState.h
-        test/flex_tests/node/flexnetd.cpp
-        test/flex_tests/node/ListExpansionRequestMessage.cpp
-        test/flex_tests/node/ListExpansionRequestMessage.h
-        test/flex_tests/node/ListExpansionMessage.cpp
-        test/flex_tests/node/ListExpansionMessage.h)
-
-#add_executable(runMainTests
-#        test/flex_tests/flex_data/TestData.h
-#        ${REMAINING_BASE_FILES}
-#        ${MINCRYPTO_FILES}
-#        test/flex_tests/flex_data/MemoryDataStore.cpp
-#        ${DATABASE_FILES}
-#        ${WORK_FILES}
-#        ${MESSAGING_FILES}
-#        src/credits/SignedTransaction.cpp
-#        src/credits/UnsignedTransaction.cpp
-#        src/credits/CreditInBatch.cpp
-#        src/credits/CreditBatch.cpp
-#        src/credits/Credit.cpp
-#        src/flexnode/main.cpp
-#        src/flexnode/main.h
-#        test/flex_tests/test_main.cpp
-#        test/flex_tests/main_tests/testNetwork.cpp
-#        test/flex_tests/main_tests/testCommunicator.cpp)
+        ${NODE_TEST_FILES}
+        test/flex_tests/node/flexnetd.cpp)
 
 target_link_libraries(runRPCTests gmock gmock_main ssl crypto boost_system boost_program_options
         boost_filesystem boost_thread jsoncpp microhttpd jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client)
-
-#target_link_libraries(runMainTests gmock gmock_main ssl crypto boost_system boost_program_options
-#        boost_filesystem boost_thread jsoncpp microhttpd jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
-#        curl curl)
 
 target_link_libraries(runNodeTests gmock gmock_main ssl crypto boost_system boost_program_options
         boost_filesystem boost_thread jsoncpp microhttpd jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client

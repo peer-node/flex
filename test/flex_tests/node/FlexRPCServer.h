@@ -33,6 +33,7 @@ public:
         BindMethod("sendtopublickey", &FlexRPCServer::SendToPublicKey);
         BindMethod("getnewaddress", &FlexRPCServer::GetNewAddress);
         BindMethod("sendtoaddress", &FlexRPCServer::SendToAddress);
+        BindMethod("addnode", &FlexRPCServer::AddNode);
     }
 
     void SetFlexLocalServer(FlexLocalServer *flex_local_server_);
@@ -61,6 +62,8 @@ public:
     void GetNewAddress(const Json::Value &request, Json::Value &response);
 
     void SendToAddress(const Json::Value &request, Json::Value &response);
+
+    void AddNode(const Json::Value &request, Json::Value &response);
 };
 
 

@@ -28,10 +28,11 @@ public:
     HttpClient *http_client;
     Client *client;
     Json::Value parameters;
+    uint32_t this_port;
 
     virtual void SetUp()
     {
-        uint32_t this_port = port++;
+        this_port = port++;
         http_server = new HttpAuthServer(this_port, "username", "password");
         server = new FlexRPCServer(*http_server);
         server->StartListening();
@@ -47,6 +48,15 @@ public:
         server->StopListening();
         delete server;
         delete http_server;
+    }
+
+
+    template <typename T>
+    CDataStream GetDataStream(string channel, T message)
+    {
+        CDataStream ss(SER_NETWORK, CLIENT_VERSION);
+        ss << channel << message.Type() << message;
+        return ss;
     }
 };
 
@@ -106,13 +116,6 @@ class AFlexRPCServerWithAFlexNetworkNodeAndABalance : public AFlexRPCServerWithA
 public:
     TestPeer peer;
 
-    template <typename T>
-    CDataStream GetDataStream(string channel, T message)
-    {
-        CDataStream ss(SER_NETWORK, CLIENT_VERSION);
-        ss << channel << message.Type() << message;
-        return ss;
-    }
 
     void AddABatchToTheTip()
     {
@@ -236,4 +239,96 @@ TEST_F(AFlexRPCServerWithCreditsSentToAnAddressWhosePrivateKeyIsKnown, CanSpendT
     AddABatchToTheTip(); // balance +1
     result = client->CallMethod("balance", parameters);
     ASSERT_THAT(result.asString(), Eq("1.00"));
+}
+
+
+class AFlexRPCServerWithARemoteFlexNetworkNode : public AFlexRPCServerWithAFlexNetworkNode
+{
+public:
+    FlexNetworkNode remote_network_node;
+    FlexConfig remote_config;
+    uint64_t remote_node_port;
+
+    virtual void SetUp()
+    {
+        AFlexRPCServerWithAFlexNetworkNode::SetUp();
+        remote_node_port = port++;
+        remote_config["port"] = PrintToString(remote_node_port);
+        remote_network_node.config = &remote_config;
+
+        flex_network_node.StartCommunicator();
+        remote_network_node.StartCommunicator();
+    }
+
+    virtual void TearDown()
+    {
+        flex_network_node.StopCommunicator();
+        remote_network_node.StopCommunicator();
+        AFlexRPCServerWithAFlexNetworkNode::TearDown();
+    }
+};
+
+
+TEST_F(AFlexRPCServerWithARemoteFlexNetworkNode, ConnectsToTheRemoteNode)
+{
+    parameters.append(std::string("127.0.0.1:" + PrintToString(remote_node_port)));
+
+    auto result = client->CallMethod("addnode", parameters);
+    MilliSleep(200);
+    flex_network_node.communicator->Node(0)->WaitForVersion();
+
+    ASSERT_THAT(remote_network_node.communicator->network.vNodes.size(), Eq(1));
+}
+
+
+class AFlexRPCServerConnectedToARemoteFlexNetworkNode : public AFlexRPCServerWithARemoteFlexNetworkNode
+{
+public:
+    virtual void SetUp()
+    {
+        AFlexRPCServerWithARemoteFlexNetworkNode::SetUp();
+        parameters.append(std::string("127.0.0.1:" + PrintToString(remote_node_port)));
+
+        SetMiningPreferences(flex_network_node);
+        SetMiningPreferences(remote_network_node);
+
+        auto result = client->CallMethod("addnode", parameters);
+        MilliSleep(200);
+        flex_network_node.communicator->Node(0)->WaitForVersion();
+        parameters = Json::Value();
+    }
+
+    virtual void AddABatchToTheTip(FlexNetworkNode *flex_network_node)
+    {
+        auto msg = flex_network_node->credit_message_handler->GenerateMinedCreditMessageWithoutProofOfWork();
+        CompleteProofOfWork(msg);
+        flex_network_node->HandleMessage(string("credit"), GetDataStream("credit", msg), NULL);
+    }
+
+    void SetMiningPreferences(FlexNetworkNode &node)
+    {
+        node.credit_system->SetExpectedNumberOfMegabytesInMinedCreditProofsOfWork(1);
+        node.credit_system->initial_difficulty = 100;
+        node.credit_system->initial_diurnal_difficulty = 500;
+        node.data_message_handler->SetMiningParametersForInitialDataMessageValidation(1, 100, 500);
+        node.data_message_handler->calendar_scrutiny_time = 1 * 10000;
+    }
+
+    void CompleteProofOfWork(MinedCreditMessage& msg)
+    {
+        flex_network_node.credit_system->AddIncompleteProofOfWork(msg);
+        uint8_t keep_working = 1;
+        msg.proof_of_work.proof.DoWork(&keep_working);
+    }
+};
+
+TEST_F(AFlexRPCServerConnectedToARemoteFlexNetworkNode, SynchronizesWithTheRemoteNetworkNode)
+{
+    ASSERT_THAT(flex_network_node.calendar.LastMinedCreditHash(), Eq(0));
+
+    AddABatchToTheTip(&flex_network_node);
+    MilliSleep(200);
+
+    ASSERT_THAT(flex_network_node.calendar.LastMinedCreditHash(), Ne(0));
+    ASSERT_THAT(flex_network_node.calendar.LastMinedCreditHash(), Eq(remote_network_node.calendar.LastMinedCreditHash()));
 }
