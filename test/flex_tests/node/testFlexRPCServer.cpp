@@ -14,6 +14,9 @@
 #include <src/base/util_hex.h>
 
 
+#include "log.h"
+#define LOG_CATEGORY "test"
+
 using namespace ::testing;
 using namespace jsonrpc;
 using namespace std;
@@ -96,6 +99,8 @@ public:
         AFlexRPCServer::SetUp();
         flex_network_node.credit_message_handler->do_spot_checks = false;
         flex_local_server.SetNetworkNode(&flex_network_node);
+        FlexConfig &config = *flex_network_node.config;
+        config["port"] = PrintToString(port++);
         server->SetFlexLocalServer(&flex_local_server);
     }
 
@@ -328,6 +333,26 @@ TEST_F(AFlexRPCServerConnectedToARemoteFlexNetworkNode, SynchronizesWithTheRemot
 
     AddABatchToTheTip(&flex_network_node);
     MilliSleep(200);
+
+    ASSERT_THAT(flex_network_node.calendar.LastMinedCreditHash(), Ne(0));
+    ASSERT_THAT(flex_network_node.calendar.LastMinedCreditHash(), Eq(remote_network_node.calendar.LastMinedCreditHash()));
+}
+
+TEST_F(AFlexRPCServerConnectedToARemoteFlexNetworkNode, SynchronizesWithTheRemoteNetworkNodeViaATipRequest)
+{
+    flex_network_node.StopCommunicator();
+
+    for (int i = 0; i < 4; i++)
+        AddABatchToTheTip(&remote_network_node); // remote node builds a blockchain while disconnected from local node
+
+    flex_network_node.StartCommunicator();
+    parameters.append(std::string("127.0.0.1:" + PrintToString(remote_node_port)));
+    auto result = client->CallMethod("addnode", parameters); // reconnect
+
+    MilliSleep(200);
+    client->CallMethod("requesttips", parameters);
+
+    MilliSleep(500);
 
     ASSERT_THAT(flex_network_node.calendar.LastMinedCreditHash(), Ne(0));
     ASSERT_THAT(flex_network_node.calendar.LastMinedCreditHash(), Eq(remote_network_node.calendar.LastMinedCreditHash()));

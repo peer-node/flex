@@ -158,7 +158,7 @@ bool MinedCreditMessageValidator::ValidateNetworkState(MinedCreditMessage &msg)
 
 bool MinedCreditMessageValidator::DataRequiredToCalculateDifficultyIsPresent(MinedCreditMessage &msg)
 {
-    if (msg.mined_credit.network_state.batch_number < 4)
+    if (msg.mined_credit.network_state.batch_number < 3)
         return true;
     uint160 previous_credit_hash = msg.mined_credit.network_state.previous_mined_credit_hash;
 

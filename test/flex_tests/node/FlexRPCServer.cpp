@@ -7,7 +7,7 @@ void FlexRPCServer::BindMethod(const char* method_name,
                                void (FlexRPCServer::*method)(const Json::Value &,Json::Value &))
 {
     this->bindAndAddMethod(
-            jsonrpc::Procedure(method_name, jsonrpc::PARAMS_BY_NAME, jsonrpc::JSON_STRING, NULL),
+            jsonrpc::Procedure(method_name, jsonrpc::PARAMS_BY_POSITION, jsonrpc::JSON_STRING, NULL),
             method);
 }
 
@@ -29,6 +29,7 @@ void FlexRPCServer::GetInfo(const Json::Value& request, Json::Value& response)
     if (latest_mined_credit.network_state.batch_number != 0)
         latest_mined_credit_hash = latest_mined_credit.GetHash160();
     response["latest_mined_credit_hash"] = latest_mined_credit_hash.ToString();
+    response["batch_number"] = latest_mined_credit.network_state.batch_number;
 }
 
 void FlexRPCServer::SetNetworkID(const Json::Value& request, Json::Value& response)
@@ -69,6 +70,26 @@ void FlexRPCServer::SetMegabytesUsed(const Json::Value &request, Json::Value &re
     flex_local_server->SetNumberOfMegabytesUsedForMining(number_of_megabytes);
 }
 
+int64_t GetAmountFromValue(const Json::Value &value)
+{
+    int64_t amount = 0;
+
+    if (value.isString())
+    {
+        if (not ParseMoney(value.asString(), amount))
+            throw jsonrpc::JsonRpcException(-32099, "bad amount");
+    }
+    else if (value.isDouble())
+    {
+        amount = (int64_t) (value.asDouble() * ONE_CREDIT);
+    }
+    else if (value.isInt())
+    {
+        amount = (int64_t) (value.asInt() * ONE_CREDIT);
+    }
+    return amount;
+}
+
 void FlexRPCServer::SendToPublicKey(const Json::Value &request, Json::Value &response)
 {
     std::string pubkey_hex = request[0].asString();
@@ -77,10 +98,8 @@ void FlexRPCServer::SendToPublicKey(const Json::Value &request, Json::Value &res
     {
         throw jsonrpc::JsonRpcException(-32099, "bad public key");
     }
-    std::string amount_string = request[1].asString();
-    int64_t amount;
-    if (not ParseMoney(amount_string, amount))
-        throw jsonrpc::JsonRpcException(-32099, "bad amount");
+
+    int64_t amount = GetAmountFromValue(request[1]);
 
     if (amount > flex_local_server->Balance())
         throw jsonrpc::JsonRpcException(-32099, "insufficient balance");
@@ -96,9 +115,7 @@ void FlexRPCServer::GetNewAddress(const Json::Value &request, Json::Value &respo
 
 void FlexRPCServer::SendToAddress(const Json::Value &request, Json::Value &response)
 {
-    int64_t amount;
-    if (not ParseMoney(request[1].asString(), amount))
-        throw jsonrpc::JsonRpcException(-32099, "bad amount");
+    int64_t amount = GetAmountFromValue(request[1]);
 
     std::string address = request[0].asString();
     vch_t pubkey_hash_bytes;
@@ -120,5 +137,10 @@ void FlexRPCServer::AddNode(const Json::Value &request, Json::Value &response)
 
     if (peer == NULL)
         throw jsonrpc::JsonRpcException(-32099, "Failed to connect to " + node_address);
+}
+
+void FlexRPCServer::RequestTips(const Json::Value &request, Json::Value &response)
+{
+    flex_local_server->flex_network_node->data_message_handler->RequestTips();
 }
 

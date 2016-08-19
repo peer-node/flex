@@ -73,7 +73,9 @@ public:
     template <typename PROPERTY_NAME>
     bool HasProperty (const PROPERTY_NAME& property_name)
     {
-        return properties.count(Serialize(property_name));
+        vch_t serialized_property_name = Serialize(property_name);
+        return properties.count(serialized_property_name)
+               and properties[serialized_property_name].serialized_value.size() > 0;
     }
 
     bool HasProperty (const char* property_name)
