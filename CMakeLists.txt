@@ -661,11 +661,6 @@ set(WORK_FILES
         src/twist/twist.h
         src/twist/twistcpp.h)
 
-set(RELAY_FILES
-        test/flex_tests/relays/RelayState_.cpp
-        test/flex_tests/relays/RelayState_.h
-        test/flex_tests/relays/Relay.cpp
-        test/flex_tests/relays/Relay.h)
 
 set(CREDITS_FILES
         ${WORK_FILES}
@@ -837,38 +832,6 @@ add_executable(runSchedulerTests
         test/flex_tests/test_main.cpp
         test/flex_tests/scheduler/test_scheduler.cpp)
 
-add_executable(runRelayTests
-        test/flex_tests/flex_data/TestData.h
-        ${REMAINING_BASE_FILES}
-        ${MINCRYPTO_FILES}
-        test/flex_tests/flex_data/MemoryDataStore.cpp
-        ${DATABASE_FILES}
-        ${CREDIT_FILES}
-        test/flex_tests/test_main.cpp
-        test/flex_tests/relays/test_relays.cpp
-        test/flex_tests/relays/Relay.h
-        test/flex_tests/relays/Relay.cpp
-        test/flex_tests/relays/RelayState_.cpp
-        test/flex_tests/relays/RelayState_.h
-        test/flex_tests/relays/RelayQueue.cpp
-        test/flex_tests/relays/RelayQueue.h
-        test/flex_tests/relays/RelayQueueAdmitter.cpp
-        test/flex_tests/relays/RelayQueueAdmitter.h
-        test/flex_tests/relays/RelayJoinMessage.cpp
-        test/flex_tests/relays/RelayJoinMessage.h
-        test/flex_tests/relays/RelayKeyPublication.cpp
-        test/flex_tests/relays/RelayKeyPublication.h
-        test/flex_tests/relays/RelayKeyShareMessage.cpp
-        test/flex_tests/relays/RelayKeyShareMessage.h
-        test/flex_tests/relays/RelayKeyShare.cpp
-        test/flex_tests/relays/RelayKeyShare.h
-        test/flex_tests/relays/RelayKeyDisclosureMessage.cpp
-        test/flex_tests/relays/RelayKeyDisclosureMessage.h
-        test/flex_tests/relays/RelayKeyDisclosure.cpp
-        test/flex_tests/relays/RelayKeyDisclosure.h
-        test/flex_tests/relays/RelayMessageHandler.cpp
-        test/flex_tests/relays/RelayMessageHandler.h)
-
 add_executable(runDataTests
         test/flex_tests/flex_data/TestData.h
         ${REMAINING_BASE_FILES}
@@ -999,9 +962,6 @@ target_link_libraries(runTwistWorkProofTests gmock gmock_main ssl crypto boost_s
         boost_filesystem boost_thread)
 
 target_link_libraries(runSchedulerTests gmock gmock_main ssl crypto boost_system boost_program_options
-        boost_filesystem boost_thread)
-
-target_link_libraries(runRelayTests gmock gmock_main ssl crypto boost_system boost_program_options
         boost_filesystem boost_thread)
 
 target_link_libraries(runDataTests gmock gmock_main ssl crypto boost_system boost_program_options
