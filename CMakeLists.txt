@@ -797,32 +797,6 @@ add_executable(miner_cli
         test/flex_tests/node/HttpAuthServer.cpp
         test/flex_tests/node/HttpAuthServer.h)
 
-
-add_executable(runMinedCreditTests
-        test/flex_tests/flex_data/TestData.h
-        test/flex_tests/flex_data/MemoryDataStore.cpp
-        src/base/util.cpp
-        src/base/util_log.cpp
-        src/base/util_file.cpp
-        src/base/util_args.cpp
-        src/base/util_data.cpp
-        src/base/util_time.cpp
-        src/base/util_format.cpp
-        src/base/allocators.cpp
-        src/credits/CreditBatch.cpp
-        src/credits/CreditInBatch.cpp
-        src/credits/Credit.cpp
-        src/crypto/point.cpp
-        src/crypto/25519/ed25519.cpp
-        ${DATABASE_FILES}
-        test/flex_tests/test_main.cpp
-        test/flex_tests/mined_credits/testMinedCredit.cpp
-        test/flex_tests/mined_credits/EncodedNetworkState.cpp
-        test/flex_tests/mined_credits/EncodedNetworkState.h
-        test/flex_tests/mined_credits/MinedCredit.cpp
-        test/flex_tests/mined_credits/MinedCredit.h
-        test/flex_tests/mined_credits/testCreditBatch.cpp)
-
 add_executable(runSchedulerTests
         test/flex_tests/flex_data/TestData.h
         ${REMAINING_BASE_FILES}
