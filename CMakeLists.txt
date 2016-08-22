@@ -547,7 +547,6 @@ SET(REMAINING_BASE_FILES
         src/base/util_log.cpp
         src/base/util_file.cpp
         src/base/util_args.cpp
-        src/base/util_hex.cpp
         src/base/util_money.cpp
         src/base/util_data.cpp
         src/base/util_pid.cpp
@@ -559,6 +558,7 @@ SET(REMAINING_BASE_FILES
         src/base/util_init.h
         src/base/util_log.h
         src/base/util_time.h
+        src/base/util_hex.cpp
         src/base/util_hex.h
         src/base/util_rand.h
         src/base/util_format.h
@@ -733,11 +733,15 @@ add_executable(runRPCTests
 
 add_executable(runCryptoTests
         test/flex_tests/flex_data/TestData.h
-        ${BASE_FILES}
+        ${REMAINING_BASE_FILES}
         test/flex_tests/flex_data/MemoryDataStore.cpp
         ${DATABASE_FILES}
         ${CREDITS_FILES}
         ${MINCRYPTO_FILES}
+        test/flex_tests/crypto/DistributedSecret.cpp
+        test/flex_tests/crypto/DistributedSecret.h
+        test/flex_tests/crypto/EncryptedSecret.cpp
+        test/flex_tests/crypto/EncryptedSecret.h
         test/flex_tests/test_main.cpp
         test/flex_tests/crypto/test_point.cpp
         test/flex_tests/crypto/test_secret.cpp)
@@ -757,6 +761,8 @@ add_executable(runNetworkSpecificProofOfWorkTests
         ${MINCRYPTO_FILES}
         ${WORK_FILES}
         test/flex_tests/test_main.cpp
+        test/flex_tests/mining/MiningHashTree.cpp
+        test/flex_tests/mining/MiningHashTree.h
         test/flex_tests/mining/testNetworkSpecificProofOfWork.cpp
         test/flex_tests/mining/NetworkSpecificProofOfWork.cpp
         test/flex_tests/mining/NetworkSpecificProofOfWork.h)

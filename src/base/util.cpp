@@ -55,6 +55,5 @@
 
 bool fDaemon = false;
 bool fServer = false;
-bool fNoListen = false;
 
 
