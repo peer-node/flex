@@ -7,7 +7,6 @@
 #include "util_format.h"
 #include "util_time.h"
 #include <boost/filesystem/operations.hpp>
-#include <src/credits/MinedCredit.h>
 
 using namespace std;
 

@@ -38,13 +38,9 @@ set(SOURCE_FILES
     src/credits/creditutil.h
         src/credits/Credit.cpp
         src/credits/Credit.h
-        src/credits/MinedCredit.cpp
-        src/credits/MinedCredit.h
         src/credits/CreditInBatch.cpp
         src/credits/CreditInBatch.h
-        src/credits/MinedCreditMessage.cpp
-        src/credits/MinedCreditMessage.h
-    src/crypto/25519/curve25519-donna-32bit.h
+        src/crypto/25519/curve25519-donna-32bit.h
     src/crypto/25519/curve25519-donna-64bit.h
     src/crypto/25519/curve25519-donna-helpers.h
     src/crypto/25519/curve25519-donna-sse2.h
@@ -122,9 +118,7 @@ set(SOURCE_FILES
     src/flexnode/schedule.h
     src/flexnode/wallet.cpp
     src/flexnode/wallet.h
-    src/flexnode/MessageValidator.cpp
-    src/flexnode/MessageValidator.h
-    src/initialize/datamessages.cpp
+        src/initialize/datamessages.cpp
     src/initialize/datamessages.h
     src/initialize/dataserver.cpp
     src/initialize/dataserver.h
@@ -677,12 +671,8 @@ set(CREDITS_FILES
         ${WORK_FILES}
         src/credits/Credit.cpp
         src/credits/Credit.h
-        src/credits/MinedCredit.cpp
-        src/credits/MinedCredit.h
         src/credits/CreditInBatch.cpp
         src/credits/CreditInBatch.h
-        src/credits/MinedCreditMessage.cpp
-        src/credits/MinedCreditMessage.h
         src/credits/CreditBatch.cpp
         src/credits/CreditBatch.h
         src/credits/UnsignedTransaction.cpp
@@ -812,17 +802,6 @@ add_executable(miner_cli
         test/flex_tests/node/HttpAuthServer.cpp
         test/flex_tests/node/HttpAuthServer.h)
 
-add_executable(runCreditTests
-        test/flex_tests/flex_data/TestData.h
-        ${REMAINING_BASE_FILES}
-        ${MINCRYPTO_FILES}
-        ${CREDITS_FILES}
-        test/flex_tests/flex_data/MemoryDataStore.cpp
-        ${DATABASE_FILES}
-        test/flex_tests/test_main.cpp
-        test/flex_tests/credits/test_credits.cpp
-        src/base/util_rand.cpp
-        src/base/util_hex.cpp)
 
 add_executable(runMinedCreditTests
         test/flex_tests/flex_data/TestData.h
@@ -913,7 +892,6 @@ set(NODE_TEST_FILES
         ${MESSAGING_FILES}
         src/flexnode/main.cpp
         src/flexnode/main.h
-
         test/flex_tests/node/FlexRPCServer.cpp
         test/flex_tests/node/FlexRPCServer.h
         test/flex_tests/node/FlexConfig.cpp
@@ -921,13 +899,10 @@ set(NODE_TEST_FILES
         test/flex_tests/node/FlexConfigDefaults.h
         test/flex_tests/node/ConfigParser.cpp
         test/flex_tests/node/ConfigParser.h
-
-
         test/flex_tests/node/FlexLocalServer.cpp
         test/flex_tests/node/FlexLocalServer.h
         src/base/base58.cpp
         src/base/base58.h
-
         test/flex_tests/node/HttpAuthServer.cpp
         test/flex_tests/node/HttpAuthServer.h
         test/flex_tests/mining/FlexMiner.cpp
@@ -944,16 +919,12 @@ set(NODE_TEST_FILES
         test/flex_tests/node/MinedCreditMessage.h
         test/flex_tests/node/MessageHandlerWithOrphanage.cpp
         test/flex_tests/node/MessageHandlerWithOrphanage.h
-
         test/flex_tests/node/MinedCreditConstructor.cpp
         test/flex_tests/node/MinedCreditConstructor.h
-
         test/flex_tests/node/NetworkStateConstructor.cpp
         test/flex_tests/node/NetworkStateConstructor.h
-
         test/flex_tests/node/NetworkState.cpp
         test/flex_tests/node/NetworkState.h
-
         test/flex_tests/node/DataMessageHandler.cpp
         test/flex_tests/node/DataMessageHandler.h
         test/flex_tests/node/TipRequestMessage.cpp
@@ -1025,12 +996,6 @@ target_link_libraries(runNetworkSpecificProofOfWorkTests gmock gmock_main ssl cr
         boost_filesystem boost_thread)
 
 target_link_libraries(runTwistWorkProofTests gmock gmock_main ssl crypto boost_system boost_program_options
-        boost_filesystem boost_thread)
-
-target_link_libraries(runCreditTests gmock gmock_main ssl crypto boost_system boost_program_options
-        boost_filesystem boost_thread)
-
-target_link_libraries(runMinedCreditTests gmock gmock_main ssl crypto boost_system boost_program_options
         boost_filesystem boost_thread)
 
 target_link_libraries(runSchedulerTests gmock gmock_main ssl crypto boost_system boost_program_options

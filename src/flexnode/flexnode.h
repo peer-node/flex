@@ -13,7 +13,6 @@
 #include "relays/relays.h"
 #include "flexnode/wallet.h"
 #include "flexnode/batchchainer.h"
-#include "flexnode/MessageValidator.h"
 #include "deposit/deposits.h"
 #include "trade/trade.h"
 #include "mining/pit.h"
@@ -28,7 +27,6 @@ class FlexNode
 public:
     uint160 previous_mined_credit_hash;
 
-    MessageValidator message_validator;
     DepositHandler deposit_handler;
     EventNotifier event_notifier;
     TradeHandler tradehandler;
