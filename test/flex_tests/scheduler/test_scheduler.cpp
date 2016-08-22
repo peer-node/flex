@@ -1,12 +1,16 @@
+#include <src/base/util_time.h>
 #include "gmock/gmock.h"
 #include "../flex_data/TestData.h"
 #include "flexnode/schedule.h"
 
 using namespace ::testing;
 
+
+MemoryDataStore schedule_test_data;
+
 void SetDone(uint160 hash)
 {
-    scheduledata[hash]["done"] = 1;
+    schedule_test_data[hash]["done"] = 1;
 }
 
 class AScheduler : public Test
@@ -31,12 +35,12 @@ TEST_F(AScheduler, CanScheduleEvents)
     SetMockTimeMicros(task_time - 1);
     scheduler.DoTasksScheduledForExecutionBeforeNow();
 
-    int is_done = scheduledata[hash]["done"];
+    int is_done = schedule_test_data[hash]["done"];
     ASSERT_THAT(is_done, Eq(0));
 
     SetMockTimeMicros(task_time);
     scheduler.DoTasksScheduledForExecutionBeforeNow();
 
-    is_done = scheduledata[hash]["done"];
+    is_done = schedule_test_data[hash]["done"];
     ASSERT_THAT(is_done, Eq(1));
 }

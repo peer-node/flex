@@ -23,13 +23,19 @@ class ScheduledTask
 public:
     string_t task_type;
     void (*task_function)(uint160);
+    MemoryDataStore *scheduledata;
     LocationIterator schedule_scanner;
 
     ScheduledTask(const char* task_type, void (*task_function)(uint160)):
         task_type(task_type),
         task_function(task_function)
     {
-        schedule_scanner = scheduledata.LocationIterator(task_type);
+    }
+
+    void Initialize(MemoryDataStore &scheduledata_)
+    {
+        schedule_scanner = scheduledata_.LocationIterator(task_type);
+        scheduledata = &scheduledata_;
         ClearTasks();
     }
 
@@ -44,11 +50,10 @@ public:
         uint160 task_hash;
         schedule_scanner.SeekEnd();
         
-        while (schedule_scanner.GetPreviousObjectAndLocation(task_hash,
-                                                             scheduled_time))
+        while (schedule_scanner.GetPreviousObjectAndLocation(task_hash, scheduled_time))
         {
-            scheduledata.RemoveFromLocation(task_type, scheduled_time);
-            schedule_scanner = scheduledata.LocationIterator(task_type);
+            scheduledata->RemoveFromLocation(task_type, scheduled_time);
+            schedule_scanner = scheduledata->LocationIterator(task_type);
             schedule_scanner.SeekEnd();
         }
     }
@@ -58,11 +63,10 @@ public:
         uint64_t now = GetTimeMicros();
         uint64_t scheduled_time = 0;
         uint160 task_hash;
-        schedule_scanner = scheduledata.LocationIterator(task_type);
+        schedule_scanner = scheduledata->LocationIterator(task_type);
         schedule_scanner.SeekStart();
         
-        while (schedule_scanner.GetNextObjectAndLocation(task_hash,
-                                                         scheduled_time))
+        while (schedule_scanner.GetNextObjectAndLocation(task_hash, scheduled_time))
         {
             if (scheduled_time > now)
                 break;
@@ -70,8 +74,8 @@ public:
                  << "doing " << task_type 
                  << " scheduled for " << scheduled_time << "\n";
             
-            scheduledata.RemoveFromLocation(task_type, scheduled_time);
-            schedule_scanner = scheduledata.LocationIterator(task_type);
+            scheduledata->RemoveFromLocation(task_type, scheduled_time);
+            schedule_scanner = scheduledata->LocationIterator(task_type);
             schedule_scanner.SeekStart();
             try
             {
@@ -96,6 +100,7 @@ public:
 class Scheduler
 {
 public:
+    MemoryDataStore scheduledata;
     std::vector<ScheduledTask> tasks;
     bool running;
 
@@ -122,12 +127,13 @@ public:
 
     void DoTasksScheduledForExecutionBeforeNow()
     {
-        foreach_(ScheduledTask& task, tasks)
+        for (auto task : tasks)
             task.DoTasksScheduledForExecutionBeforeNow();
     }
 
     void AddTask(ScheduledTask task)
     {
+        task.Initialize(scheduledata);
         tasks.push_back(task);
     }
 
