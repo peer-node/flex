@@ -55,7 +55,7 @@
 
 bool fDaemon = false;
 bool fServer = false;
-string strMiscWarning;
+std::string strMiscWarning;
 bool fNoListen = false;
 
 
