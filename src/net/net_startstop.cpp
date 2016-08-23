@@ -58,7 +58,7 @@ void Network::Discover()
     // Don't use external IPv4 discovery, when -onlynet="IPv6"
     if (!IsLimited(NET_IPV4))
     {
-        boost::thread external_ip_thread(&Network::TraceThreadGetMyExternalIP, boost::ref(this));
+        boost::thread external_ip_thread(&Network::TraceThreadGetMyExternalIP, this);
     }
 
 }
