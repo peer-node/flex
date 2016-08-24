@@ -367,7 +367,7 @@ TEST_F(ACalendarWithMinedCreditsWhoseDifficultiesVary, ChecksTheDiurnRootsAndCre
     ASSERT_THAT(ok, Eq(true));
 }
 
-void MarkProofsInCurrentDiunAsCheckedAndValid(Calendar &calendar, MemoryDataStore &creditdata)
+void MarkProofsInCurrentDiurnAsCheckedAndValid(Calendar &calendar, MemoryDataStore &creditdata)
 {
     for (auto msg : calendar.current_diurn.credits_in_diurn)
         creditdata[msg.GetHash160()]["quickcheck_ok"] = true;
@@ -378,7 +378,7 @@ TEST_F(ACalendarWithMinedCreditsWhoseDifficultiesVary, ChecksTheProofsOfWorkInTh
     uint160 credit_hash = CreditHashAtTipOfChainContainingCalends();
     calendar = Calendar(credit_hash, credit_system);
     // faster to mark proofs as checked than generate & check valid proofs
-    MarkProofsInCurrentDiunAsCheckedAndValid(calendar, creditdata);
+    MarkProofsInCurrentDiurnAsCheckedAndValid(calendar, creditdata);
     bool ok = calendar.CheckProofsOfWorkInCurrentDiurn(credit_system);
     ASSERT_THAT(ok, Eq(true));
 }
@@ -419,7 +419,7 @@ TEST_F(ACalendarWithMinedCreditsWhoseDifficultiesVary, ChecksTheProofsOfWork)
     uint160 credit_hash = CreditHashAtTipOfChainContainingCalends();
     calendar = Calendar(credit_hash, credit_system);
     MarkProofsInCalendsAsCheckedAndValid(calendar, creditdata);
-    MarkProofsInCurrentDiunAsCheckedAndValid(calendar, creditdata);
+    MarkProofsInCurrentDiurnAsCheckedAndValid(calendar, creditdata);
     MarkProofsInExtraWorkAsCheckedAndValid(calendar, creditdata);
     bool ok = calendar.CheckProofsOfWork(credit_system);
     ASSERT_THAT(ok, Eq(true));

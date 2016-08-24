@@ -57,7 +57,7 @@ bool MinedCreditMessageValidator::CheckTimeStampSucceedsPreviousTimestamp(MinedC
 
 bool MinedCreditMessageValidator::CheckTimeStampIsNotInFuture(MinedCreditMessage &msg)
 {
-    return msg.mined_credit.network_state.timestamp < GetTimeMicros();
+    return msg.mined_credit.network_state.timestamp < GetAdjustedTimeMicros() + 2000000; // 2 seconds leeway
 }
 
 bool MinedCreditMessageValidator::CheckPreviousTotalWork(MinedCreditMessage &msg)

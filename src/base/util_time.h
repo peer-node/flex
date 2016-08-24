@@ -15,6 +15,7 @@ int64_t GetTime();
 void SetMockTime(int64_t nMockTimeIn);
 int64_t GetAdjustedTime();
 int64_t GetTimeOffset();
+void SetTimeOffset(int64_t offset);
 
 
 static int64_t nMockTimeMicros = 0;
@@ -38,6 +39,11 @@ inline uint64_t GetTimeMicros()
         return nMockTimeMicros;
     return (boost::posix_time::ptime(boost::posix_time::microsec_clock::universal_time()) -
             boost::posix_time::ptime(boost::gregorian::date(1970,1,1))).total_microseconds();
+}
+
+inline uint64_t GetAdjustedTimeMicros()
+{
+    return GetTimeMicros() + 1000000 * (GetAdjustedTime() - GetTime());
 }
 
 class CNetAddr;

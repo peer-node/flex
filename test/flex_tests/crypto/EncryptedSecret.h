@@ -7,12 +7,12 @@
 class EncryptedSecret
 {
 public:
+    Point point;
+    CBigNum secret_xor_shared_secret;
+
     EncryptedSecret() { }
 
     EncryptedSecret(CBigNum secret, Point recipient);
-
-    Point point;
-    CBigNum secret_xor_shared_secret;
 
     CBigNum RecoverSecret(CBigNum recipient_private_key);
 

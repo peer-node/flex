@@ -142,28 +142,29 @@ TEST_F(AMinedCreditMessageValidator, ChecksTheSpentChainHash)
 TEST_F(AMinedCreditMessageValidator, ChecksTheTimeStampSucceedsThePreviousTimestamp)
 {
     auto msg = MinedCreditMessageWithABatch();
-    msg.mined_credit.network_state.timestamp = (uint64_t) GetTimeMicros();
+    msg.mined_credit.network_state.timestamp = (uint64_t) GetAdjustedTimeMicros();
     credit_system->StoreMinedCreditMessage(msg);
 
     MinedCreditMessage next_msg;
     next_msg.mined_credit.network_state = credit_system->SucceedingNetworkState(msg.mined_credit);
-    next_msg.mined_credit.network_state.timestamp = (uint64_t) (GetTimeMicros() - 1e15);
+    next_msg.mined_credit.network_state.timestamp = (uint64_t) (GetAdjustedTimeMicros() - 1e15);
     bool ok = validator.CheckTimeStampSucceedsPreviousTimestamp(next_msg);
     ASSERT_THAT(ok, Eq(false));
-    next_msg.mined_credit.network_state.timestamp = (uint64_t) (GetTimeMicros() + 1e6);
+    next_msg.mined_credit.network_state.timestamp = (uint64_t) (GetAdjustedTimeMicros() + 1e6);
     ok = validator.CheckTimeStampSucceedsPreviousTimestamp(next_msg);
     ASSERT_THAT(ok, Eq(true));
 }
 
-TEST_F(AMinedCreditMessageValidator, ChecksTheTimeStampIsNotInTheFuture)
+TEST_F(AMinedCreditMessageValidator, ChecksTheTimeStampIsNotInTheFutureWithTwoSecondsLeeway)
 {
+    SetTimeOffset(100);
     auto msg = MinedCreditMessageWithABatch();
-    msg.mined_credit.network_state.timestamp = (uint64_t) (GetTimeMicros() + 1e6);
+    msg.mined_credit.network_state.timestamp = (uint64_t) (GetAdjustedTimeMicros() + 2.5e6);
     credit_system->StoreMinedCreditMessage(msg);
 
     bool ok = validator.CheckTimeStampIsNotInFuture(msg);
     ASSERT_THAT(ok, Eq(false));
-    msg.mined_credit.network_state.timestamp = (uint64_t) (GetTimeMicros() - 1e6);
+    msg.mined_credit.network_state.timestamp = (uint64_t) (GetAdjustedTimeMicros() + 1.5e6);
     ok = validator.CheckTimeStampIsNotInFuture(msg);
     ASSERT_THAT(ok, Eq(true));
 }

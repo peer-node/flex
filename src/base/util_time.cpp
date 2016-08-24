@@ -35,6 +35,12 @@ void SetMockTime(int64_t nMockTimeIn)
 static CCriticalSection cs_nTimeOffset;
 static int64_t nTimeOffset = 0;
 
+void SetTimeOffset(int64_t offset)
+{
+    LOCK(cs_nTimeOffset);
+    nTimeOffset = offset;
+}
+
 int64_t GetTimeOffset()
 {
     LOCK(cs_nTimeOffset);

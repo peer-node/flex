@@ -29,8 +29,8 @@ class ANetworkSpecificProofOfWorkWithData : public ANetworkSpecificProofOfWork
 public:
     virtual void SetUp()
     {
-        TwistWorkProof twist_work_proof(1, 8, 100);
         std::vector<uint256> branch{1};
+        TwistWorkProof twist_work_proof(branch[0], 8, 100);
         proof = NetworkSpecificProofOfWork(branch, twist_work_proof);
     }
 };
@@ -50,6 +50,7 @@ TEST_F(ANetworkSpecificProofOfWorkWithData, CanBeSerializedIntoABase64EncodedStr
 
 TEST_F(ANetworkSpecificProofOfWorkWithData, CanBeValidated)
 {
+    ASSERT_FALSE(proof.IsValid());
     uint8_t working = 1;
     proof.proof.DoWork(&working);
     ASSERT_TRUE(proof.IsValid());

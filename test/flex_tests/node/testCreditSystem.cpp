@@ -340,6 +340,16 @@ TEST_F(ACreditSystemWithAStoredMinedCredit, GeneratesASucceedingNetworkStateWith
     ASSERT_THAT(next_state.previous_mined_credit_hash, Eq(0));
 }
 
+TEST_F(ACreditSystemWithAStoredMinedCredit,
+       GeneratesANetworkStateWithATimestampOffsetByTheDifferenceBetweenLocalAndNetworkTime)
+{
+    SetTimeOffset(100);
+    uint64_t start_of_test = GetAdjustedTimeMicros();
+    EncodedNetworkState next_state = credit_system->SucceedingNetworkState(mined_credit);
+    uint64_t end_of_test = GetAdjustedTimeMicros();
+    ASSERT_THAT(next_state.timestamp, Gt(start_of_test));
+    ASSERT_THAT(next_state.timestamp, Le(end_of_test));
+}
 
 class ACreditSystemWithASmallIntervalBetweenMinedCredits: public ACreditSystem
 {

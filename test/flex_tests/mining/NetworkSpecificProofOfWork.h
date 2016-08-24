@@ -11,13 +11,13 @@ uint64_t MemoryFactorFromNumberOfMegabytes(uint64_t number_of_megabytes);
 class NetworkSpecificProofOfWork
 {
 public:
+    std::vector<uint256> branch;
+    TwistWorkProof proof;
+
     NetworkSpecificProofOfWork() { }
     NetworkSpecificProofOfWork(std::vector<uint256> branch, TwistWorkProof proof);
 
     NetworkSpecificProofOfWork(std::string base64_string);
-
-    std::vector<uint256> branch;
-    TwistWorkProof proof;
 
     std::string GetBase64String();
 

@@ -440,7 +440,7 @@ EncodedNetworkState CreditSystem::SucceedingNetworkState(MinedCredit mined_credi
 
     next_state.network_id = prev_state.network_id;
 
-    next_state.timestamp = GetTimeMicros();
+    next_state.timestamp = GetAdjustedTimeMicros();
     // message_list_hash, spent_chain_hash, batch_size, batch_root
     // depend on external data
 
