@@ -427,3 +427,17 @@ TEST_F(ADataMessageHandlerWithACalendarWithCalends, DetectsIfTheMinedCreditMessa
     bool msgs_ok = data_message_handler->ValidateMinedCreditMessagesInInitialDataMessage(initial_data_message);
     ASSERT_THAT(msgs_ok, Eq(false));
 }
+
+TEST_F(ADataMessageHandlerWithACalendarWithCalends, MarksTheMinedCreditMessagesInAValidInitialDataMessageAsValidated)
+{
+    auto initial_data_message = AValidInitialDataMessageThatWasRequested();
+    uint160 last_credit_hash = initial_data_message.mined_credit_messages_in_current_diurn.back().mined_credit.GetHash160();
+
+    bool valid = creditdata[last_credit_hash]["passed_verification"];
+    ASSERT_THAT(valid, Eq(false));
+
+    data_message_handler->MarkMinedCreditMessagesInInitialDataMessageAsValidated(initial_data_message);
+
+    valid = creditdata[last_credit_hash]["passed_verification"];
+    ASSERT_THAT(valid, Eq(true));
+}

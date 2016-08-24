@@ -66,7 +66,7 @@ void AddTimeData(const CNetAddr& ip, int64_t nTime)
     static CMedianFilter<int64_t> vTimeOffsets(200,0);
     vTimeOffsets.input(nOffsetSample);
     LogPrintf("Added time data, samples %d, offset %+d (%+d minutes)\n", vTimeOffsets.size(), nOffsetSample, nOffsetSample/60);
-    if (vTimeOffsets.size() >= 5 && vTimeOffsets.size() % 2 == 1)
+    if (vTimeOffsets.size() >= 2)
     {
         int64_t nMedian = vTimeOffsets.median();
         std::vector<int64_t> vSorted = vTimeOffsets.sorted();
@@ -97,7 +97,9 @@ void AddTimeData(const CNetAddr& ip, int64_t nTime)
                     uiInterface.ThreadSafeMessageBox(strMessage, "", CClientUIInterface::MSG_WARNING);
                 }
             }
-        }        if (fDebug) {
+        }
+        if (fDebug)
+        {
             BOOST_FOREACH(int64_t n, vSorted)
             LogPrintf("%+d  ", n);
             LogPrintf("|  ");

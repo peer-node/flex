@@ -246,7 +246,17 @@ void DataMessageHandler::UseInitialDataMessageAndCalendar(InitialDataMessage ini
                                                           Calendar new_calendar)
 {
     StoreDataFromInitialDataMessageInCreditSystem(initial_data_message, *credit_system);
+    MarkMinedCreditMessagesInInitialDataMessageAsValidated(initial_data_message);
     flex_network_node->SwitchToNewCalendarAndSpentChain(new_calendar, initial_data_message.spent_chain);
+}
+
+void DataMessageHandler::MarkMinedCreditMessagesInInitialDataMessageAsValidated(InitialDataMessage initial_data_message)
+{
+    for (auto msg : initial_data_message.mined_credit_messages_in_current_diurn)
+    {
+        uint160 mined_credit_hash = msg.mined_credit.GetHash160();
+        creditdata[mined_credit_hash]["passed_verification"] = true;
+    }
 }
 
 bool DataMessageHandler::ValidateInitialDataMessage(InitialDataMessage initial_data_message)

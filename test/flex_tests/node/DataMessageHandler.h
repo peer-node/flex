@@ -142,6 +142,8 @@ public:
     bool ValidateInitialDataMessage(InitialDataMessage initial_data_message);
 
     void UseInitialDataMessageAndCalendar(InitialDataMessage initial_data_message, Calendar new_calendar);
+
+    void MarkMinedCreditMessagesInInitialDataMessageAsValidated(InitialDataMessage initial_data_message);
 };
 
 void LoadHashesIntoDataStoreFromMessageTypesAndContents(MemoryDataStore &hashdata,
