@@ -115,7 +115,106 @@ typedef std::string string_t;
         return Hash160(ss.begin(), ss.end());                   \
     }
 
-#define RELAY_FEE 1000000
+
+// jsonification - allow up to 20 member fields
+#define _SELECT_NTH_ARG(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, NAME, ...) NAME
+
+#define _ADD(X) _json_add(#X, X);
+#define _JSON1(X) _ADD(X)
+#define _JSON2(X1, ...) _ADD(X1) _JSON1(__VA_ARGS__)
+#define _JSON3(X1, ...) _ADD(X1) _JSON2(__VA_ARGS__)
+#define _JSON4(X1, ...) _ADD(X1) _JSON3(__VA_ARGS__)
+#define _JSON5(X1, ...) _ADD(X1) _JSON4(__VA_ARGS__)
+#define _JSON6(X1, ...) _ADD(X1) _JSON5(__VA_ARGS__)
+#define _JSON7(X1, ...) _ADD(X1) _JSON6(__VA_ARGS__)
+#define _JSON8(X1, ...) _ADD(X1) _JSON7(__VA_ARGS__)
+#define _JSON9(X1, ...) _ADD(X1) _JSON8(__VA_ARGS__)
+#define _JSON10(X1, ...) _ADD(X1) _JSON9(__VA_ARGS__)
+#define _JSON11(X1, ...) _ADD(X1) _JSON10(__VA_ARGS__)
+#define _JSON12(X1, ...) _ADD(X1) _JSON11(__VA_ARGS__)
+#define _JSON13(X1, ...) _ADD(X1) _JSON12(__VA_ARGS__)
+#define _JSON14(X1, ...) _ADD(X1) _JSON13(__VA_ARGS__)
+#define _JSON15(X1, ...) _ADD(X1) _JSON14(__VA_ARGS__)
+#define _JSON16(X1, ...) _ADD(X1) _JSON15(__VA_ARGS__)
+#define _JSON17(X1, ...) _ADD(X1) _JSON16(__VA_ARGS__)
+#define _JSON18(X1, ...) _ADD(X1) _JSON17(__VA_ARGS__)
+#define _JSON19(X1, ...) _ADD(X1) _JSON18(__VA_ARGS__)
+#define _JSON20(X1, ...) _ADD(X1) _JSON19(__VA_ARGS__)
+
+#define _JSON(...) _SELECT_NTH_ARG(__VA_ARGS__, \
+        _JSON20, _JSON19, _JSON18, _JSON17, _JSON16, \
+        _JSON15, _JSON14, _JSON13, _JSON12, _JSON11, \
+        _JSON10, _JSON9, _JSON8, _JSON7, _JSON6, _JSON5, \
+        _JSON4, _JSON3, _JSON2, _JSON1)\
+    (__VA_ARGS__)
+
+#define JSON(...)   \
+    std::string _json_serialization;                                        \
+    void _json_append(std::string s)                                        \
+    {                                                                       \
+        if (_json_serialization != "{")                                     \
+            _json_serialization += ",";                                     \
+        _json_serialization += s;                                           \
+    }                                                                       \
+    template<typename T> void _json_add(std::string name, T variable)       \
+    {                                                                       \
+        _json_append("\"" + name + "\": " + _json_format(variable));        \
+    }                                                                       \
+    template<typename T> std::string _json_format(T variable)               \
+    {                                                                       \
+        return variable.json();                                             \
+    }                                                                       \
+    std::string _json_format(std::string s)                                 \
+    {                                                                       \
+        return "\"" + s + "\"";                                             \
+    }                                                                       \
+    std::string _json_format(uint8_t n)                                     \
+    { std::stringstream ss; ss << n; return ss.str(); }                     \
+    std::string _json_format(int64_t n)                                     \
+    { std::stringstream ss; ss << n; return ss.str(); }                     \
+    std::string _json_format(uint64_t n)                                    \
+    { std::stringstream ss; ss << n; return ss.str(); }                     \
+    std::string _json_format(int32_t n)                                     \
+    { std::stringstream ss; ss << n; return ss.str(); }                     \
+    std::string _json_format(uint32_t n)                                    \
+    { std::stringstream ss; ss << n; return ss.str(); }                     \
+    std::string _json_format(uint160 hash)                                  \
+    {                                                                       \
+        return "\"" + hash.ToString() + "\"";                               \
+    }                                                                       \
+    std::string _json_format(uint256 hash)                                  \
+    {                                                                       \
+        return "\"" + hash.ToString() + "\"";                               \
+    }                                                                       \
+    std::string _format(uint8_t byte)                                       \
+    {                                                                       \
+        char buffer[BUFSIZ];                                                \
+        sprintf(buffer, "%02x", byte);                                      \
+        return std::string(buffer);                                         \
+    }                                                                       \
+    std::string _json_format(vch_t bytes)                                   \
+    {                                                                       \
+        std::string result{"\""};                                           \
+        for (auto byte : bytes)                                             \
+            result += _format(byte);                                        \
+        return result + "\"";                                               \
+    }                                                                       \
+    template<typename T> std::string _json_format(std::vector<T> entries)   \
+    {                                                                       \
+        std::string result{"["};                                            \
+        for (auto entry : entries)                                          \
+            result += _json_format(entry) + ",";                            \
+        if (result.size() > 1)                                              \
+            result.resize(result.size() - 1);                               \
+        return result + "]";                                                \
+    }                                                                       \
+    std::string json()                                                      \
+    {                                                                       \
+        _json_serialization = "{";                                          \
+        _JSON(__VA_ARGS__);                                                 \
+        return _json_serialization + "}";                                   \
+    }
+
 
 #define MIN_TRANSACTION_SIZE 100
 #define MAX_OUTPUTS_PER_TRANSACTION 50

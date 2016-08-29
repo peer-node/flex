@@ -77,6 +77,7 @@ UnsignedTransaction Wallet::GetUnsignedTransaction(vch_t key_data, uint64_t amou
 {
     UnsignedTransaction raw_tx;
     uint64_t amount_in = 0;
+
     for (auto credit : credits)
     {
         raw_tx.inputs.push_back(credit);
@@ -90,7 +91,7 @@ UnsignedTransaction Wallet::GetUnsignedTransaction(vch_t key_data, uint64_t amou
             break;
     }
 
-    if (amount < amount_in)
+    if (amount > amount_in)
     {
         raw_tx.inputs.resize(0);
         return raw_tx;

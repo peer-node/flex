@@ -28,6 +28,8 @@ public:
         READWRITE(extra_work);
     )
 
+    JSON(calends, current_diurn, extra_work);
+
     bool operator==(const Calendar& other) const
     {
         return calends == other.calends and current_diurn == other.current_diurn and extra_work == other.extra_work;

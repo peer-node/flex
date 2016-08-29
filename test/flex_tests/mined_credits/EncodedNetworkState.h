@@ -50,6 +50,10 @@ public:
         READWRITE(timestamp);
     )
 
+    JSON(network_id, previous_mined_credit_hash, batch_number, batch_root, batch_offset,
+         batch_size, message_list_hash, spent_chain_hash, previous_total_work, difficulty,
+         previous_diurn_root, diurnal_block_root, diurnal_difficulty, timestamp);
+
     bool operator==(const EncodedNetworkState& other) const
     {
         CDataStream stream1(SER_NETWORK, CLIENT_VERSION), stream2(SER_NETWORK, CLIENT_VERSION);

@@ -24,6 +24,8 @@ public:
         READWRITE(proof_of_work);
     )
 
+    JSON(mined_credit, hash_list, proof_of_work);
+
     DEPENDENCIES();
 
     uint160 GetHash160();

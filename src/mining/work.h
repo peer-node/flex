@@ -25,8 +25,8 @@ class TwistWorkProof
 public:
     TwistWorkProof(uint256 memory_seed, uint64_t memory_factor, uint160 difficulty);
 
-    uint256 memoryseed;
-    uint64_t N_factor;
+    uint256 memory_seed;
+    uint64_t memory_factor;
     uint160 target;
     uint160 link_threshold;
     uint160 quick_verifier;
@@ -39,8 +39,8 @@ public:
     uint32_t minimum_number_of_links{FLEX_WORK_MINIMUM_NUMBER_OF_LINKS};
 
     TwistWorkProof();
-    TwistWorkProof(uint256 memoryseed, 
-                   uint64_t N_factor, 
+    TwistWorkProof(uint256 memory_seed,
+                   uint64_t memory_factor,
                    uint160 target, 
                    uint160 link_threshold,
                    uint32_t num_segments,
@@ -51,9 +51,9 @@ public:
     uint64_t Length();
 
     IMPLEMENT_SERIALIZE(
-        READWRITE(memoryseed);
+        READWRITE(memory_seed);
         READWRITE(num_segments);
-        READWRITE(N_factor);
+        READWRITE(memory_factor);
         READWRITE(target);
         READWRITE(link_threshold);
         READWRITE(quick_verifier);
@@ -62,6 +62,9 @@ public:
         READWRITE(links);
         READWRITE(link_lengths);
     )
+
+    JSON(memory_seed, num_segments, memory_factor, target, link_threshold,
+         quick_verifier, num_links, seeds, links, link_lengths);
 
     uint256 GetHash() const;
 
@@ -76,7 +79,7 @@ public:
 
     uint64_t MegabytesUsed()
     {
-        int64_t power_of_two = N_factor - 7;
+        int64_t power_of_two = memory_factor - 7;
         if (power_of_two < 0)
             return 0;
 
@@ -94,7 +97,7 @@ public:
 class TwistWorkCheck
 {
 public:
-    uint256 proof_hash;
+    uint256 proof_hash{0};
     uint8_t valid{0};
     uint32_t failure_step{0};
     uint32_t failure_link{0};
@@ -111,6 +114,8 @@ public:
         READWRITE(failure_step);
         READWRITE(failure_seed);
     )
+
+    JSON(proof_hash, valid, failure_step, failure_link, failure_seed);
 
     uint256 GetHash();
 

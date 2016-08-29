@@ -299,7 +299,7 @@ SignedTransaction ValidTransaction(CreditSystem *credit_system, MinedCreditMessa
 
     UnsignedTransaction rawtx;
     rawtx.inputs.push_back(credit_in_batch);
-    Credit output = Credit(Point(SECP256K1, 5).getvch(), ONE_CREDIT);
+    Credit output = Credit(Point(SECP256K1, 5).getvch(), ONE_CREDIT * 0.5);
     rawtx.outputs.push_back(output);
 
     MemoryDataStore keydata;

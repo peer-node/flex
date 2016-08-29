@@ -28,6 +28,8 @@ public:
         READWRITE(credits_in_diurn);
     )
 
+    JSON(previous_diurn_root, credits_in_diurn);
+
     bool operator==(const Diurn& other) const
     {
         return previous_diurn_root == other.previous_diurn_root and credits_in_diurn == other.credits_in_diurn;

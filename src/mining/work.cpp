@@ -42,8 +42,8 @@ uint160 target_from_difficulty(uint160 difficulty)
  */
 
     TwistWorkProof::TwistWorkProof()
-    : memoryseed(0),
-      N_factor(0),
+    : memory_seed(0),
+      memory_factor(0),
       target(0),
       link_threshold(0),
       quick_verifier(0),
@@ -52,14 +52,14 @@ uint160 target_from_difficulty(uint160 difficulty)
       difficulty_achieved(0)
     { }
 
-    TwistWorkProof::TwistWorkProof(uint256 memoryseed,
-                   uint64_t N_factor, 
+    TwistWorkProof::TwistWorkProof(uint256 memory_seed,
+                   uint64_t memory_factor,
                    uint160 target, 
                    uint160 link_threshold,
                    uint32_t num_segments,
                    uint32_t minimum_number_of_links)
-    : memoryseed(memoryseed),
-      N_factor(N_factor),
+    : memory_seed(memory_seed),
+      memory_factor(memory_factor),
       target(target),
       link_threshold(link_threshold),
       num_segments(num_segments),
@@ -70,8 +70,8 @@ uint160 target_from_difficulty(uint160 difficulty)
     TwistWorkProof::TwistWorkProof(uint256 memory_seed,
                                    uint64_t memory_factor,
                                    uint160 difficulty)
-            : memoryseed(memory_seed),
-              N_factor(memory_factor),
+            : memory_seed(memory_seed),
+              memory_factor(memory_factor),
               target(target_from_difficulty(difficulty)),
               link_threshold(target * FLEX_WORK_NUMBER_OF_LINKS),
               num_segments(FLEX_WORK_NUMBER_OF_SEGMENTS),
@@ -88,11 +88,11 @@ uint160 target_from_difficulty(uint160 difficulty)
         uint128_t quick_verifier_ = uint160to128(quick_verifier);
 
         uint128_t hash =  twist_doquickcheck(
-                                    UBEGIN(memoryseed),
+                                    UBEGIN(memory_seed),
                                     uint160to128(target),
                                     uint160to128(link_threshold),
                                     &quick_verifier_,
-                                    N_factor, RFACTOR, num_segments, seeds,
+                                    memory_factor, RFACTOR, num_segments, seeds,
                                     links, link_lengths,
                                     minimum_number_of_links);
 
@@ -127,15 +127,15 @@ uint160 target_from_difficulty(uint160 difficulty)
     int TwistWorkProof::DoWork(uint8_t *working)
     {
         uint64_t first_link;
-        memcpy((uint8_t*)&first_link, (uint8_t*)&memoryseed, 8);
+        memcpy((uint8_t*)&first_link, (uint8_t*)&memory_seed, 8);
 
         uint128_t quick_verifier_ = uint160to128(quick_verifier);
-        int result = twist_dowork(UBEGIN(memoryseed), 
+        int result = twist_dowork(UBEGIN(memory_seed),
                                   (uint8_t*)&first_link, 
                                   uint160to128(target), 
                                   uint160to128(link_threshold),
                                   &quick_verifier_,
-                                  N_factor, RFACTOR, num_segments,
+                                  memory_factor, RFACTOR, num_segments,
                                   seeds, links, link_lengths,
                                   working, minimum_number_of_links);
         quick_verifier = uint128to160(quick_verifier_);
@@ -161,10 +161,10 @@ uint160 target_from_difficulty(uint160 difficulty)
                                               uint32_t link, uint32_t links_to_check)
     {
         TwistWorkCheck check(*this);
-        check.valid = (uint8_t) twist_doverify(UBEGIN(memoryseed),
+        check.valid = (uint8_t) twist_doverify(UBEGIN(memory_seed),
                                                uint160to128(target),
                                                uint160to128(link_threshold),
-                                               N_factor,
+                                               memory_factor,
                                                RFACTOR,
                                                num_segments,
                                                seeds,

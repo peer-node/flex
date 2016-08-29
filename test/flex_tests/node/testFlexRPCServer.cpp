@@ -165,6 +165,18 @@ TEST_F(AFlexRPCServerWithAFlexNetworkNodeAndABalance, SendsCreditsToAPublicKey)
     ASSERT_THAT(result.asString(), Eq("1.00"));
 }
 
+TEST_F(AFlexRPCServerWithAFlexNetworkNodeAndABalance, SendsANonIntegerNumberOfCreditsToAPublicKey)
+{
+    Point public_key(SECP256K1, 2);
+    string encoded_public_key = HexStr(public_key.getvch());
+    parameters.append(encoded_public_key);
+    parameters.append("0.5");
+    auto result = client->CallMethod("sendtopublickey", parameters); // balance -0.5
+    AddABatchToTheTip(); // balance +1
+    result = client->CallMethod("balance", parameters);
+    ASSERT_THAT(result.asString(), Eq("1.50"));
+}
+
 TEST_F(AFlexRPCServerWithAFlexNetworkNodeAndABalance, ThrowsAnErrorIfABadPublicKeyIsGiven)
 {
     parameters.append("00");
@@ -260,6 +272,9 @@ public:
         remote_node_port = port++;
         remote_config["port"] = PrintToString(remote_node_port);
         remote_network_node.config = &remote_config;
+
+        flex_network_node.credit_message_handler->do_spot_checks = false;
+        remote_network_node.credit_message_handler->do_spot_checks = false;
 
         flex_network_node.StartCommunicator();
         remote_network_node.StartCommunicator();

@@ -24,7 +24,7 @@ int64_t GetTime()
 {
     if (nMockTime) return nMockTime;
 
-    return time(NULL);
+    return (int64_t) time(NULL);
 }
 
 void SetMockTime(int64_t nMockTimeIn)

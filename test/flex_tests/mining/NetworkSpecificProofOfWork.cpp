@@ -41,5 +41,5 @@ NetworkSpecificProofOfWork::NetworkSpecificProofOfWork(std::string base64_string
 
 bool NetworkSpecificProofOfWork::IsValid()
 {
-    return MiningHashTree::EvaluateBranch(branch) == proof.memoryseed and proof.DifficultyAchieved() != 0;
+    return MiningHashTree::EvaluateBranch(branch) == proof.memory_seed and proof.DifficultyAchieved() != 0;
 }

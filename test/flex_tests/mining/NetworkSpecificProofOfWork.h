@@ -30,6 +30,8 @@ public:
         READWRITE(branch);
         READWRITE(proof);
     )
+    
+    JSON(branch, proof);
 
     bool IsValid();
 

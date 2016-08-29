@@ -501,9 +501,9 @@ bool CreditSystem::CheckHashesSeedsAndThresholdsInMinedCreditMessageProofOfWork(
 
     if (branch.size() == 0 or branch[0] != msg.mined_credit.GetHash())
         ok = false;
-    if (MiningHashTree::EvaluateBranch(branch) != msg.proof_of_work.proof.memoryseed)
+    if (MiningHashTree::EvaluateBranch(branch) != msg.proof_of_work.proof.memory_seed)
         ok = false;
-    if (proof.N_factor != expected_memory_factor_for_mined_credit_proofs_of_work)
+    if (proof.memory_factor != expected_memory_factor_for_mined_credit_proofs_of_work)
         ok = false;
     if (proof.seeds.size() != FLEX_WORK_NUMBER_OF_SEGMENTS)
         ok = false;

@@ -11,6 +11,8 @@
 using namespace ::testing;
 using namespace std;
 
+#include "log.h"
+#define LOG_CATEGORY "test"
 
 class ACalendar : public Test
 {

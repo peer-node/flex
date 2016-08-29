@@ -23,8 +23,6 @@ public:
     void SetPreviousMinedCredit(MinedCredit credit);
 
     void AddTransaction(SignedTransaction transaction);
-
-    bool ValidateIncomingMinedCredit(MinedCredit incoming_mined_credit);
 };
 
 

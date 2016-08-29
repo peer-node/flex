@@ -83,6 +83,8 @@ public:
         READWRITE(disambiguator);
     )
 
+    JSON(short_hashes, disambiguator);
+
     template <typename HASH2>
     bool operator==(const ShortHashList<HASH2> &other) const
     {

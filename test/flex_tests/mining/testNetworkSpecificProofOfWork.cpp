@@ -38,7 +38,7 @@ public:
 TEST_F(ANetworkSpecificProofOfWorkWithData, RetainsItsData)
 {
     ASSERT_THAT(proof.branch[0], Eq(1));
-    ASSERT_THAT(proof.proof.memoryseed, Eq(1));
+    ASSERT_THAT(proof.proof.memory_seed, Eq(1));
 }
 
 TEST_F(ANetworkSpecificProofOfWorkWithData, CanBeSerializedIntoABase64EncodedString)

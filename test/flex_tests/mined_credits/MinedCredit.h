@@ -18,6 +18,8 @@ public:
         READWRITE(network_state);
     )
 
+    JSON(amount, keydata, network_state);
+
     uint160 BranchBridge()
     {
         CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);

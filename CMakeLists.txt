@@ -898,7 +898,6 @@ add_executable(runNodeTests
         test/flex_tests/main_tests/testCommunicator.cpp
         test/flex_tests/node/testDataMessageHandler.cpp
         test/flex_tests/main_tests/testNetwork.cpp
-        test/flex_tests/node/testNetworkState.cpp
         test/flex_tests/node/testConfigParser.cpp
         test/flex_tests/node/testFlexLocalServer.cpp
         test/flex_tests/node/testMinedCreditMessage.cpp

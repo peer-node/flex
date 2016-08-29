@@ -69,7 +69,7 @@ TEST_F(AFlexMinerWithMiningInfo, CompletesAProofOfWorkUsingTheMiningRoot)
     miner.SetMemoryUsageInMegabytes(1);
     miner.StartMining();
     TwistWorkProof proof = miner.GetProof();
-    ASSERT_THAT(proof.memoryseed, Eq(miner.MiningRoot()));
+    ASSERT_THAT(proof.memory_seed, Eq(miner.MiningRoot()));
     ASSERT_THAT(proof.DifficultyAchieved(), Gt(0));
 }
 
