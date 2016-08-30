@@ -144,3 +144,23 @@ void FlexRPCServer::RequestTips(const Json::Value &request, Json::Value &respons
     flex_local_server->flex_network_node->data_message_handler->RequestTips();
 }
 
+void FlexRPCServer::GetCalendar(const Json::Value &request, Json::Value &response)
+{
+    std::string json_calendar = flex_local_server->flex_network_node->calendar.json();
+    Json::Reader reader;
+    Json::Value result;
+    reader.parse(json_calendar, result, false);
+    response = result;
+}
+
+void FlexRPCServer::GetMinedCredit(const Json::Value &request, Json::Value &response)
+{
+    std::string credit_hash_string = request[0].asString();
+    uint160 credit_hash(credit_hash_string);
+    MinedCredit mined_credit = flex_local_server->flex_network_node->creditdata[credit_hash]["mined_credit"];
+    Json::Reader reader;
+    Json::Value value;
+    reader.parse(mined_credit.json(), value, false);
+    response = value;
+}
+

@@ -85,17 +85,12 @@ public:
 
     JSON(short_hashes, disambiguator);
 
+    HASH160();
+
     template <typename HASH2>
     bool operator==(const ShortHashList<HASH2> &other) const
     {
         return short_hashes == other.short_hashes and disambiguator == other.disambiguator;
-    }
-
-    uint160 GetHash160() const
-    {
-        CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
-        ss << *this;
-        return Hash160(ss.begin(), ss.end());
     }
 
     HASH MultiXor(std::vector<std::vector<HASH> > &hashes, std::vector<uint32_t> &choices)
@@ -149,7 +144,7 @@ public:
         {
             uint64_t number_of_matches = full_hashes_matching_individual_short_hash.size();
             uint64_t product = number_of_combinations * number_of_matches;
-            if (product < number_of_combinations or product < number_of_matches)
+            if (product == 0 or product / number_of_combinations != number_of_matches)
                 overflow = true;
             number_of_combinations = product;
         }

@@ -35,6 +35,8 @@ public:
         BindMethod("sendtoaddress", &FlexRPCServer::SendToAddress);
         BindMethod("addnode", &FlexRPCServer::AddNode);
         BindMethod("requesttips", &FlexRPCServer::RequestTips);
+        BindMethod("getcalendar", &FlexRPCServer::GetCalendar);
+        BindMethod("getminedcredit", &FlexRPCServer::GetMinedCredit);
     }
 
     void SetFlexLocalServer(FlexLocalServer *flex_local_server_);
@@ -67,6 +69,10 @@ public:
     void AddNode(const Json::Value &request, Json::Value &response);
 
     void RequestTips(const Json::Value &request, Json::Value &response);
+
+    void GetCalendar(const Json::Value &request, Json::Value &response);
+
+    void GetMinedCredit(const Json::Value &request, Json::Value &response);
 };
 
 

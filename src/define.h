@@ -8,6 +8,7 @@
 #include <string>
 #include <sstream>
 #include <stdexcept>
+#include <jsoncpp/json/json.h>
 
 
 class MissingDataException : public std::runtime_error
@@ -48,6 +49,14 @@ typedef std::vector<unsigned char> vch_t;
 typedef std::string string_t;
 
 #define foreach_ BOOST_FOREACH
+
+#define HASH160()                                               \
+    uint160 GetHash160() const                                  \
+    {                                                           \
+        CDataStream ss(SER_NETWORK, CLIENT_VERSION);            \
+        ss << *this;                                            \
+        return Hash160(ss.begin(), ss.end());                   \
+    }
 
 #define IMPLEMENT_HASH_SIGN_VERIFY()                            \
     uint160 GetHash160() const                                  \
@@ -106,14 +115,6 @@ typedef std::string string_t;
             result.push_back(dependencies[i]);                  \
         return result;                                          \
     }              
-
-#define HASH160()                                               \
-    uint160 GetHash160()                                        \
-    {                                                           \
-        CDataStream ss(SER_NETWORK, CLIENT_VERSION);            \
-        ss << *this;                                            \
-        return Hash160(ss.begin(), ss.end());                   \
-    }
 
 
 // jsonification - allow up to 20 member fields
@@ -215,6 +216,15 @@ typedef std::string string_t;
         return _json_serialization + "}";                                   \
     }
 
+template<typename T> std::string PrettyPrint(T item)
+{
+    Json::Reader reader;
+    Json::Value value;
+    reader.parse(item.json(), value, false);
+    std::stringstream ss;
+    ss << value;
+    return ss.str();
+}
 
 #define MIN_TRANSACTION_SIZE 100
 #define MAX_OUTPUTS_PER_TRANSACTION 50

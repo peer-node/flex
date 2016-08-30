@@ -36,8 +36,7 @@ public:
 
     bool operator==(const Signature& other) const
     {
-        return signature == other.signature &&
-               exhibit == other.exhibit;
+        return signature == other.signature and exhibit == other.exhibit;
     }
 };
 

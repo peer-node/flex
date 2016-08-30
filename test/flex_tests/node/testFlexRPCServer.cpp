@@ -153,6 +153,22 @@ TEST_F(AFlexRPCServerWithAFlexNetworkNodeAndABalance, HasABalance)
     ASSERT_THAT(result.asString(), Eq("1.00"));
 }
 
+TEST_F(AFlexRPCServerWithAFlexNetworkNodeAndABalance, ProvidesACalendar)
+{
+    auto result = client->CallMethod("getcalendar", parameters);
+    uint64_t diurn_size = result["current_diurn"].size();
+    ASSERT_THAT(diurn_size, Gt(0));
+}
+
+TEST_F(AFlexRPCServerWithAFlexNetworkNodeAndABalance, ProvidesAMinedCreditByHash)
+{
+    uint160 last_credit_hash = flex_network_node.calendar.LastMinedCreditHash();
+    parameters.append(last_credit_hash.ToString());
+    auto result = client->CallMethod("getminedcredit", parameters);
+
+    ASSERT_TRUE(result["network_state"].isObject());
+}
+
 TEST_F(AFlexRPCServerWithAFlexNetworkNodeAndABalance, SendsCreditsToAPublicKey)
 {
     Point public_key(SECP256K1, 2);
