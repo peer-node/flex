@@ -231,7 +231,7 @@ void CreditMessageHandler::ValidateAcceptedMessagesAfterFork()
             should_keep = false;
         if (message_type == "tx")
         {
-            SignedTransaction tx = creditdata[hash]["tx"];
+            SignedTransaction tx = msgdata[hash]["tx"];
             if (TransactionHasNoSpentInputs(tx, spent_positions))
                 for (auto input : tx.rawtx.inputs)
                     spent_positions.insert(input.position);
@@ -376,7 +376,7 @@ std::set<uint64_t> CreditMessageHandler::PositionsSpentByAcceptedTransactions()
     for (auto hash : accepted_messages)
         if (credit_system->MessageType(hash) == "tx")
         {
-            SignedTransaction accepted_tx = creditdata[hash]["tx"];
+            SignedTransaction accepted_tx = msgdata[hash]["tx"];
             for (auto input : accepted_tx.rawtx.inputs)
                 spent_positions.insert(input.position);
         }

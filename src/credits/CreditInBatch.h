@@ -30,6 +30,8 @@ public:
         READWRITE(diurn_branch);
     )
 
+    JSON(amount, keydata, position, branch, diurn_branch);
+
     vch_t getvch();
 
     bool operator==(const CreditInBatch& other) const;

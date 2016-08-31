@@ -67,10 +67,11 @@ void CreditSystem::SetChildBatch(uint160 parent_hash, uint160 child_hash)
 
 void CreditSystem::StoreTransaction(SignedTransaction tx)
 {
+
     uint160 hash = tx.GetHash160();
     StoreHash(hash);
     msgdata[hash]["type"] = "tx";
-    creditdata[hash]["tx"] = tx;
+    msgdata[hash]["tx"] = tx;
 }
 
 void CreditSystem::StoreHash(uint160 hash)
@@ -124,7 +125,7 @@ CreditBatch CreditSystem::ReconstructBatch(MinedCreditMessage &msg)
         if (type == "tx")
         {
             SignedTransaction tx;
-            tx = creditdata[message_hash]["tx"];
+            tx = msgdata[message_hash]["tx"];
             batch.AddCredits(tx.rawtx.outputs);
         }
         else if (type == "mined_credit")
@@ -196,7 +197,10 @@ set<uint64_t> CreditSystem::GetPositionsOfCreditsSpentInBatch(uint160 credit_has
 
     MinedCreditMessage msg;
     msg = creditdata[credit_hash]["msg"];
-    msg.hash_list.RecoverFullHashes(msgdata);
+    if (not msg.hash_list.RecoverFullHashes(msgdata))
+    {
+        log_ << "failed to recover full hashes for " << credit_hash << "\n";
+    }
 
     for (auto message_hash : msg.hash_list.full_hashes)
     {
@@ -204,7 +208,7 @@ set<uint64_t> CreditSystem::GetPositionsOfCreditsSpentInBatch(uint160 credit_has
         if (type == "tx")
         {
             SignedTransaction tx;
-            tx = creditdata[message_hash]["tx"];
+            tx = msgdata[message_hash]["tx"];
             for (auto credit_in_batch : tx.rawtx.inputs)
                 spent.insert(credit_in_batch.position);
         }
@@ -239,7 +243,10 @@ BitChain CreditSystem::GetSpentChainOnOtherProngOfFork(BitChain &spent_chain, ui
 {
     set<uint64_t> spent, unspent;
     if (not GetSpentAndUnspentWhenSwitchingAcrossFork(from_credit_hash, to_credit_hash, spent, unspent))
+    {
+        log_ << "failed to switch across fork\n";
         return BitChain();
+    }
     MinedCredit to_credit = creditdata[to_credit_hash]["mined_credit"];
     uint64_t length = to_credit.network_state.batch_offset + to_credit.network_state.batch_size;
     BitChain resulting_chain = spent_chain;
@@ -468,7 +475,7 @@ BitChain CreditSystem::ConstructSpentChainFromPreviousSpentChainAndContentsOfMin
             spent_chain.Add();
         else if (type == "tx")
         {
-            SignedTransaction tx = creditdata[hash]["tx"];
+            SignedTransaction tx = msgdata[hash]["tx"];
             for (auto input : tx.rawtx.inputs)
                 spent_chain.Set(input.position);
             for (auto output : tx.rawtx.outputs)

@@ -11,6 +11,8 @@ class MinedCredit : public Credit
 public:
     EncodedNetworkState network_state;
 
+    static std::string Type() { return "mined_credit"; }
+
     IMPLEMENT_SERIALIZE
     (
         READWRITE(amount);

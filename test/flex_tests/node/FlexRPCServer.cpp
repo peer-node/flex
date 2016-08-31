@@ -144,23 +144,34 @@ void FlexRPCServer::RequestTips(const Json::Value &request, Json::Value &respons
     flex_local_server->flex_network_node->data_message_handler->RequestTips();
 }
 
-void FlexRPCServer::GetCalendar(const Json::Value &request, Json::Value &response)
+template <typename T> Json::Value GetJsonValue(T item)
 {
-    std::string json_calendar = flex_local_server->flex_network_node->calendar.json();
     Json::Reader reader;
     Json::Value result;
-    reader.parse(json_calendar, result, false);
-    response = result;
+    reader.parse(item.json(), result, false);
+    return result;
+}
+
+void FlexRPCServer::GetCalendar(const Json::Value &request, Json::Value &response)
+{
+    response = GetJsonValue(flex_local_server->flex_network_node->calendar);
 }
 
 void FlexRPCServer::GetMinedCredit(const Json::Value &request, Json::Value &response)
 {
-    std::string credit_hash_string = request[0].asString();
-    uint160 credit_hash(credit_hash_string);
+    uint160 credit_hash(request[0].asString());
     MinedCredit mined_credit = flex_local_server->flex_network_node->creditdata[credit_hash]["mined_credit"];
-    Json::Reader reader;
-    Json::Value value;
-    reader.parse(mined_credit.json(), value, false);
-    response = value;
+    response = GetJsonValue(mined_credit);
+}
+
+void FlexRPCServer::ListUnspent(const Json::Value &request, Json::Value &response)
+{
+    std::vector<CreditInBatch> &credits = flex_local_server->flex_network_node->wallet->credits;
+
+    Json::Value result;
+    for (auto credit : credits)
+        result.append(GetJsonValue(credit));
+
+    response = result;
 }
 

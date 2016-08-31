@@ -37,6 +37,7 @@ public:
         BindMethod("requesttips", &FlexRPCServer::RequestTips);
         BindMethod("getcalendar", &FlexRPCServer::GetCalendar);
         BindMethod("getminedcredit", &FlexRPCServer::GetMinedCredit);
+        BindMethod("listunspent", &FlexRPCServer::ListUnspent);
     }
 
     void SetFlexLocalServer(FlexLocalServer *flex_local_server_);
@@ -73,6 +74,8 @@ public:
     void GetCalendar(const Json::Value &request, Json::Value &response);
 
     void GetMinedCredit(const Json::Value &request, Json::Value &response);
+
+    void ListUnspent(const Json::Value &request, Json::Value &response);
 };
 
 

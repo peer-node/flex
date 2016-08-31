@@ -91,6 +91,16 @@ public:
         return *this;
     }
 
+    template <typename V>
+    Logger& operator<<(std::set<V> values)
+    {
+        *this << "(";
+        for (auto it = values.begin(); it != values.end(); it++)
+            *this << *it << ",";
+        *this << ")";
+        return *this;
+    }
+
     template <typename V, typename W>
     Logger& operator<<(std::pair<V, W> value)
     {

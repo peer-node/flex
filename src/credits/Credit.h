@@ -30,7 +30,9 @@ public:
         READWRITE(keydata);
     )
 
-    string_t ToString() const;
+    JSON(amount, keydata);
+
+    virtual string_t ToString() const;
 
     uint160 KeyHash() const;
 

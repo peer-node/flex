@@ -8,6 +8,9 @@
 #include "src/base/util.h"
 #include "src/crypto/hash.h"
 
+#include "log.h"
+#define LOG_CATEGORY "shorthash.h"
+
 template <typename HASH>
 class ShortHashList
 {
@@ -43,12 +46,23 @@ public:
     bool RecoverFullHashes(MemoryDataStore& hashdata)
     {
         if (short_hashes.size() > MAX_HASH_ENTRIES)
+        {
+            log_ << "too many short hashes: " << short_hashes.size() << " vs " << MAX_HASH_ENTRIES << "\n";
             return false;
+        }
 
         auto possible_matches = PossibleMatches(hashdata);
 
+        for (uint32_t i = 0; i < short_hashes.size() ; i++)
+            if (possible_matches[i].size() == 0)
+                return false;
+
         if (NumberOfCombinations(possible_matches) > MAX_HASH_COMBINATIONS)
+        {
+            log_ << "too many combinations: "
+                 << NumberOfCombinations(possible_matches) << " vs " << MAX_HASH_COMBINATIONS << "\n";
             return TryKnownSolution(hashdata);
+        }
 
         std::vector<uint32_t> resulting_match;
 
@@ -143,6 +157,8 @@ public:
         for (auto full_hashes_matching_individual_short_hash : possible_matches)
         {
             uint64_t number_of_matches = full_hashes_matching_individual_short_hash.size();
+            if (number_of_matches == 0)
+                return 0;
             uint64_t product = number_of_combinations * number_of_matches;
             if (product == 0 or product / number_of_combinations != number_of_matches)
                 overflow = true;

@@ -38,7 +38,7 @@ public:
             }
             else if (type == "tx")
             {
-                SignedTransaction tx = credit_system->creditdata[hash]["tx"];
+                SignedTransaction tx = credit_system->msgdata[hash]["tx"];
                 CDataStream ss(SER_NETWORK, CLIENT_VERSION);
                 ss << tx;
                 message_content = vch_t(ss.begin(), ss.end());

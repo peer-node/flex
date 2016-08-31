@@ -121,7 +121,7 @@ void Wallet::RemoveTransactionInputsSpentInBatchFromCredits(MinedCreditMessage& 
     for (auto hash : msg.hash_list.full_hashes)
         if (credit_system->MessageType(hash) == "tx")
         {
-            SignedTransaction tx = credit_system->creditdata[hash]["tx"];
+            SignedTransaction tx = credit_system->msgdata[hash]["tx"];
             for (auto input : tx.rawtx.inputs)
             {
                 if (VectorContainsEntry(credits, input))
@@ -164,7 +164,7 @@ void Wallet::AddTransactionInputsSpentInRemovedBatchToCredits(MinedCreditMessage
     for (auto hash : msg.hash_list.full_hashes)
         if (credit_system->MessageType(hash) == "tx")
         {
-            SignedTransaction tx = credit_system->creditdata[hash]["tx"];
+            SignedTransaction tx = credit_system->msgdata[hash]["tx"];
             for (auto input : tx.rawtx.inputs)
                 if (PrivateKeyIsKnown(input) and not VectorContainsEntry(credits, input))
                     credits.push_back(input);

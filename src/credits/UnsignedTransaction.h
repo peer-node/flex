@@ -28,6 +28,8 @@ public:
         READWRITE(pubkeys);
     )
 
+    JSON(inputs, outputs, pubkeys);
+
     void AddInput(CreditInBatch batch_credit, bool is_keyhash);
 
     bool AddOutput(Credit credit);

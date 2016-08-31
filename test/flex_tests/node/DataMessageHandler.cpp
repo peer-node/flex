@@ -261,6 +261,12 @@ void DataMessageHandler::MarkMinedCreditMessagesInInitialDataMessageAsValidated(
 
 bool DataMessageHandler::ValidateInitialDataMessage(InitialDataMessage initial_data_message)
 {
+    if (not EnclosedMessagesArePresentInInitialDataMessage(initial_data_message))
+    {
+        log_ << "initial data message doesn't contain necessary data\n";
+        return false;
+    }
+
     if (not CheckSpentChainInInitialDataMessage(initial_data_message))
     {
         log_ << "bad spent chain included in initial data message\n";

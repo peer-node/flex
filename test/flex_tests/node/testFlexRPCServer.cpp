@@ -169,6 +169,12 @@ TEST_F(AFlexRPCServerWithAFlexNetworkNodeAndABalance, ProvidesAMinedCreditByHash
     ASSERT_TRUE(result["network_state"].isObject());
 }
 
+TEST_F(AFlexRPCServerWithAFlexNetworkNodeAndABalance, ListsUnspentCredits)
+{
+    auto result = client->CallMethod("listunspent", parameters);
+    ASSERT_THAT(result.size(), Eq(1));
+}
+
 TEST_F(AFlexRPCServerWithAFlexNetworkNodeAndABalance, SendsCreditsToAPublicKey)
 {
     Point public_key(SECP256K1, 2);

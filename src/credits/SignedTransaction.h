@@ -26,6 +26,8 @@ public:
         READWRITE(signature);
     )
 
+    JSON(rawtx, signature);
+
     uint256 GetHash() const;
 
     uint160 GetHash160() const;

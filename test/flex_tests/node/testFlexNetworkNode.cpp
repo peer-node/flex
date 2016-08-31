@@ -337,6 +337,50 @@ TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesWithTransactionsAreAdded, Synchro
     ASSERT_THAT(node1.calendar.LastMinedCreditHash(), Eq(node2.calendar.LastMinedCreditHash()));
 }
 
+class TwoFlexNetworkNodesConnectedAfterBatchesWithTransactionsAreAddedFollowedByCalends :
+        public TwoFlexNetworkNodesConnectedAfterBatchesWithTransactionsAreAdded
+{
+public:
+    virtual void SetUp()
+    {
+        SetMiningPreferences(node1);
+        SetMiningPreferences(node2);
+
+        AddABatchToTheTip(&node1);
+        AddABatchToTheTip(&node1);
+        Point pubkey = node2.GetNewPublicKey();
+        node1.SendCreditsToPublicKey(pubkey, ONE_CREDIT);
+
+        AddABatchToTheTip(&node2);
+
+        AddABatchToTheTip(&node1);
+        while (node1.calendar.current_diurn.Size() != 1)
+        {
+            AddABatchToTheTip(&node1);
+        }
+
+        ConnectNodesViaPeers();
+    }
+};
+
+
+TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesWithTransactionsAreAddedFollowedByCalends, SynchronizeThroughSharingMinedCreditMessages)
+{
+    AddABatchToTheTip(&node1);
+    MilliSleep(100); // time for node2 to synchronize with node1
+
+    ASSERT_THAT(node1.calendar.LastMinedCreditHash(), Eq(node2.calendar.LastMinedCreditHash()));
+}
+
+TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesWithTransactionsAreAddedFollowedByCalends, SynchronizeThroughAnInitialDataMessage)
+{
+    node2.data_message_handler->RequestTips();
+    MilliSleep(100); // time for node2 to synchronize with node1
+
+    ASSERT_THAT(node1.calendar.LastMinedCreditHash(), Eq(node2.calendar.LastMinedCreditHash()));
+}
+
+
 class AFlexNetworkNodeWithAConfig : public AFlexNetworkNode
 {
 public:

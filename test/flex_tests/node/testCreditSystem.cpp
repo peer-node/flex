@@ -141,7 +141,7 @@ TEST_F(ACreditSystem, StoresTransactions)
 
     credit_system->StoreTransaction(tx);
     SignedTransaction recovered_transaction;
-    recovered_transaction = creditdata[tx.GetHash160()]["tx"];
+    recovered_transaction = msgdata[tx.GetHash160()]["tx"];
 
     ASSERT_THAT(recovered_transaction, Eq(tx));
 }

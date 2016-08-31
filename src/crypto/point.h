@@ -41,6 +41,11 @@ public:
 
     string_t ToString() const;
 
+    std::string json()
+    {
+        return "\"" + ToString() + "\"";
+    }
+
     void SetToMultipleOfGenerator(CBigNum n);
 
     void GetCoordinates(CBigNum &x, CBigNum &y) const;
