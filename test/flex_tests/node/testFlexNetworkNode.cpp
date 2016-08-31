@@ -367,7 +367,7 @@ public:
 TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesWithTransactionsAreAddedFollowedByCalends, SynchronizeThroughSharingMinedCreditMessages)
 {
     AddABatchToTheTip(&node1);
-    MilliSleep(100); // time for node2 to synchronize with node1
+    MilliSleep(200); // time for node2 to synchronize with node1
 
     ASSERT_THAT(node1.calendar.LastMinedCreditHash(), Eq(node2.calendar.LastMinedCreditHash()));
 }

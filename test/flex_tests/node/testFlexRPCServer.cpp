@@ -66,7 +66,7 @@ public:
 TEST_F(AFlexRPCServer, ProvidesHelp)
 {
     auto result = client->CallMethod("help", parameters);
-    ASSERT_THAT(result.asString(), Ne(""));
+    ASSERT_THAT(result.size(), Eq(server->methods.size()));
 }
 
 TEST_F(AFlexRPCServer, ProvidesANetworkIDWithInfo)

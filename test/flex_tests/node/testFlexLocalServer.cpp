@@ -169,7 +169,7 @@ TEST_F(AFlexLocalServerWithRPCSettings, StartsAnRPCServer)
     Json::Value params;
 
     auto result = client->CallMethod("help", params);
-    ASSERT_THAT(result.asString(), Ne(""));
+    ASSERT_THAT(result.size(), Ne(0));
 }
 
 TEST_F(AFlexLocalServerWithRPCSettings, ProvidesABalance)

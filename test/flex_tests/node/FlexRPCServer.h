@@ -18,6 +18,7 @@ public:
     std::map<std::string,std::string> headers;
     std::string response{"a response"};
     FlexLocalServer *flex_local_server{NULL};
+    std::vector<std::string> methods;
 
     FlexRPCServer(jsonrpc::HttpAuthServer &server) :
             jsonrpc::AbstractServer<FlexRPCServer>(server)

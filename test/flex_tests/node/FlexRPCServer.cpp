@@ -9,11 +9,13 @@ void FlexRPCServer::BindMethod(const char* method_name,
     this->bindAndAddMethod(
             jsonrpc::Procedure(method_name, jsonrpc::PARAMS_BY_POSITION, jsonrpc::JSON_STRING, NULL),
             method);
+    methods.push_back(method_name);
 }
 
 void FlexRPCServer::Help(const Json::Value& request, Json::Value& response)
 {
-    response = "help";
+    for (auto method : methods)
+        response.append(method);
 }
 
 void FlexRPCServer::GetInfo(const Json::Value& request, Json::Value& response)
