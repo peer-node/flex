@@ -105,13 +105,9 @@ public:
     {
         std::set<uint160> new_non_orphans = msgdata[message_hash]["new_non_orphans"];
         for (auto non_orphan : new_non_orphans)
-        {
             HandleMessage(non_orphan);
-        }
-        for (auto non_orphan : new_non_orphans)
-        {
-            new_non_orphans.erase(non_orphan);
-        }
+
+        new_non_orphans.clear();
         msgdata[message_hash]["new_non_orphans"] = new_non_orphans;
     }
 

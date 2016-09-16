@@ -21,7 +21,7 @@ TEST(ACommunicator, ListensToAnotherCommunicator)
 
     communicator1.network.AddNode("127.0.0.1:" + PrintToString(port2));
 
-    MilliSleep(80);
+    MilliSleep(800);
 
     ASSERT_THAT(communicator1.network.vNodes.size(), Eq(1));
     ASSERT_THAT(communicator2.network.vNodes.size(), Eq(1));

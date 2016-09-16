@@ -134,10 +134,14 @@ void CreditMessageHandler::SwitchToNewTipIfAppropriate()
 
     uint160 current_tip = calendar->LastMinedCreditHash();
     if (VectorContainsEntry(batches_with_the_most_work, current_tip))
+    {
         return;
+    }
 
     if (batches_with_the_most_work.size() == 0)
+    {
         return;
+    }
 
     uint160 new_tip = batches_with_the_most_work[0];
     SwitchToTip(new_tip);

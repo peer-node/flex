@@ -4,6 +4,7 @@
 #include "base/util_log.h"
 #include "define.h"
 #include <exception>
+#include <set>
 
 #ifdef LOG_CATEGORY
 #undef LOG_CATEGORY

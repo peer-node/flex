@@ -222,7 +222,7 @@ uint160 target_from_difficulty(uint160 difficulty)
         if (proof.Length() == 0)
             return false;
         TwistWorkCheck check_ = proof.CheckRange(failure_seed, 1, failure_link, 1);
-        return (!check_.valid);
+        return (not check_.valid);
     }
 
 /*

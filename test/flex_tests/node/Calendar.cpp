@@ -470,6 +470,7 @@ bool Calendar::SpotCheckWork(CalendarFailureDetails &details)
             uint160 diurn_root = calends[i].Root();
             details.diurn_root = diurn_root;
             details.credit_hash = calends[i].mined_credit.GetHash160();
+            details.mined_credit_message_hash = calends[i].GetHash160();
             details.check = check;
             return false;
         }

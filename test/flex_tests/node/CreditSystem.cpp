@@ -16,6 +16,7 @@ using std::set;
 using std::vector;
 using std::string;
 
+
 vector<uint160> CreditSystem::MostWorkBatches()
 {
     LocationIterator work_scanner = creditdata.LocationIterator("total_work");
@@ -34,12 +35,46 @@ void CreditSystem::StoreMinedCredit(MinedCredit mined_credit)
     msgdata[credit_hash]["type"] = "mined_credit";
 }
 
-void CreditSystem::RecordTotalWork(uint160 credit_hash, uint160 total_work)
+void AddToHashesAtLocation(uint160 hash, uint160 location, std::string location_name, MemoryDataStore& datastore)
 {
     vector<uint160> hashes_at_location;
-    creditdata.GetObjectAtLocation(hashes_at_location, "total_work", total_work);
-    hashes_at_location.push_back(credit_hash);
-    creditdata[hashes_at_location].Location("total_work") = total_work;
+    datastore.GetObjectAtLocation(hashes_at_location, location_name, location);
+    if (not VectorContainsEntry(hashes_at_location, hash))
+        hashes_at_location.push_back(hash);
+    datastore[hashes_at_location].Location(location_name) = location;
+}
+
+void AddToHashes(uint160 object_hash, std::string property_name, uint160 hash_to_add, MemoryDataStore& datastore)
+{
+    vector<uint160> hashes = datastore[object_hash][property_name];
+    if (not VectorContainsEntry(hashes, hash_to_add))
+        hashes.push_back(hash_to_add);
+    datastore[object_hash][property_name] = hashes;
+}
+
+void RemoveFromHashes(uint160 object_hash, std::string property_name, uint160 hash_to_remove, MemoryDataStore& datastore)
+{
+    vector<uint160> hashes = datastore[object_hash][property_name];
+    if (VectorContainsEntry(hashes, hash_to_remove))
+        EraseEntryFromVector(hash_to_remove, hashes);
+    datastore[object_hash][property_name] = hashes;
+}
+
+void RemoveFromHashesAtLocation(uint160 hash, uint160 location, std::string location_name, MemoryDataStore& datastore)
+{
+    vector<uint160> hashes_at_location;
+    datastore.GetObjectAtLocation(hashes_at_location, location_name, location);
+    if (VectorContainsEntry(hashes_at_location, hash))
+        EraseEntryFromVector(hash, hashes_at_location);
+    if (hashes_at_location.size() > 0)
+        datastore[hashes_at_location].Location(location_name) = location;
+    else
+        datastore.RemoveFromLocation(location_name, location);
+}
+
+void CreditSystem::RecordTotalWork(uint160 credit_hash, uint160 total_work)
+{
+    AddToHashesAtLocation(credit_hash, total_work, "total_work", creditdata);
 }
 
 bool CreditSystem::MinedCreditWasRecordedToHaveTotalWork(uint160 credit_hash, uint160 total_work)
@@ -67,7 +102,6 @@ void CreditSystem::SetChildBatch(uint160 parent_hash, uint160 child_hash)
 
 void CreditSystem::StoreTransaction(SignedTransaction tx)
 {
-
     uint160 hash = tx.GetHash160();
     StoreHash(hash);
     msgdata[hash]["type"] = "tx";
@@ -323,6 +357,7 @@ void CreditSystem::DeleteRecordOfTotalWork(MinedCreditMessage &msg)
     creditdata.GetObjectAtLocation(hashes_with_same_total_work, "total_work", total_work);
     if (VectorContainsEntry(hashes_with_same_total_work, credit_hash))
         EraseEntryFromVector(credit_hash, hashes_with_same_total_work);
+    RemoveFromHashesAtLocation(credit_hash, total_work, "total_work", creditdata);
 
     if (hashes_with_same_total_work.size() > 0)
         creditdata[hashes_with_same_total_work].Location("total_work") = total_work;
@@ -716,4 +751,95 @@ CalendarMessage CreditSystem::CalendarMessageWithMaximumScrutinizedWork()
 
     CalendarMessage calendar_message = msgdata[calendar_message_hashes[0]]["calendar"];
     return calendar_message;
+}
+
+void CreditSystem::MarkCalendAndSucceedingCalendsAsInvalid(CalendarFailureMessage message)
+{
+    uint160 calend_hash = message.details.mined_credit_message_hash;
+    uint160 failure_message_hash = message.GetHash160();
+    MarkCalendAndSucceedingCalendsAsInvalid(calend_hash, failure_message_hash);
+}
+
+void CreditSystem::MarkCalendAndSucceedingCalendsAsInvalid(uint160 calend_hash, uint160 failure_message_hash)
+{
+    creditdata[calend_hash]["invalid"] = true;
+    creditdata[calend_hash]["failure_message_hash"] = failure_message_hash;
+
+    vector<uint160> succeeding_calends = creditdata[calend_hash]["succeeding_calends"];
+    for (auto succeeding_calend_hash : succeeding_calends)
+        MarkCalendAndSucceedingCalendsAsInvalid(succeeding_calend_hash, failure_message_hash);
+}
+
+bool CreditSystem::CalendHasReportedFailure(uint160 calend_hash)
+{
+    vector<uint160> reported_failure_message_hashes = creditdata[calend_hash]["reported_failures"];
+    return reported_failure_message_hashes.size() > 0;
+}
+
+void CreditSystem::RecordReportedFailureOfCalend(CalendarFailureMessage message)
+{
+    uint160 failure_message_hash = message.GetHash160();
+    uint160 calend_hash = message.details.mined_credit_message_hash;
+
+    AddToHashes(calend_hash, "reported_failures", failure_message_hash, creditdata);
+}
+
+bool CreditSystem::ReportedFailedCalendHasBeenReceived(CalendarFailureMessage message)
+{
+    uint160 calend_hash = message.details.mined_credit_message_hash;
+    MinedCreditMessage msg = msgdata[calend_hash]["msg"];
+    return IsCalend(msg.mined_credit.GetHash160());
+}
+
+bool CreditSystem::CalendarContainsAKnownBadCalend(Calendar &calendar_)
+{
+    for (auto calend : calendar_.calends)
+    {
+        if (creditdata[calend.GetHash160()].HasProperty("failure_details"))
+            return true;
+    }
+    return false;
+}
+
+void CreditSystem::StoreCalendsFromCalendar(Calendar &calendar_)
+{
+    for (auto calend : calendar_.calends)
+    {
+        msgdata[calend.GetHash160()]["msg"] = calend;
+    }
+}
+
+void CreditSystem::RemoveReportedTotalWorkOfMinedCreditsSucceedingInvalidCalend(CalendarFailureMessage message)
+{
+    uint160 calend_hash = message.details.mined_credit_message_hash;
+    MinedCreditMessage calend = msgdata[calend_hash]["msg"];
+    LocationIterator work_scanner = creditdata.LocationIterator("total_work");
+    work_scanner.Seek(calend.mined_credit.ReportedWork());
+
+    RemoveFromHashesAtLocation(calend.mined_credit.GetHash160(), calend.mined_credit.ReportedWork(), "total_work", creditdata);
+
+    std::vector<uint160> mined_credit_hashes;
+    uint160 reported_work;
+
+    uint160 previous_diurn_root = calend.mined_credit.network_state.DiurnRoot();
+    uint160 previous_credit_hash = calend.mined_credit.GetHash160();
+
+    work_scanner = creditdata.LocationIterator("total_work");
+    work_scanner.Seek(calend.mined_credit.ReportedWork());
+    while (work_scanner.GetNextObjectAndLocation(mined_credit_hashes, reported_work))
+    {
+        for (auto credit_hash : mined_credit_hashes)
+        {
+            MinedCreditMessage msg = creditdata[credit_hash]["msg"];
+            if (msg.mined_credit.network_state.previous_mined_credit_hash == previous_credit_hash or
+                    msg.mined_credit.network_state.previous_diurn_root == previous_diurn_root)
+            {
+                RemoveFromHashesAtLocation(credit_hash, reported_work, "total_work", creditdata);
+                previous_credit_hash = credit_hash;
+                previous_diurn_root = msg.mined_credit.network_state.previous_diurn_root;
+                work_scanner = creditdata.LocationIterator("total_work");
+                work_scanner.Seek(reported_work); // need new iterator because total_work dimension has changed
+            }
+        }
+    }
 }

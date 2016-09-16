@@ -2,8 +2,12 @@
 #define FLEX_LOCATIONITERATOR_H
 
 
+#include <src/crypto/uint256.h>
 #include "MockObject.h"
 #include "MockDimension.h"
+
+#include "log.h"
+#define LOG_CATEGORY "LocationIterator.h"
 
 typedef std::map<vch_t, vch_t> MockDataMap;
 
@@ -53,6 +57,15 @@ public:
     void SeekEnd();
 
     void SeekStart();
+
+    template <typename LOCATION_NAME>
+    void Seek(LOCATION_NAME location)
+    {
+        SeekStart();
+        vch_t serialized_location = Serialize(location);
+        while (internal_iterator != end and internal_iterator->first < serialized_location)
+            internal_iterator++;
+    }
 };
 
 

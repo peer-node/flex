@@ -235,6 +235,22 @@ TEST_F(ALocationIterator, CanBeResetToTheStartWithSeekStart)
     ASSERT_FALSE(scanner.GetNextObjectAndLocation(object, location));
 }
 
+TEST_F(ALocationIterator, CanSeekToASpecificLocation)
+{
+    scanner.Seek(12345678899);
+    ASSERT_TRUE(scanner.GetNextObjectAndLocation(object, location));
+    ASSERT_THAT(object, Eq(12345678900));
+    ASSERT_THAT(location, Eq(12345678900));
+    scanner.Seek((uint64_t)299);
+    ASSERT_TRUE(scanner.GetNextObjectAndLocation(object, location));
+    ASSERT_THAT(object, Eq(200));
+    ASSERT_THAT(location, Eq(300));
+    scanner.Seek((uint64_t)199);
+    ASSERT_TRUE(scanner.GetNextObjectAndLocation(object, location));
+    ASSERT_THAT(object, Eq(100));
+    ASSERT_THAT(location, Eq(200));
+}
+
 TEST_F(AMockDataStore, CanRemoveAnObjectFromALocation)
 {
     datastore[5].Location("lattitude") = 100;

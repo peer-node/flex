@@ -9,6 +9,8 @@ class CalendarFailureMessage
 public:
     CalendarFailureDetails details;
 
+    CalendarFailureMessage() { }
+
     CalendarFailureMessage(CalendarFailureDetails details_);
 
     static std::string Type() { return "calendar_failure"; }
@@ -17,6 +19,8 @@ public:
     (
         READWRITE(details);
     )
+
+    JSON(details);
 
     DEPENDENCIES();
 

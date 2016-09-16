@@ -31,6 +31,8 @@ public:
         READWRITE(request_hash);
     )
 
+    JSON(calendar, request_hash);
+
     DEPENDENCIES();
 
     uint160 GetHash160()

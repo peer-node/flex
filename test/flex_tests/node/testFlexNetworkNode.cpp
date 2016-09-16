@@ -146,11 +146,6 @@ public:
         node2.credit_message_handler->do_spot_checks = false;
 
         ConnectNodesViaPeers();
-
-        AddABatchToTheTip(&node1);
-        AddABatchToTheTip(&node1);
-
-        AddABatchToTheTip(&node2);
     }
 
     void ConnectNodesViaPeers()
@@ -185,7 +180,27 @@ public:
     }
 };
 
-TEST_F(TwoFlexNetworkNodesConnectedViaPeers, PassMessagesToOneAnother)
+
+class TwoFlexNetworkNodesWithSomeBatchesConnectedViaPeers : public TwoFlexNetworkNodesConnectedViaPeers
+{
+public:
+    virtual void SetUp()
+    {
+        TwoFlexNetworkNodesConnectedViaPeers::SetUp();
+        AddABatchToTheTip(&node1);
+        AddABatchToTheTip(&node1);
+
+        AddABatchToTheTip(&node2);
+    }
+
+    virtual void TearDown()
+    {
+        TwoFlexNetworkNodesConnectedViaPeers::TearDown();
+    }
+};
+
+
+TEST_F(TwoFlexNetworkNodesWithSomeBatchesConnectedViaPeers, PassMessagesToOneAnother)
 {
     TipRequestMessage tip_request;
     node1.HandleMessage(string("data"), GetDataStream("data", tip_request), (CNode*)&peer2); // unrequested
@@ -202,7 +217,7 @@ TEST_F(TwoFlexNetworkNodesConnectedViaPeers, SendTipRequests)
     ASSERT_TRUE(peer1.HasBeenInformedAbout("data", "tip_request", tip_request));
 }
 
-TEST_F(TwoFlexNetworkNodesConnectedViaPeers, SendTipsInResponseToRequests)
+TEST_F(TwoFlexNetworkNodesWithSomeBatchesConnectedViaPeers, SendTipsInResponseToRequests)
 {
     uint160 request_hash = node2.data_message_handler->RequestTips();
     // give node2 a very high total work so that the tip message doesn't provoke a calendar request
@@ -212,7 +227,7 @@ TEST_F(TwoFlexNetworkNodesConnectedViaPeers, SendTipsInResponseToRequests)
     ASSERT_TRUE(peer2.HasReceived("data", "tip", TipMessage(tip_request, &node1.calendar)));
 }
 
-class TwoFlexNetworkNodesWithValidProofsOfWorkConnectedViaPeers : public TwoFlexNetworkNodesConnectedViaPeers
+class TwoFlexNetworkNodesWithValidProofsOfWorkConnectedViaPeers : public TwoFlexNetworkNodesWithSomeBatchesConnectedViaPeers
 {
 public:
 
@@ -248,15 +263,32 @@ public:
     }
 };
 
+void WaitForCalendarSwitch(FlexNetworkNode &node, uint160 last_tip = 0)
+{
+    if (last_tip == 0)
+        last_tip = node.calendar.LastMinedCreditHash();
+    while (node.calendar.LastMinedCreditHash() == last_tip)
+    {
+        MilliSleep(10);
+        LOCK(node.credit_message_handler->calendar_mutex);
+    }
+}
+
 TEST_F(TwoFlexNetworkNodesWithValidProofsOfWorkConnectedViaPeers, AreSynchronized)
 {
-    AddABatchToTheTip(&node1);
-    AddABatchToTheTip(&node1);
+    auto original_node2_tip = node2.calendar.LastMinedCreditHash();
 
-    MilliSleep(200); // time for node2 to synchronize with node1
+    AddABatchToTheTip(&node1);
+    WaitForCalendarSwitch(node2, original_node2_tip);
+
+    auto intermediate_node2_tip = node2.calendar.LastMinedCreditHash();
+    AddABatchToTheTip(&node1);
+    WaitForCalendarSwitch(node2, intermediate_node2_tip);
+
+
+    auto intermediate_node1_tip = node1.calendar.LastMinedCreditHash();
     AddABatchToTheTip(&node2);
-
-    MilliSleep(200); // time for node1 to synchronize with node2
+    WaitForCalendarSwitch(node1, intermediate_node1_tip);
 
     ASSERT_THAT(node1.calendar.LastMinedCreditHash(), Eq(node2.calendar.LastMinedCreditHash()));
 
@@ -285,7 +317,7 @@ public:
 TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesAreAdded, SynchronizeThroughSharingMinedCreditMessages)
 {
     AddABatchToTheTip(&node1);
-    MilliSleep(100); // time for node2 to synchronize with node1
+    WaitForCalendarSwitch(node2); // wait for node2 to synchronize with node1
 
     ASSERT_THAT(node1.calendar.LastMinedCreditHash(), Eq(node2.calendar.LastMinedCreditHash()));
 }
@@ -293,7 +325,7 @@ TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesAreAdded, SynchronizeThroughShari
 TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesAreAdded, SynchronizeThroughAnInitialDataMessage)
 {
     node2.data_message_handler->RequestTips();
-    MilliSleep(100); // time for node2 to synchronize with node1
+    WaitForCalendarSwitch(node2); // wait for node2 to synchronize with node1
 
     ASSERT_THAT(node1.calendar.LastMinedCreditHash(), Eq(node2.calendar.LastMinedCreditHash()));
 }
@@ -322,7 +354,7 @@ public:
 TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesWithTransactionsAreAdded, SynchronizeThroughSharingMinedCreditMessages)
 {
     AddABatchToTheTip(&node1);
-    MilliSleep(100); // time for node2 to synchronize with node1
+    WaitForCalendarSwitch(node2); // wait for node2 to synchronize with node1
 
     ASSERT_THAT(node1.calendar.LastMinedCreditHash(), Eq(node2.calendar.LastMinedCreditHash()));
     ASSERT_THAT(node1.Balance(), Eq(ONE_CREDIT)); // mined two credits, spent 1
@@ -332,7 +364,7 @@ TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesWithTransactionsAreAdded, Synchro
 TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesWithTransactionsAreAdded, SynchronizeThroughAnInitialDataMessage)
 {
     node2.data_message_handler->RequestTips();
-    MilliSleep(100); // time for node2 to synchronize with node1
+    WaitForCalendarSwitch(node2); // wait for node2 to synchronize with node1
 
     ASSERT_THAT(node1.calendar.LastMinedCreditHash(), Eq(node2.calendar.LastMinedCreditHash()));
 }
@@ -367,7 +399,7 @@ public:
 TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesWithTransactionsAreAddedFollowedByCalends, SynchronizeThroughSharingMinedCreditMessages)
 {
     AddABatchToTheTip(&node1);
-    MilliSleep(200); // time for node2 to synchronize with node1
+    WaitForCalendarSwitch(node2); // wait for node2 to synchronize with node1
 
     ASSERT_THAT(node1.calendar.LastMinedCreditHash(), Eq(node2.calendar.LastMinedCreditHash()));
 }
@@ -375,7 +407,7 @@ TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesWithTransactionsAreAddedFollowedB
 TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesWithTransactionsAreAddedFollowedByCalends, SynchronizeThroughAnInitialDataMessage)
 {
     node2.data_message_handler->RequestTips();
-    MilliSleep(100); // time for node2 to synchronize with node1
+    WaitForCalendarSwitch(node2); // wait for node2 to synchronize with node1
 
     ASSERT_THAT(node1.calendar.LastMinedCreditHash(), Eq(node2.calendar.LastMinedCreditHash()));
 }
@@ -429,33 +461,6 @@ public:
         node1.StopCommunicator();
         node2.StopCommunicator();
     }
-};
-
-TEST_F(TwoFlexNetworkNodesWithCommunicators, ConnectToEachOther)
-{
-    ASSERT_THAT(node1.communicator->network.vNodes.size(), Eq(0));
-    ASSERT_THAT(node2.communicator->network.vNodes.size(), Eq(0));
-
-    string node2_address = string("127.0.0.1:") + PrintToString(port2);
-    node1.communicator->network.AddNode(node2_address);
-    MilliSleep(200);
-
-    ASSERT_THAT(node1.communicator->network.vNodes.size(), Eq(1));
-    ASSERT_THAT(node2.communicator->network.vNodes.size(), Eq(1));
-}
-
-class TwoFlexNetworkNodesConnectedViaCommunicators : public TwoFlexNetworkNodesWithCommunicators
-{
-public:
-
-    virtual void SetUp()
-    {
-        TwoFlexNetworkNodesWithCommunicators::SetUp();
-        node1.communicator->network.AddNode("127.0.0.1:" + PrintToString(port2));
-        SetMiningPreferences(node1);
-        SetMiningPreferences(node2);
-        MilliSleep(150);
-    }
 
     virtual void AddABatchToTheTip(FlexNetworkNode *flex_network_node)
     {
@@ -481,9 +486,200 @@ public:
     }
 };
 
+TEST_F(TwoFlexNetworkNodesWithCommunicators, ConnectToEachOther)
+{
+    ASSERT_THAT(node1.communicator->network.vNodes.size(), Eq(0));
+    ASSERT_THAT(node2.communicator->network.vNodes.size(), Eq(0));
+
+    string node2_address = string("127.0.0.1:") + PrintToString(port2);
+    node1.communicator->network.AddNode(node2_address);
+
+    node1.communicator->network.vNodes[0]->WaitForVersion();
+    node2.communicator->network.vNodes[0]->WaitForVersion();
+
+    ASSERT_THAT(node1.communicator->network.vNodes.size(), Eq(1));
+    ASSERT_THAT(node2.communicator->network.vNodes.size(), Eq(1));
+}
+
+class TwoFlexNetworkNodesConnectedViaCommunicators : public TwoFlexNetworkNodesWithCommunicators
+{
+public:
+
+    virtual void SetUp()
+    {
+        TwoFlexNetworkNodesWithCommunicators::SetUp();
+        node1.communicator->network.AddNode("127.0.0.1:" + PrintToString(port2));
+        SetMiningPreferences(node1);
+        SetMiningPreferences(node2);
+        MilliSleep(150);
+    }
+};
+
 TEST_F(TwoFlexNetworkNodesConnectedViaCommunicators, SendAndReceiveMessages)
 {
     AddABatchToTheTip(&node1);
-    MilliSleep(200);
+    WaitForCalendarSwitch(node2); // wait for node2 to synchronize with node1
     ASSERT_THAT(node1.calendar.LastMinedCreditHash(), Eq(node2.calendar.LastMinedCreditHash()));
+}
+
+class TwoFlexNetworkNodesConnectedViaCommunicatorsAfterOneHasBuiltACalendarWithAFailure :
+        public TwoFlexNetworkNodesWithCommunicators
+{
+public:
+    uint64_t bad_batch_number;
+
+    virtual void SetUp()
+    {
+        TwoFlexNetworkNodesWithCommunicators::SetUp();
+        SetMiningPreferences(node1);
+        SetMiningPreferences(node2);
+
+        BuildACalendarWithAFailure(node1);
+        node1.communicator->network.AddNode("127.0.0.1:" + PrintToString(port2));
+
+        node1.communicator->network.vNodes[0]->WaitForVersion();
+        node2.communicator->network.vNodes[0]->WaitForVersion();
+    }
+
+    void BuildACalendarWithAFailure(FlexNetworkNode &node)
+    {
+        while (node.calendar.calends.size() < 2)
+            AddABatchToTheTip(&node);
+
+        MinedCreditMessage calend = node.calendar.calends.back();
+        node.credit_message_handler->calendar->RemoveLast(node.credit_system);
+
+        calend.proof_of_work.proof.link_lengths[2] += 1;
+        node.credit_message_handler->AddToTip(calend);
+        bad_batch_number = calend.mined_credit.network_state.batch_number;
+
+        while (node.calendar.calends.size() < 5)
+            AddABatchToTheTip(&node);
+    }
+
+    virtual void TearDown()
+    {
+        TwoFlexNetworkNodesWithCommunicators::TearDown();
+    }
+};
+
+TEST_F(TwoFlexNetworkNodesConnectedViaCommunicatorsAfterOneHasBuiltACalendarWithAFailure, HaveDifferentCalendars)
+{
+    ASSERT_THAT(node1.calendar, Ne(node2.calendar));
+}
+
+TEST_F(TwoFlexNetworkNodesConnectedViaCommunicatorsAfterOneHasBuiltACalendarWithAFailure, HaveACalendarWithAFailure)
+{
+    bool ok = true;
+    CalendarFailureDetails details;
+    while (ok)
+        ok = node1.calendar.SpotCheckWork(details);
+    ASSERT_THAT(ok, Eq(false));
+}
+
+TEST_F(TwoFlexNetworkNodesConnectedViaCommunicatorsAfterOneHasBuiltACalendarWithAFailure,
+       SynchronizeToTheLastGoodMinedCreditIfTheFailureIsDetected)
+{
+    Calendar original_calendar = node1.calendar;
+    node2.data_message_handler->calendar_scrutiny_time = 100 * CALENDAR_SCRUTINY_TIME; // error will be found
+    node2.data_message_handler->RequestTips(); // node2 should inform node1 of the error
+
+    WaitForCalendarSwitch(node1, original_calendar.LastMinedCreditHash());
+
+    ASSERT_THAT(node1.calendar, Ne(original_calendar));
+    ASSERT_THAT(node1.calendar.calends.size(), Eq(1));
+    ASSERT_THAT(node1.calendar.LastMinedCredit().network_state.batch_number, Eq(bad_batch_number - 1));
+}
+
+
+
+class TwoFlexNetworkNodesConnectedViaPeersAfterOneHasBuiltACalendarWithAFailure :
+        public TwoFlexNetworkNodesConnectedViaCommunicatorsAfterOneHasBuiltACalendarWithAFailure
+{
+public:
+    TestPeerWithNetworkNode peer1, peer2;
+
+    virtual void SetUp()
+    {
+        TwoFlexNetworkNodesWithCommunicators::SetUp();
+        SetMiningPreferences(node1);
+        SetMiningPreferences(node2);
+
+        BuildACalendarWithAFailure(node1);
+        ConnectNodesViaPeers();
+    }
+
+    void ConnectNodesViaPeers()
+    {
+        peer1.id = 1;
+        peer2.id = 2;
+
+        peer1.SetNetworkNode(&node1);
+        peer2.SetNetworkNode(&node2);
+        peer1.network.vNodes.push_back(&peer2);
+        peer2.network.vNodes.push_back(&peer1);
+
+        node1.credit_message_handler->SetNetwork(peer1.network);
+        node2.credit_message_handler->SetNetwork(peer2.network);
+        node1.data_message_handler->SetNetwork(peer1.network);
+        node2.data_message_handler->SetNetwork(peer2.network);
+    }
+
+    virtual void TearDown()
+    {
+        peer1.StopGettingMessages();
+        peer2.StopGettingMessages();
+
+        MilliSleep(100);
+    }
+};
+
+TEST_F(TwoFlexNetworkNodesConnectedViaPeersAfterOneHasBuiltACalendarWithAFailure,
+       SynchronizeToTheLastGoodMinedCreditIfTheFailureIsDetected)
+{
+    Calendar original_calendar = node1.calendar;
+    node2.data_message_handler->calendar_scrutiny_time = 100 * CALENDAR_SCRUTINY_TIME; // error will be found
+    node2.data_message_handler->RequestTips(); // node2 should inform node1 of the error
+
+    WaitForCalendarSwitch(node1, original_calendar.LastMinedCreditHash());
+
+    ASSERT_THAT(node1.calendar, Ne(original_calendar));
+    ASSERT_THAT(node1.calendar.calends.size(), Eq(1));
+    ASSERT_THAT(node1.calendar.LastMinedCredit().network_state.batch_number, Eq(bad_batch_number - 1));
+}
+
+
+class TwoFlexNetworkNodesWhoHaveDetectedAFailureInACalendar :
+        public TwoFlexNetworkNodesConnectedViaPeersAfterOneHasBuiltACalendarWithAFailure
+{
+public:
+    Calendar original_calendar;
+
+    virtual void SetUp()
+    {
+        TwoFlexNetworkNodesConnectedViaPeersAfterOneHasBuiltACalendarWithAFailure::SetUp();
+
+        original_calendar = node1.calendar;
+        node2.data_message_handler->calendar_scrutiny_time = 100 * CALENDAR_SCRUTINY_TIME; // error will be found
+        node2.data_message_handler->RequestTips(); // node2 should inform node1 of the error
+
+        WaitForCalendarSwitch(node1, original_calendar.LastMinedCreditHash());
+    }
+
+};
+
+TEST_F(TwoFlexNetworkNodesWhoHaveDetectedAFailureInACalendar,
+       SendCalendarFailureMessagesInResponseToCalendarsWhichContainTheBadCalend)
+{
+    auto calendar_with_failure = original_calendar;
+    calendar_with_failure.RemoveLast(node1.credit_system);
+
+    CalendarRequestMessage request(calendar_with_failure.LastMinedCredit());
+    node2.msgdata[request.GetHash160()]["is_calendar_request"] = true;
+    CalendarMessage calendar_message(request, node1.credit_system);
+    node2.data_message_handler->HandleMessage(GetDataStream("data", calendar_message), &peer1);
+    MilliSleep(3000);
+    CalendarFailureDetails details = node2.data_message_handler->GetCalendarFailureDetails(calendar_with_failure);
+
+    ASSERT_TRUE(peer1.HasBeenInformedAbout("data", "calendar_failure", CalendarFailureMessage(details)));
 }

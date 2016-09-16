@@ -1,4 +1,6 @@
 #include <fstream>
+#include <src/base/util_time.h>
+#include <boost/filesystem.hpp>
 #include "gmock/gmock.h"
 #include "FlexConfig.h"
 #include "ConfigParser.h"
@@ -39,6 +41,15 @@ public:
         DeleteConfigFile();
     }
 };
+
+TEST_F(AConfigParser, CreatesTheDataDirectoryIfItDoesntExist)
+{
+    config_parser.config["datadir"] = "lq5ic7wsn3" + PrintToString(GetTimeMicros());
+    ASSERT_FALSE(config_parser.Exists(config_parser.config.String("datadir")));
+    config_parser.CreateDataDirectoryIfItDoesntExist();
+    ASSERT_TRUE(config_parser.Exists(config_parser.config.String("datadir")));
+    boost::filesystem::remove(config_parser.config.String("datadir"));
+}
 
 TEST_F(AConfigParser, ReadsAConfigFile)
 {

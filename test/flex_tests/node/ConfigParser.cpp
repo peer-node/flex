@@ -5,6 +5,8 @@
 #include <sys/stat.h>
 #include "ConfigParser.h"
 
+#include "log.h"
+#define LOG_CATEGORY "ConfigParser.cpp"
 
 void ConfigParser::ParseCommandLineArguments(int argc, const char **argv)
 {
@@ -81,6 +83,7 @@ bool ConfigParser::Exists(std::string config_filename)
 void ConfigParser::ReadConfigFile()
 {
     std::string config_filename = ConfigFileName().string();
+    CreateDataDirectoryIfItDoesntExist();
     if (not Exists(config_filename))
     {
         throw std::runtime_error("\nThe configuration file " + config_filename + " doesn't exist.\n");
@@ -101,6 +104,16 @@ void ConfigParser::ReadConfigFile()
 FlexConfig ConfigParser::GetConfig()
 {
     return config;
+}
+
+void ConfigParser::CreateDataDirectoryIfItDoesntExist()
+{
+    auto data_directory = GetDataDir().string();
+    if (not Exists(data_directory))
+    {
+        boost::filesystem::path data_dir_path(data_directory);
+        boost::filesystem::create_directory(data_dir_path);
+    }
 }
 
 

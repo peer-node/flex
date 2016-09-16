@@ -17,29 +17,35 @@ public:
 
     TestPeerWithNetworkNode()
     {
-        boost::thread t(&TestPeerWithNetworkNode::GetMessages, this);
-        thread = &t;
+        thread = new boost::thread(&TestPeerWithNetworkNode::GetMessages, this);
     }
 
     ~TestPeerWithNetworkNode()
-    { }
+    {
+    }
 
     void StopGettingMessages()
-    {
+    {   // this must be called before the peer destructs
         getting_messages = false;
+        thread->join();
     }
 
     void GetMessages()
     {
+        std::vector<CInv> inventory;
         while (getting_messages)
         {
-            for (auto inv : vInventoryToSend)
-                GetMessageIfItHasNotAlreadyBeenProcessed(inv);
-
+            boost::this_thread::sleep(boost::posix_time::milliseconds(20));
             boost::this_thread::interruption_point();
             if (not getting_messages)
                 return;
-            boost::this_thread::sleep(boost::posix_time::milliseconds(20));
+            {
+                inventory = vInventoryToSend;
+            }
+            for (auto inv : inventory)
+            {
+                GetMessageIfItHasNotAlreadyBeenProcessed(inv);
+            }
         }
     }
 
@@ -63,12 +69,20 @@ public:
 
     CDataStream GetDataStreamForInv(CInv inv)
     {
-        for (auto peer : network.vNodes)
+        LOCK(network.cs_vNodes);
+        for (uint32_t tries = 0; tries < 5; tries++)
         {
-            if (peer->network.mapRelay.count(inv))
-                return (*peer->network.mapRelay.find(inv)).second;
+            for (auto peer : network.vNodes)
+            {
+                LOCK(peer->network.cs_mapRelay);
+                if (peer->network.mapRelay.count(inv))
+                {
+                    return (*peer->network.mapRelay.find(inv)).second;
+                }
+            }
+            MilliSleep(5);
         }
-        log_ << "Coudn't find datastream for inv " << inv.hash << "\n";
+        log_ << "Couldn't find datastream for inv " << inv.hash << "\n";
         return CDataStream(SER_NETWORK, CLIENT_VERSION);
     }
 

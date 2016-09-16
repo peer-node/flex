@@ -9,6 +9,8 @@
 #include <src/credits/CreditBatch.h>
 #include "MinedCreditMessage.h"
 #include "Calend.h"
+#include "CalendarFailureMessage.h"
+#include "Calendar.h"
 
 
 #define TARGET_BATCH_INTERVAL 60000000ULL // one minute
@@ -148,6 +150,26 @@ public:
     bool MinedCreditWasRecordedToHaveTotalWork(uint160 credit_hash, uint160 total_work);
 
     void AddCreditHashAndPredecessorsToMainChain(uint160 credit_hash);
+
+    void MarkCalendAndSucceedingCalendsAsInvalid(uint160 message, uint160 failure_message_hash);
+
+    bool CalendHasReportedFailure(uint160 calend_hash);
+
+    bool ReportedFailedCalendHasBeenReceived(CalendarFailureMessage message);
+
+    void RecordReportedFailureOfCalend(CalendarFailureMessage message);
+
+    void MarkCalendAndSucceedingCalendsAsInvalid(uint160 calend_hash);
+
+    bool CalendarContainsAKnownBadCalend(Calendar &calendar);
+
+    void MarkCalendAndSucceedingCalendsAsInvalid(CalendarFailureMessage message);
+
+    void StoreCalendsFromCalendar(Calendar &calendar_);
+
+    void RemoveReportedTotalWorkOfMinedCreditsSucceedingInvalidCalend(CalendarFailureMessage message);
+
+    std::vector<uint160> GetInvalidCalends();
 };
 
 

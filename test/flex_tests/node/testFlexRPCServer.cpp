@@ -233,6 +233,23 @@ TEST_F(AFlexRPCServerWithAFlexNetworkNodeAndABalance, SendsCreditsToAnAddress)
     ASSERT_THAT(result.asString(), Eq("1.00"));
 }
 
+
+TEST_F(AFlexRPCServerWithAFlexNetworkNodeAndABalance, GetsTransactions)
+{
+    Point public_key(SECP256K1, 2);
+    string address = GetAddressFromPublicKey(public_key);
+    parameters.append(address);
+    parameters.append("1");
+    auto result = client->CallMethod("sendtoaddress", parameters);
+    std::string tx_hash = result.asString();
+    AddABatchToTheTip();
+
+    parameters.resize(0);
+    parameters.append(tx_hash);
+    result = client->CallMethod("gettransaction", parameters);
+    ASSERT_THAT(result["rawtx"]["inputs"].size(), Gt(0));
+}
+
 TEST_F(AFlexRPCServerWithAFlexNetworkNodeAndABalance, ThrowsAnErrorIfABadAddressIsGiven)
 {
     string address = GetAddressFromPublicKey(Point(SECP256K1, 2));
@@ -369,7 +386,7 @@ TEST_F(AFlexRPCServerConnectedToARemoteFlexNetworkNode, SynchronizesWithTheRemot
     ASSERT_THAT(flex_network_node.calendar.LastMinedCreditHash(), Eq(0));
 
     AddABatchToTheTip(&flex_network_node);
-    MilliSleep(200);
+    MilliSleep(300);
 
     ASSERT_THAT(flex_network_node.calendar.LastMinedCreditHash(), Ne(0));
     ASSERT_THAT(flex_network_node.calendar.LastMinedCreditHash(), Eq(remote_network_node.calendar.LastMinedCreditHash()));

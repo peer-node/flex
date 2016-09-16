@@ -135,6 +135,11 @@ bool DataMessageHandler::ValidateCalendarMessage(CalendarMessage calendar_messag
 
 void DataMessageHandler::HandleCalendarMessage(CalendarMessage calendar_message)
 {
+    if (credit_system->CalendarContainsAKnownBadCalend(calendar_message.calendar))
+    {
+        SendCalendarFailureMessageInResponseToCalendarMessage(calendar_message);
+        return;
+    }
     if (not ValidateCalendarMessage(calendar_message))
     {
         RejectMessage(calendar_message.GetHash160());
@@ -147,6 +152,8 @@ void DataMessageHandler::HandleIncomingCalendar(CalendarMessage calendar_message
 {
     uint160 reported_work = calendar_message.calendar.LastMinedCredit().ReportedWork();
     credit_system->RecordCalendarReportedWork(calendar_message, reported_work);
+    credit_system->StoreCalendsFromCalendar(calendar_message.calendar);
+
     uint160 maximum_reported_work = credit_system->MaximumReportedCalendarWork();
 
     bool ok = false;
@@ -158,6 +165,7 @@ void DataMessageHandler::HandleIncomingCalendar(CalendarMessage calendar_message
             CalendarFailureDetails details = creditdata[calendar_message.GetHash160()]["failure_details"];
             CalendarFailureMessage failure_message(details);
             Broadcast(failure_message);
+            HandleCalendarFailureMessage(failure_message);
         }
         else
         {
@@ -192,6 +200,7 @@ bool DataMessageHandler::ScrutinizeCalendarWithTheMostWork()
     if (not ok)
     {
         creditdata[message_hash]["failure_details"] = details;
+        creditdata[details.mined_credit_message_hash]["failure_details"] = details;
     }
     else
     {
@@ -491,4 +500,50 @@ void DataMessageHandler::TrimLastDiurnFromCalendar(Calendar& calendar, CreditSys
 void DataMessageHandler::SetNetworkNode(FlexNetworkNode *flex_network_node_)
 {
     flex_network_node = flex_network_node_;
+}
+
+void DataMessageHandler::HandleCalendarFailureMessage(CalendarFailureMessage message)
+{
+    if (not credit_system->ReportedFailedCalendHasBeenReceived(message))
+    {
+        credit_system->RecordReportedFailureOfCalend(message);
+        return;
+    }
+    if (not ValidateCalendarFailureMessage(message))
+        return;
+    MarkCalendarsAsInvalidAndSwitchToNewCalendar(message);
+}
+
+bool DataMessageHandler::ValidateCalendarFailureMessage(CalendarFailureMessage message)
+{
+    MinedCreditMessage msg = msgdata[message.details.mined_credit_message_hash]["msg"];
+    TwistWorkCheck &check = message.details.check;
+    return (bool) check.VerifyInvalid(msg.proof_of_work.proof);
+}
+
+void DataMessageHandler::MarkCalendarsAsInvalidAndSwitchToNewCalendar(CalendarFailureMessage message)
+{
+    credit_system->MarkCalendAndSucceedingCalendsAsInvalid(message);
+    credit_system->RemoveReportedTotalWorkOfMinedCreditsSucceedingInvalidCalend(message);
+    if (flex_network_node != NULL)
+        flex_network_node->credit_message_handler->SwitchToNewTipIfAppropriate();
+}
+
+CalendarFailureDetails DataMessageHandler::GetCalendarFailureDetails(Calendar& calendar_)
+{
+    for (auto calend : calendar_.calends)
+        if (creditdata[calend.GetHash160()].HasProperty("failure_details"))
+        {
+            return creditdata[calend.GetHash160()]["failure_details"];
+        }
+    return CalendarFailureDetails();
+}
+
+void DataMessageHandler::SendCalendarFailureMessageInResponseToCalendarMessage(CalendarMessage calendar_message)
+{
+    CalendarFailureDetails details = GetCalendarFailureDetails(calendar_message.calendar);
+    CalendarFailureMessage failure_message(details);
+    CNode *peer = GetPeer(calendar_message.GetHash160());
+    if (peer != NULL)
+        peer->PushMessage("data", "calendar_failure", failure_message);
 }

@@ -310,6 +310,21 @@ TEST_F(ADataMessageHandlerWithACalendarWithCalends, SendsACalendarFailureMessage
     ASSERT_TRUE(peer.HasBeenInformedAbout("data", "calendar_failure", CalendarFailureMessage(details)));
 }
 
+TEST_F(ADataMessageHandlerWithACalendarWithCalends,
+       RecordsTheMinedCreditMessageHashIfACalendarFailureMessageRefersToACalendNotYetReceived)
+{
+    CalendarFailureDetails details;
+    details.mined_credit_message_hash = 2;
+
+    CalendarFailureMessage failure_message(details);
+    data_message_handler->HandleMessage(GetDataStream(failure_message), &peer);
+
+    bool calend_has_reported_failure = credit_system->CalendHasReportedFailure(details.mined_credit_message_hash);
+    ASSERT_THAT(calend_has_reported_failure, Eq(true));
+}
+
+
+
 CalendarMessage ADataMessageHandlerWithACalendarWithCalends::CalendarMessageWithACalendarWithTheMostWork()
 {
     Calendar new_calendar = *calendar;

@@ -51,7 +51,7 @@ int main(int argc, char** argv)
     options_description program_options("Options");
     program_options.add_options()
       ("help,h", "Print help message")
-      ("port,p", value<int>()->default_value(8385), "port to listen on")
+      ("port,p", value<int>()->default_value(8339), "port to listen on")
       ("sslkey,k", value<string>(), "ssl key file")
       ("sslcert,c", value<string>(), "ssl certificate file");
 

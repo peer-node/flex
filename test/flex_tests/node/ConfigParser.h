@@ -27,6 +27,8 @@ public:
     FlexConfig GetConfig();
 
     bool Exists(std::string config_filename);
+
+    void CreateDataDirectoryIfItDoesntExist();
 };
 
 

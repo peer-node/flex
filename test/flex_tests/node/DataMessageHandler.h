@@ -13,7 +13,7 @@
 #include "CalendarFailureDetails.h"
 #include "InitialDataRequestMessage.h"
 #include "InitialDataMessage.h"
-
+#include "CalendarFailureMessage.h"
 
 
 #define CALENDAR_SCRUTINY_TIME 5000000 // microseconds
@@ -46,6 +46,7 @@ public:
         HANDLESTREAM(CalendarMessage);
         HANDLESTREAM(InitialDataRequestMessage);
         HANDLESTREAM(InitialDataMessage);
+        HANDLESTREAM(CalendarFailureMessage);
     }
 
     void HandleMessage(uint160 message_hash)
@@ -56,6 +57,7 @@ public:
         HANDLEHASH(CalendarMessage);
         HANDLEHASH(InitialDataRequestMessage);
         HANDLEHASH(InitialDataMessage);
+        HANDLEHASH(CalendarFailureMessage);
     }
 
     HANDLECLASS(TipRequestMessage);
@@ -64,12 +66,15 @@ public:
     HANDLECLASS(CalendarMessage);
     HANDLECLASS(InitialDataRequestMessage);
     HANDLECLASS(InitialDataMessage);
+    HANDLECLASS(CalendarFailureMessage);
 
     void HandleTipRequestMessage(TipRequestMessage request);
 
     void HandleTipMessage(TipMessage message);
 
     void HandleCalendarRequestMessage(CalendarRequestMessage request);
+
+    void HandleCalendarFailureMessage(CalendarFailureMessage message);
 
     void HandleInitialDataRequestMessage(InitialDataRequestMessage request);
 
@@ -144,6 +149,16 @@ public:
     void UseInitialDataMessageAndCalendar(InitialDataMessage initial_data_message, Calendar new_calendar);
 
     void MarkMinedCreditMessagesInInitialDataMessageAsValidated(InitialDataMessage initial_data_message);
+
+    bool ValidateCalendarFailureMessage(CalendarFailureMessage message);
+
+    void MarkCalendarsAsInvalidAndSwitchToNewCalendar(CalendarFailureMessage message);
+
+    Calendar GetCalendarFromCalendarFailureMessage(CalendarFailureMessage message);
+
+    void SendCalendarFailureMessageInResponseToCalendarMessage(CalendarMessage calendar_message);
+
+    CalendarFailureDetails GetCalendarFailureDetails(Calendar &calendar_);
 };
 
 void LoadHashesIntoDataStoreFromMessageTypesAndContents(MemoryDataStore &hashdata,

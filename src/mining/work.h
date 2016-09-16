@@ -115,7 +115,7 @@ public:
         READWRITE(failure_seed);
     )
 
-    JSON(proof_hash, valid, failure_step, failure_link, failure_seed);
+    JSON(proof_hash, failure_step, failure_link, failure_seed, valid);
 
     uint256 GetHash();
 

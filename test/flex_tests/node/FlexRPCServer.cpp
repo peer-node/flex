@@ -3,6 +3,9 @@
 #include "FlexRPCServer.h"
 #include "FlexLocalServer.h"
 
+#include "log.h"
+#define LOG_CATEGORY "FlexRPCServer.cpp"
+
 void FlexRPCServer::BindMethod(const char* method_name,
                                void (FlexRPCServer::*method)(const Json::Value &,Json::Value &))
 {
@@ -175,5 +178,13 @@ void FlexRPCServer::ListUnspent(const Json::Value &request, Json::Value &respons
         result.append(GetJsonValue(credit));
 
     response = result;
+}
+
+void FlexRPCServer::GetTransaction(const Json::Value &request, Json::Value &response)
+{
+    std::string tx_hash_string = request[0].asString();
+    uint160 tx_hash(tx_hash_string);
+    SignedTransaction tx = flex_local_server->flex_network_node->msgdata[tx_hash]["tx"];
+    response = GetJsonValue(tx);
 }
 
