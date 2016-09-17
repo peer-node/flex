@@ -1,6 +1,7 @@
 #ifndef FLEX_LOCATION_H
 #define FLEX_LOCATION_H
 
+#include <src/base/sync.h>
 #include "MockData.h"
 
 
@@ -10,6 +11,19 @@ class MockDimension : public MockData
 {
 public:
     MockDataMap located_serialized_objects;
+    Mutex mutex;
+
+    MockDimension() { }
+
+    MockDimension(const MockDimension& other)
+    {
+        located_serialized_objects = other.located_serialized_objects;
+    }
+
+    MockDimension& operator=(const MockDimension& other)
+    {
+        located_serialized_objects = other.located_serialized_objects;
+    }
 
     bool Find(vch_t serialized_object_name, vch_t& location_value)
     {

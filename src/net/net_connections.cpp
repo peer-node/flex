@@ -47,6 +47,7 @@ void Network::OpenConnectionsIteration(int64_t& nStart)
         }
     }
 
+    boost::this_thread::interruption_point();
     int64_t nANow = GetAdjustedTime();
 
     int nTries = 0;

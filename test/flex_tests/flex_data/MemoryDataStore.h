@@ -5,17 +5,30 @@
 #include "LocationIterator.h"
 #include "MockDimension.h"
 
+#include "log.h"
+#define LOG_CATEGORY "MemoryDataStore.h"
+
 class MemoryDataStore : MockData
 {
 public:
     std::map<vch_t, MockObject> objects;
     std::map<vch_t, MockDimension> dimensions;
+    Mutex objects_mutex, dimensions_mutex;
+
+    MemoryDataStore() { }
+
+    MemoryDataStore(const MemoryDataStore& other)
+    {
+        objects = other.objects;
+        dimensions = other.dimensions;
+    }
 
     template <typename OBJECT_NAME>
     MockObject& operator[](const OBJECT_NAME& object_name)
     {
         vch_t serialized_name = Serialize(object_name);
 
+        LOCK(objects_mutex);
         if (not objects.count(serialized_name))
             objects[serialized_name] = MockObject(serialized_name, &dimensions);
 
@@ -30,6 +43,7 @@ public:
     template <typename OBJECT_NAME>
     void Delete(const OBJECT_NAME& object_name)
     {
+        LOCK(objects_mutex);
         objects.erase(Serialize(object_name));
     }
 
@@ -40,6 +54,7 @@ public:
     {
         vch_t serialized_location_name = MemoryDataStore::Serialize(location_name);
 
+        LOCK(dimensions_mutex);
         if (not dimensions.count(serialized_location_name))
             dimensions[serialized_location_name] = MockDimension();
 
@@ -54,6 +69,7 @@ public:
     template <typename LOCATION_NAME, typename LOCATION_VALUE>
     void RemoveFromLocation(LOCATION_NAME location_name, LOCATION_VALUE location_value)
     {
+        LOCK(dimensions_mutex);
         vch_t serialized_location_name = MemoryDataStore::Serialize(location_name);
         if (not dimensions.count(serialized_location_name))
             return;
@@ -75,6 +91,7 @@ public:
     template <typename OBJECT_NAME, typename LOCATION_NAME, typename LOCATION_VALUE>
     void GetObjectAtLocation(OBJECT_NAME& object_name, LOCATION_NAME location_name, LOCATION_VALUE location_value)
     {
+        LOCK(dimensions_mutex);
         vch_t serialized_location_name = MemoryDataStore::Serialize(location_name);
         if (not dimensions.count(serialized_location_name))
             return;

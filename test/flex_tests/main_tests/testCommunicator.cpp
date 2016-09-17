@@ -39,8 +39,8 @@ public:
     virtual void SetUp()
     {
         MilliSleep(100);
-        uint64_t port1 = 10000 + GetRand(10000);;
-        uint64_t port2 = 10000 + GetRand(10000);;
+        uint64_t port1 = 10000 + GetRand(10000);
+        uint64_t port2 = port1 + 1;
         communicator1 = new Communicator("1", port1);
         communicator2 = new Communicator("2", port2);
 
