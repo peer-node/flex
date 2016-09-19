@@ -403,10 +403,10 @@ TEST_F(AFlexRPCServerConnectedToARemoteFlexNetworkNode, SynchronizesWithTheRemot
     parameters.append(std::string("127.0.0.1:" + PrintToString(remote_node_port)));
     auto result = client->CallMethod("addnode", parameters); // reconnect
 
-    MilliSleep(200);
+    MilliSleep(150);
     client->CallMethod("requesttips", parameters);
 
-    MilliSleep(500);
+    MilliSleep(800);
 
     ASSERT_THAT(flex_network_node.calendar.LastMinedCreditHash(), Ne(0));
     ASSERT_THAT(flex_network_node.calendar.LastMinedCreditHash(), Eq(remote_network_node.calendar.LastMinedCreditHash()));

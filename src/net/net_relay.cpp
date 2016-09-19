@@ -4,21 +4,6 @@
 #include "log.h"
 #define LOG_CATEGORY "net_relay.cpp"
 
-void Network::TellNodeAboutTransaction(CNode* pnode, const SignedTransaction& tx)
-{
-    uint256 hash = tx.GetHash();
-    CInv inv(MSG_TX, hash);
-    CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
-    ss.reserve(10000);
-    ss << tx;
-
-    mapRelay.insert(std::make_pair(inv, ss));
-    LOCK(cs_vNodes);
-    {
-        pnode->PushInventory(inv);
-    }
-}
-
 void Network::ExpireOldRelayMessages()
 {
     while (not vRelayExpiration.empty() and vRelayExpiration.front().first < GetTime())

@@ -391,6 +391,25 @@ public:
         }
     }
 
+    template<typename T1>
+    void PushMessage(const char* pszCommand, const char* pszSubCommand,
+                     const char *pszThirdCommand, const T1& a1)
+    {
+        try
+        {
+            BeginMessage(pszCommand);
+            ssSend << std::string(pszSubCommand);
+            ssSend << std::string(pszThirdCommand);
+            ssSend << a1;
+            EndMessage();
+        }
+        catch (...)
+        {
+            AbortMessage();
+            throw;
+        }
+    }
+
     template<typename T1, typename T2>
     void PushMessage(const char* pszCommand, const T1& a1, const T2& a2)
     {

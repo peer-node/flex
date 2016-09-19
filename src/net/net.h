@@ -238,8 +238,6 @@ public:
 
     void StartSync(const std::vector<CNode *> &vNodes);
 
-    void TellNodeAboutTransaction(CNode *pnode, const SignedTransaction &tx);
-
     void RelayMessage(const CDataStream &ss, int type);
 
     void TraceThreadGetMyExternalIP();

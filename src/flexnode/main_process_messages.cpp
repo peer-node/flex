@@ -14,18 +14,6 @@ using namespace boost;
 #include "log.h"
 #define LOG_CATEGORY "main_process_messages.cpp"
 
-bool MainRoutine::AlreadyHave(const CInv& inv)
-{
-    //return flex_network_node->HaveInventory(inv);
-    return false;
-}
-
-bool MainRoutine::IsInitialBlockDownload()
-{
-    //return not flex_network_node->IsFinishedDownloading();
-    return false;
-}
-
 void MainRoutine::ProcessGetData(CNode* pfrom)
 {
     std::deque<CInv>::iterator it = pfrom->vRecvGetData.begin();
@@ -45,19 +33,7 @@ void MainRoutine::ProcessGetData(CNode* pfrom)
             boost::this_thread::interruption_point();
             it++;
 
-            if (inv.type == MSG_BLOCK)
-            {
-                log_ << "block with hash: " << inv.hash << "\n";
-//                MinedCreditMessage msg = creditdata[inv.hash]["msg"];
-//                log_ << "that block has mined credit: "
-//                << msg.mined_credit << "\n";
-//                pfrom->PushMessage("block", msg);
-//                log_ << "Sending minedcreditmessage "
-//                << msg.GetHash() << "\n";
-//                log_ << "hashes: " << msg.hash_list.short_hashes.size()
-//                << "\n";
-            }
-            else if (inv.IsKnownType())
+            if (inv.IsKnownType())
             {
                 // Send stream from relay memory
                 bool pushed = false;
@@ -68,13 +44,6 @@ void MainRoutine::ProcessGetData(CNode* pfrom)
                         pfrom->PushMessage(inv.GetCommand(), (*mi).second);
                         pushed = true;
                     }
-                }
-                if (!pushed && inv.type == MSG_TX) {
-//                    SignedTransaction tx = creditdata[inv.hash]["tx"];
-//                    pfrom->PushMessage("tx", tx);
-//                    std::cout << "Sending SignedTransaction "
-//                    << tx.GetHash().ToString() << "\n";
-//                    pushed = true;
                 }
                 if (!pushed) {
                     vNotFound.push_back(inv);
@@ -101,14 +70,11 @@ void MainRoutine::ProcessGetData(CNode* pfrom)
 bool MainRoutine::ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
 {
     if (flex_network_node == NULL)
-    {
-        log_ << routine_name << " no flex_network_node available to process message: " << strCommand << "\n";
         return true;
-    }
+
     LOCK(flex_network_node->credit_message_handler->calendar_mutex);
 
     RandAddSeedPerfmon();
-    log_ << "received: " << strCommand << " (" << vRecv.size() << " bytes)\n";
 
     if (mapArgs.count("-dropmessagestest") && GetRand(atoi(mapArgs["-dropmessagestest"])) == 0)
     {
@@ -190,7 +156,7 @@ bool MainRoutine::ProcessMessage(CNode* pfrom, string strCommand, CDataStream& v
         pfrom->PushMessage("verack");
         pfrom->ssSend.SetVersion(min(pfrom->nVersion, PROTOCOL_VERSION));
 
-        if (!pfrom->fInbound && !IsInitialBlockDownload())
+        if (!pfrom->fInbound)
         {
             // Advertise our address
             if (!fNoListen)
@@ -338,7 +304,7 @@ bool MainRoutine::ProcessMessage(CNode* pfrom, string strCommand, CDataStream& v
 
             log_ << "hash is " << inv.hash << "\n";
 
-            if (!fAlreadyHave && !IsInitialBlockDownload())
+            if (!fAlreadyHave)
             {
                 if (inv.type == MSG_BLOCK)
                     AddBlockToQueue(pfrom->GetId(), inv.hash);
@@ -376,7 +342,7 @@ bool MainRoutine::ProcessMessage(CNode* pfrom, string strCommand, CDataStream& v
     {
         pfrom->vAddrToSend.clear();
         vector<CAddress> vAddr = network->addrman.GetAddr();
-        BOOST_FOREACH(const CAddress &addr, vAddr)
+        for (auto addr : vAddr)
             pfrom->PushAddress(addr);
     }
 
@@ -535,7 +501,6 @@ bool MainRoutine::ProcessMessages(CNode* pfrom)
             continue;
         }
         string strCommand = hdr.GetCommand();
-        log_ << "ProcessMessages(): strCommand is " << strCommand << "\n";
 
         // Message size
         unsigned int nMessageSize = hdr.nMessageSize;

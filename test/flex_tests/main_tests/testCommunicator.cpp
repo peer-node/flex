@@ -12,7 +12,7 @@ TEST(ACommunicator, ListensToAnotherCommunicator)
 {
     MilliSleep(100);
     uint64_t port1 = 10000 + GetRand(10000);
-    uint64_t port2 = 10000 + GetRand(10000);
+    uint64_t port2 = port1 + 1;
     Communicator communicator1("1", port1);
     Communicator communicator2("2", port2);
 
@@ -38,7 +38,6 @@ public:
 
     virtual void SetUp()
     {
-        MilliSleep(100);
         uint64_t port1 = 10000 + GetRand(10000);
         uint64_t port2 = port1 + 1;
         communicator1 = new Communicator("1", port1);
@@ -82,10 +81,16 @@ public:
         TwoConnectedCommunicators::SetUp();
         communicator1->main_node.SetFlexNetworkNode(*flex_network_node1);
         communicator2->main_node.SetFlexNetworkNode(*flex_network_node2);
+
+        MilliSleep(100);
+
+        communicator2->Node(0)->WaitForVersion();
+        communicator1->Node(0)->WaitForVersion();
     }
 
     virtual void TearDown()
     {
+        MilliSleep(50);
         TwoConnectedCommunicators::TearDown();
         delete flex_network_node1;
         delete flex_network_node2;
@@ -98,16 +103,12 @@ TEST_F(TwoConnectedCommunicatorsWithFlexNetworkNodes, AreConnected)
     MilliSleep(100);
     ASSERT_THAT(communicator1->network.vNodes.size(), Eq(1));
     ASSERT_THAT(communicator2->network.vNodes.size(), Eq(1));
-    MilliSleep(50);
 }
 
 TEST_F(TwoConnectedCommunicatorsWithFlexNetworkNodes, SendAndReceiveMessages)
 {
-    MilliSleep(100);
-
     SignedTransaction tx;
 
-    communicator2->Node(0)->WaitForVersion();
     communicator2->Node(0)->PushMessage("credit", "tx", tx);
 
     MilliSleep(100);

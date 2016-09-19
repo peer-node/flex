@@ -15,11 +15,19 @@ uint64_t FlexNetworkNode::Balance()
 
 void FlexNetworkNode::HandleMessage(std::string channel, CDataStream stream, CNode *peer)
 {
+    RecordReceiptOfMessage(channel, stream);
     if (channel == "credit")
         credit_message_handler->HandleMessage(stream, peer);
 
     if (channel == "data")
         data_message_handler->HandleMessage(stream, peer);
+}
+
+void FlexNetworkNode::RecordReceiptOfMessage(std::string channel, CDataStream stream)
+{
+    uint256 message_hash = Hash(stream.begin(), stream.end());
+    if (communicator != NULL and communicator->network.main_routine != NULL)
+        communicator->network.main_routine->invs_received.insert(CInv(MSG_GENERAL, message_hash));
 }
 
 MinedCreditMessage FlexNetworkNode::Tip()

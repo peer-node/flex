@@ -18,8 +18,8 @@ static const char* ppszTypeName[] =
     "tx",
     "block",
     "trade",
-    "relay",
-    "deposit",
+    "credit",
+    "data",
     "general"
 };
 

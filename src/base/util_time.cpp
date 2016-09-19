@@ -94,7 +94,6 @@ void AddTimeData(const CNetAddr& ip, int64_t nTime)
                     string strMessage = _("Warning: Please check that your computer's date and time are correct! If your clock is wrong Flex will not work properly.");
                     strMiscWarning = strMessage;
                     LogPrintf("*** %s\n", strMessage);
-                    uiInterface.ThreadSafeMessageBox(strMessage, "", CClientUIInterface::MSG_WARNING);
                 }
             }
         }

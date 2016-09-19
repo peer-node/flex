@@ -115,7 +115,6 @@ void Network::SocketHandlerIteration(unsigned int& nPrevNodeCount)
     }
     if(vNodes.size() != nPrevNodeCount) {
         nPrevNodeCount = vNodes.size();
-        uiInterface.NotifyNumConnectionsChanged(nPrevNodeCount);
     }
 
 
@@ -260,10 +259,10 @@ void Network::SocketHandlerIteration(unsigned int& nPrevNodeCount)
     {
         LOCK(cs_vNodes);
         vNodesCopy = vNodes;
-        BOOST_FOREACH(CNode* pnode, vNodesCopy)
-                        pnode->AddRef();
+        for (auto pnode : vNodesCopy)
+            pnode->AddRef();
     }
-    BOOST_FOREACH(CNode* pnode, vNodesCopy)
+    for (auto pnode : vNodesCopy)
     {
         boost::this_thread::interruption_point();
 

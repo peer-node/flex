@@ -22,6 +22,7 @@ public:
 
     ~TestPeerWithNetworkNode()
     {
+        delete thread;
     }
 
     void StopGettingMessages()

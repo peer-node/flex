@@ -154,8 +154,6 @@ public:
 
     void MarkCalendarsAsInvalidAndSwitchToNewCalendar(CalendarFailureMessage message);
 
-    Calendar GetCalendarFromCalendarFailureMessage(CalendarFailureMessage message);
-
     void SendCalendarFailureMessageInResponseToCalendarMessage(CalendarMessage calendar_message);
 
     CalendarFailureDetails GetCalendarFailureDetails(Calendar &calendar_);

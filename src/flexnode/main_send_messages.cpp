@@ -9,6 +9,11 @@
 
 using namespace std;
 
+bool MainRoutine::AlreadyHave(const CInv& inv)
+{
+    return (bool) invs_received.count(inv);
+}
+
 bool MainRoutine::SendMessages(CNode* pto)
 {
     {
@@ -49,7 +54,7 @@ bool MainRoutine::SendMessages(CNode* pto)
 
         // Address refresh broadcast
         static int64_t nLastRebroadcast;
-        if (!IsInitialBlockDownload() && (GetTime() - nLastRebroadcast > 24 * 60 * 60))
+        if (GetTime() - nLastRebroadcast > 24 * 60 * 60)
         {
             {
                 LOCK(network->cs_vNodes);
@@ -96,13 +101,7 @@ bool MainRoutine::SendMessages(CNode* pto)
             pto->fStartSync = false;
         }
 
-        // Resend wallet transactions that haven't gotten in a block yet
-        // Except during reindex, importing and IBD, when old wallet
-        // transactions become unconfirmed and spams other nodes.
-        if (!IsInitialBlockDownload())
-        {
-            g_signals.Broadcast();
-        }
+        g_signals.Broadcast();
 
         //
         // Message: inventory

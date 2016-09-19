@@ -41,7 +41,8 @@ bool Wallet::PrivateKeyIsKnown(CreditInBatch credit_in_batch)
     }
     Point pubkey;
     pubkey.setvch(credit_in_batch.keydata);
-    return PrivateKeyIsKnown(pubkey);
+    bool known = PrivateKeyIsKnown(pubkey);
+    return known;
 }
 
 bool Wallet::PrivateKeyIsKnown(Point public_key)

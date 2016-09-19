@@ -233,7 +233,7 @@ set<uint64_t> CreditSystem::GetPositionsOfCreditsSpentInBatch(uint160 credit_has
     msg = creditdata[credit_hash]["msg"];
     if (not msg.hash_list.RecoverFullHashes(msgdata))
     {
-        log_ << "failed to recover full hashes for " << credit_hash << "\n";
+        // log_ << "failed to recover full hashes for " << credit_hash << "\n";
     }
 
     for (auto message_hash : msg.hash_list.full_hashes)

@@ -19,7 +19,7 @@ public:
     DataMessageHandler *data_message_handler;
     CreditSystem *credit_system;
     BitChain spent_chain;
-    Communicator *communicator;
+    Communicator *communicator{NULL};
     FlexConfig *config;
 
     FlexNetworkNode()
@@ -74,6 +74,8 @@ public:
     void SwitchToNewCalendarAndSpentChain(Calendar new_calendar, BitChain spent_chain);
 
     void AttachCommunicatorNetworkToHandlers();
+
+    void RecordReceiptOfMessage(std::string channel, CDataStream stream);
 };
 
 

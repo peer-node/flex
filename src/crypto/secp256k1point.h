@@ -43,7 +43,7 @@ public:
     {
         group = EC_GROUP_new_by_curve_name(NID_secp256k1);
         context = BN_CTX_new();
-        EC_GROUP_precompute_mult(group, context);
+        //EC_GROUP_precompute_mult(group, context);
         modulus = BN_new();
         EC_GROUP_get_order(group, modulus, context);
         generator = EC_GROUP_get0_generator(group);
@@ -51,11 +51,12 @@ public:
 
     ~CGroup()
     {
-        EC_GROUP_free(group);
+        EC_GROUP_clear_free(group);
         if (modulus)
             BN_free(modulus);
         if (context != NULL)
             BN_CTX_free(context);
+        CRYPTO_cleanup_all_ex_data();
     }
 };
 
@@ -182,7 +183,7 @@ public:
 
     void GetCoordinates(CBigNum &x, CBigNum &y) const
     {
-        EC_POINT_get_affine_coordinates_GFp(curve_group.group, point, 
+        EC_POINT_get_affine_coordinates_GFp(curve_group.group, point,
                                             &x, &y, context);
     }
 
@@ -243,8 +244,14 @@ public:
         if (empty)
             return false;
 
-        return EC_POINT_oct2point(curve_group.group, point,
-                                  &vchPoint[0], 33, context) != 0;
+        if (point != NULL)
+        {
+            EC_POINT_free(point);
+            point = EC_POINT_new(curve_group.group);
+        }
+
+        bool result = (EC_POINT_oct2point(curve_group.group, point, &vchPoint[0], 33, context) != 0);
+        return result;
     }
 
     operator vch_t()

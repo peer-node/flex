@@ -13,10 +13,4 @@ Network::~Network()
         if (closesocket(hListenSocket) == SOCKET_ERROR)
             LogPrintf("closesocket(hListenSocket) failed with error %s\n", NetworkErrorString(WSAGetLastError()));
 
-
-
-#ifdef WIN32
-    // Shutdown Windows Sockets
-        WSACleanup();
-#endif
 }

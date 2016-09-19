@@ -168,7 +168,7 @@ public:
     {
         peer1.StopGettingMessages();
         peer2.StopGettingMessages();
-        MilliSleep(100);
+        MilliSleep(150);
     }
 
     virtual void AddABatchToTheTip(FlexNetworkNode *flex_network_node)
@@ -223,7 +223,7 @@ TEST_F(TwoFlexNetworkNodesWithSomeBatchesConnectedViaPeers, SendTipsInResponseTo
     // give node2 a very high total work so that the tip message doesn't provoke a calendar request
     node2.calendar.current_diurn.credits_in_diurn.back().mined_credit.network_state.difficulty = 100000000;
     TipRequestMessage tip_request = node2.msgdata[request_hash]["tip_request"];
-    MilliSleep(50);
+    MilliSleep(150);
     ASSERT_TRUE(peer2.HasReceived("data", "tip", TipMessage(tip_request, &node1.calendar)));
 }
 
@@ -629,8 +629,10 @@ public:
     {
         peer1.StopGettingMessages();
         peer2.StopGettingMessages();
+        node1.StopCommunicator();
+        node2.StopCommunicator();
 
-        MilliSleep(100);
+        MilliSleep(150);
     }
 };
 

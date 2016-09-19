@@ -29,12 +29,12 @@ TEST_F(ANetwork, StartsAndStops)
 TEST_F(ANetwork, ListensOnTheSpecifiedPort)
 {
     Network network1;
-    uint64_t port1 = 10000 + GetRand(10000);;
+    uint64_t port1 = 10000 + GetRand(10000);
     network1.SetName("1");
     network1.SetListenPort(port1);
     network1.InitializeNode(false);
 
-    uint64_t port2 = 10000 + GetRand(10000);;
+    uint64_t port2 = port1 + 1;
     Network network2;
     network2.SetName("2");
     network2.SetListenPort(port2);

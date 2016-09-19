@@ -99,6 +99,8 @@ public:
     std::map<uint256, std::pair<NodeId, std::list<QueuedBlock>::iterator> > mapBlocksInFlight;
     std::map<uint256, std::pair<NodeId, std::list<uint256>::iterator> > mapBlocksToDownload;
 
+    std::set<CInv> invs_received;
+
     // Map maintaining per-node state. Requires cs_main.
     std::map<NodeId, CNodeState> mapNodeState;
 
@@ -117,8 +119,6 @@ public:
     void InitializeNode(NodeId nodeid, const CNode *pnode);
 
     void FinalizeNode(NodeId nodeid);
-
-    bool IsInitialBlockDownload();
 
     bool AlreadyHave(const CInv& inv);
 
