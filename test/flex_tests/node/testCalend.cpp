@@ -29,12 +29,3 @@ TEST_F(ACalend, ReportsTheTotalCreditWork)
     uint160 total_work = calend.TotalCreditWork();
     ASSERT_THAT(total_work, Eq(15));
 }
-
-TEST_F(ACalend, ReportsTheMinedCreditHash)
-{
-    msg.mined_credit.network_state.previous_total_work = 10;
-    msg.mined_credit.network_state.difficulty = 5;
-    calend = Calend(msg);
-    uint160 credit_hash = calend.MinedCreditHash();
-    ASSERT_THAT(credit_hash, Eq(msg.mined_credit.GetHash160()));
-}

@@ -7,20 +7,20 @@
 class ListExpansionRequestMessage
 {
 public:
-    uint160 mined_credit_hash;
+    uint160 mined_credit_message_hash;
 
     ListExpansionRequestMessage() { }
 
     ListExpansionRequestMessage(MinedCreditMessage msg)
     {
-        mined_credit_hash = msg.mined_credit.GetHash160();
+        mined_credit_message_hash = msg.GetHash160();
     }
 
     static std::string Type() { return "list_expansion_request"; }
 
     IMPLEMENT_SERIALIZE
     (
-        READWRITE(mined_credit_hash);
+        READWRITE(mined_credit_message_hash);
     )
 
     DEPENDENCIES();

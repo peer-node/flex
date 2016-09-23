@@ -92,9 +92,7 @@ public:
 
     TipMessage TipWithTheMostWork();
 
-    uint160 SendCalendarRequestToPeer(CNode *peer, MinedCredit mined_credit);
-
-    std::vector<uint160> TipMessageHashesWithTheMostWork();
+    std::vector<uint160> TipMessageHashesWithTheMostReportedWork();
 
     void RecordReportedTotalWorkOfTip(uint160 tip_message_hash, uint160 total_work);
 
@@ -157,6 +155,8 @@ public:
     void SendCalendarFailureMessageInResponseToCalendarMessage(CalendarMessage calendar_message);
 
     CalendarFailureDetails GetCalendarFailureDetails(Calendar &calendar_);
+
+    uint160 SendCalendarRequestToPeer(CNode *peer, MinedCreditMessage msg);
 };
 
 void LoadHashesIntoDataStoreFromMessageTypesAndContents(MemoryDataStore &hashdata,

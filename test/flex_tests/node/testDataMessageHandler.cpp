@@ -124,17 +124,20 @@ public:
     {
         TipMessage tip;
         tip.tip_request_hash = request.GetHash160();
-        tip.mined_credit = GetMinedCreditWithSpecifiedTotalWork(total_work);
+        tip.mined_credit_message = GetMinedCreditMessageWithSpecifiedTotalWork(total_work);
         return tip;
     }
 
-    MinedCredit GetMinedCreditWithSpecifiedTotalWork(uint160 total_work)
+    MinedCreditMessage GetMinedCreditMessageWithSpecifiedTotalWork(uint160 total_work)
     {
         MinedCredit credit;
         credit.network_state.difficulty = 100;
         credit.network_state.previous_total_work = total_work - 100;
         credit.network_state.batch_number = 1;
-        return credit;
+
+        MinedCreditMessage msg;
+        msg.mined_credit = credit;
+        return msg;
     }
 
     virtual void SetUp()
@@ -159,7 +162,7 @@ public:
 TEST_F(ADataMessageHandlerWhichReceivedMultipleTips, RequestsTheCalendarOfTheTipWithTheMostReportedWork)
 {
     data_message_handler->RequestCalendarOfTipWithTheMostWork();
-    CalendarRequestMessage calendar_request(tip2.mined_credit);
+    CalendarRequestMessage calendar_request(tip2.mined_credit_message);
     ASSERT_TRUE(peer.HasReceived("data", "calendar_request", calendar_request));
 }
 
@@ -185,8 +188,7 @@ public:
 
 TEST_F(ADataMessageHandlerWithSomeBatches, RespondsToCalendarRequestsWithCalendarMessages)
 {
-    MinedCredit mined_credit_at_tip = calendar->LastMinedCredit();
-    CalendarRequestMessage calendar_request(mined_credit_at_tip);
+    CalendarRequestMessage calendar_request(calendar->LastMinedCreditMessage());
     data_message_handler->HandleMessage(GetDataStream(calendar_request), &peer);
     CalendarMessage calendar_message(calendar_request, credit_system);
     ASSERT_TRUE(peer.HasReceived("data", "calendar", calendar_message));
@@ -194,8 +196,7 @@ TEST_F(ADataMessageHandlerWithSomeBatches, RespondsToCalendarRequestsWithCalenda
 
 TEST_F(ADataMessageHandlerWithSomeBatches, RejectsIncomingCalendarMessagesThatWerentRequested)
 {
-    MinedCredit mined_credit_at_tip = calendar->LastMinedCredit();
-    CalendarRequestMessage calendar_request(mined_credit_at_tip);
+    CalendarRequestMessage calendar_request(calendar->LastMinedCreditMessage());
     CalendarMessage calendar_message(calendar_request, credit_system);
 
     data_message_handler->HandleMessage(GetDataStream(calendar_message), &peer);
@@ -205,7 +206,7 @@ TEST_F(ADataMessageHandlerWithSomeBatches, RejectsIncomingCalendarMessagesThatWe
 
 CalendarMessage ADataMessageHandlerWithSomeBatches::ACalendarMessageThatWasRequested()
 {
-    CalendarRequestMessage calendar_request(calendar->LastMinedCredit());
+    CalendarRequestMessage calendar_request(calendar->LastMinedCreditMessage());
     msgdata[calendar_request.GetHash160()]["is_calendar_request"] = true;
     return CalendarMessage(calendar_request, credit_system);
 }
@@ -235,12 +236,12 @@ public:
             AddABatch();
         }
 
-        uint160 credit_hash = calendar->LastMinedCreditHash();
+        uint160 credit_hash = calendar->LastMinedCreditMessageHash();
         vector<uint160> credit_hashes;
         while (credit_hash != 0)
         {
             credit_hashes.push_back(credit_hash);
-            credit_hash = credit_system->PreviousCreditHash(credit_hash);
+            credit_hash = credit_system->PreviousMinedCreditMessageHash(credit_hash);
         }
         reverse(credit_hashes.begin(), credit_hashes.end());
     }
@@ -282,13 +283,13 @@ TEST_F(ADataMessageHandlerWithACalendarWithCalends, ReturnsDetailsWhenACalendarF
     calendar->calends[1].proof_of_work.proof.link_lengths[2] += 1;
     uint64_t scrutiny_time = 1 * 1000000;
     while (data_message_handler->Scrutinize(*calendar, scrutiny_time, details)) {}
-    ASSERT_THAT(details.credit_hash, Eq(calendar->calends[1].mined_credit.GetHash160()));
+    ASSERT_THAT(details.mined_credit_message_hash, Eq(calendar->calends[1].GetHash160()));
     ASSERT_THAT(details.check.failure_link, Eq(2));
 }
 
 CalendarMessage ADataMessageHandlerWithACalendarWithCalends::CalendarMessageWithABadCalendar()
 {
-    CalendarRequestMessage calendar_request(calendar->LastMinedCredit());
+    CalendarRequestMessage calendar_request(calendar->LastMinedCreditMessage());
     msgdata[calendar_request.GetHash160()]["is_calendar_request"] = true;
     CalendarMessage calendar_message(calendar_request, credit_system);
 
@@ -329,7 +330,7 @@ CalendarMessage ADataMessageHandlerWithACalendarWithCalends::CalendarMessageWith
 {
     Calendar new_calendar = *calendar;
     AddABatchToCalendar(&new_calendar);
-    CalendarRequestMessage calendar_request(new_calendar.LastMinedCredit());
+    CalendarRequestMessage calendar_request(new_calendar.LastMinedCreditMessage());
     msgdata[calendar_request.GetHash160()]["is_calendar_request"] = true;
     CalendarMessage calendar_message(calendar_request, credit_system);
     return calendar_message;
@@ -446,13 +447,13 @@ TEST_F(ADataMessageHandlerWithACalendarWithCalends, DetectsIfTheMinedCreditMessa
 TEST_F(ADataMessageHandlerWithACalendarWithCalends, MarksTheMinedCreditMessagesInAValidInitialDataMessageAsValidated)
 {
     auto initial_data_message = AValidInitialDataMessageThatWasRequested();
-    uint160 last_credit_hash = initial_data_message.mined_credit_messages_in_current_diurn.back().mined_credit.GetHash160();
+    uint160 last_msg_hash = initial_data_message.mined_credit_messages_in_current_diurn.back().GetHash160();
 
-    bool valid = creditdata[last_credit_hash]["passed_verification"];
+    bool valid = creditdata[last_msg_hash]["passed_verification"];
     ASSERT_THAT(valid, Eq(false));
 
     data_message_handler->MarkMinedCreditMessagesInInitialDataMessageAsValidated(initial_data_message);
 
-    valid = creditdata[last_credit_hash]["passed_verification"];
+    valid = creditdata[last_msg_hash]["passed_verification"];
     ASSERT_THAT(valid, Eq(true));
 }

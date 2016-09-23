@@ -28,7 +28,7 @@ public:
 
     DEPENDENCIES();
 
-    uint160 GetHash160();
+    HASH160();
 
     bool operator==(const MinedCreditMessage &other) const
     {

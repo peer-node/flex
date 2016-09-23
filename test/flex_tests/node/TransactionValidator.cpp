@@ -17,16 +17,16 @@ bool TransactionValidator::OutputsOverflow(SignedTransaction &tx)
     return false;
 }
 
-uint160 TransactionValidator::GetMinedCreditHashFromCreditInBatch(CreditInBatch &credit_in_batch)
+uint160 TransactionValidator::GetMinedCreditMessageHashFromCreditInBatch(CreditInBatch &credit_in_batch)
 {
     uint160 batch_root = credit_in_batch.branch.back();
-    return credit_system->creditdata[batch_root]["credit_hash"];
+    return credit_system->creditdata[batch_root]["msg_hash"];
 }
 
 bool TransactionValidator::CheckIfCreditInBatchIsInTheMainChain(CreditInBatch &credit_in_batch)
 {
-    uint160 mined_credit_hash = GetMinedCreditHashFromCreditInBatch(credit_in_batch);
-    return credit_system->IsInMainChain(mined_credit_hash);
+    uint160 msg_hash = GetMinedCreditMessageHashFromCreditInBatch(credit_in_batch);
+    return credit_system->IsInMainChain(msg_hash);
 }
 
 bool TransactionValidator::CheckBranchOfCreditInBatch(CreditInBatch credit_in_batch)

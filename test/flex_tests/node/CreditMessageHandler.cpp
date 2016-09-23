@@ -16,15 +16,23 @@ using std::set;
 
 void CreditMessageHandler::HandleMinedCreditMessage(MinedCreditMessage msg)
 {
-    if (credit_system->MinedCreditWasRecordedToHaveTotalWork(msg.mined_credit.GetHash160(),
-                                                             msg.mined_credit.ReportedWork()))
+    if (credit_system->MinedCreditWasRecordedToHaveTotalWork(msg.GetHash160(), msg.mined_credit.ReportedWork()))
+    {
         return;
+    }
+
+    credit_system->StoreMinedCreditMessage(msg);
 
     if (msg.mined_credit.network_state.batch_number > 1 and not PreviousMinedCreditMessageWasHandled(msg))
     {
-        credit_system->StoreMinedCreditMessage(msg);
         QueueMinedCreditMessageBehindPrevious(msg);
+        if (not EnclosedMessagesArePresent(msg))
+        {
+            FetchFailedListExpansion(msg);
+            return;
+        }
     }
+
     if (not EnclosedMessagesArePresent(msg))
     {
         FetchFailedListExpansion(msg);
@@ -37,7 +45,7 @@ void CreditMessageHandler::HandleMinedCreditMessage(MinedCreditMessage msg)
     }
 
     Broadcast(msg);
-    credit_system->StoreMinedCreditMessage(msg);
+
 
     if (do_spot_checks and not ProofOfWorkPassesSpotCheck(msg))
         Broadcast(GetBadBatchMessage(msg.GetHash160()));
@@ -51,29 +59,32 @@ void CreditMessageHandler::HandleMinedCreditMessage(MinedCreditMessage msg)
 
 bool CreditMessageHandler::PreviousMinedCreditMessageWasHandled(MinedCreditMessage& msg)
 {
-    uint160 previous_mined_credit_hash = msg.mined_credit.network_state.previous_mined_credit_hash;
+    uint160 previous_msg_hash = msg.mined_credit.network_state.previous_mined_credit_message_hash;
     uint160 previous_total_work = msg.mined_credit.network_state.previous_total_work;
-    return credit_system->MinedCreditWasRecordedToHaveTotalWork(previous_mined_credit_hash, previous_total_work);
+    return credit_system->MinedCreditWasRecordedToHaveTotalWork(previous_msg_hash, previous_total_work);
 }
 
 void CreditMessageHandler::QueueMinedCreditMessageBehindPrevious(MinedCreditMessage& msg)
 {
     uint160 msg_hash = msg.GetHash160();
-    uint160 previous_mined_credit_hash = msg.mined_credit.network_state.previous_mined_credit_hash;
-    std::vector<uint160> queued_messages = creditdata[previous_mined_credit_hash]["queued"];
+    uint160 previous_msg_hash = msg.mined_credit.network_state.previous_mined_credit_message_hash;
+    std::vector<uint160> queued_messages = creditdata[previous_msg_hash]["queued"];
     if (not VectorContainsEntry(queued_messages, msg_hash))
         queued_messages.push_back(msg_hash);
-    creditdata[previous_mined_credit_hash]["queued"] = queued_messages;
+    creditdata[previous_msg_hash]["queued"] = queued_messages;
 }
 
 void CreditMessageHandler::HandleQueuedMinedCreditMessages(MinedCreditMessage& msg)
 {
-    uint160 credit_hash = msg.mined_credit.GetHash160();
-    std::vector<uint160> queued_messages = creditdata[credit_hash]["queued"];
-    for (auto msg_hash : queued_messages)
-        HandleMessage(msg_hash);
-
-    creditdata[credit_hash]["queued"] = std::vector<uint160>();
+    uint160 msg_hash = msg.GetHash160();
+    std::vector<uint160> queued_messages = creditdata[msg_hash]["queued"];
+    auto final_queued_messages = queued_messages;
+    for (auto queued_msg_hash : queued_messages)
+    {
+        EraseEntryFromVector(queued_msg_hash, final_queued_messages);
+        creditdata[msg_hash]["queued"] = final_queued_messages;
+        HandleMessage(queued_msg_hash);
+    }
 }
 
 bool CreditMessageHandler::EnclosedMessagesArePresent(MinedCreditMessage msg)
@@ -84,8 +95,7 @@ bool CreditMessageHandler::EnclosedMessagesArePresent(MinedCreditMessage msg)
 bool CreditMessageHandler::MinedCreditMessagePassesVerification(MinedCreditMessage& msg)
 {
     uint160 msg_hash = msg.GetHash160();
-    uint160 credit_hash = msg.mined_credit.GetHash160();
-    uint160 previous_hash = msg.mined_credit.network_state.previous_mined_credit_hash;
+    uint160 previous_hash = msg.mined_credit.network_state.previous_mined_credit_message_hash;
 
     if (msg.mined_credit.amount != ONE_CREDIT)
         return RejectMessage(msg_hash);
@@ -97,42 +107,44 @@ bool CreditMessageHandler::MinedCreditMessagePassesVerification(MinedCreditMessa
         return RejectMessage(msg_hash);
 
     if (not credit_system->QuickCheckProofOfWorkInMinedCreditMessage(msg))
+    {
         return RejectMessage(msg_hash);
+    }
 
     bool predecessor_passed_verification = creditdata[previous_hash]["passed_verification"];
 
-    bool first_message = creditdata[credit_hash]["first_in_data_message"];
+    bool first_message = creditdata[msg_hash]["first_in_data_message"];
 
     if (msg.mined_credit.network_state.batch_number != 1 and not first_message)
     {
-        bool have_data_for_preceding_mined_credit = creditdata[previous_hash].HasProperty("msg");
-        MinedCreditMessage prev_msg = creditdata[previous_hash]["msg"];
-        if (have_data_for_preceding_mined_credit or not credit_system->IsCalend(credit_hash))
+        bool have_data_for_preceding_mined_credit = msgdata[previous_hash].HasProperty("msg");
+        MinedCreditMessage prev_msg = msgdata[previous_hash]["msg"];
+        if (have_data_for_preceding_mined_credit or not credit_system->IsCalend(msg_hash))
             if (not predecessor_passed_verification)
             {
                 return false;
             }
     }
-    creditdata[credit_hash]["passed_verification"] = true;
+    creditdata[msg_hash]["passed_verification"] = true;
     return true;
 }
 
 void CreditMessageHandler::HandleValidMinedCreditMessage(MinedCreditMessage& msg)
 {
-    credit_system->AcceptMinedCreditAsValidByRecordingTotalWorkAndParent(msg.mined_credit);
+    credit_system->AcceptMinedCreditMessageAsValidByRecordingTotalWorkAndParent(msg);
     SwitchToNewTipIfAppropriate();
 }
 
 MinedCreditMessage CreditMessageHandler::Tip()
 {
-    return creditdata[calendar->LastMinedCreditHash()]["msg"];
+    return msgdata[calendar->LastMinedCreditMessageHash()]["msg"];
 }
 
 void CreditMessageHandler::SwitchToNewTipIfAppropriate()
 {
     vector<uint160> batches_with_the_most_work = credit_system->MostWorkBatches();
 
-    uint160 current_tip = calendar->LastMinedCreditHash();
+    uint160 current_tip = calendar->LastMinedCreditMessageHash();
     if (VectorContainsEntry(batches_with_the_most_work, current_tip))
     {
         return;
@@ -147,25 +159,25 @@ void CreditMessageHandler::SwitchToNewTipIfAppropriate()
     SwitchToTip(new_tip);
 }
 
-void CreditMessageHandler::SwitchToTip(uint160 credit_hash_of_new_tip)
+void CreditMessageHandler::SwitchToTip(uint160 msg_hash_of_new_tip)
 {
-    MinedCreditMessage msg_at_new_tip = creditdata[credit_hash_of_new_tip]["msg"];
-    uint160 current_tip = calendar->LastMinedCreditHash();
+    MinedCreditMessage msg_at_new_tip = msgdata[msg_hash_of_new_tip]["msg"];
+    uint160 current_tip = calendar->LastMinedCreditMessageHash();
 
-    if (msg_at_new_tip.mined_credit.network_state.previous_mined_credit_hash == current_tip)
+    if (msg_at_new_tip.mined_credit.network_state.previous_mined_credit_message_hash == current_tip)
     {
         AddToTip(msg_at_new_tip);
     }
     else
     {
-        SwitchToTipViaFork(credit_hash_of_new_tip);
+        SwitchToTipViaFork(msg_hash_of_new_tip);
     }
 }
 
 void CreditMessageHandler::SwitchToTipViaFork(uint160 new_tip)
 {
-    uint160 old_tip = calendar->LastMinedCreditHash();
-    uint160 current_tip = calendar->LastMinedCreditHash();
+    uint160 old_tip = calendar->LastMinedCreditMessageHash();
+    uint160 current_tip = calendar->LastMinedCreditMessageHash();
     *spent_chain = credit_system->GetSpentChainOnOtherProngOfFork(*spent_chain, current_tip, new_tip);
     credit_system->SwitchMainChainToOtherBranchOfFork(current_tip, new_tip);
     *calendar = Calendar(new_tip, credit_system);
@@ -231,7 +243,7 @@ void CreditMessageHandler::ValidateAcceptedMessagesAfterFork()
     {
         bool should_keep = true;
         string message_type = credit_system->MessageType(hash);
-        if (message_type == "mined_credit")
+        if (message_type == "msg")
             should_keep = false;
         if (message_type == "tx")
         {
@@ -283,7 +295,7 @@ void CreditMessageHandler::HandleListExpansionMessage(ListExpansionMessage list_
 void CreditMessageHandler::HandleMinedCreditMessageWithGivenListExpansion(ListExpansionMessage list_expansion_message)
 {
     ListExpansionRequestMessage request = msgdata[list_expansion_message.request_hash]["list_expansion_request"];
-    MinedCreditMessage msg = creditdata[request.mined_credit_hash]["msg"];
+    MinedCreditMessage msg = msgdata[request.mined_credit_message_hash]["msg"];
     CDataStream ss(SER_NETWORK, CLIENT_VERSION);
     ss << std::string("credit") << std::string("msg") << msg;
     CNode *peer = GetPeer(list_expansion_message.GetHash160());
@@ -305,7 +317,7 @@ void CreditMessageHandler::HandleMessageWithSpecifiedTypeAndContent(std::string 
 {
     CDataStream ss(content, SER_NETWORK, CLIENT_VERSION);
     CDataStream ssReceived(SER_NETWORK, CLIENT_VERSION);
-    if (type == "mined_credit")
+    if (type == "msg")
     {
         MinedCreditMessage msg;
         ss >> msg;
@@ -331,7 +343,7 @@ bool CreditMessageHandler::ValidateListExpansionMessage(ListExpansionMessage lis
                                                        list_expansion_message.message_types,
                                                        list_expansion_message.message_contents, credit_system);
     ListExpansionRequestMessage request = msgdata[list_expansion_message.request_hash]["list_expansion_request"];
-    MinedCreditMessage msg = creditdata[request.mined_credit_hash]["msg"];
+    MinedCreditMessage msg = msgdata[request.mined_credit_message_hash]["msg"];
     return msg.hash_list.RecoverFullHashes(hashdata);
 }
 
@@ -347,8 +359,8 @@ void CreditMessageHandler::AddToTip(MinedCreditMessage &msg)
     credit_system->StoreMinedCreditMessage(msg);
     credit_system->AddToMainChain(msg);
     *spent_chain = credit_system->GetSpentChainOnOtherProngOfFork(*spent_chain,
-                                                                  calendar->LastMinedCreditHash(),
-                                                                  msg.mined_credit.GetHash160());
+                                                                  calendar->LastMinedCreditMessageHash(),
+                                                                  msg.GetHash160());
     calendar->AddToTip(msg, credit_system);
     if (wallet != NULL)
         wallet->AddBatchToTip(msg, credit_system);
@@ -363,7 +375,7 @@ void CreditMessageHandler::UpdateAcceptedMessagesAfterNewTip(MinedCreditMessage 
         if (VectorContainsEntry(accepted_messages, enclosed_hash))
             EraseEntryFromVector(enclosed_hash, accepted_messages);
     }
-    accepted_messages.push_back(msg.mined_credit.GetHash160());
+    accepted_messages.push_back(msg.GetHash160());
 }
 
 bool CreditMessageHandler::CheckInputsAreUnspentAccordingToSpentChain(SignedTransaction tx)
@@ -483,14 +495,14 @@ void CreditMessageHandler::HandleBadBatchMessage(BadBatchMessage bad_batch_messa
     }
 
     creditdata[msg_hash]["spot_check_failure"] = bad_batch_message.check;
-    uint160 credit_hash = msg.mined_credit.GetHash160();
-    if (credit_system->IsInMainChain(credit_hash))
-        RemoveFromMainChainAndSwitchToNewTip(credit_hash);
+
+    if (credit_system->IsInMainChain(msg_hash))
+        RemoveFromMainChainAndSwitchToNewTip(msg_hash);
 }
 
-void CreditMessageHandler::RemoveFromMainChainAndSwitchToNewTip(uint160 credit_hash)
+void CreditMessageHandler::RemoveFromMainChainAndSwitchToNewTip(uint160 msg_hash)
 {
-    credit_system->RemoveBatchAndChildrenFromMainChainAndDeleteRecordOfTotalWork(credit_hash);
+    credit_system->RemoveBatchAndChildrenFromMainChainAndDeleteRecordOfTotalWork(msg_hash);
     SwitchToNewTipIfAppropriate();
 }
 
@@ -507,11 +519,11 @@ MinedCreditMessage CreditMessageHandler::GenerateMinedCreditMessageWithoutProofO
 {
     MinedCreditMessage msg, current_tip = Tip();
 
-    msg.mined_credit.network_state = credit_system->SucceedingNetworkState(current_tip.mined_credit);
+    msg.mined_credit.network_state = credit_system->SucceedingNetworkState(current_tip);
     msg.mined_credit.keydata = GetNewPublicKey(keydata).getvch();
 
     if (msg.mined_credit.network_state.batch_number > 1)
-        msg.hash_list.full_hashes.push_back(msg.mined_credit.network_state.previous_mined_credit_hash);
+        msg.hash_list.full_hashes.push_back(msg.mined_credit.network_state.previous_mined_credit_message_hash);
     else
         msg.mined_credit.network_state.network_id = config.Uint64("network_id");
 

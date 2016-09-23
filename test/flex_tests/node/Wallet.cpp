@@ -188,22 +188,21 @@ void Wallet::SwitchAcrossFork(uint160 old_tip, uint160 new_tip, CreditSystem *cr
     uint160 fork = credit_system->FindFork(old_tip, new_tip);
     while (old_tip != fork)
     {
-        MinedCreditMessage msg = credit_system->creditdata[old_tip]["msg"];
+        MinedCreditMessage msg = credit_system->msgdata[old_tip]["msg"];
         RemoveBatchFromTip(msg, credit_system);
-        old_tip = msg.mined_credit.network_state.previous_mined_credit_hash;
+        old_tip = msg.mined_credit.network_state.previous_mined_credit_message_hash;
     }
     std::vector<MinedCreditMessage> new_branch;
     while (new_tip != fork)
     {
-        MinedCreditMessage msg = credit_system->creditdata[new_tip]["msg"];
+        MinedCreditMessage msg = credit_system->msgdata[new_tip]["msg"];
         new_branch.push_back(msg);
-        new_tip = msg.mined_credit.network_state.previous_mined_credit_hash;
+        new_tip = msg.mined_credit.network_state.previous_mined_credit_message_hash;
     }
     std::reverse(new_branch.begin(), new_branch.end());
     for (auto msg : new_branch)
         AddBatchToTip(msg, credit_system);
 }
-
 
 uint160 GetKeyHashFromAddress(std::string address_string)
 {

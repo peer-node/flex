@@ -32,14 +32,14 @@ void DataMessageHandler::HandleTipRequestMessage(TipRequestMessage request)
 void DataMessageHandler::HandleTipMessage(TipMessage tip_message)
 {
     uint160 tip_message_hash = tip_message.GetHash160();
-    uint160 reported_work = tip_message.mined_credit.ReportedWork();
+    uint160 reported_work = tip_message.mined_credit_message.mined_credit.ReportedWork();
     if (not msgdata[tip_message.tip_request_hash]["is_tip_request"])
     {
         RejectMessage(tip_message_hash);
         return;
     }
     RecordReportedTotalWorkOfTip(tip_message_hash, reported_work);
-    if (reported_work > calendar->LastMinedCredit().ReportedWork())
+    if (reported_work > calendar->LastMinedCreditMessage().mined_credit.ReportedWork())
     {
         RequestCalendarOfTipWithTheMostWork();
     }
@@ -68,7 +68,7 @@ uint160 DataMessageHandler::RequestCalendarOfTipWithTheMostWork()
 {
     TipMessage tip = TipWithTheMostWork();
 
-    if (tip.mined_credit.network_state.batch_number == 0)
+    if (tip.mined_credit_message.mined_credit.network_state.batch_number == 0)
     {
         return 0;
     }
@@ -76,12 +76,12 @@ uint160 DataMessageHandler::RequestCalendarOfTipWithTheMostWork()
     CNode *peer = GetPeer(tip_message_hash);
     if (peer == NULL)
         return 0;
-    return SendCalendarRequestToPeer(peer, tip.mined_credit);
+    return SendCalendarRequestToPeer(peer, tip.mined_credit_message);
 }
 
-uint160 DataMessageHandler::SendCalendarRequestToPeer(CNode *peer, MinedCredit mined_credit)
+uint160 DataMessageHandler::SendCalendarRequestToPeer(CNode *peer, MinedCreditMessage msg)
 {
-    CalendarRequestMessage calendar_request(mined_credit);
+    CalendarRequestMessage calendar_request(msg);
     uint160 calendar_request_hash = calendar_request.GetHash160();
     msgdata[calendar_request_hash]["is_calendar_request"] = true;
     peer->PushMessage("data", "calendar_request", calendar_request);
@@ -92,7 +92,7 @@ uint160 DataMessageHandler::SendCalendarRequestToPeer(CNode *peer, MinedCredit m
 TipMessage DataMessageHandler::TipWithTheMostWork()
 {
     TipMessage tip_message;
-    auto tip_message_hashes_with_the_most_work = TipMessageHashesWithTheMostWork();
+    auto tip_message_hashes_with_the_most_work = TipMessageHashesWithTheMostReportedWork();
     if (tip_message_hashes_with_the_most_work.size() == 0)
     {
         return tip_message;
@@ -102,7 +102,7 @@ TipMessage DataMessageHandler::TipWithTheMostWork()
     return tip_message;
 }
 
-std::vector<uint160> DataMessageHandler::TipMessageHashesWithTheMostWork()
+std::vector<uint160> DataMessageHandler::TipMessageHashesWithTheMostReportedWork()
 {
     std::vector<uint160> tip_message_hashes;
     LocationIterator work_scanner = creditdata.LocationIterator("reported_work");
@@ -150,7 +150,7 @@ void DataMessageHandler::HandleCalendarMessage(CalendarMessage calendar_message)
 
 void DataMessageHandler::HandleIncomingCalendar(CalendarMessage calendar_message)
 {
-    uint160 reported_work = calendar_message.calendar.LastMinedCredit().ReportedWork();
+    uint160 reported_work = calendar_message.calendar.LastMinedCreditMessage().mined_credit.ReportedWork();
     credit_system->RecordCalendarReportedWork(calendar_message, reported_work);
     credit_system->StoreCalendsFromCalendar(calendar_message.calendar);
 
@@ -243,11 +243,11 @@ void DataMessageHandler::HandleInitialDataMessage(InitialDataMessage initial_dat
     }
     if (not ValidateInitialDataMessage(initial_data_message))
     {
-        log_ << "bad initial data message\n";
         return;
     }
     auto requested_calendar = GetRequestedCalendar(initial_data_message);
-    if (requested_calendar.LastMinedCredit().ReportedWork() > calendar->LastMinedCredit().ReportedWork())
+    if (requested_calendar.LastMinedCreditMessage().mined_credit.ReportedWork() >
+            calendar->LastMinedCreditMessage().mined_credit.ReportedWork())
         UseInitialDataMessageAndCalendar(initial_data_message, requested_calendar);
 }
 
@@ -263,8 +263,8 @@ void DataMessageHandler::MarkMinedCreditMessagesInInitialDataMessageAsValidated(
 {
     for (auto msg : initial_data_message.mined_credit_messages_in_current_diurn)
     {
-        uint160 mined_credit_hash = msg.mined_credit.GetHash160();
-        creditdata[mined_credit_hash]["passed_verification"] = true;
+        uint160 msg_hash = msg.GetHash160();
+        creditdata[msg_hash]["passed_verification"] = true;
     }
 }
 
@@ -311,14 +311,14 @@ void LoadHashesIntoDataStoreFromMessageTypesAndContents(MemoryDataStore &hashdat
     for (uint32_t i = 0; i < types.size(); i++)
     {
         uint160 enclosed_message_hash;
-        if (types[i] != "mined_credit")
+        if (types[i] != "msg")
             enclosed_message_hash = Hash160(contents[i].begin(), contents[i].end());
         else
         {
             CDataStream ss(contents[i], SER_NETWORK, CLIENT_VERSION);
-            MinedCredit mined_credit;
-            ss >> mined_credit;
-            enclosed_message_hash = mined_credit.GetHash160();
+            MinedCreditMessage msg;
+            ss >> msg;
+            enclosed_message_hash = msg.GetHash160();
         }
         credit_system->StoreHash(enclosed_message_hash, hashdata);
     }
@@ -329,7 +329,7 @@ MemoryDataStore DataMessageHandler::GetEnclosedMessageHashes(InitialDataMessage 
     MemoryDataStore hashdata;
     for (auto mined_credit_message : message.mined_credit_messages_in_current_diurn)
     {
-        credit_system->StoreHash(mined_credit_message.mined_credit.GetHash160(), hashdata);
+        credit_system->StoreHash(mined_credit_message.GetHash160(), hashdata);
     }
     LoadHashesIntoDataStoreFromMessageTypesAndContents(hashdata,
                                                        message.enclosed_message_types,
@@ -396,14 +396,14 @@ bool DataMessageHandler::SequenceOfMinedCreditMessagesIsValidAndHasValidProofsOf
 
 bool DataMessageHandler::SequenceOfMinedCreditMessagesIsValid(std::vector<MinedCreditMessage> msgs)
 {
-    return Calendar::CheckCreditHashesInSequenceOfConsecutiveMinedCreditMessages(msgs) and
+    return Calendar::CheckCreditMessageHashesInSequenceOfConsecutiveMinedCreditMessages(msgs) and
             Calendar::CheckDifficultiesOfConsecutiveSequenceOfMinedCreditMessages(msgs);
 }
 
 void DataMessageHandler::StoreDataFromInitialDataMessageInCreditSystem(InitialDataMessage &initial_data_message,
                                                                        CreditSystem &credit_system)
 {
-    uint160 calend_hash = initial_data_message.mined_credit_messages_in_current_diurn[0].mined_credit.GetHash160();
+    uint160 calend_hash = initial_data_message.mined_credit_messages_in_current_diurn[0].GetHash160();
     credit_system.creditdata[calend_hash]["first_in_data_message"] = true;
 
     Calendar calendar = GetRequestedCalendar(initial_data_message);
@@ -424,12 +424,12 @@ void DataMessageHandler::StoreDataFromInitialDataMessageInCreditSystem(InitialDa
 
 void DataMessageHandler::StoreMessageInCreditSystem(std::string type, vch_t content, CreditSystem &credit_system)
 {
-    if (type == "mined_credit")
+    if (type == "msg")
     {
         CDataStream ss(content, SER_NETWORK, CLIENT_VERSION);
-        MinedCredit mined_credit;
-        ss >> mined_credit;
-        credit_system.StoreMinedCredit(mined_credit);
+        MinedCreditMessage msg;
+        ss >> msg;
+        credit_system.StoreMinedCreditMessage(msg);
     }
     else if (type == "tx")
     {

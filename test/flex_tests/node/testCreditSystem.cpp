@@ -15,14 +15,14 @@ using namespace std;
 
 static uint64_t mined_credit_number{1};
 
-MinedCredit SucceedingMinedCredit(MinedCredit& given_credit)
+MinedCreditMessage SucceedingMinedCreditMessage(MinedCreditMessage& given_msg)
 {
-    MinedCredit successor;
+    MinedCreditMessage successor;
 
-    successor.network_state = given_credit.network_state;
-    successor.network_state.previous_mined_credit_hash = given_credit.GetHash160();
-    successor.network_state.batch_number += 1;
-    successor.amount = mined_credit_number++;
+    successor.mined_credit.network_state = given_msg.mined_credit.network_state;
+    successor.mined_credit.network_state.previous_mined_credit_message_hash = given_msg.GetHash160();
+    successor.mined_credit.network_state.batch_number += 1;
+    successor.mined_credit.amount = mined_credit_number++;
 
     return successor;
 }
@@ -44,19 +44,19 @@ public:
         delete credit_system;
     }
 
-    vector<MinedCredit> ChainStartingFromGivenMinedCredit(MinedCredit given_credit, uint64_t length)
+    vector<MinedCreditMessage> ChainStartingFromGivenMinedCreditMessage(MinedCreditMessage given_msg, uint64_t length)
     {
-        vector<MinedCredit> chain_of_credits;
-        MinedCredit mined_credit = SucceedingMinedCredit(given_credit);
-        chain_of_credits.push_back(mined_credit);
+        vector<MinedCreditMessage> chain_of_msgs;
+        MinedCreditMessage msg = SucceedingMinedCreditMessage(given_msg);
+        chain_of_msgs.push_back(msg);
 
-        while (chain_of_credits.size() < length)
-            chain_of_credits.push_back(SucceedingMinedCredit(chain_of_credits.back()));
+        while (chain_of_msgs.size() < length)
+            chain_of_msgs.push_back(SucceedingMinedCreditMessage(chain_of_msgs.back()));
 
-        for (auto credit : chain_of_credits)
-            credit_system->StoreMinedCredit(credit);
+        for (auto msg_ : chain_of_msgs)
+            credit_system->StoreMinedCreditMessage(msg_);
 
-        return chain_of_credits;
+        return chain_of_msgs;
     }
 
 };
@@ -83,7 +83,7 @@ EncodedNetworkState ExampleNetworkState()
     EncodedNetworkState network_state;
 
     network_state.batch_number = 2;
-    network_state.previous_mined_credit_hash = 1;
+    network_state.previous_mined_credit_message_hash = 1;
     network_state.difficulty = 100;
     network_state.diurnal_difficulty = 1000;
     network_state.batch_offset = 1;
@@ -176,9 +176,9 @@ TEST_F(ACreditSystem, ReconstructsTheBatchRootOfAMinedCreditMessage)
 TEST_F(ACreditSystem, ReconstructsTheBatchRootOfAMinedCreditMessageWithAPreviousCreditHash)
 {
     MinedCreditMessage msg;
-    uint160 previous_mined_credit_hash = 1;
-    msg.mined_credit.network_state.previous_mined_credit_hash = previous_mined_credit_hash;
-    msg.mined_credit.network_state.batch_root = CreditBatch(previous_mined_credit_hash, 0).Root();
+    uint160 previous_msg_hash = 1;
+    msg.mined_credit.network_state.previous_mined_credit_message_hash = previous_msg_hash;
+    msg.mined_credit.network_state.batch_root = CreditBatch(previous_msg_hash, 0).Root();
     CreditBatch batch = credit_system->ReconstructBatch(msg);
     ASSERT_THAT(batch.Root(), Eq(msg.mined_credit.network_state.batch_root));
 }
@@ -237,10 +237,10 @@ TEST_F(ACreditSystem, DeterminesTheNextPreviousDiurnRoot)
     MinedCreditMessage msg;
     msg.mined_credit.network_state.previous_diurn_root = 1;
     msg.mined_credit.network_state.diurnal_block_root = 2;
-    uint160 next_previous_diurn_root = credit_system->GetNextPreviousDiurnRoot(msg.mined_credit);
+    uint160 next_previous_diurn_root = credit_system->GetNextPreviousDiurnRoot(msg);
     ASSERT_THAT(next_previous_diurn_root, Eq(1));
-    creditdata[msg.mined_credit.GetHash160()]["is_calend"] = true;
-    next_previous_diurn_root = credit_system->GetNextPreviousDiurnRoot(msg.mined_credit);
+    creditdata[msg.GetHash160()]["is_calend"] = true;
+    next_previous_diurn_root = credit_system->GetNextPreviousDiurnRoot(msg);
     ASSERT_THAT(next_previous_diurn_root, Eq(SymmetricCombine(1, 2)));
 }
 
@@ -255,7 +255,7 @@ TEST_F(ACreditSystem, DeterminesTheNextDiurnalBlockRoot)
 
     diurn.Add(msg);
 
-    uint160 next_diurnal_block_root = credit_system->GetNextDiurnalBlockRoot(msg.mined_credit);
+    uint160 next_diurnal_block_root = credit_system->GetNextDiurnalBlockRoot(msg);
     ASSERT_THAT(next_diurnal_block_root, Eq(diurn.BlockRoot()));
 }
 
@@ -298,16 +298,16 @@ class ACreditSystemWithAStoredMinedCredit : public ACreditSystem
 {
 public:
     MinedCreditMessage mined_credit_message;
-    MinedCredit mined_credit;
-    uint160 credit_hash;
+    MinedCreditMessage previous_message;
+    uint160 previous_msg_hash;
 
     virtual void SetUp()
     {
         ACreditSystem::SetUp();
-        mined_credit = ExampleMinedCredit();
-        credit_system->StoreMinedCredit(mined_credit);
-        credit_hash = mined_credit.GetHash160();
-        mined_credit_message.hash_list.full_hashes.push_back(credit_hash);
+        previous_message = ExampleMinedCreditMessage();
+        credit_system->StoreMinedCreditMessage(previous_message);
+        previous_msg_hash = previous_message.GetHash160();
+        mined_credit_message.hash_list.full_hashes.push_back(previous_msg_hash);
         mined_credit_message.hash_list.GenerateShortHashes();
     }
 
@@ -321,23 +321,23 @@ TEST_F(ACreditSystemWithAStoredMinedCredit, CanReconstructTheCreditBatchFromAMin
 {
     CreditBatch reconstructed_credit_batch = credit_system->ReconstructBatch(mined_credit_message);
     ASSERT_THAT(reconstructed_credit_batch.size(), Eq(1));
-    ASSERT_THAT(reconstructed_credit_batch.credits[0], Eq((Credit)mined_credit));
+    ASSERT_THAT(reconstructed_credit_batch.credits[0], Eq((Credit)previous_message.mined_credit));
 }
 
 TEST_F(ACreditSystemWithAStoredMinedCredit, GeneratesASucceedingNetworkState)
 {
-    EncodedNetworkState next_state = credit_system->SucceedingNetworkState(mined_credit);
-    auto prev_state = mined_credit.network_state;
+    EncodedNetworkState next_state = credit_system->SucceedingNetworkState(previous_message);
+    auto prev_state = previous_message.mined_credit.network_state;
 
     ASSERT_THAT(next_state.batch_number, Eq(prev_state.batch_number + 1));
 }
 
 TEST_F(ACreditSystemWithAStoredMinedCredit, GeneratesASucceedingNetworkStateWithAPreviousMinedCreditHashOfZero)
 {
-    MinedCredit blank_mined_credit;
-    EncodedNetworkState next_state = credit_system->SucceedingNetworkState(blank_mined_credit);
+    MinedCreditMessage blank_mined_credit_message;
+    EncodedNetworkState next_state = credit_system->SucceedingNetworkState(blank_mined_credit_message);
 
-    ASSERT_THAT(next_state.previous_mined_credit_hash, Eq(0));
+    ASSERT_THAT(next_state.previous_mined_credit_message_hash, Eq(0));
 }
 
 TEST_F(ACreditSystemWithAStoredMinedCredit,
@@ -345,29 +345,31 @@ TEST_F(ACreditSystemWithAStoredMinedCredit,
 {
     SetTimeOffset(100);
     uint64_t start_of_test = GetAdjustedTimeMicros();
-    EncodedNetworkState next_state = credit_system->SucceedingNetworkState(mined_credit);
+    EncodedNetworkState next_state = credit_system->SucceedingNetworkState(mined_credit_message);
     uint64_t end_of_test = GetAdjustedTimeMicros();
     ASSERT_THAT(next_state.timestamp, Gt(start_of_test));
     ASSERT_THAT(next_state.timestamp, Le(end_of_test));
 }
 
-class ACreditSystemWithASmallIntervalBetweenMinedCredits: public ACreditSystem
+class ACreditSystemWithASmallIntervalBetweenMinedCreditMessages: public ACreditSystem
 {
 public:
-    MinedCredit credit1, credit2;
+    MinedCreditMessage msg1, msg2;
     EncodedNetworkState second_network_state;
 
     virtual void SetUp()
     {
         ACreditSystem::SetUp();
-        credit1 = ExampleMinedCredit();
-        credit_system->StoreMinedCredit(credit1);
-        second_network_state = credit_system->SucceedingNetworkState(credit1);
-        second_network_state.timestamp = credit1.network_state.timestamp + 59 * 1000 * 1000;
-        credit2.amount = ONE_CREDIT;
-        credit2.keydata = Point(SECP256K1, 2).getvch();
-        credit2.network_state = second_network_state;
-        credit_system->StoreMinedCredit(credit2);
+
+        msg1.mined_credit = ExampleMinedCredit();
+        credit_system->StoreMinedCreditMessage(msg1);
+        second_network_state = credit_system->SucceedingNetworkState(msg1);
+        second_network_state.timestamp = msg1.mined_credit.network_state.timestamp + 59 * 1000 * 1000;
+
+        msg2.mined_credit.amount = ONE_CREDIT;
+        msg2.mined_credit.keydata = Point(SECP256K1, 2).getvch();
+        msg2.mined_credit.network_state = second_network_state;
+        credit_system->StoreMinedCreditMessage(msg2);
     }
 
     virtual void TearDown()
@@ -376,29 +378,29 @@ public:
     }
 };
 
-TEST_F(ACreditSystemWithASmallIntervalBetweenMinedCredits, IncreasesTheDifficultyOfTheSucceedingNetworkState)
+TEST_F(ACreditSystemWithASmallIntervalBetweenMinedCreditMessages, IncreasesTheDifficultyOfTheSucceedingNetworkState)
 {
-    EncodedNetworkState third_network_state = credit_system->SucceedingNetworkState(credit2);
+    EncodedNetworkState third_network_state = credit_system->SucceedingNetworkState(msg2);
     ASSERT_THAT(third_network_state.difficulty, Eq((second_network_state.difficulty * 100) / uint160(95)));
 }
 
 class ACreditSystemWithALargeIntervalBetweenMinedCredits: public ACreditSystem
 {
 public:
-    MinedCredit credit1, credit2;
+    MinedCreditMessage msg1, msg2;
     EncodedNetworkState second_network_state;
 
     virtual void SetUp()
     {
         ACreditSystem::SetUp();
-        credit1 = ExampleMinedCredit();
-        credit_system->StoreMinedCredit(credit1);
-        second_network_state = credit_system->SucceedingNetworkState(credit1);
-        second_network_state.timestamp = credit1.network_state.timestamp + 61 * 1000 * 1000;
-        credit2.amount = ONE_CREDIT;
-        credit2.keydata = Point(SECP256K1, 2).getvch();
-        credit2.network_state = second_network_state;
-        credit_system->StoreMinedCredit(credit2);
+        msg1.mined_credit= ExampleMinedCredit();
+        credit_system->StoreMinedCreditMessage(msg1);
+        second_network_state = credit_system->SucceedingNetworkState(msg1);
+        second_network_state.timestamp = msg1.mined_credit.network_state.timestamp + 61 * 1000 * 1000;
+        msg2.mined_credit.amount = ONE_CREDIT;
+        msg2.mined_credit.keydata = Point(SECP256K1, 2).getvch();
+        msg2.mined_credit.network_state = second_network_state;
+        credit_system->StoreMinedCredit(msg2.mined_credit);
     }
 
     virtual void TearDown()
@@ -409,7 +411,7 @@ public:
 
 TEST_F(ACreditSystemWithALargeIntervalBetweenMinedCredits, DecreasesTheDifficultyOfTheSucceedingNetworkState)
 {
-    EncodedNetworkState third_network_state = credit_system->SucceedingNetworkState(credit2);
+    EncodedNetworkState third_network_state = credit_system->SucceedingNetworkState(msg2);
     ASSERT_THAT(third_network_state.difficulty, Eq((second_network_state.difficulty * 95) / uint160(100)));
 }
 
@@ -417,26 +419,26 @@ TEST_F(ACreditSystemWithALargeIntervalBetweenMinedCredits, DecreasesTheDifficult
 class ACreditSystemWithSeveralStoredMinedCredits : public ACreditSystem
 {
 public:
-    MinedCredit credit1, credit2, credit3, credit4, credit5;
-    uint160 credit5_hash, credit4_hash, credit2_hash;
+    MinedCreditMessage msg1, msg2, msg3, msg4, msg5;
+    uint160 msg5_hash, msg4_hash, msg2_hash;
 
     virtual void SetUp()
     {
         ACreditSystem::SetUp();
-        credit2 = SucceedingMinedCredit(credit1);
-        credit3 = SucceedingMinedCredit(credit2);
-        credit4 = SucceedingMinedCredit(credit3);
-        credit5 = SucceedingMinedCredit(credit2);
+        msg2 = SucceedingMinedCreditMessage(msg1);
+        msg3 = SucceedingMinedCreditMessage(msg2);
+        msg4 = SucceedingMinedCreditMessage(msg3);
+        msg5 = SucceedingMinedCreditMessage(msg2);
 
-        credit_system->StoreMinedCredit(credit1);
-        credit_system->StoreMinedCredit(credit2);
-        credit_system->StoreMinedCredit(credit3);
-        credit_system->StoreMinedCredit(credit4);
-        credit_system->StoreMinedCredit(credit5);
+        credit_system->StoreMinedCreditMessage(msg1);
+        credit_system->StoreMinedCreditMessage(msg2);
+        credit_system->StoreMinedCreditMessage(msg3);
+        credit_system->StoreMinedCreditMessage(msg4);
+        credit_system->StoreMinedCreditMessage(msg5);
 
-        credit5_hash = credit5.GetHash160();
-        credit4_hash = credit4.GetHash160();
-        credit2_hash = credit2.GetHash160();
+        msg5_hash = msg5.GetHash160();
+        msg4_hash = msg4.GetHash160();
+        msg2_hash = msg2.GetHash160();
     }
 
     virtual void TearDown()
@@ -447,15 +449,15 @@ public:
 
 TEST_F(ACreditSystemWithSeveralStoredMinedCredits, CanFindAFork)
 {
-    uint160 fork = credit_system->FindFork(credit4_hash, credit5_hash);
-    ASSERT_THAT(fork, Eq(credit2_hash));
+    uint160 fork = credit_system->FindFork(msg4_hash, msg5_hash);
+    ASSERT_THAT(fork, Eq(msg2_hash));
 }
 
 
 class ACreditSystemWithABigFork : public ACreditSystem
 {
 public:
-    vector<MinedCredit> common_part, branch1, branch2;
+    vector<MinedCreditMessage> common_part, branch1, branch2;
 
     virtual void SetUp()
     {
@@ -464,11 +466,12 @@ public:
         uint64_t length_of_branch1 = 20;
         uint64_t length_of_branch2 = 30;
 
-        MinedCredit starting_credit;
-        credit_system->StoreMinedCredit(starting_credit);
-        common_part = ChainStartingFromGivenMinedCredit(starting_credit, length_of_common_part);
-        branch1 = ChainStartingFromGivenMinedCredit(common_part.back(), length_of_branch1);
-        branch2 = ChainStartingFromGivenMinedCredit(common_part.back(), length_of_branch2);
+
+        MinedCreditMessage starting_msg;
+        credit_system->StoreMinedCreditMessage(starting_msg);
+        common_part = ChainStartingFromGivenMinedCreditMessage(starting_msg, length_of_common_part);
+        branch1 = ChainStartingFromGivenMinedCreditMessage(common_part.back(), length_of_branch1);
+        branch2 = ChainStartingFromGivenMinedCreditMessage(common_part.back(), length_of_branch2);
     }
 
     virtual void TearDown()
@@ -491,22 +494,22 @@ TEST_F(ACreditSystemWithABigFork, CanFindTheFork)
 class ACreditSystemWithTwoNonIntersectingChains : public ACreditSystem
 {
 public:
-    vector<MinedCredit> chain1, chain2;
+    vector<MinedCreditMessage> chain1, chain2;
 
     virtual void SetUp()
     {
         ACreditSystem::SetUp();
 
-        MinedCredit starting_credit1, starting_credit2;
+        MinedCreditMessage starting_msg1, starting_msg2;
 
-        starting_credit1.amount = 1;
-        starting_credit2.amount = 2;
+        starting_msg1.mined_credit.amount = 1;
+        starting_msg2.mined_credit.amount = 2;
 
-        credit_system->StoreMinedCredit(starting_credit1);
-        credit_system->StoreMinedCredit(starting_credit2);
+        credit_system->StoreMinedCreditMessage(starting_msg1);
+        credit_system->StoreMinedCreditMessage(starting_msg2);
 
-        chain1 = ChainStartingFromGivenMinedCredit(starting_credit1, 10);
-        chain2 = ChainStartingFromGivenMinedCredit(starting_credit2, 15);
+        chain1 = ChainStartingFromGivenMinedCreditMessage(starting_msg1, 10);
+        chain2 = ChainStartingFromGivenMinedCreditMessage(starting_msg2, 15);
     }
 
     virtual void TearDown()
@@ -559,15 +562,15 @@ TEST_F(ACreditSystemWithTransactions, DeterminesTheCreditsSpentBetweenOneMinedCr
     auto msg1 = MinedCreditMessageContaining(tx1);
     auto msg2 = MinedCreditMessageContaining(tx2);
 
-    msg2.mined_credit = SucceedingMinedCredit(msg1.mined_credit);
+    msg2.mined_credit.network_state.previous_mined_credit_message_hash = msg1.GetHash160();
 
     credit_system->StoreMinedCreditMessage(msg1);
     credit_system->StoreMinedCreditMessage(msg2);
 
-    uint160 credit_hash1 = msg1.mined_credit.GetHash160();
-    uint160 credit_hash2 = msg2.mined_credit.GetHash160();
+    uint160 msg1_hash = msg1.GetHash160();
+    uint160 msg2_hash = msg2.GetHash160();
 
-    auto spent = credit_system->GetPositionsOfCreditsSpentBetween(credit_hash1, credit_hash2);
+    auto spent = credit_system->GetPositionsOfCreditsSpentBetween(msg1_hash, msg2_hash);
 
     ASSERT_FALSE(spent.count(1));
     ASSERT_TRUE(spent.count(2));
@@ -583,13 +586,13 @@ public:
     uint64_t number_of_credits{0};
     uint64_t number_of_mined_credits{0};
 
-    MinedCredit SucceedingMinedCredit(MinedCredit mined_credit)
+    MinedCreditMessage SucceedingMinedCreditMessage(MinedCreditMessage msg)
     {
-        MinedCredit succeeding_mined_credit;
-        succeeding_mined_credit.network_state.previous_mined_credit_hash = mined_credit.GetHash160();
-        succeeding_mined_credit.network_state.batch_number = mined_credit.network_state.batch_number;
-        succeeding_mined_credit.amount = number_of_mined_credits++; // prevent exact duplicates
-        return succeeding_mined_credit;
+        MinedCreditMessage succeeding_msg;
+        succeeding_msg.mined_credit.network_state.previous_mined_credit_message_hash = msg.GetHash160();
+        succeeding_msg.mined_credit.network_state.batch_number = msg.mined_credit.network_state.batch_number;
+        succeeding_msg.mined_credit.amount = number_of_mined_credits++; // prevent exact duplicates
+        return succeeding_msg;
     }
 
     SignedTransaction TransactionWithOneInput()
@@ -607,15 +610,14 @@ public:
         vector<MinedCreditMessage> chain;
         while (chain.size() < length)
         {
-            auto previous_mined_credit = chain.size() > 0 ? chain.back().mined_credit : msg.mined_credit;
-            MinedCreditMessage next_msg;
-            next_msg.mined_credit = SucceedingMinedCredit(previous_mined_credit);
+            auto previous_msg = chain.size() > 0 ? chain.back() : msg;
+            MinedCreditMessage next_msg = SucceedingMinedCreditMessage(previous_msg);
             auto next_tx = TransactionWithOneInput();
             credit_system->StoreTransaction(next_tx);
             next_msg.hash_list.full_hashes.push_back(next_tx.GetHash160());
             next_msg.mined_credit.network_state.batch_size = 1;
-            next_msg.mined_credit.network_state.batch_offset = previous_mined_credit.network_state.batch_offset
-                                                                + previous_mined_credit.network_state.batch_size;
+            next_msg.mined_credit.network_state.batch_offset = previous_msg.mined_credit.network_state.batch_offset
+                                                                + previous_msg.mined_credit.network_state.batch_size;
             next_msg.hash_list.GenerateShortHashes();
             credit_system->StoreMinedCreditMessage(next_msg);
             chain.push_back(next_msg);
@@ -649,8 +651,8 @@ public:
 TEST_F(ACreditSystemWithAFork, DeterminesTheCreditsSpentAndUnspentWhenSwitchingAcrossTheFork)
 {
     set<uint64_t> spent, unspent;
-    auto hash1 = branch1.back().mined_credit.GetHash160();
-    auto hash2 = branch2.back().mined_credit.GetHash160();
+    auto hash1 = branch1.back().GetHash160();
+    auto hash2 = branch2.back().GetHash160();
 
     bool succeeded = credit_system->GetSpentAndUnspentWhenSwitchingAcrossFork(hash1, hash2, spent, unspent);
 
@@ -662,8 +664,8 @@ TEST_F(ACreditSystemWithAFork, DeterminesTheCreditsSpentAndUnspentWhenSwitchingA
 TEST_F(ACreditSystemWithAFork, GetsTheSpentChainOfOneProngStartingFromTheSpentChainOfTheOther)
 {
     BitChain spent_chain1, spent_chain2;
-    auto hash1 = branch1.back().mined_credit.GetHash160();
-    auto hash2 = branch2.back().mined_credit.GetHash160();
+    auto hash1 = branch1.back().GetHash160();
+    auto hash2 = branch2.back().GetHash160();
 
     for (uint32_t i = 0; i < 15; i++)
     {
@@ -682,7 +684,7 @@ TEST_F(ACreditSystemWithAFork, GetsTheSpentChainOfOneProngStartingFromTheSpentCh
 
 TEST_F(ACreditSystemWithAFork, GetsTheSpentChainOfAGivenCreditHashByReplayingTransactionsAndCredits)
 {
-    auto hash1 = branch1.back().mined_credit.GetHash160();
+    auto hash1 = branch1.back().GetHash160();
     BitChain empty_spent_chain;
     BitChain original_spent_chain = credit_system->GetSpentChainOnOtherProngOfFork(empty_spent_chain, 0, hash1);
 
@@ -694,16 +696,16 @@ TEST_F(ACreditSystemWithAFork, GetsTheSpentChainOfAGivenCreditHashByReplayingTra
 class ACreditSystemWithAMinedCreditAndATransaction : public ACreditSystem
 {
 public:
-    MinedCredit mined_credit;
+    MinedCreditMessage msg;
     SignedTransaction tx;
 
 
     virtual void SetUp()
     {
         ACreditSystem::SetUp();
-        mined_credit = ExampleMinedCredit();
+        msg = ExampleMinedCreditMessage();
         tx.rawtx.outputs.push_back(Credit(Point(SECP256K1, 3).getvch(), ONE_CREDIT));
-        credit_system->StoreMinedCredit(mined_credit);
+        credit_system->StoreMinedCreditMessage(msg);
         credit_system->StoreTransaction(tx);
     }
 
@@ -715,20 +717,20 @@ public:
 
 TEST_F(ACreditSystemWithAMinedCreditAndATransaction, SetsTheBatchRootAndSizeAndMessageListHashInAMinedCreditMessage)
 {
-    MinedCreditMessage msg;
-    msg.mined_credit.network_state.previous_mined_credit_hash = 1;
-    msg.mined_credit.network_state.batch_offset = 10;
-    msg.hash_list.full_hashes.push_back(mined_credit.GetHash160());
-    msg.hash_list.full_hashes.push_back(tx.GetHash160());
-    msg.hash_list.GenerateShortHashes();
+    MinedCreditMessage next_msg;
+    next_msg.mined_credit.network_state.previous_mined_credit_message_hash = 1;
+    next_msg.mined_credit.network_state.batch_offset = 10;
+    next_msg.hash_list.full_hashes.push_back(msg.GetHash160());
+    next_msg.hash_list.full_hashes.push_back(tx.GetHash160());
+    next_msg.hash_list.GenerateShortHashes();
 
-    credit_system->SetBatchRootAndSizeAndMessageListHashAndSpentChainHash(msg);
-    ASSERT_THAT(msg.mined_credit.network_state.batch_size, Eq(2));
+    credit_system->SetBatchRootAndSizeAndMessageListHashAndSpentChainHash(next_msg);
+    ASSERT_THAT(next_msg.mined_credit.network_state.batch_size, Eq(2));
 
     CreditBatch batch(1, 10);
-    batch.Add(mined_credit);
+    batch.Add(msg.mined_credit);
     batch.Add(tx.rawtx.outputs[0]);
-    ASSERT_THAT(msg.mined_credit.network_state.batch_root, Eq(batch.Root()));
+    ASSERT_THAT(next_msg.mined_credit.network_state.batch_root, Eq(batch.Root()));
 
-    ASSERT_THAT(msg.mined_credit.network_state.message_list_hash, Eq(msg.hash_list.GetHash160()));
+    ASSERT_THAT(next_msg.mined_credit.network_state.message_list_hash, Eq(next_msg.hash_list.GetHash160()));
 }

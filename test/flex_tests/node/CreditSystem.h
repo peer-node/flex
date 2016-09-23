@@ -48,7 +48,7 @@ public:
 
     uint160 FindFork(uint160 credit_hash1, uint160 credit_hash2);
 
-    uint160 PreviousCreditHash(uint160 credit_hash);
+    uint160 PreviousMinedCreditMessageHash(uint160 credit_hash);
 
     std::set<uint64_t> GetPositionsOfCreditsSpentBetween(uint160 from_credit_hash, uint160 to_credit_hash);
 
@@ -71,15 +71,7 @@ public:
 
     bool IsCalend(uint160 credit_hash);
 
-    uint160 PrecedingCalendCreditHash(uint160 credit_hash);
-
-    EncodedNetworkState SucceedingNetworkState(MinedCredit mined_credit);
-
     uint160 InitialDifficulty();
-
-    uint160 GetNextDifficulty(MinedCredit credit);
-
-    uint160 GetNextDiurnalDifficulty(MinedCredit credit);
 
     void SetBatchRootAndSizeAndMessageListHashAndSpentChainHash(MinedCreditMessage &msg);
 
@@ -93,17 +85,11 @@ public:
 
     bool CheckHashesSeedsAndThresholdsInMinedCreditMessageProofOfWork(MinedCreditMessage &msg);
 
-    uint160 GetNextPreviousDiurnRoot(MinedCredit &mined_credit);
-
-    uint160 GetNextDiurnalBlockRoot(MinedCredit mined_credit);
-
     bool ProofHasCorrectNumberOfSeedsAndLinks(TwistWorkProof proof);
 
     void SetChildBatch(uint160 parent_hash, uint160 child_hash);
 
     void RemoveFromMainChain(uint160 credit_hash);
-
-    void AcceptMinedCreditAsValidByRecordingTotalWorkAndParent(MinedCredit mined_credit);
 
     void RecordTotalWork(uint160 credit_hash, uint160 total_work);
 
@@ -142,14 +128,12 @@ public:
 
     void StoreHash(uint160 hash, MemoryDataStore &hashdata);
 
-    bool DataIsPresentFromMinedCreditToPrecedingCalendOrStart(MinedCredit mined_credit);
-
     void
     SetMiningParameters(uint64_t number_of_megabytes_, uint160 initial_difficulty_, uint160 initial_diurnal_difficulty_);
 
     bool MinedCreditWasRecordedToHaveTotalWork(uint160 credit_hash, uint160 total_work);
 
-    void AddCreditHashAndPredecessorsToMainChain(uint160 credit_hash);
+    void AddMinedCreditMessageAndPredecessorsToMainChain(uint160 credit_hash);
 
     void MarkCalendAndSucceedingCalendsAsInvalid(uint160 message, uint160 failure_message_hash);
 
@@ -159,8 +143,6 @@ public:
 
     void RecordReportedFailureOfCalend(CalendarFailureMessage message);
 
-    void MarkCalendAndSucceedingCalendsAsInvalid(uint160 calend_hash);
-
     bool CalendarContainsAKnownBadCalend(Calendar &calendar);
 
     void MarkCalendAndSucceedingCalendsAsInvalid(CalendarFailureMessage message);
@@ -169,7 +151,21 @@ public:
 
     void RemoveReportedTotalWorkOfMinedCreditsSucceedingInvalidCalend(CalendarFailureMessage message);
 
-    std::vector<uint160> GetInvalidCalends();
+    void AcceptMinedCreditMessageAsValidByRecordingTotalWorkAndParent(MinedCreditMessage msg);
+
+    uint160 PrecedingCalendHash(uint160 msg_hash);
+
+    uint160 GetNextDifficulty(MinedCreditMessage msg);
+
+    uint160 GetNextDiurnalDifficulty(MinedCreditMessage msg);
+
+    EncodedNetworkState SucceedingNetworkState(MinedCreditMessage msg);
+
+    uint160 GetNextPreviousDiurnRoot(MinedCreditMessage &msg);
+
+    bool DataIsPresentFromMinedCreditToPrecedingCalendOrStart(MinedCreditMessage msg);
+
+    uint160 GetNextDiurnalBlockRoot(MinedCreditMessage msg);
 };
 
 

@@ -27,14 +27,11 @@ public:
         READWRITE(timestamp);
     );
 
+    JSON(timestamp);
+
     DEPENDENCIES();
 
-    uint160 GetHash160()
-    {
-        CDataStream ss(SER_NETWORK, CLIENT_VERSION);
-        ss << *this;
-        return Hash160(ss.begin(), ss.end());
-    }
+    HASH160();
 };
 
 

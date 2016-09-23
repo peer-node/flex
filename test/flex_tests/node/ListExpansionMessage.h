@@ -5,6 +5,9 @@
 #include "CreditSystem.h"
 #include "ListExpansionRequestMessage.h"
 
+#include "log.h"
+#define LOG_CATEGORY "ListExpansionMessage.h"
+
 class ListExpansionMessage
 {
 public:
@@ -17,7 +20,7 @@ public:
     ListExpansionMessage(ListExpansionRequestMessage request, CreditSystem *credit_system)
     {
         request_hash = request.GetHash160();
-        MinedCreditMessage msg = credit_system->creditdata[request.mined_credit_hash]["msg"];
+        MinedCreditMessage msg = credit_system->msgdata[request.mined_credit_message_hash]["msg"];
         msg.hash_list.RecoverFullHashes(credit_system->msgdata);
         PopulateMessages(msg.hash_list.full_hashes, credit_system);
     }
@@ -29,9 +32,9 @@ public:
             std::string type = credit_system->MessageType(hash);
             message_types.push_back(type);
             vch_t message_content;
-            if (type == "mined_credit")
+            if (type == "msg")
             {
-                MinedCreditMessage msg = credit_system->creditdata[hash]["msg"];
+                MinedCreditMessage msg = credit_system->msgdata[hash]["msg"];
                 CDataStream ss(SER_NETWORK, CLIENT_VERSION);
                 ss << msg;
                 message_content = vch_t(ss.begin(), ss.end());

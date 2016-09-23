@@ -162,7 +162,7 @@ TEST_F(AFlexRPCServerWithAFlexNetworkNodeAndABalance, ProvidesACalendar)
 
 TEST_F(AFlexRPCServerWithAFlexNetworkNodeAndABalance, ProvidesAMinedCreditByHash)
 {
-    uint160 last_credit_hash = flex_network_node.calendar.LastMinedCreditHash();
+    uint160 last_credit_hash = flex_network_node.calendar.LastMinedCreditMessageHash();
     parameters.append(last_credit_hash.ToString());
     auto result = client->CallMethod("getminedcredit", parameters);
 
@@ -383,13 +383,14 @@ public:
 
 TEST_F(AFlexRPCServerConnectedToARemoteFlexNetworkNode, SynchronizesWithTheRemoteNetworkNode)
 {
-    ASSERT_THAT(flex_network_node.calendar.LastMinedCreditHash(), Eq(0));
+    ASSERT_THAT(flex_network_node.calendar.LastMinedCreditMessageHash(), Eq(0));
 
     AddABatchToTheTip(&flex_network_node);
     MilliSleep(300);
 
-    ASSERT_THAT(flex_network_node.calendar.LastMinedCreditHash(), Ne(0));
-    ASSERT_THAT(flex_network_node.calendar.LastMinedCreditHash(), Eq(remote_network_node.calendar.LastMinedCreditHash()));
+    ASSERT_THAT(flex_network_node.calendar.LastMinedCreditMessageHash(), Ne(0));
+    ASSERT_THAT(flex_network_node.calendar.LastMinedCreditMessageHash(), Eq(
+            remote_network_node.calendar.LastMinedCreditMessageHash()));
 }
 
 TEST_F(AFlexRPCServerConnectedToARemoteFlexNetworkNode, SynchronizesWithTheRemoteNetworkNodeViaATipRequest)
@@ -408,6 +409,7 @@ TEST_F(AFlexRPCServerConnectedToARemoteFlexNetworkNode, SynchronizesWithTheRemot
 
     MilliSleep(800);
 
-    ASSERT_THAT(flex_network_node.calendar.LastMinedCreditHash(), Ne(0));
-    ASSERT_THAT(flex_network_node.calendar.LastMinedCreditHash(), Eq(remote_network_node.calendar.LastMinedCreditHash()));
+    ASSERT_THAT(flex_network_node.calendar.LastMinedCreditMessageHash(), Ne(0));
+    ASSERT_THAT(flex_network_node.calendar.LastMinedCreditMessageHash(), Eq(
+            remote_network_node.calendar.LastMinedCreditMessageHash()));
 }

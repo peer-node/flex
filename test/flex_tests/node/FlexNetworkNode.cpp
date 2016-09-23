@@ -77,12 +77,12 @@ uint160 FlexNetworkNode::SendToAddress(std::string address, int64_t amount)
 
 void FlexNetworkNode::SwitchToNewCalendarAndSpentChain(Calendar new_calendar, BitChain new_spent_chain)
 {
-    uint160 old_tip_credit_hash = calendar.LastMinedCreditHash();
-    uint160 new_tip_credit_hash = new_calendar.LastMinedCreditHash();
-    uint160 fork = credit_system->FindFork(calendar.LastMinedCreditHash(), new_tip_credit_hash);
+    uint160 old_tip_credit_hash = calendar.LastMinedCreditMessageHash();
+    uint160 new_tip_credit_hash = new_calendar.LastMinedCreditMessageHash();
+    uint160 fork = credit_system->FindFork(calendar.LastMinedCreditMessageHash(), new_tip_credit_hash);
     LOCK(credit_message_handler->calendar_mutex);
     credit_system->RemoveBatchAndChildrenFromMainChainAndDeleteRecordOfTotalWork(fork);
-    credit_system->AddCreditHashAndPredecessorsToMainChain(new_tip_credit_hash);
+    credit_system->AddMinedCreditMessageAndPredecessorsToMainChain(new_tip_credit_hash);
     calendar = new_calendar;
     spent_chain = new_spent_chain;
     if (wallet != NULL)

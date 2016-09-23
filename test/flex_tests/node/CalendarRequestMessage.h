@@ -2,30 +2,30 @@
 #define FLEX_CALENDARREQUESTMESSAGE_H
 
 
-#include <test/flex_tests/mined_credits/MinedCredit.h>
+#include "MinedCreditMessage.h"
 
 class CalendarRequestMessage
 {
 public:
-    uint160 credit_hash;
+    uint160 msg_hash;
 
     CalendarRequestMessage() { }
 
-    CalendarRequestMessage(MinedCredit mined_credit)
+    CalendarRequestMessage(MinedCreditMessage msg)
     {
-        credit_hash = mined_credit.GetHash160();
+        msg_hash = msg.GetHash160();
     }
 
     static std::string Type() { return "calendar_request"; }
 
     IMPLEMENT_SERIALIZE
     (
-        READWRITE(credit_hash);
+        READWRITE(msg_hash);
     )
 
     DEPENDENCIES();
 
-    uint160 GetHash160();
+    HASH160();
 };
 
 

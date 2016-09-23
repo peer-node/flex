@@ -16,7 +16,7 @@ public:
 
     InitialDataRequestMessage(CalendarMessage calendar_message)
     {
-        latest_mined_credit_hash = calendar_message.calendar.LastMinedCreditHash();
+        latest_mined_credit_hash = calendar_message.calendar.LastMinedCreditMessageHash();
     }
 
     static std::string Type() { return "initial_data_request"; }

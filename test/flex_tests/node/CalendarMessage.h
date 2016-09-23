@@ -20,7 +20,7 @@ public:
     CalendarMessage(CalendarRequestMessage request, CreditSystem *credit_system)
     {
         request_hash = request.GetHash160();
-        calendar = Calendar(request.credit_hash, credit_system);
+        calendar = Calendar(request.msg_hash, credit_system);
     }
 
     static std::string Type() { return "calendar"; }
@@ -35,12 +35,7 @@ public:
 
     DEPENDENCIES();
 
-    uint160 GetHash160()
-    {
-        CDataStream ss(SER_NETWORK, CLIENT_VERSION);
-        ss << *this;
-        return Hash160(ss.begin(), ss.end());
-    }
+    HASH160();
 };
 
 

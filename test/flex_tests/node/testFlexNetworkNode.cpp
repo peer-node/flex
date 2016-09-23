@@ -223,7 +223,7 @@ TEST_F(TwoFlexNetworkNodesWithSomeBatchesConnectedViaPeers, SendTipsInResponseTo
     // give node2 a very high total work so that the tip message doesn't provoke a calendar request
     node2.calendar.current_diurn.credits_in_diurn.back().mined_credit.network_state.difficulty = 100000000;
     TipRequestMessage tip_request = node2.msgdata[request_hash]["tip_request"];
-    MilliSleep(150);
+    MilliSleep(350);
     ASSERT_TRUE(peer2.HasReceived("data", "tip", TipMessage(tip_request, &node1.calendar)));
 }
 
@@ -266,8 +266,8 @@ public:
 void WaitForCalendarSwitch(FlexNetworkNode &node, uint160 last_tip = 0)
 {
     if (last_tip == 0)
-        last_tip = node.calendar.LastMinedCreditHash();
-    while (node.calendar.LastMinedCreditHash() == last_tip)
+        last_tip = node.calendar.LastMinedCreditMessageHash();
+    while (node.calendar.LastMinedCreditMessageHash() == last_tip)
     {
         MilliSleep(10);
         LOCK(node.credit_message_handler->calendar_mutex);
@@ -276,30 +276,32 @@ void WaitForCalendarSwitch(FlexNetworkNode &node, uint160 last_tip = 0)
 
 TEST_F(TwoFlexNetworkNodesWithValidProofsOfWorkConnectedViaPeers, AreSynchronized)
 {
-    auto original_node2_tip = node2.calendar.LastMinedCreditHash();
+    auto original_node2_tip = node2.calendar.LastMinedCreditMessageHash();
 
     AddABatchToTheTip(&node1);
     WaitForCalendarSwitch(node2, original_node2_tip);
 
-    auto intermediate_node2_tip = node2.calendar.LastMinedCreditHash();
+    auto intermediate_node2_tip = node2.calendar.LastMinedCreditMessageHash();
     AddABatchToTheTip(&node1);
     WaitForCalendarSwitch(node2, intermediate_node2_tip);
 
 
-    auto intermediate_node1_tip = node1.calendar.LastMinedCreditHash();
+    auto intermediate_node1_tip = node1.calendar.LastMinedCreditMessageHash();
     AddABatchToTheTip(&node2);
     WaitForCalendarSwitch(node1, intermediate_node1_tip);
 
-    ASSERT_THAT(node1.calendar.LastMinedCreditHash(), Eq(node2.calendar.LastMinedCreditHash()));
+    ASSERT_THAT(node1.calendar.LastMinedCreditMessageHash(), Eq(node2.calendar.LastMinedCreditMessageHash()));
 
-    MinedCredit mined_credit = node1.calendar.LastMinedCredit();
-    ASSERT_THAT(mined_credit.network_state.batch_number, Eq(3));
+    MinedCreditMessage msg = node1.calendar.LastMinedCreditMessage();
+    ASSERT_THAT(msg.mined_credit.network_state.batch_number, Eq(3));
 }
 
 
 class TwoFlexNetworkNodesConnectedAfterBatchesAreAdded : public TwoFlexNetworkNodesWithValidProofsOfWorkConnectedViaPeers
 {
 public:
+    uint160 original_node2_tip;
+
     virtual void SetUp()
     {
         SetMiningPreferences(node1);
@@ -310,6 +312,8 @@ public:
 
         AddABatchToTheTip(&node2);
 
+        original_node2_tip = node2.calendar.LastMinedCreditMessageHash();
+
         ConnectNodesViaPeers();
     }
 };
@@ -317,17 +321,17 @@ public:
 TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesAreAdded, SynchronizeThroughSharingMinedCreditMessages)
 {
     AddABatchToTheTip(&node1);
-    WaitForCalendarSwitch(node2); // wait for node2 to synchronize with node1
+    WaitForCalendarSwitch(node2, original_node2_tip); // wait for node2 to synchronize with node1
 
-    ASSERT_THAT(node1.calendar.LastMinedCreditHash(), Eq(node2.calendar.LastMinedCreditHash()));
+    ASSERT_THAT(node1.calendar.LastMinedCreditMessageHash(), Eq(node2.calendar.LastMinedCreditMessageHash()));
 }
 
 TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesAreAdded, SynchronizeThroughAnInitialDataMessage)
 {
     node2.data_message_handler->RequestTips();
-    WaitForCalendarSwitch(node2); // wait for node2 to synchronize with node1
+    WaitForCalendarSwitch(node2, original_node2_tip); // wait for node2 to synchronize with node1
 
-    ASSERT_THAT(node1.calendar.LastMinedCreditHash(), Eq(node2.calendar.LastMinedCreditHash()));
+    ASSERT_THAT(node1.calendar.LastMinedCreditMessageHash(), Eq(node2.calendar.LastMinedCreditMessageHash()));
 }
 
 class TwoFlexNetworkNodesConnectedAfterBatchesWithTransactionsAreAdded : public TwoFlexNetworkNodesWithValidProofsOfWorkConnectedViaPeers
@@ -356,7 +360,7 @@ TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesWithTransactionsAreAdded, Synchro
     AddABatchToTheTip(&node1);
     WaitForCalendarSwitch(node2); // wait for node2 to synchronize with node1
 
-    ASSERT_THAT(node1.calendar.LastMinedCreditHash(), Eq(node2.calendar.LastMinedCreditHash()));
+    ASSERT_THAT(node1.calendar.LastMinedCreditMessageHash(), Eq(node2.calendar.LastMinedCreditMessageHash()));
     ASSERT_THAT(node1.Balance(), Eq(ONE_CREDIT)); // mined two credits, spent 1
     ASSERT_THAT(node2.Balance(), Eq(ONE_CREDIT)); // received from transaction
 }
@@ -366,7 +370,7 @@ TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesWithTransactionsAreAdded, Synchro
     node2.data_message_handler->RequestTips();
     WaitForCalendarSwitch(node2); // wait for node2 to synchronize with node1
 
-    ASSERT_THAT(node1.calendar.LastMinedCreditHash(), Eq(node2.calendar.LastMinedCreditHash()));
+    ASSERT_THAT(node1.calendar.LastMinedCreditMessageHash(), Eq(node2.calendar.LastMinedCreditMessageHash()));
 }
 
 class TwoFlexNetworkNodesConnectedAfterBatchesWithTransactionsAreAddedFollowedByCalends :
@@ -401,7 +405,7 @@ TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesWithTransactionsAreAddedFollowedB
     AddABatchToTheTip(&node1);
     WaitForCalendarSwitch(node2); // wait for node2 to synchronize with node1
 
-    ASSERT_THAT(node1.calendar.LastMinedCreditHash(), Eq(node2.calendar.LastMinedCreditHash()));
+    ASSERT_THAT(node1.calendar.LastMinedCreditMessageHash(), Eq(node2.calendar.LastMinedCreditMessageHash()));
 }
 
 TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesWithTransactionsAreAddedFollowedByCalends, SynchronizeThroughAnInitialDataMessage)
@@ -409,7 +413,7 @@ TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesWithTransactionsAreAddedFollowedB
     node2.data_message_handler->RequestTips();
     WaitForCalendarSwitch(node2); // wait for node2 to synchronize with node1
 
-    ASSERT_THAT(node1.calendar.LastMinedCreditHash(), Eq(node2.calendar.LastMinedCreditHash()));
+    ASSERT_THAT(node1.calendar.LastMinedCreditMessageHash(), Eq(node2.calendar.LastMinedCreditMessageHash()));
 }
 
 
@@ -519,7 +523,7 @@ TEST_F(TwoFlexNetworkNodesConnectedViaCommunicators, SendAndReceiveMessages)
 {
     AddABatchToTheTip(&node1);
     WaitForCalendarSwitch(node2); // wait for node2 to synchronize with node1
-    ASSERT_THAT(node1.calendar.LastMinedCreditHash(), Eq(node2.calendar.LastMinedCreditHash()));
+    ASSERT_THAT(node1.calendar.LastMinedCreditMessageHash(), Eq(node2.calendar.LastMinedCreditMessageHash()));
 }
 
 class TwoFlexNetworkNodesConnectedViaCommunicatorsAfterOneHasBuiltACalendarWithAFailure :
@@ -547,9 +551,14 @@ public:
             AddABatchToTheTip(&node);
 
         MinedCreditMessage calend = node.calendar.calends.back();
-        node.credit_message_handler->calendar->RemoveLast(node.credit_system);
+        node.calendar.RemoveLast(node.credit_system);
+
+        node.credit_system->RemoveFromMainChainAndDeleteRecordOfTotalWork(calend);
 
         calend.proof_of_work.proof.link_lengths[2] += 1;
+        node.credit_system->AcceptMinedCreditMessageAsValidByRecordingTotalWorkAndParent(calend);
+        node.creditdata[calend.GetHash160()]["passed_verification"] = true;
+        node.creditdata[calend.GetHash160()]["is_calend"] = true;
         node.credit_message_handler->AddToTip(calend);
         bad_batch_number = calend.mined_credit.network_state.batch_number;
 
@@ -584,11 +593,11 @@ TEST_F(TwoFlexNetworkNodesConnectedViaCommunicatorsAfterOneHasBuiltACalendarWith
     node2.data_message_handler->calendar_scrutiny_time = 100 * CALENDAR_SCRUTINY_TIME; // error will be found
     node2.data_message_handler->RequestTips(); // node2 should inform node1 of the error
 
-    WaitForCalendarSwitch(node1, original_calendar.LastMinedCreditHash());
+    WaitForCalendarSwitch(node1, original_calendar.LastMinedCreditMessageHash());
 
     ASSERT_THAT(node1.calendar, Ne(original_calendar));
     ASSERT_THAT(node1.calendar.calends.size(), Eq(1));
-    ASSERT_THAT(node1.calendar.LastMinedCredit().network_state.batch_number, Eq(bad_batch_number - 1));
+    ASSERT_THAT(node1.calendar.LastMinedCreditMessage().mined_credit.network_state.batch_number, Eq(bad_batch_number - 1));
 }
 
 
@@ -643,11 +652,12 @@ TEST_F(TwoFlexNetworkNodesConnectedViaPeersAfterOneHasBuiltACalendarWithAFailure
     node2.data_message_handler->calendar_scrutiny_time = 100 * CALENDAR_SCRUTINY_TIME; // error will be found
     node2.data_message_handler->RequestTips(); // node2 should inform node1 of the error
 
-    WaitForCalendarSwitch(node1, original_calendar.LastMinedCreditHash());
+    WaitForCalendarSwitch(node1, original_calendar.LastMinedCreditMessageHash());
 
     ASSERT_THAT(node1.calendar, Ne(original_calendar));
     ASSERT_THAT(node1.calendar.calends.size(), Eq(1));
-    ASSERT_THAT(node1.calendar.LastMinedCredit().network_state.batch_number, Eq(bad_batch_number - 1));
+    ASSERT_THAT(node1.calendar.LastMinedCreditMessage().mined_credit.network_state.batch_number,
+                Eq(bad_batch_number - 1));
 }
 
 
@@ -665,7 +675,7 @@ public:
         node2.data_message_handler->calendar_scrutiny_time = 100 * CALENDAR_SCRUTINY_TIME; // error will be found
         node2.data_message_handler->RequestTips(); // node2 should inform node1 of the error
 
-        WaitForCalendarSwitch(node1, original_calendar.LastMinedCreditHash());
+        WaitForCalendarSwitch(node1, original_calendar.LastMinedCreditMessageHash());
     }
 
 };
@@ -676,7 +686,7 @@ TEST_F(TwoFlexNetworkNodesWhoHaveDetectedAFailureInACalendar,
     auto calendar_with_failure = original_calendar;
     calendar_with_failure.RemoveLast(node1.credit_system);
 
-    CalendarRequestMessage request(calendar_with_failure.LastMinedCredit());
+    CalendarRequestMessage request(calendar_with_failure.LastMinedCreditMessage());
     node2.msgdata[request.GetHash160()]["is_calendar_request"] = true;
     CalendarMessage calendar_message(request, node1.credit_system);
     node2.data_message_handler->HandleMessage(GetDataStream("data", calendar_message), &peer1);

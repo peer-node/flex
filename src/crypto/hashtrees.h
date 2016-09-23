@@ -46,13 +46,13 @@ inline uint160 SymmetricCombine(uint160 hash1, uint160 hash2)
 {
     uint8_t input[40];
     uint160 *hash1xorhash2 = (uint160*)&input[0];    
-    uint160 *hhash1xorhhash2 = (uint160*)&input[20];
+    uint160 *hhash1orhhash2 = (uint160*)&input[20];
 
     uint160 hhash1 = TreeHash(&hash1, 20);
     uint160 hhash2 = TreeHash(&hash2, 20);
 
     *hash1xorhash2 = hash1 ^ hash2;
-    *hhash1xorhhash2 = hhash1 ^ hhash2;
+    *hhash1orhhash2 = hhash1 | hhash2;
 
     return TreeHash(input, 40);
 }

@@ -14,10 +14,6 @@ public:
     uint160 Root() const;
 
     uint160 TotalCreditWork();
-
-    uint160 MinedCreditHash();
-
-    bool operator!=(Calend other);
 };
 
 

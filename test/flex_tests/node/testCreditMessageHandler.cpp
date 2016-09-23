@@ -69,7 +69,7 @@ EncodedNetworkState ValidFirstNetworkState()
     network_state.batch_size = 0;
     network_state.batch_root = CreditBatch(0, 0).Root();
     network_state.message_list_hash = ShortHashList<uint160>().GetHash160();
-    network_state.previous_mined_credit_hash = 0;
+    network_state.previous_mined_credit_message_hash = 0;
     network_state.spent_chain_hash = BitChain().GetHash160();
     network_state.timestamp = GetTimeMicros();
 
@@ -142,11 +142,11 @@ TEST_F(ACreditMessageHandler, RequiresAMinedCreditMessageWithABatchNumberOfZeroT
     msg.mined_credit.network_state.batch_offset = 0;
 
     msgdata[msg.GetHash160()]["rejected"] = false;
-    msg.mined_credit.network_state.previous_mined_credit_hash = 1;
+    msg.mined_credit.network_state.previous_mined_credit_message_hash = 1;
     credit_message_handler->HandleMessage(GetDataStream(msg), &peer);
     rejected = msgdata[msg.GetHash160()]["rejected"];
     ASSERT_THAT(rejected, Eq(true));
-    msg.mined_credit.network_state.previous_mined_credit_hash = 0;
+    msg.mined_credit.network_state.previous_mined_credit_message_hash = 0;
 
     msgdata[msg.GetHash160()]["rejected"] = false;
     msg.mined_credit.network_state.difficulty += 1;
@@ -246,8 +246,8 @@ MinedCreditMessage ValidSecondMinedCreditMessage(CreditSystem* credit_system, Mi
     msg.mined_credit.keydata = Point(SECP256K1, 3).getvch();
 
     credit_system->StoreMinedCreditMessage(prev_msg);
-    msg.mined_credit.network_state = credit_system->SucceedingNetworkState(prev_msg.mined_credit);
-    msg.hash_list.full_hashes.push_back(prev_msg.mined_credit.GetHash160());
+    msg.mined_credit.network_state = credit_system->SucceedingNetworkState(prev_msg);
+    msg.hash_list.full_hashes.push_back(prev_msg.GetHash160());
     msg.hash_list.GenerateShortHashes();
     credit_system->SetBatchRootAndSizeAndMessageListHashAndSpentChainHash(msg);
     msg.mined_credit.network_state.timestamp = GetTimeMicros();
@@ -333,10 +333,10 @@ MinedCreditMessage ValidThirdMinedCreditMessageWithATransaction(CreditSystem* cr
     msg.mined_credit.keydata = Point(SECP256K1, 4).getvch();
 
     credit_system->StoreMinedCreditMessage(prev_msg);
-    msg.mined_credit.network_state = credit_system->SucceedingNetworkState(prev_msg.mined_credit);
+    msg.mined_credit.network_state = credit_system->SucceedingNetworkState(prev_msg);
     auto tx = ValidTransaction(credit_system, prev_msg);
     credit_system->StoreTransaction(tx);
-    msg.hash_list.full_hashes.push_back(prev_msg.mined_credit.GetHash160());
+    msg.hash_list.full_hashes.push_back(prev_msg.GetHash160());
     msg.hash_list.full_hashes.push_back(tx.GetHash160());
     msg.hash_list.GenerateShortHashes();
     credit_system->SetBatchRootAndSizeAndMessageListHashAndSpentChainHash(msg);
@@ -383,17 +383,17 @@ void AddThreeMinedCreditMessagesToTheTip(CreditMessageHandler* credit_message_ha
 {
     CreditSystem* credit_system = credit_message_handler->credit_system;
     auto msg = ValidFirstMinedCreditMessage(credit_system);
-    credit_system->AcceptMinedCreditAsValidByRecordingTotalWorkAndParent(msg.mined_credit);
+    credit_system->AcceptMinedCreditMessageAsValidByRecordingTotalWorkAndParent(msg);
     credit_message_handler->AddToTip(msg);
 
     auto second_msg = ValidSecondMinedCreditMessage(credit_system, msg);
     credit_message_handler->AddToTip(second_msg);
-    credit_system->AcceptMinedCreditAsValidByRecordingTotalWorkAndParent(second_msg.mined_credit);
+    credit_system->AcceptMinedCreditMessageAsValidByRecordingTotalWorkAndParent(second_msg);
     credit_message_handler->HandleSignedTransaction(ValidTransaction(credit_system, second_msg));
 
     auto third_msg = ValidThirdMinedCreditMessageWithATransactionAndProof(credit_system, second_msg);
     MakeProofOfWorkInvalid(third_msg.proof_of_work.proof);
-    credit_system->AcceptMinedCreditAsValidByRecordingTotalWorkAndParent(third_msg.mined_credit);
+    credit_system->AcceptMinedCreditMessageAsValidByRecordingTotalWorkAndParent(third_msg);
     credit_message_handler->AddToTip(third_msg);
 }
 
@@ -401,14 +401,14 @@ TEST_F(ACreditMessageHandler, RemovesBatchesFromMainChainAndSwitchesToANewTipInR
 {
     AddThreeMinedCreditMessagesToTheTip(credit_message_handler);
     auto third_msg = credit_message_handler->calendar->current_diurn.credits_in_diurn.back();
-    uint160 second_mined_credit_hash = third_msg.mined_credit.network_state.previous_mined_credit_hash;
+    uint160 second_msg_hash = third_msg.mined_credit.network_state.previous_mined_credit_message_hash;
 
     while (credit_message_handler->ProofOfWorkPassesSpotCheck(third_msg)) { }
 
     auto bad_batch_message = credit_message_handler->GetBadBatchMessage(third_msg.GetHash160());
 
     credit_message_handler->HandleBadBatchMessage(bad_batch_message);
-    ASSERT_THAT(credit_message_handler->calendar->LastMinedCreditHash(), Eq(second_mined_credit_hash));
+    ASSERT_THAT(credit_message_handler->calendar->LastMinedCreditMessageHash(), Eq(second_msg_hash));
 }
 
 
@@ -480,9 +480,9 @@ public:
     {
         MinedCreditMessage msg;
         if (prev_msg.mined_credit.network_state.batch_number != 0)
-            msg.hash_list.full_hashes.push_back(prev_msg.mined_credit.GetHash160());
+            msg.hash_list.full_hashes.push_back(prev_msg.GetHash160());
         msg.hash_list.GenerateShortHashes();
-        msg.mined_credit.network_state = credit_system->SucceedingNetworkState(prev_msg.mined_credit);
+        msg.mined_credit.network_state = credit_system->SucceedingNetworkState(prev_msg);
 
         msg.mined_credit.keydata = GetNextPubKey().getvch();
 
@@ -579,8 +579,8 @@ public:
 
 TEST_F(ACreditMessageHandlerWithAcceptedTransactions, HasTheCorrectTip)
 {
-    uint160 tip = calendar.LastMinedCreditHash();
-    ASSERT_THAT(tip, Eq(msgs.back().mined_credit.GetHash160()));
+    uint160 tip = calendar.LastMinedCreditMessageHash();
+    ASSERT_THAT(tip, Eq(msgs.back().GetHash160()));
 }
 
 TEST_F(ACreditMessageHandlerWithAcceptedTransactions, RetainsTheTransactionsNotIncludedInANewBatchAddedToTheTip)
@@ -635,7 +635,7 @@ TEST_F(ACreditMessageHandlerWithAcceptedTransactions, GeneratesAValidMinedCredit
 {
     MinedCreditMessage msg = credit_message_handler->GenerateMinedCreditMessageWithoutProofOfWork();
     creditdata[msg.GetHash160()]["quickcheck_ok"] = true;
-    creditdata[msg.mined_credit.network_state.previous_mined_credit_hash]["passed_verification"] = true;
+    creditdata[msg.mined_credit.network_state.previous_mined_credit_message_hash]["passed_verification"] = true;
     ASSERT_TRUE(credit_message_handler->MinedCreditMessagePassesVerification(msg));
 }
 

@@ -36,8 +36,6 @@ public:
 
     bool CheckDiurnalDifficulty(MinedCreditMessage &msg);
 
-    MinedCredit GetPreviousMinedCredit(MinedCreditMessage &msg);
-
     bool CheckDifficulty(MinedCreditMessage &msg);
 
     bool CheckPreviousDiurnRoot(MinedCreditMessage &msg);
@@ -51,6 +49,8 @@ public:
     bool DataRequiredToCalculateDifficultyIsPresent(MinedCreditMessage &msg);
 
     bool DataRequiredToCalculateDiurnalBlockRootIsPresent(MinedCreditMessage &msg);
+
+    MinedCreditMessage GetPreviousMinedCreditMessage(MinedCreditMessage &msg);
 };
 
 

@@ -10,11 +10,11 @@
 
 Calendar::Calendar() { }
 
-Calendar::Calendar(uint160 credit_hash, CreditSystem *credit_system)
+Calendar::Calendar(uint160 msg_hash, CreditSystem *credit_system)
 {
-    PopulateDiurn(credit_hash, credit_system);
-    PopulateCalends(credit_hash, credit_system);
-    PopulateTopUpWork(credit_hash, credit_system);
+    PopulateDiurn(msg_hash, credit_system);
+    PopulateCalends(msg_hash, credit_system);
+    PopulateTopUpWork(msg_hash, credit_system);
 }
 
 uint160 Calendar::CalendWork()
@@ -25,12 +25,12 @@ uint160 Calendar::CalendWork()
     return calend_work;
 }
 
-std::vector<uint160> Calendar::GetCalendCreditHashes()
+std::vector<uint160> Calendar::GetCalendHashes()
 {
-    std::vector<uint160> calend_credit_hashes;
+    std::vector<uint160> calend_hashes;
     for (auto calend : calends)
-        calend_credit_hashes.push_back(calend.mined_credit.GetHash160());
-    return calend_credit_hashes;
+        calend_hashes.push_back(calend.GetHash160());
+    return calend_hashes;
 }
 
 bool Calendar::ContainsDiurn(uint160 diurn_root)
@@ -41,40 +41,40 @@ bool Calendar::ContainsDiurn(uint160 diurn_root)
     return false;
 }
 
-uint160 Calendar::LastMinedCreditHash()
+uint160 Calendar::LastMinedCreditMessageHash()
 {
     if (current_diurn.Size() > 0)
-        return current_diurn.Last();
+        return current_diurn.credits_in_diurn.back().GetHash160();
     if (calends.size() > 0)
-        return calends.back().mined_credit.GetHash160();
+        return calends.back().GetHash160();
     return 0;
 }
 
-MinedCredit Calendar::LastMinedCredit()
+MinedCreditMessage Calendar::LastMinedCreditMessage()
 {
     if (current_diurn.Size() > 0)
-        return current_diurn.credits_in_diurn.back().mined_credit;
+        return current_diurn.credits_in_diurn.back();
     if (calends.size() > 0)
-        return calends.back().mined_credit;
-    return MinedCredit();
+        return calends.back();
+    return MinedCreditMessage();
 }
 
-void Calendar::PopulateDiurn(uint160 credit_hash, CreditSystem* credit_system)
+void Calendar::PopulateDiurn(uint160 msg_hash, CreditSystem* credit_system)
 {
     current_diurn.credits_in_diurn.resize(0);
     current_diurn.diurnal_block = DiurnalBlock();
 
     std::vector<MinedCreditMessage> msgs;
-    MinedCreditMessage msg = credit_system->creditdata[credit_hash]["msg"];
+    MinedCreditMessage msg = credit_system->msgdata[msg_hash]["msg"];
 
     msgs.push_back(msg);
 
-    while (not credit_system->IsCalend(credit_hash) and credit_hash != 0)
+    while (not credit_system->IsCalend(msg_hash) and msg_hash != 0)
     {
-        credit_hash = msg.mined_credit.network_state.previous_mined_credit_hash;
-        if (credit_hash == 0)
+        msg_hash = msg.mined_credit.network_state.previous_mined_credit_message_hash;
+        if (msg_hash == 0)
             break;
-        msg = credit_system->creditdata[credit_hash]["msg"];
+        msg = credit_system->msgdata[msg_hash]["msg"];
         msgs.push_back(msg);
     }
     std::reverse(msgs.begin(), msgs.end());
@@ -83,29 +83,30 @@ void Calendar::PopulateDiurn(uint160 credit_hash, CreditSystem* credit_system)
     current_diurn.previous_diurn_root = Calend(msgs[0]).Root();
 }
 
-void Calendar::PopulateCalends(uint160 credit_hash, CreditSystem *credit_system)
+void Calendar::PopulateCalends(uint160 msg_hash, CreditSystem *credit_system)
 {
     calends.resize(0);
-    if (credit_system->IsCalend(credit_hash))
+    if (credit_system->IsCalend(msg_hash))
     {
-        MinedCreditMessage msg = credit_system->creditdata[credit_hash]["msg"];
+        MinedCreditMessage msg = credit_system->msgdata[msg_hash]["msg"];
         calends.push_back(Calend(msg));
     }
-    credit_hash = credit_system->PrecedingCalendCreditHash(credit_hash);
-    while (credit_hash != 0)
+    msg_hash = credit_system->PrecedingCalendHash(msg_hash);
+    while (msg_hash != 0)
     {
-        MinedCreditMessage msg = credit_system->creditdata[credit_hash]["msg"];
+        MinedCreditMessage msg = credit_system->msgdata[msg_hash]["msg"];
         calends.push_back(Calend(msg));
-        credit_hash = credit_system->PrecedingCalendCreditHash(credit_hash);
+
+        msg_hash = credit_system->PrecedingCalendHash(msg_hash);
     }
     std::reverse(calends.begin(), calends.end());
 }
 
-void Calendar::PopulateTopUpWork(uint160 credit_hash, CreditSystem *credit_system)
+void Calendar::PopulateTopUpWork(uint160 msg_hash, CreditSystem *credit_system)
 {
     extra_work.resize(0);
     uint160 total_calendar_work = CalendWork() + current_diurn.Work();
-    auto latest_network_state = LastMinedCredit().network_state;
+    auto latest_network_state = LastMinedCreditMessage().mined_credit.network_state;
     uint160 total_credit_work = latest_network_state.previous_total_work + latest_network_state.difficulty;
     if (calends.size() > 0)
         total_calendar_work -= calends.back().mined_credit.network_state.difficulty;
@@ -131,7 +132,7 @@ void Calendar::AddTopUpWorkInDiurn(uint160 credit_work_in_diurn,
     uint160 calend_work = calend.mined_credit.network_state.diurnal_difficulty;
     EncodedNetworkState network_state = calend.mined_credit.network_state;
 
-    uint160 credit_hash, remaining_credit_work_in_diurn = credit_work_in_diurn;
+    uint160 msg_hash, remaining_credit_work_in_diurn = credit_work_in_diurn;
 
     MinedCreditMessage msg = (MinedCreditMessage)calend;
 
@@ -142,10 +143,10 @@ void Calendar::AddTopUpWorkInDiurn(uint160 credit_work_in_diurn,
         remaining_credit_work_in_diurn -= network_state.difficulty;
         total_calendar_work += network_state.difficulty;
 
-        credit_hash = network_state.previous_mined_credit_hash;
-        if (credit_hash == 0)
+        msg_hash = network_state.previous_mined_credit_message_hash;
+        if (msg_hash == 0)
             break;
-        msg = credit_system->creditdata[credit_hash]["msg"];
+        msg = credit_system->msgdata[msg_hash]["msg"];
     }
     std::reverse(extra_work_in_diurn.begin(), extra_work_in_diurn.end());
     extra_work.push_back(extra_work_in_diurn);
@@ -186,7 +187,7 @@ bool Calendar::CheckCreditHashesInExtraWork()
 
     for (uint32_t i = 0; i < extra_work.size(); i++)
     {
-        if (not CheckCreditHashesInSequenceOfConsecutiveMinedCreditMessages(extra_work[i]))
+        if (not CheckCreditMessageHashesInSequenceOfConsecutiveMinedCreditMessages(extra_work[i]))
         {
             return false;
         }
@@ -198,25 +199,25 @@ bool Calendar::CheckCreditHashesInExtraWork()
     return true;
 }
 
-bool Calendar::CheckCreditHashesInSequenceOfConsecutiveMinedCreditMessages(std::vector<MinedCreditMessage> msgs)
+bool Calendar::CheckCreditMessageHashesInSequenceOfConsecutiveMinedCreditMessages(std::vector<MinedCreditMessage> msgs)
 {
     for (uint32_t i = 1 ; i < msgs.size() ; i++)
-        if (msgs[i].mined_credit.network_state.previous_mined_credit_hash != msgs[i-1].mined_credit.GetHash160())
+        if (msgs[i].mined_credit.network_state.previous_mined_credit_message_hash != msgs[i-1].GetHash160())
         {
             return false;
         }
     return true;
 }
 
-bool Calendar::CheckCreditHashesInCurrentDiurn()
+bool Calendar::CheckCreditMessageHashesInCurrentDiurn()
 {
     if (calends.size() == 0)
     {
         auto first_network_state = current_diurn.credits_in_diurn[0].mined_credit.network_state;
-        if (first_network_state.previous_mined_credit_hash != 0)
+        if (first_network_state.previous_mined_credit_message_hash != 0)
             return false;
     }
-    return CheckCreditHashesInSequenceOfConsecutiveMinedCreditMessages(current_diurn.credits_in_diurn);
+    return CheckCreditMessageHashesInSequenceOfConsecutiveMinedCreditMessages(current_diurn.credits_in_diurn);
 }
 
 bool Calendar::CheckDiurnRoots()
@@ -240,8 +241,8 @@ bool Calendar::CheckDiurnRoots()
     }
     if (calends.size() > 0)
     {
-        auto first_mined_credit_of_diurn = current_diurn.credits_in_diurn[0].mined_credit;
-        if (calends.back().mined_credit.GetHash160() != first_mined_credit_of_diurn.GetHash160())
+        auto first_msg_of_diurn = current_diurn.credits_in_diurn[0];
+        if (calends.back().GetHash160() != first_msg_of_diurn.GetHash160())
             return false;
     }
     return true;
@@ -249,14 +250,14 @@ bool Calendar::CheckDiurnRoots()
 
 bool Calendar::CheckDiurnRootsAndCreditHashes()
 {
-    return CheckDiurnRoots() and CheckCreditHashesInCurrentDiurn() and CheckCreditHashesInExtraWork();
+    return CheckDiurnRoots() and CheckCreditMessageHashesInCurrentDiurn() and CheckCreditHashesInExtraWork();
 }
 
 bool Calendar::CheckExtraWorkDifficultiesForDiurn(Calend calend, std::vector<MinedCreditMessage> msgs)
 {
     if (not CheckDifficultiesOfConsecutiveSequenceOfMinedCreditMessages(msgs))
         return false;
-    return msgs.size() == 0 or msgs.back().mined_credit.GetHash160() == calend.mined_credit.GetHash160();
+    return msgs.size() == 0 or msgs.back().GetHash160() == calend.GetHash160();
 }
 
 bool Calendar::CheckExtraWorkDifficulties()
@@ -394,9 +395,9 @@ bool Calendar::CheckProofsOfWork(CreditSystem *credit_system)
 
 void Calendar::AddToTip(MinedCreditMessage &msg, CreditSystem* credit_system)
 {
-    if (msg.mined_credit.network_state.previous_mined_credit_hash != LastMinedCreditHash())
+    if (msg.mined_credit.network_state.previous_mined_credit_message_hash != LastMinedCreditMessageHash())
         throw(std::runtime_error("Calendar: Attempt to add wrong mined credit to tip"));
-    if (not credit_system->IsCalend(msg.mined_credit.GetHash160()))
+    if (not credit_system->IsCalend(msg.GetHash160()))
     {
         current_diurn.Add(msg);
         return;
@@ -415,8 +416,8 @@ void Calendar::RemoveLast(CreditSystem* credit_system)
 {
     if (current_diurn.Size() == 0)
             return;
-    MinedCredit last_credit = LastMinedCredit();
-    *this = Calendar(last_credit.network_state.previous_mined_credit_hash, credit_system);
+    auto last_msg = LastMinedCreditMessage();
+    *this = Calendar(last_msg.mined_credit.network_state.previous_mined_credit_message_hash, credit_system);
 }
 
 bool Calendar::ValidateCreditInBatchUsingCurrentDiurn(CreditInBatch credit_in_batch)
@@ -469,7 +470,6 @@ bool Calendar::SpotCheckWork(CalendarFailureDetails &details)
         {
             uint160 diurn_root = calends[i].Root();
             details.diurn_root = diurn_root;
-            details.credit_hash = calends[i].mined_credit.GetHash160();
             details.mined_credit_message_hash = calends[i].GetHash160();
             details.check = check;
             return false;

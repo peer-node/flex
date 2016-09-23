@@ -37,6 +37,6 @@ TEST_F(ANetworkStateConstructor, ConstructsANetworkStateWithTheRightNetworkId)
 TEST_F(ANetworkStateConstructor, InitiallyConstructsANetworkStateWithAPreviousMinedCreditHashOfZero)
 {
     EncodedNetworkState network_state = network_state_constructor->ConstructNetworkState();
-    ASSERT_THAT(network_state.previous_mined_credit_hash, Eq(0));
+    ASSERT_THAT(network_state.previous_mined_credit_message_hash, Eq(0));
 }
 

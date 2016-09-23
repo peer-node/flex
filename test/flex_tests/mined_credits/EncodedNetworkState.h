@@ -17,7 +17,7 @@ class EncodedNetworkState
 {
 public:
     uint256 network_id{0};
-    uint160 previous_mined_credit_hash{0};
+    uint160 previous_mined_credit_message_hash{0};
     uint32_t batch_number{0};
     uint160 batch_root{0};
     uint32_t batch_offset{0};
@@ -35,7 +35,7 @@ public:
     IMPLEMENT_SERIALIZE
     (
         READWRITE(network_id);
-        READWRITE(previous_mined_credit_hash);
+        READWRITE(previous_mined_credit_message_hash);
         READWRITE(batch_number);
         READWRITE(batch_root);
         READWRITE(batch_offset);
@@ -50,7 +50,7 @@ public:
         READWRITE(timestamp);
     )
 
-    JSON(network_id, previous_mined_credit_hash, batch_number, batch_root, batch_offset,
+    JSON(network_id, previous_mined_credit_message_hash, batch_number, batch_root, batch_offset,
          batch_size, message_list_hash, spent_chain_hash, previous_total_work, difficulty,
          previous_diurn_root, diurnal_block_root, diurnal_difficulty, timestamp);
 

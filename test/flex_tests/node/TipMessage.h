@@ -16,23 +16,20 @@ public:
 
     static std::string Type() { return "tip"; }
 
-    MinedCredit mined_credit;
+    MinedCreditMessage mined_credit_message;
     uint160 tip_request_hash;
 
     IMPLEMENT_SERIALIZE
     (
-        READWRITE(mined_credit);
+        READWRITE(mined_credit_message);
         READWRITE(tip_request_hash);
     );
 
+    JSON(mined_credit_message, tip_request_hash);
+
     DEPENDENCIES();
 
-    uint160 GetHash160()
-    {
-        CDataStream ss(SER_NETWORK, CLIENT_VERSION);
-        ss << *this;
-        return Hash160(ss.begin(), ss.end());
-    }
+    HASH160();
 };
 
 

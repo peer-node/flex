@@ -29,26 +29,26 @@ public:
     void SetSpentChain(CreditSystem* credit_system)
     {
         Calend last_calend = GetLastCalend();
-        spent_chain = credit_system->GetSpentChain(last_calend.mined_credit.GetHash160());
+        spent_chain = credit_system->GetSpentChain(last_calend.GetHash160());
     }
 
-    void PopulateMinedCreditMessagesAndEnclosedData(uint160 credit_hash, CreditSystem *credit_system)
+    void PopulateMinedCreditMessagesAndEnclosedData(uint160 msg_hash, CreditSystem *credit_system)
     {
-        AddMinedCreditMessage(credit_hash, credit_system);
-        credit_hash = credit_system->PreviousCreditHash(credit_hash);
-        while (credit_hash != 0)
+        AddMinedCreditMessageAndContents(msg_hash, credit_system);
+        msg_hash = credit_system->PreviousMinedCreditMessageHash(msg_hash);
+        while (msg_hash != 0)
         {
-            AddMinedCreditMessage(credit_hash, credit_system);
-            if (credit_system->IsCalend(credit_hash))
+            AddMinedCreditMessageAndContents(msg_hash, credit_system);
+            if (credit_system->IsCalend(msg_hash))
                 break;
-            credit_hash = credit_system->PreviousCreditHash(credit_hash);
+            msg_hash = credit_system->PreviousMinedCreditMessageHash(msg_hash);
         }
         std::reverse(mined_credit_messages_in_current_diurn.begin(), mined_credit_messages_in_current_diurn.end());
     }
 
-    void AddMinedCreditMessage(uint160 credit_hash, CreditSystem *credit_system)
+    void AddMinedCreditMessageAndContents(uint160 msg_hash, CreditSystem *credit_system)
     {
-        MinedCreditMessage msg = credit_system->creditdata[credit_hash]["msg"];
+        MinedCreditMessage msg = credit_system->msgdata[msg_hash]["msg"];
         mined_credit_messages_in_current_diurn.push_back(msg);
         AddMessagesContainedInMinedCreditMessage(msg, credit_system);
     }
@@ -63,8 +63,8 @@ public:
             {
                 AddTransaction(hash, credit_system);
             }
-            if (type == "mined_credit" and credit_system->IsCalend(msg.mined_credit.GetHash160()))
-                AddMinedCredit(hash, credit_system);
+            if (type == "msg" and credit_system->IsCalend(msg.GetHash160()))
+                AddMinedCreditMessage(hash, credit_system);
         }
     }
 
@@ -75,11 +75,11 @@ public:
         enclosed_message_contents.push_back(Serialize(tx));
     }
 
-    void AddMinedCredit(uint160 credit_hash, CreditSystem *credit_system)
+    void AddMinedCreditMessage(uint160 msg_hash, CreditSystem *credit_system)
     {
-        MinedCredit mined_credit = credit_system->creditdata[credit_hash]["mined_credit"];
-        enclosed_message_types.push_back("mined_credit");
-        enclosed_message_contents.push_back(Serialize(mined_credit));
+        MinedCreditMessage msg = credit_system->msgdata[msg_hash]["msg"];
+        enclosed_message_types.push_back("msg");
+        enclosed_message_contents.push_back(Serialize(msg));
     }
 
     template <typename T>

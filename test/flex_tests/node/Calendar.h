@@ -14,7 +14,7 @@ class Calendar
 public:
     Calendar();
 
-    Calendar(uint160 credit_hash, CreditSystem *credit_system);
+    Calendar(uint160 msg_hash, CreditSystem *credit_system);
 
     std::vector<Calend> calends;
     std::vector<std::vector<MinedCreditMessage> > extra_work;
@@ -42,13 +42,9 @@ public:
 
     uint160 CalendWork();
 
-    std::vector<uint160> GetCalendCreditHashes();
-
     bool ContainsDiurn(uint160 diurn_root);
 
-    uint160 LastMinedCreditHash();
-
-    MinedCredit LastMinedCredit();
+    uint160 LastMinedCreditMessageHash();
 
     void PopulateDiurn(uint160 credit_hash, CreditSystem* credit_system);
 
@@ -73,7 +69,7 @@ public:
 
     bool CheckCreditHashesInExtraWork();
 
-    bool CheckCreditHashesInCurrentDiurn();
+    bool CheckCreditMessageHashesInCurrentDiurn();
 
     bool CheckDiurnRoots();
 
@@ -81,7 +77,7 @@ public:
 
     static bool CheckDifficultiesOfConsecutiveSequenceOfMinedCreditMessages(std::vector<MinedCreditMessage> msgs);
 
-    static bool CheckCreditHashesInSequenceOfConsecutiveMinedCreditMessages(std::vector<MinedCreditMessage> msgs);
+    static bool CheckCreditMessageHashesInSequenceOfConsecutiveMinedCreditMessages(std::vector<MinedCreditMessage> msgs);
 
     bool CheckProofsOfWorkInCurrentDiurn(CreditSystem* credit_system);
 
@@ -108,6 +104,10 @@ public:
     bool CheckRootsAndDifficulties(CreditSystem *credit_system);
 
     bool SpotCheckWork(CalendarFailureDetails &details);
+
+    std::vector<uint160> GetCalendHashes();
+
+    MinedCreditMessage LastMinedCreditMessage();
 };
 
 

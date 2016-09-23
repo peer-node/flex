@@ -17,7 +17,7 @@ public:
 
     bool CheckIfCreditInBatchIsInTheMainChain(CreditInBatch &credit_in_batch);
 
-    uint160 GetMinedCreditHashFromCreditInBatch(CreditInBatch &credit_in_batch);
+    uint160 GetMinedCreditMessageHashFromCreditInBatch(CreditInBatch &credit_in_batch);
 
     bool CheckBranchOfCreditInBatch(CreditInBatch credit_in_batch);
 };
