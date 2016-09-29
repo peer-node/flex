@@ -6,7 +6,7 @@
 #include "Calendar.h"
 #include "Wallet.h"
 #include "CreditMessageHandler.h"
-#include "DataMessageHandler.h"
+#include "test/flex_tests/node/data_handler/DataMessageHandler.h"
 
 
 class FlexNetworkNode
@@ -34,7 +34,7 @@ public:
         credit_message_handler->SetNetworkNode(this);
 
         data_message_handler = new DataMessageHandler(msgdata, creditdata);
-        data_message_handler->SetCreditSystem(credit_system);
+        data_message_handler->SetCreditSystemAndGenerateHandlers(credit_system);
         data_message_handler->SetCalendar(&calendar);
         data_message_handler->SetNetworkNode(this);
     }

@@ -1,7 +1,7 @@
 #include <src/credits/creditsign.h>
 #include <src/crypto/secp256k1point.h>
 #include "CreditMessageHandler.h"
-#include "DataMessageHandler.h"
+#include "test/flex_tests/node/data_handler/DataMessageHandler.h"
 
 #include "ListExpansionRequestMessage.h"
 
@@ -16,10 +16,8 @@ using std::set;
 
 void CreditMessageHandler::HandleMinedCreditMessage(MinedCreditMessage msg)
 {
-    if (credit_system->MinedCreditWasRecordedToHaveTotalWork(msg.GetHash160(), msg.mined_credit.ReportedWork()))
-    {
+    if (MinedCreditMessageWasRegardedAsValidAndHandled(msg))
         return;
-    }
 
     credit_system->StoreMinedCreditMessage(msg);
 
@@ -55,6 +53,11 @@ void CreditMessageHandler::HandleMinedCreditMessage(MinedCreditMessage msg)
         HandleValidMinedCreditMessage(msg);
         HandleQueuedMinedCreditMessages(msg);
     }
+}
+
+bool CreditMessageHandler::MinedCreditMessageWasRegardedAsValidAndHandled(MinedCreditMessage& msg)
+{
+    return credit_system->MinedCreditWasRecordedToHaveTotalWork(msg.GetHash160(), msg.mined_credit.ReportedWork());
 }
 
 bool CreditMessageHandler::PreviousMinedCreditMessageWasHandled(MinedCreditMessage& msg)

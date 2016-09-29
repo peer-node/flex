@@ -7,6 +7,7 @@
 #include <src/base/serialize.h>
 #include "CalendarMessage.h"
 
+
 class InitialDataRequestMessage
 {
 public:

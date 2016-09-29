@@ -30,6 +30,8 @@ public:
 
     JSON(previous_diurn_root, credits_in_diurn);
 
+    HASH160();
+
     bool operator==(const Diurn& other) const
     {
         return previous_diurn_root == other.previous_diurn_root and credits_in_diurn == other.credits_in_diurn;

@@ -9,7 +9,7 @@ Calend::Calend(MinedCreditMessage msg)
     mined_credit = msg.mined_credit;
 }
 
-uint160 Calend::Root() const
+uint160 Calend::DiurnRoot() const
 {
     return SymmetricCombine(mined_credit.network_state.previous_diurn_root,
                             mined_credit.network_state.diurnal_block_root);
@@ -18,4 +18,12 @@ uint160 Calend::Root() const
 uint160 Calend::TotalCreditWork()
 {
     return mined_credit.network_state.previous_total_work + mined_credit.network_state.difficulty;
+}
+
+DiurnMessageData Calend::GenerateDiurnMessageData(CreditSystem *credit_system)
+{
+    DiurnMessageData message_data;
+
+
+    return message_data;
 }

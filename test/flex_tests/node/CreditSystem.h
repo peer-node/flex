@@ -9,7 +9,7 @@
 #include <src/credits/CreditBatch.h>
 #include "MinedCreditMessage.h"
 #include "Calend.h"
-#include "CalendarFailureMessage.h"
+#include "test/flex_tests/node/data_handler/CalendarFailureMessage.h"
 #include "Calendar.h"
 
 

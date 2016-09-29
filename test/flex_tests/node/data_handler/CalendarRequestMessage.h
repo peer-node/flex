@@ -2,7 +2,7 @@
 #define FLEX_CALENDARREQUESTMESSAGE_H
 
 
-#include "MinedCreditMessage.h"
+#include "test/flex_tests/node/MinedCreditMessage.h"
 
 class CalendarRequestMessage
 {

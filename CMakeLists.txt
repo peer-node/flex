@@ -868,24 +868,24 @@ set(NODE_TEST_FILES
         test/flex_tests/node/NetworkStateConstructor.h
         test/flex_tests/node/NetworkState.cpp
         test/flex_tests/node/NetworkState.h
-        test/flex_tests/node/DataMessageHandler.cpp
-        test/flex_tests/node/DataMessageHandler.h
+        test/flex_tests/node/data_handler/DataMessageHandler.cpp
+        test/flex_tests/node/data_handler/DataMessageHandler.h
         test/flex_tests/node/TipRequestMessage.cpp
         test/flex_tests/node/TipRequestMessage.h
         test/flex_tests/node/TipMessage.cpp
         test/flex_tests/node/TipMessage.h
-        test/flex_tests/node/CalendarRequestMessage.cpp
-        test/flex_tests/node/CalendarRequestMessage.h
-        test/flex_tests/node/CalendarMessage.cpp
-        test/flex_tests/node/CalendarMessage.h
-        test/flex_tests/node/CalendarFailureDetails.cpp
-        test/flex_tests/node/CalendarFailureDetails.h
-        test/flex_tests/node/CalendarFailureMessage.cpp
-        test/flex_tests/node/CalendarFailureMessage.h
-        test/flex_tests/node/InitialDataRequestMessage.cpp
-        test/flex_tests/node/InitialDataRequestMessage.h
-        test/flex_tests/node/InitialDataMessage.cpp
-        test/flex_tests/node/InitialDataMessage.h
+        test/flex_tests/node/data_handler/CalendarRequestMessage.cpp
+        test/flex_tests/node/data_handler/CalendarRequestMessage.h
+        test/flex_tests/node/data_handler/CalendarMessage.cpp
+        test/flex_tests/node/data_handler/CalendarMessage.h
+        test/flex_tests/node/data_handler/CalendarFailureDetails.cpp
+        test/flex_tests/node/data_handler/CalendarFailureDetails.h
+        test/flex_tests/node/data_handler/CalendarFailureMessage.cpp
+        test/flex_tests/node/data_handler/CalendarFailureMessage.h
+        test/flex_tests/node/data_handler/InitialDataRequestMessage.cpp
+        test/flex_tests/node/data_handler/InitialDataRequestMessage.h
+        test/flex_tests/node/data_handler/InitialDataMessage.cpp
+        test/flex_tests/node/data_handler/InitialDataMessage.h
         test/flex_tests/node/TestPeerWithNetworkNode.h
         test/flex_tests/node/ListExpansionRequestMessage.cpp
         test/flex_tests/node/ListExpansionRequestMessage.h
@@ -906,7 +906,7 @@ add_executable(runNodeTests
         test/flex_tests/node/testMinedCreditConstructor.cpp
         test/flex_tests/node/testHttpAuthServer.cpp
         test/flex_tests/node/testFlexConfig.cpp
-        test/flex_tests/node/testFlexRPCServer.cpp)
+        test/flex_tests/node/testFlexRPCServer.cpp test/flex_tests/node/data_handler/KnownHistoryMessage.cpp test/flex_tests/node/data_handler/KnownHistoryMessage.h test/flex_tests/node/data_handler/KnownHistoryDeclaration.cpp test/flex_tests/node/data_handler/KnownHistoryDeclaration.h test/flex_tests/node/data_handler/DiurnMessageData.cpp test/flex_tests/node/data_handler/DiurnMessageData.h test/flex_tests/node/data_handler/EnclosedMessageData.h test/flex_tests/node/data_handler/EnclosedMessageData.cpp test/flex_tests/node/data_handler/TipHandler.cpp test/flex_tests/node/data_handler/TipHandler.h test/flex_tests/node/data_handler/CalendarHandler.cpp test/flex_tests/node/data_handler/CalendarHandler.h test/flex_tests/node/data_handler/InitialDataHandler.cpp test/flex_tests/node/data_handler/InitialDataHandler.h test/flex_tests/node/data_handler/KnownHistoryHandler.cpp test/flex_tests/node/data_handler/KnownHistoryHandler.h)
 
 add_executable(flexnetd
         test/flex_tests/flex_data/TestData.h

@@ -5,7 +5,7 @@
 #include <src/credits/CreditInBatch.h>
 #include "Calend.h"
 #include "Diurn.h"
-#include "CalendarFailureDetails.h"
+#include "test/flex_tests/node/data_handler/CalendarFailureDetails.h"
 
 class CreditSystem;
 

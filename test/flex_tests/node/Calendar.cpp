@@ -3,7 +3,7 @@
 #include <boost/range/adaptor/reversed.hpp>
 
 #include "log.h"
-#include "CalendarFailureDetails.h"
+#include "test/flex_tests/node/data_handler/CalendarFailureDetails.h"
 
 #define LOG_CATEGORY "Calendar.cpp"
 
@@ -36,7 +36,7 @@ std::vector<uint160> Calendar::GetCalendHashes()
 bool Calendar::ContainsDiurn(uint160 diurn_root)
 {
     for (auto calend : calends)
-        if (calend.Root() == diurn_root)
+        if (calend.DiurnRoot() == diurn_root)
             return true;
     return false;
 }
@@ -80,7 +80,7 @@ void Calendar::PopulateDiurn(uint160 msg_hash, CreditSystem* credit_system)
     std::reverse(msgs.begin(), msgs.end());
     for (auto msg_ : msgs)
         current_diurn.Add(msg_);
-    current_diurn.previous_diurn_root = Calend(msgs[0]).Root();
+    current_diurn.previous_diurn_root = Calend(msgs[0]).DiurnRoot();
 }
 
 void Calendar::PopulateCalends(uint160 msg_hash, CreditSystem *credit_system)
@@ -405,8 +405,17 @@ void Calendar::AddToTip(MinedCreditMessage &msg, CreditSystem* credit_system)
     else
     {
         calends.push_back(msg);
+        uint160 diurn_root = calends.back().DiurnRoot();
+
+        credit_system->creditdata[diurn_root]["data_is_known"] = true;
+        credit_system->creditdata[diurn_root]["message_data_is_known"] = true;
+        credit_system->creditdata[diurn_root]["diurn_hash"] = current_diurn.GetHash160();
+
+        DiurnMessageData message_data = calends.back().GenerateDiurnMessageData(credit_system);
+        credit_system->creditdata[diurn_root]["message_data_hash"] = message_data.GetHash160();
+
         current_diurn = Diurn();
-        current_diurn.previous_diurn_root = calends.back().Root();
+        current_diurn.previous_diurn_root = diurn_root;
         current_diurn.Add(msg);
         PopulateTopUpWork(msg.mined_credit.GetHash160(), credit_system);
     }
@@ -468,7 +477,7 @@ bool Calendar::SpotCheckWork(CalendarFailureDetails &details)
 
         if (!check.Valid())
         {
-            uint160 diurn_root = calends[i].Root();
+            uint160 diurn_root = calends[i].DiurnRoot();
             details.diurn_root = diurn_root;
             details.mined_credit_message_hash = calends[i].GetHash160();
             details.check = check;

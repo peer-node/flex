@@ -3,6 +3,9 @@
 #include "FlexNetworkNode.h"
 #include "TestPeer.h"
 #include "TestPeerWithNetworkNode.h"
+#include "test/flex_tests/node/data_handler/TipHandler.h"
+#include "test/flex_tests/node/data_handler/CalendarHandler.h"
+#include "test/flex_tests/node/data_handler/InitialDataHandler.h"
 
 using namespace ::testing;
 using namespace std;
@@ -212,14 +215,14 @@ TEST_F(TwoFlexNetworkNodesWithSomeBatchesConnectedViaPeers, PassMessagesToOneAno
 
 TEST_F(TwoFlexNetworkNodesConnectedViaPeers, SendTipRequests)
 {
-    uint160 request_hash = node2.data_message_handler->RequestTips();
+    uint160 request_hash = node2.data_message_handler->tip_handler->RequestTips();
     TipRequestMessage tip_request = node2.msgdata[request_hash]["tip_request"];
     ASSERT_TRUE(peer1.HasBeenInformedAbout("data", "tip_request", tip_request));
 }
 
 TEST_F(TwoFlexNetworkNodesWithSomeBatchesConnectedViaPeers, SendTipsInResponseToRequests)
 {
-    uint160 request_hash = node2.data_message_handler->RequestTips();
+    uint160 request_hash = node2.data_message_handler->tip_handler->RequestTips();
     // give node2 a very high total work so that the tip message doesn't provoke a calendar request
     node2.calendar.current_diurn.credits_in_diurn.back().mined_credit.network_state.difficulty = 100000000;
     TipRequestMessage tip_request = node2.msgdata[request_hash]["tip_request"];
@@ -236,8 +239,8 @@ public:
         node.credit_system->SetExpectedNumberOfMegabytesInMinedCreditProofsOfWork(1);
         node.credit_system->initial_difficulty = 100;
         node.credit_system->initial_diurnal_difficulty = 500;
-        node.data_message_handler->SetMiningParametersForInitialDataMessageValidation(1, 100, 500);
-        node.data_message_handler->calendar_scrutiny_time = 1 * 10000;
+        node.data_message_handler->initial_data_handler->SetMiningParametersForInitialDataMessageValidation(1, 100, 500);
+        node.data_message_handler->calendar_handler->calendar_scrutiny_time = 1 * 10000;
     }
 
     virtual void SetUp()
@@ -328,7 +331,7 @@ TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesAreAdded, SynchronizeThroughShari
 
 TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesAreAdded, SynchronizeThroughAnInitialDataMessage)
 {
-    node2.data_message_handler->RequestTips();
+    node2.data_message_handler->tip_handler->RequestTips();
     WaitForCalendarSwitch(node2, original_node2_tip); // wait for node2 to synchronize with node1
 
     ASSERT_THAT(node1.calendar.LastMinedCreditMessageHash(), Eq(node2.calendar.LastMinedCreditMessageHash()));
@@ -367,7 +370,7 @@ TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesWithTransactionsAreAdded, Synchro
 
 TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesWithTransactionsAreAdded, SynchronizeThroughAnInitialDataMessage)
 {
-    node2.data_message_handler->RequestTips();
+    node2.data_message_handler->tip_handler->RequestTips();
     WaitForCalendarSwitch(node2); // wait for node2 to synchronize with node1
 
     ASSERT_THAT(node1.calendar.LastMinedCreditMessageHash(), Eq(node2.calendar.LastMinedCreditMessageHash()));
@@ -410,7 +413,7 @@ TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesWithTransactionsAreAddedFollowedB
 
 TEST_F(TwoFlexNetworkNodesConnectedAfterBatchesWithTransactionsAreAddedFollowedByCalends, SynchronizeThroughAnInitialDataMessage)
 {
-    node2.data_message_handler->RequestTips();
+    node2.data_message_handler->tip_handler->RequestTips();
     WaitForCalendarSwitch(node2); // wait for node2 to synchronize with node1
 
     ASSERT_THAT(node1.calendar.LastMinedCreditMessageHash(), Eq(node2.calendar.LastMinedCreditMessageHash()));
@@ -478,8 +481,8 @@ public:
         node.credit_system->SetExpectedNumberOfMegabytesInMinedCreditProofsOfWork(1);
         node.credit_system->initial_difficulty = 100;
         node.credit_system->initial_diurnal_difficulty = 500;
-        node.data_message_handler->SetMiningParametersForInitialDataMessageValidation(1, 100, 500);
-        node.data_message_handler->calendar_scrutiny_time = 1 * 10000;
+        node.data_message_handler->initial_data_handler->SetMiningParametersForInitialDataMessageValidation(1, 100, 500);
+        node.data_message_handler->calendar_handler->calendar_scrutiny_time = 1 * 10000;
     }
 
     void CompleteProofOfWork(MinedCreditMessage& msg)
@@ -590,8 +593,8 @@ TEST_F(TwoFlexNetworkNodesConnectedViaCommunicatorsAfterOneHasBuiltACalendarWith
        SynchronizeToTheLastGoodMinedCreditIfTheFailureIsDetected)
 {
     Calendar original_calendar = node1.calendar;
-    node2.data_message_handler->calendar_scrutiny_time = 100 * CALENDAR_SCRUTINY_TIME; // error will be found
-    node2.data_message_handler->RequestTips(); // node2 should inform node1 of the error
+    node2.data_message_handler->calendar_handler->calendar_scrutiny_time = 100 * CALENDAR_SCRUTINY_TIME; // error will be found
+    node2.data_message_handler->tip_handler->RequestTips(); // node2 should inform node1 of the error
 
     WaitForCalendarSwitch(node1, original_calendar.LastMinedCreditMessageHash());
 
@@ -649,8 +652,8 @@ TEST_F(TwoFlexNetworkNodesConnectedViaPeersAfterOneHasBuiltACalendarWithAFailure
        SynchronizeToTheLastGoodMinedCreditIfTheFailureIsDetected)
 {
     Calendar original_calendar = node1.calendar;
-    node2.data_message_handler->calendar_scrutiny_time = 100 * CALENDAR_SCRUTINY_TIME; // error will be found
-    node2.data_message_handler->RequestTips(); // node2 should inform node1 of the error
+    node2.data_message_handler->calendar_handler->calendar_scrutiny_time = 100 * CALENDAR_SCRUTINY_TIME; // error will be found
+    node2.data_message_handler->tip_handler->RequestTips(); // node2 should inform node1 of the error
 
     WaitForCalendarSwitch(node1, original_calendar.LastMinedCreditMessageHash());
 
@@ -672,8 +675,8 @@ public:
         TwoFlexNetworkNodesConnectedViaPeersAfterOneHasBuiltACalendarWithAFailure::SetUp();
 
         original_calendar = node1.calendar;
-        node2.data_message_handler->calendar_scrutiny_time = 100 * CALENDAR_SCRUTINY_TIME; // error will be found
-        node2.data_message_handler->RequestTips(); // node2 should inform node1 of the error
+        node2.data_message_handler->calendar_handler->calendar_scrutiny_time = 100 * CALENDAR_SCRUTINY_TIME; // error will be found
+        node2.data_message_handler->tip_handler->RequestTips(); // node2 should inform node1 of the error
 
         WaitForCalendarSwitch(node1, original_calendar.LastMinedCreditMessageHash());
     }
@@ -691,7 +694,7 @@ TEST_F(TwoFlexNetworkNodesWhoHaveDetectedAFailureInACalendar,
     CalendarMessage calendar_message(request, node1.credit_system);
     node2.data_message_handler->HandleMessage(GetDataStream("data", calendar_message), &peer1);
     MilliSleep(3000);
-    CalendarFailureDetails details = node2.data_message_handler->GetCalendarFailureDetails(calendar_with_failure);
+    CalendarFailureDetails details = node2.data_message_handler->calendar_handler->GetCalendarFailureDetails(calendar_with_failure);
 
     ASSERT_TRUE(peer1.HasBeenInformedAbout("data", "calendar_failure", CalendarFailureMessage(details)));
 }

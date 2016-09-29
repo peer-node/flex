@@ -146,6 +146,8 @@ public:
     void HandleQueuedMinedCreditMessages(MinedCreditMessage &msg);
 
     void HandleMinedCreditMessageWithGivenListExpansion(ListExpansionMessage list_expansion_message);
+
+    bool MinedCreditMessageWasRegardedAsValidAndHandled(MinedCreditMessage &msg);
 };
 
 

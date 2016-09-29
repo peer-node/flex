@@ -3,6 +3,9 @@
 
 
 #include "MinedCreditMessage.h"
+#include "test/flex_tests/node/data_handler/DiurnMessageData.h"
+
+class CreditSystem;
 
 class Calend : public MinedCreditMessage
 {
@@ -11,9 +14,11 @@ public:
 
     Calend(MinedCreditMessage msg);
 
-    uint160 Root() const;
+    uint160 DiurnRoot() const;
 
     uint160 TotalCreditWork();
+
+    DiurnMessageData GenerateDiurnMessageData(CreditSystem *credit_system);
 };
 
 

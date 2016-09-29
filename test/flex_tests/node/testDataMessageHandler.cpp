@@ -1,10 +1,17 @@
 #include "gmock/gmock.h"
 
 #include "TestPeer.h"
-#include "DataMessageHandler.h"
-#include "CalendarFailureMessage.h"
+#include "test/flex_tests/node/data_handler/DataMessageHandler.h"
+#include "test/flex_tests/node/data_handler/CalendarFailureMessage.h"
 #include "CreditMessageHandler.h"
 #include "FlexNetworkNode.h"
+#include "test/flex_tests/node/data_handler/KnownHistoryMessage.h"
+#include "test/flex_tests/node/data_handler/KnownHistoryDeclaration.h"
+#include "test/flex_tests/node/data_handler/DiurnMessageData.h"
+#include "test/flex_tests/node/data_handler/TipHandler.h"
+#include "test/flex_tests/node/data_handler/CalendarHandler.h"
+#include "test/flex_tests/node/data_handler/InitialDataHandler.h"
+#include "test/flex_tests/node/data_handler/KnownHistoryHandler.h"
 
 using namespace ::testing;
 using namespace std;
@@ -30,7 +37,7 @@ public:
         data_message_handler = new DataMessageHandler(msgdata, creditdata);
         data_message_handler->SetNetwork(peer.network);
         credit_system = new CreditSystem(msgdata, creditdata);
-        data_message_handler->SetCreditSystem(credit_system);
+        data_message_handler->SetCreditSystemAndGenerateHandlers(credit_system);
         calendar = new Calendar();
         data_message_handler->SetCalendar(calendar);
 
@@ -40,7 +47,7 @@ public:
         credit_message_handler->SetCalendar(*calendar);
         credit_message_handler->SetNetwork(peer.network);
 
-        data_message_handler->calendar_scrutiny_time = 1500000;
+        data_message_handler->calendar_handler->calendar_scrutiny_time = 1500000;
 
         SetMiningPreferences();
 
@@ -52,7 +59,7 @@ public:
         credit_system->SetExpectedNumberOfMegabytesInMinedCreditProofsOfWork(1);
         credit_system->initial_difficulty = 100;
         credit_system->initial_diurnal_difficulty = 500;
-        data_message_handler->SetMiningParametersForInitialDataMessageValidation(1, 100, 500);
+        data_message_handler->initial_data_handler->SetMiningParametersForInitialDataMessageValidation(1, 100, 500);
     }
 
     virtual void TearDown()
@@ -106,7 +113,7 @@ TEST_F(ADataMessageHandler, RejectsIncomingTipMessagesWhichWerentRequested)
 
 TEST_F(ADataMessageHandler, AcceptsIncomingTipMessagesWhichWereRequested)
 {
-    uint160 tip_request_hash = data_message_handler->RequestTips();
+    uint160 tip_request_hash = data_message_handler->tip_handler->RequestTips();
     TipRequestMessage tip_request_message = msgdata[tip_request_hash]["tip_request"];
     TipMessage tip_message(tip_request_message, calendar);
     data_message_handler->HandleMessage(GetDataStream(tip_message), &peer);
@@ -144,7 +151,7 @@ public:
     {
         ADataMessageHandler::SetUp();
 
-        uint160 tip_request_hash = data_message_handler->RequestTips();
+        uint160 tip_request_hash = data_message_handler->tip_handler->RequestTips();
         TipRequestMessage request = msgdata[tip_request_hash]["tip_request"];
 
         tip1 = GetTipMessage(request, 1000);
@@ -161,7 +168,7 @@ public:
 
 TEST_F(ADataMessageHandlerWhichReceivedMultipleTips, RequestsTheCalendarOfTheTipWithTheMostReportedWork)
 {
-    data_message_handler->RequestCalendarOfTipWithTheMostWork();
+    data_message_handler->tip_handler->RequestCalendarOfTipWithTheMostWork();
     CalendarRequestMessage calendar_request(tip2.mined_credit_message);
     ASSERT_TRUE(peer.HasReceived("data", "calendar_request", calendar_request));
 }
@@ -221,7 +228,7 @@ TEST_F(ADataMessageHandlerWithSomeBatches, AcceptsIncomingCalendarMessagesThatWe
 
 TEST_F(ADataMessageHandlerWithSomeBatches, ChecksTheDifficultiesRootsAndProofsOfWorkInACalendar)
 {
-    bool ok = data_message_handler->CheckDifficultiesRootsAndProofsOfWork(*calendar);
+    bool ok = data_message_handler->calendar_handler->CheckDifficultiesRootsAndProofsOfWork(*calendar);
     ASSERT_THAT(ok, Eq(true));
 }
 
@@ -273,7 +280,7 @@ TEST_F(ADataMessageHandlerWithACalendarWithCalends, ScrutinizesTheWorkInTheCalen
 {
     CalendarFailureDetails details;
     uint64_t scrutiny_time = 1 * 1000000;
-    bool ok = data_message_handler->Scrutinize(*calendar, scrutiny_time, details);
+    bool ok = data_message_handler->calendar_handler->Scrutinize(*calendar, scrutiny_time, details);
     ASSERT_THAT(ok, Eq(true));
 }
 
@@ -282,7 +289,7 @@ TEST_F(ADataMessageHandlerWithACalendarWithCalends, ReturnsDetailsWhenACalendarF
     CalendarFailureDetails details;
     calendar->calends[1].proof_of_work.proof.link_lengths[2] += 1;
     uint64_t scrutiny_time = 1 * 1000000;
-    while (data_message_handler->Scrutinize(*calendar, scrutiny_time, details)) {}
+    while (data_message_handler->calendar_handler->Scrutinize(*calendar, scrutiny_time, details)) {}
     ASSERT_THAT(details.mined_credit_message_hash, Eq(calendar->calends[1].GetHash160()));
     ASSERT_THAT(details.check.failure_link, Eq(2));
 }
@@ -387,37 +394,37 @@ TEST_F(ADataMessageHandlerWithACalendarWithCalends, DetectsABadSpentChainInclude
 {
     auto initial_data_message = AValidInitialDataMessageThatWasRequested();
     initial_data_message.spent_chain.Set(0);
-    bool spent_chain_ok = data_message_handler->CheckSpentChainInInitialDataMessage(initial_data_message);
+    bool spent_chain_ok = data_message_handler->initial_data_handler->CheckSpentChainInInitialDataMessage(initial_data_message);
     ASSERT_THAT(spent_chain_ok, Eq(false));
 }
 
 TEST_F(ADataMessageHandlerWithACalendarWithCalends, AcceptsAGoodSpentChainIncludedInAnInitialDataMessage)
 {
     auto initial_data_message = AValidInitialDataMessageThatWasRequested();
-    bool spent_chain_ok = data_message_handler->CheckSpentChainInInitialDataMessage(initial_data_message);
+    bool spent_chain_ok = data_message_handler->initial_data_handler->CheckSpentChainInInitialDataMessage(initial_data_message);
     ASSERT_THAT(spent_chain_ok, Eq(true));
 }
 
 TEST_F(ADataMessageHandlerWithACalendarWithCalends, DetectsIfTheInitialDataMessageDoesntContainAllTheEnclosedMessages)
 {
     auto initial_data_message = AValidInitialDataMessageThatWasRequested();
-    initial_data_message.enclosed_message_contents.pop_back();
-    initial_data_message.enclosed_message_types.pop_back();
-    bool data_contained = data_message_handler->EnclosedMessagesArePresentInInitialDataMessage(initial_data_message);
+    initial_data_message.message_data.enclosed_message_contents.pop_back();
+    initial_data_message.message_data.enclosed_message_types.pop_back();
+    bool data_contained = data_message_handler->initial_data_handler->EnclosedMessagesArePresentInInitialDataMessage(initial_data_message);
     ASSERT_THAT(data_contained, Eq(false));
 }
 
 TEST_F(ADataMessageHandlerWithACalendarWithCalends, DetectsIfTheInitialDataMessageDoesContainAllTheEnclosedMessages)
 {
     auto initial_data_message = AValidInitialDataMessageThatWasRequested();
-    bool data_contained = data_message_handler->EnclosedMessagesArePresentInInitialDataMessage(initial_data_message);
+    bool data_contained = data_message_handler->initial_data_handler->EnclosedMessagesArePresentInInitialDataMessage(initial_data_message);
     ASSERT_THAT(data_contained, Eq(true));
 }
 
 TEST_F(ADataMessageHandlerWithACalendarWithCalends, DetectsIfTheInitialDataMessageMatchesTheRequestedCalendar)
 {
     auto initial_data_message = AValidInitialDataMessageThatWasRequested();
-    bool data_matches_calendar = data_message_handler->InitialDataMessageMatchesRequestedCalendar(initial_data_message);
+    bool data_matches_calendar = data_message_handler->initial_data_handler->InitialDataMessageMatchesRequestedCalendar(initial_data_message);
     ASSERT_THAT(data_matches_calendar, Eq(true));
 }
 
@@ -425,14 +432,14 @@ TEST_F(ADataMessageHandlerWithACalendarWithCalends, DetectsIfTheInitialDataMessa
 {
     auto initial_data_message = AValidInitialDataMessageThatWasRequested();
     initial_data_message.mined_credit_messages_in_current_diurn.pop_back();
-    bool data_matches_calendar = data_message_handler->InitialDataMessageMatchesRequestedCalendar(initial_data_message);
+    bool data_matches_calendar = data_message_handler->initial_data_handler->InitialDataMessageMatchesRequestedCalendar(initial_data_message);
     ASSERT_THAT(data_matches_calendar, Eq(false));
 }
 
 TEST_F(ADataMessageHandlerWithACalendarWithCalends, DetectsIfTheMinedCreditMessagesInTheInitialDataMessageAreValid)
 {
     auto initial_data_message = AValidInitialDataMessageThatWasRequested();
-    bool msgs_ok = data_message_handler->ValidateMinedCreditMessagesInInitialDataMessage(initial_data_message);
+    bool msgs_ok = data_message_handler->initial_data_handler->ValidateMinedCreditMessagesInInitialDataMessage(initial_data_message);
     ASSERT_THAT(msgs_ok, Eq(true));
 }
 
@@ -440,7 +447,7 @@ TEST_F(ADataMessageHandlerWithACalendarWithCalends, DetectsIfTheMinedCreditMessa
 {
     auto initial_data_message = AValidInitialDataMessageThatWasRequested();
     initial_data_message.mined_credit_messages_in_current_diurn[0].hash_list.short_hashes.pop_back();
-    bool msgs_ok = data_message_handler->ValidateMinedCreditMessagesInInitialDataMessage(initial_data_message);
+    bool msgs_ok = data_message_handler->initial_data_handler->ValidateMinedCreditMessagesInInitialDataMessage(initial_data_message);
     ASSERT_THAT(msgs_ok, Eq(false));
 }
 
@@ -452,8 +459,67 @@ TEST_F(ADataMessageHandlerWithACalendarWithCalends, MarksTheMinedCreditMessagesI
     bool valid = creditdata[last_msg_hash]["passed_verification"];
     ASSERT_THAT(valid, Eq(false));
 
-    data_message_handler->MarkMinedCreditMessagesInInitialDataMessageAsValidated(initial_data_message);
+    data_message_handler->initial_data_handler->MarkMinedCreditMessagesInInitialDataMessageAsValidated(initial_data_message);
 
     valid = creditdata[last_msg_hash]["passed_verification"];
     ASSERT_THAT(valid, Eq(true));
+}
+
+TEST_F(ADataMessageHandlerWithACalendarWithCalends, ProvidesAKnownHistoryMessage)
+{
+    auto known_history_message = data_message_handler->known_history_handler->GenerateKnownHistoryMessage();
+    KnownHistoryDeclaration history_declaration = known_history_message.history_declaration;
+
+    ASSERT_THAT(history_declaration.known_diurns.Get(0), Eq(true));
+}
+
+TEST_F(ADataMessageHandlerWithACalendarWithCalends, SpecifiesDiurnHashesForKnownDiurnsInTheKnownHistoryMessage)
+{
+    auto known_history_message = data_message_handler->known_history_handler->GenerateKnownHistoryMessage();
+    KnownHistoryDeclaration history_declaration = known_history_message.history_declaration;
+
+    ASSERT_THAT(history_declaration.diurn_hashes.size(), Eq(calendar->calends.size()));
+
+    uint160 first_diurn_root = calendar->calends[0].DiurnRoot();
+    uint160 stored_diurn_hash = credit_system->creditdata[first_diurn_root]["diurn_hash"];
+    ASSERT_THAT(history_declaration.diurn_hashes[0], Eq(stored_diurn_hash));
+}
+
+TEST_F(ADataMessageHandlerWithACalendarWithCalends, SpecifiesDiurnMessageDataHashesForKnownDiurnsInTheKnownHistoryMessage)
+{
+    auto known_history_message = data_message_handler->known_history_handler->GenerateKnownHistoryMessage();
+    KnownHistoryDeclaration history_declaration = known_history_message.history_declaration;
+
+    ASSERT_THAT(history_declaration.diurn_hashes.size(), Eq(calendar->calends.size()));
+
+    uint160 first_diurn_root = calendar->calends[0].DiurnRoot();
+    Calend first_calend = calendar->calends[0];
+    DiurnMessageData message_data = first_calend.GenerateDiurnMessageData(credit_system);
+
+    uint160 message_data_hash = message_data.GetHash160();
+
+    ASSERT_THAT(history_declaration.diurn_message_data_hashes[0], Eq(message_data_hash));
+}
+
+TEST_F(ADataMessageHandlerWithACalendarWithCalends, DetectsWhenAKnownHistoryMessageIsValid)
+{
+    auto known_history_message = data_message_handler->known_history_handler->GenerateKnownHistoryMessage();
+    bool ok = data_message_handler->known_history_handler->ValidateKnownHistoryMessage(known_history_message);
+    ASSERT_THAT(ok, Eq(true));
+}
+
+TEST_F(ADataMessageHandlerWithACalendarWithCalends, DetectsWhenAKnownHistoryMessageHasASizeMismatch)
+{
+    auto known_history_message = data_message_handler->known_history_handler->GenerateKnownHistoryMessage();
+    known_history_message.history_declaration.known_diurns.Add();
+    bool ok = data_message_handler->known_history_handler->ValidateKnownHistoryMessage(known_history_message);
+    ASSERT_THAT(ok, Eq(false));
+}
+
+TEST_F(ADataMessageHandlerWithACalendarWithCalends, DetectsWhenAKnownHistoryMessageDoesntMatchTheCalendar)
+{
+    auto known_history_message = data_message_handler->known_history_handler->GenerateKnownHistoryMessage();
+    known_history_message.latest_mined_credit_message_hash += 1;
+    bool ok = data_message_handler->known_history_handler->ValidateKnownHistoryMessage(known_history_message);
+    ASSERT_THAT(ok, Eq(false));
 }

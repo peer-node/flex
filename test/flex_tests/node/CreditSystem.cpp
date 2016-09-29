@@ -7,7 +7,7 @@
 #include "CreditSystem.h"
 #include "MinedCreditMessage.h"
 #include "Calend.h"
-#include "CalendarMessage.h"
+#include "test/flex_tests/node/data_handler/CalendarMessage.h"
 
 #include "log.h"
 #define LOG_CATEGORY "CreditSystem.cpp"

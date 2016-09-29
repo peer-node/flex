@@ -2,6 +2,7 @@
 #include <jsonrpccpp/client.h>
 #include "FlexRPCServer.h"
 #include "FlexLocalServer.h"
+#include "test/flex_tests/node/data_handler/TipHandler.h"
 
 #include "log.h"
 #define LOG_CATEGORY "FlexRPCServer.cpp"
@@ -146,7 +147,7 @@ void FlexRPCServer::AddNode(const Json::Value &request, Json::Value &response)
 
 void FlexRPCServer::RequestTips(const Json::Value &request, Json::Value &response)
 {
-    flex_local_server->flex_network_node->data_message_handler->RequestTips();
+    flex_local_server->flex_network_node->data_message_handler->tip_handler->RequestTips();
 }
 
 template <typename T> Json::Value GetJsonValue(T item)
