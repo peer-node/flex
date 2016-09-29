@@ -59,6 +59,8 @@ public:
         HANDLESTREAM(CalendarFailureMessage);
         HANDLESTREAM(InitialDataRequestMessage);
         HANDLESTREAM(InitialDataMessage);
+        HANDLESTREAM(KnownHistoryRequest);
+        HANDLESTREAM(KnownHistoryMessage);
     }
 
     void HandleMessage(uint160 message_hash)
@@ -70,6 +72,8 @@ public:
         HANDLEHASH(CalendarFailureMessage);
         HANDLEHASH(InitialDataRequestMessage);
         HANDLEHASH(InitialDataMessage);
+        HANDLEHASH(KnownHistoryMessage);
+        HANDLEHASH(KnownHistoryRequest);
     }
 
     HANDLECLASS(TipRequestMessage);
@@ -79,6 +83,8 @@ public:
     HANDLECLASS(CalendarFailureMessage);
     HANDLECLASS(InitialDataRequestMessage);
     HANDLECLASS(InitialDataMessage);
+    HANDLECLASS(KnownHistoryMessage);
+    HANDLECLASS(KnownHistoryRequest);
 
     void HandleTipRequestMessage(TipRequestMessage request);
 
@@ -93,6 +99,11 @@ public:
     void HandleInitialDataMessage(InitialDataMessage request);
 
     void HandleCalendarMessage(CalendarMessage calendar_message);
+
+    void HandleKnownHistoryMessage(KnownHistoryMessage known_history_message);
+
+    void HandleKnownHistoryRequest(KnownHistoryRequest known_history_request);
+
 };
 
 void LoadHashesIntoDataStoreFromMessageTypesAndContents(MemoryDataStore &hashdata,

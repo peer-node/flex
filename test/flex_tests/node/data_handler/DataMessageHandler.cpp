@@ -89,3 +89,13 @@ void DataMessageHandler::HandleCalendarFailureMessage(CalendarFailureMessage mes
 {
     calendar_handler->HandleCalendarFailureMessage(message);
 }
+
+void DataMessageHandler::HandleKnownHistoryMessage(KnownHistoryMessage known_history_message)
+{
+    known_history_handler->HandleKnownHistoryMessage(known_history_message);
+}
+
+void DataMessageHandler::HandleKnownHistoryRequest(KnownHistoryRequest known_history_request)
+{
+    known_history_handler->HandleKnownHistoryRequest(known_history_request);
+}

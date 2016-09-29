@@ -5,21 +5,24 @@
 
 #include <string>
 #include <src/crypto/uint256.h>
+#include <test/flex_tests/node/data_handler/KnownHistoryRequest.h>
 #include "test/flex_tests/node/CreditSystem.h"
 #include "KnownHistoryDeclaration.h"
 
 class KnownHistoryMessage
 {
 public:
-    uint160 latest_mined_credit_message_hash{0};
+    uint160 request_hash{0};
+    uint160 mined_credit_message_hash{0};
     KnownHistoryDeclaration history_declaration;
 
     KnownHistoryMessage() { }
 
-    KnownHistoryMessage(uint160 msg_hash, CreditSystem *credit_system)
+    KnownHistoryMessage(KnownHistoryRequest request, CreditSystem *credit_system)
     {
-        latest_mined_credit_message_hash = msg_hash;
-        Calendar calendar(msg_hash, credit_system);
+        request_hash = request.GetHash160();
+        mined_credit_message_hash = request.mined_credit_message_hash;
+        Calendar calendar(mined_credit_message_hash, credit_system);
         PopulateDeclaration(calendar, credit_system);
     }
 
@@ -53,8 +56,12 @@ public:
 
     IMPLEMENT_SERIALIZE
     (
+        READWRITE(request_hash);
+        READWRITE(mined_credit_message_hash);
         READWRITE(history_declaration);
     )
+
+    JSON(request_hash, mined_credit_message_hash, history_declaration);
 
     DEPENDENCIES();
 

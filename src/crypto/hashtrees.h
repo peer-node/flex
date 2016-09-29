@@ -637,6 +637,8 @@ public:
         READWRITE(data);
     )
 
+    JSON(length, data);
+
     std::string ToString()
     {
         std::string result("");

@@ -17,9 +17,15 @@ public:
         creditdata(data_message_handler_->creditdata)
     { }
 
+    void HandleKnownHistoryMessage(KnownHistoryMessage known_history);
+
     KnownHistoryMessage GenerateKnownHistoryMessage();
 
     bool ValidateKnownHistoryMessage(KnownHistoryMessage known_history_message);
+
+    void HandleKnownHistoryRequest(KnownHistoryRequest request);
+
+    uint160 RequestKnownHistoryMessages(uint160 mined_credit_message_hash);
 };
 
 

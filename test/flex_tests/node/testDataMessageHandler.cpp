@@ -12,6 +12,7 @@
 #include "test/flex_tests/node/data_handler/CalendarHandler.h"
 #include "test/flex_tests/node/data_handler/InitialDataHandler.h"
 #include "test/flex_tests/node/data_handler/KnownHistoryHandler.h"
+#include "test/flex_tests/node/data_handler/KnownHistoryRequest.h"
 
 using namespace ::testing;
 using namespace std;
@@ -519,7 +520,31 @@ TEST_F(ADataMessageHandlerWithACalendarWithCalends, DetectsWhenAKnownHistoryMess
 TEST_F(ADataMessageHandlerWithACalendarWithCalends, DetectsWhenAKnownHistoryMessageDoesntMatchTheCalendar)
 {
     auto known_history_message = data_message_handler->known_history_handler->GenerateKnownHistoryMessage();
-    known_history_message.latest_mined_credit_message_hash += 1;
+    known_history_message.mined_credit_message_hash += 1;
     bool ok = data_message_handler->known_history_handler->ValidateKnownHistoryMessage(known_history_message);
     ASSERT_THAT(ok, Eq(false));
+}
+
+TEST_F(ADataMessageHandlerWithACalendarWithCalends, RejectsAKnownHistoryMessageWhichWasntRequested)
+{
+    auto known_history_message = data_message_handler->known_history_handler->GenerateKnownHistoryMessage();
+    data_message_handler->HandleMessage(GetDataStream(known_history_message), &peer);
+    bool rejected = msgdata[known_history_message.GetHash160()]["rejected"];
+    ASSERT_THAT(rejected, Eq(true));
+}
+
+TEST_F(ADataMessageHandlerWithACalendarWithCalends, SendsAKnownHistoryMessageWhenRequested)
+{
+    KnownHistoryRequest history_request(calendar->LastMinedCreditMessageHash());
+    data_message_handler->HandleMessage(GetDataStream(history_request), &peer);
+    KnownHistoryMessage history_message(history_request, credit_system);
+    ASSERT_TRUE(peer.HasReceived("data", "known_history", history_message));
+}
+
+TEST_F(ADataMessageHandlerWithACalendarWithCalends, RequestsKnownHistoryMessages)
+{
+    uint160 msg_hash = calendar->LastMinedCreditMessageHash();
+    uint160 request_hash = data_message_handler->known_history_handler->RequestKnownHistoryMessages(msg_hash);
+    KnownHistoryRequest request = msgdata[request_hash]["known_history_request"];
+    ASSERT_TRUE(peer.HasBeenInformedAbout("data", "known_history_request", request));
 }

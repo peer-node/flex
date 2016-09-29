@@ -25,6 +25,7 @@ public:
         READWRITE(diurn_message_data_hashes);
     );
 
+    JSON(known_diurns, known_diurn_message_data, diurn_hashes, diurn_message_data_hashes);
 };
 
 

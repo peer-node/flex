@@ -29,13 +29,39 @@ bool KnownHistoryHandler::ValidateKnownHistoryMessage(KnownHistoryMessage known_
     if (data_known != known_history_message.history_declaration.diurn_message_data_hashes.size())
         return false;
 
-    uint160 msg_hash = known_history_message.latest_mined_credit_message_hash;
+    uint160 msg_hash = known_history_message.mined_credit_message_hash;
 
     uint64_t number_of_calends = Calendar(msg_hash, data_message_handler->credit_system).calends.size();
 
-    if (number_of_calends != known_history_message.history_declaration.known_diurns.length or
-        number_of_calends != known_history_message.history_declaration.known_diurn_message_data.length)
-        return false;
+    return number_of_calends == known_history_message.history_declaration.known_diurns.length and
+        number_of_calends == known_history_message.history_declaration.known_diurn_message_data.length;
+}
 
-    return true;
+void KnownHistoryHandler::HandleKnownHistoryMessage(KnownHistoryMessage known_history)
+{
+    if (not msgdata[known_history.request_hash]["is_history_request"])
+    {
+        data_message_handler->RejectMessage(known_history.GetHash160());
+        return;
+    }
+}
+
+void KnownHistoryHandler::HandleKnownHistoryRequest(KnownHistoryRequest request)
+{
+    KnownHistoryMessage history_message(request, data_message_handler->credit_system);
+    CNode *peer = data_message_handler->GetPeer(request.GetHash160());
+    if (peer != NULL)
+        peer->PushMessage("data", "known_history", history_message);
+}
+
+uint160 KnownHistoryHandler::RequestKnownHistoryMessages(uint160 mined_credit_message_hash)
+{
+    KnownHistoryRequest request(mined_credit_message_hash);
+    uint160 request_hash = request.GetHash160();
+
+    msgdata[request_hash]["is_history_request"] = true;
+    msgdata[request_hash]["known_history_request"] = request;
+
+    data_message_handler->Broadcast(request);
+    return request_hash;
 }
