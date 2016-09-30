@@ -99,3 +99,13 @@ void DataMessageHandler::HandleKnownHistoryRequest(KnownHistoryRequest known_his
 {
     known_history_handler->HandleKnownHistoryRequest(known_history_request);
 }
+
+void DataMessageHandler::HandleDiurnDataRequest(DiurnDataRequest request)
+{
+    known_history_handler->HandlerDiurnDataRequest(request);
+}
+
+void DataMessageHandler::HandleDiurnDataMessage(DiurnDataMessage diurn_data_message)
+{
+    known_history_handler->HandleDiurnDataMessage(diurn_data_message);
+}

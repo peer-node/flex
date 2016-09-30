@@ -15,6 +15,9 @@
 #include "InitialDataMessage.h"
 #include "CalendarFailureMessage.h"
 #include "KnownHistoryMessage.h"
+#include "DiurnDataRequest.h"
+#include "DiurnDataMessage.h"
+
 
 
 #define CALENDAR_SCRUTINY_TIME 5000000 // microseconds
@@ -61,6 +64,8 @@ public:
         HANDLESTREAM(InitialDataMessage);
         HANDLESTREAM(KnownHistoryRequest);
         HANDLESTREAM(KnownHistoryMessage);
+        HANDLESTREAM(DiurnDataRequest);
+        HANDLESTREAM(DiurnDataMessage);
     }
 
     void HandleMessage(uint160 message_hash)
@@ -74,6 +79,8 @@ public:
         HANDLEHASH(InitialDataMessage);
         HANDLEHASH(KnownHistoryMessage);
         HANDLEHASH(KnownHistoryRequest);
+        HANDLEHASH(DiurnDataRequest);
+        HANDLEHASH(DiurnDataMessage);
     }
 
     HANDLECLASS(TipRequestMessage);
@@ -85,6 +92,8 @@ public:
     HANDLECLASS(InitialDataMessage);
     HANDLECLASS(KnownHistoryMessage);
     HANDLECLASS(KnownHistoryRequest);
+    HANDLECLASS(DiurnDataRequest);
+    HANDLECLASS(DiurnDataMessage);
 
     void HandleTipRequestMessage(TipRequestMessage request);
 
@@ -104,6 +113,9 @@ public:
 
     void HandleKnownHistoryRequest(KnownHistoryRequest known_history_request);
 
+    void HandleDiurnDataRequest(DiurnDataRequest request);
+
+    void HandleDiurnDataMessage(DiurnDataMessage diurn_data_message);
 };
 
 void LoadHashesIntoDataStoreFromMessageTypesAndContents(MemoryDataStore &hashdata,

@@ -1,3 +1,4 @@
+#include <test/flex_tests/node/data_handler/DiurnDataRequest.h>
 #include "KnownHistoryHandler.h"
 
 
@@ -64,4 +65,36 @@ uint160 KnownHistoryHandler::RequestKnownHistoryMessages(uint160 mined_credit_me
 
     data_message_handler->Broadcast(request);
     return request_hash;
+}
+
+uint160 KnownHistoryHandler::RequestDiurnData(uint160 msg_hash, std::vector<uint32_t> requested_diurns, CNode *peer)
+{
+    if (peer == NULL)
+        return 0;
+    DiurnDataRequest request(msg_hash, requested_diurns);
+    uint160 request_hash = request.GetHash160();
+
+    msgdata[request_hash]["is_diurn_data_request"] = true;
+    msgdata[request_hash]["diurn_data_request"] = request;
+
+    peer->PushMessage("data", "diurn_data_request", request);
+    return request_hash;
+}
+
+void KnownHistoryHandler::HandleDiurnDataMessage(DiurnDataMessage diurn_data_message)
+{
+    if (not msgdata[diurn_data_message.request_hash]["is_diurn_data_request"])
+    {
+        data_message_handler->RejectMessage(diurn_data_message.GetHash160());
+        return;
+    }
+}
+
+void KnownHistoryHandler::HandlerDiurnDataRequest(DiurnDataRequest request)
+{
+    CNode *peer = data_message_handler->GetPeer(request.GetHash160());
+    if (peer == NULL)
+        return;
+    DiurnDataMessage diurn_data_message(request, data_message_handler->credit_system);
+    peer->PushMessage("data", "diurn_data", diurn_data_message);
 }

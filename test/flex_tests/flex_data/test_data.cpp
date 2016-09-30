@@ -151,9 +151,7 @@ public:
     {
         for (uint32_t i = 0; i < 160; i++)
         {
-            object = 1;
-            object = object << i;
-            value = object;
+            value = object = ((uint160)1) << i;
             boost::thread thread(&AMemoryDataStorePopulatedByMultipleThreads::StoreInDataBase, this, object, value);
         }
         MilliSleep(5);
@@ -206,10 +204,10 @@ TEST_F(AMemoryDataStoreWithAnObjectWhosePropertiesArePopulatedByMultipleThreads,
 {
     for (uint32_t i = 0; i < 160; i++)
     {
-        uint160 hash = 1;
-        hash <<= i;
-        uint160 value = datastore["some_object"][hash];
-        EXPECT_THAT(value, Eq(hash)) << "failed at " << i;
+        uint160 property = 1;
+        property <<= i;
+        uint160 value = datastore["some_object"][property];
+        EXPECT_THAT(value, Eq(property)) << "failed at " << i;
     }
 }
 
@@ -350,9 +348,7 @@ public:
     {
         for (uint32_t i = 0; i < 160; i++)
         {
-            object = 1;
-            object = object << i;
-            location = object;
+            location = object = ((uint160)1) << i;
             datastore[object].Location("lattitude") = location;
         }
 
@@ -362,13 +358,11 @@ public:
 
 TEST_F(ALocationIteratorWithUint160Locations, ReturnsObjectsAndLocationsInTheCorrectOrder)
 {
-    uint32_t digits;
-    for (digits = 0; digits < 160; digits++)
+    for (uint32_t digits = 0; digits < 160; digits++)
     {
         EXPECT_TRUE(scanner.GetNextObjectAndLocation(object, location)) << "failed at " << digits;
         EXPECT_TRUE(object == location);
-        object = object >> digits;
-        EXPECT_THAT(object, Eq(1)) << "failed at " << digits;
+        EXPECT_THAT(object >> digits, Eq(1)) << "failed at " << digits;
     }
     ASSERT_FALSE(scanner.GetNextObjectAndLocation(object, location));
 }
@@ -381,31 +375,27 @@ public:
     {
         for (uint32_t i = 0; i < 160; i++)
         {
-            object = 1;
-            object = object << i;
-            location = object;
+            location = object = ((uint160)1) << i;
             boost::thread thread(&ALocationIteratorWithUint160LocationsPopulatedByMultipleThreads::PutHashAtLocation,
                                  this, object, location);
         }
         MilliSleep(5);
     }
 
-    void PutHashAtLocation(uint160 hash, uint160 location)
+    void PutHashAtLocation(uint160 object, uint160 location)
     {
-        datastore[hash].Location("lattitude") = location;
+        datastore[object].Location("lattitude") = location;
     }
 };
 
 TEST_F(ALocationIteratorWithUint160LocationsPopulatedByMultipleThreads, ReturnsObjectsAndLocationsInTheCorrectOrder)
 {
     scanner = datastore.LocationIterator("lattitude");
-    uint32_t digits;
-    for (digits = 0; digits < 160; digits++)
+    for (uint32_t digits = 0; digits < 160; digits++)
     {
         EXPECT_TRUE(scanner.GetNextObjectAndLocation(object, location)) << "failed at " << digits;
         EXPECT_TRUE(object == location);
-        object = object >> digits;
-        EXPECT_THAT(object, Eq(1)) << "failed at " << digits;
+        EXPECT_THAT(object >> digits, Eq(1)) << "failed at " << digits;
     }
     ASSERT_FALSE(scanner.GetNextObjectAndLocation(object, location));
 }

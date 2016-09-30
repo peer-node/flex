@@ -13,6 +13,8 @@
 #include "test/flex_tests/node/data_handler/InitialDataHandler.h"
 #include "test/flex_tests/node/data_handler/KnownHistoryHandler.h"
 #include "test/flex_tests/node/data_handler/KnownHistoryRequest.h"
+#include "test/flex_tests/node/data_handler/DiurnDataRequest.h"
+#include "test/flex_tests/node/data_handler/DiurnDataMessage.h"
 
 using namespace ::testing;
 using namespace std;
@@ -547,4 +549,32 @@ TEST_F(ADataMessageHandlerWithACalendarWithCalends, RequestsKnownHistoryMessages
     uint160 request_hash = data_message_handler->known_history_handler->RequestKnownHistoryMessages(msg_hash);
     KnownHistoryRequest request = msgdata[request_hash]["known_history_request"];
     ASSERT_TRUE(peer.HasBeenInformedAbout("data", "known_history_request", request));
+}
+
+TEST_F(ADataMessageHandlerWithACalendarWithCalends, RequestsDiurnData)
+{
+    uint160 msg_hash = calendar->LastMinedCreditMessageHash();
+    std::vector<uint32_t> requested_diurns{1, 2};
+    uint160 request_hash = data_message_handler->known_history_handler->RequestDiurnData(msg_hash,
+                                                                                         requested_diurns, &peer);
+    DiurnDataRequest request = msgdata[request_hash]["diurn_data_request"];
+    ASSERT_TRUE(peer.HasReceived("data", "diurn_data_request", request));
+}
+
+TEST_F(ADataMessageHandlerWithACalendarWithCalends, RespondsToDiurnDataRequestsWithDiurnDataMessages)
+{
+    uint160 msg_hash = calendar->LastMinedCreditMessageHash();
+    DiurnDataRequest request(msg_hash, std::vector<uint32_t>{1, 2});
+    data_message_handler->HandleMessage(GetDataStream(request), &peer);
+    DiurnDataMessage diurn_data_message(request, credit_system);
+    ASSERT_TRUE(peer.HasReceived("data", "diurn_data", diurn_data_message));
+}
+
+TEST_F(ADataMessageHandlerWithACalendarWithCalends, RejectsDiurnDataMessagesThatWerentRequested)
+{
+    uint160 msg_hash = calendar->LastMinedCreditMessageHash();
+    DiurnDataMessage diurn_data_message(DiurnDataRequest(msg_hash, std::vector<uint32_t>{1, 2}), credit_system);
+    data_message_handler->HandleMessage(GetDataStream(diurn_data_message), &peer);
+    bool rejected = msgdata[diurn_data_message.GetHash160()]["rejected"];
+    ASSERT_THAT(rejected, Eq(true));
 }

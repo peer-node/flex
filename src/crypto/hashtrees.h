@@ -658,13 +658,9 @@ inline uint160 BitChain::HashDifferent(std::vector<uint64_t> to_set,
     other.SetLength(length_);
 
     for (uint32_t i = 0; i < to_set.size(); i++)
-    {
         other.Set(to_set[i]);
-    }
     for (uint32_t i = 0; i < to_clear.size(); i++)
-    {
         other.Clear(to_clear[i]);
-    }
     
     uint160 hash = other.GetHash160();
     return hash;
@@ -856,22 +852,12 @@ inline bool VerifyBranchFromOrderedHashTree(uint32_t position,
                                             std::vector<uint160> branch,
                                             uint160 root)
 {
-    if ((!branch.size()) || root != branch.back())
-    {
+    if (branch.size() == 0 or root != branch.back())
         return false;
-    }
 
     uint160 hash = OrderedDataElement(position, element).Hash();
-    bool verified;
-    if (EvaluateBranchWithHash(branch, hash) != root)
-    {
-        verified = false;
-    }
-    else
-    {
-        verified = true;
-    }
-    return verified;
+
+    return EvaluateBranchWithHash(branch, hash) == root;
 }
 
 

@@ -46,7 +46,7 @@ public:
 
     uint160 LastMinedCreditMessageHash();
 
-    void PopulateDiurn(uint160 credit_hash, CreditSystem* credit_system);
+    void PopulateCurrentDiurn(uint160 credit_hash, CreditSystem *credit_system);
 
     void PopulateCalends(uint160 credit_hash, CreditSystem *credit_system);
 

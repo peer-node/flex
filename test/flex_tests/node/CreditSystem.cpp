@@ -849,3 +849,30 @@ void CreditSystem::RemoveReportedTotalWorkOfMinedCreditsSucceedingInvalidCalend(
         }
     }
 }
+
+Diurn CreditSystem::PopulateDiurn(uint160 msg_hash)
+{
+    Diurn diurn;
+    diurn.credits_in_diurn.resize(0);
+    diurn.diurnal_block = DiurnalBlock();
+
+    std::vector<MinedCreditMessage> msgs;
+    MinedCreditMessage msg = msgdata[msg_hash]["msg"];
+
+    msgs.push_back(msg);
+
+    while (not IsCalend(msg_hash) and msg_hash != 0)
+    {
+        msg_hash = msg.mined_credit.network_state.previous_mined_credit_message_hash;
+        if (msg_hash == 0)
+            break;
+        msg = msgdata[msg_hash]["msg"];
+        msgs.push_back(msg);
+    }
+    std::reverse(msgs.begin(), msgs.end());
+    for (auto msg_ : msgs)
+        diurn.Add(msg_);
+    diurn.previous_diurn_root = Calend(msgs[0]).DiurnRoot();
+
+    return diurn;
+}

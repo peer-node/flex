@@ -9,6 +9,8 @@
 #include <sstream>
 #include <stdexcept>
 #include <jsoncpp/json/json.h>
+#include "base/version.h"
+#include "crypto/hash.h"
 
 
 class MissingDataException : public std::runtime_error

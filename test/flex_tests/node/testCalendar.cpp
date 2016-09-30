@@ -149,7 +149,7 @@ public:
 TEST_F(ACalendarWithACreditSystem, PopulatesTheCurrentDiurnBackToZeroWhenThereAreNoCalends)
 {
     uint160 msg_hash = HashOfMinedCreditMessageAtTipOfDiurn();
-    calendar.PopulateDiurn(msg_hash, credit_system);
+    calendar.PopulateCurrentDiurn(msg_hash, credit_system);
     ASSERT_THAT(calendar.current_diurn.Size(), Eq(8));
 }
 
@@ -159,7 +159,7 @@ TEST_F(ACalendarWithACreditSystem, PopulatesTheCurrentDiurnBackToACalend)
     uint160 previous_hash = credit_system->PreviousMinedCreditMessageHash(msg_hash);
     uint160 antepenultimate_hash = credit_system->PreviousMinedCreditMessageHash(previous_hash);
     credit_system->creditdata[antepenultimate_hash]["is_calend"] = true;
-    calendar.PopulateDiurn(msg_hash, credit_system);
+    calendar.PopulateCurrentDiurn(msg_hash, credit_system);
     ASSERT_THAT(calendar.current_diurn.Size(), Eq(3));
 }
 
@@ -233,7 +233,7 @@ TEST_F(ACalendarWithACreditSystemContainingCalends, PopulatesTheCalends)
 TEST_F(ACalendarWithACreditSystemContainingCalends, PopulatesTheTopUpWork)
 {
     uint160 msg_hash = MinedCreditMessageHashAtTipOfChainContainingCalends();
-    calendar.PopulateDiurn(msg_hash, credit_system);
+    calendar.PopulateCurrentDiurn(msg_hash, credit_system);
     calendar.PopulateCalends(msg_hash, credit_system);
     calendar.PopulateTopUpWork(msg_hash, credit_system);
 

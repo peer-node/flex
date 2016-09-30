@@ -12,7 +12,7 @@ Calendar::Calendar() { }
 
 Calendar::Calendar(uint160 msg_hash, CreditSystem *credit_system)
 {
-    PopulateDiurn(msg_hash, credit_system);
+    PopulateCurrentDiurn(msg_hash, credit_system);
     PopulateCalends(msg_hash, credit_system);
     PopulateTopUpWork(msg_hash, credit_system);
 }
@@ -59,28 +59,9 @@ MinedCreditMessage Calendar::LastMinedCreditMessage()
     return MinedCreditMessage();
 }
 
-void Calendar::PopulateDiurn(uint160 msg_hash, CreditSystem* credit_system)
+void Calendar::PopulateCurrentDiurn(uint160 msg_hash, CreditSystem *credit_system)
 {
-    current_diurn.credits_in_diurn.resize(0);
-    current_diurn.diurnal_block = DiurnalBlock();
-
-    std::vector<MinedCreditMessage> msgs;
-    MinedCreditMessage msg = credit_system->msgdata[msg_hash]["msg"];
-
-    msgs.push_back(msg);
-
-    while (not credit_system->IsCalend(msg_hash) and msg_hash != 0)
-    {
-        msg_hash = msg.mined_credit.network_state.previous_mined_credit_message_hash;
-        if (msg_hash == 0)
-            break;
-        msg = credit_system->msgdata[msg_hash]["msg"];
-        msgs.push_back(msg);
-    }
-    std::reverse(msgs.begin(), msgs.end());
-    for (auto msg_ : msgs)
-        current_diurn.Add(msg_);
-    current_diurn.previous_diurn_root = Calend(msgs[0]).DiurnRoot();
+    current_diurn = credit_system->PopulateDiurn(msg_hash);
 }
 
 void Calendar::PopulateCalends(uint160 msg_hash, CreditSystem *credit_system)

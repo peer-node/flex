@@ -166,6 +166,8 @@ public:
     bool DataIsPresentFromMinedCreditToPrecedingCalendOrStart(MinedCreditMessage msg);
 
     uint160 GetNextDiurnalBlockRoot(MinedCreditMessage msg);
+
+    Diurn PopulateDiurn(uint160 msg_hash);
 };
 
 
