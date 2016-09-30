@@ -14,7 +14,7 @@ import cgi
 requests_received = {}   # (payer, payee, amount) -> accept_commit_hash
 
 
-class FlexExampleReceiver(BaseHTTPRequestHandler):
+class TeleportExampleReceiver(BaseHTTPRequestHandler):
     def _set_headers(self, response_code=200):
         self.send_response(response_code)
         self.send_header('Content-type', 'text/html')
@@ -58,7 +58,7 @@ class FlexExampleReceiver(BaseHTTPRequestHandler):
 
 
 
-class FlexExampleIPNReceiver(FlexExampleReceiver):
+class TeleportExampleIPNReceiver(TeleportExampleReceiver):
     def validate_IPN(self, data):
         # insert a valid way of checking that the IPN came from the
         # payment processor here or else the sender will be able to
@@ -91,7 +91,7 @@ class FlexExampleIPNReceiver(FlexExampleReceiver):
 
 
 
-class FlexExamplePaymentProofReceiver(FlexExampleReceiver):
+class TeleportExamplePaymentProofReceiver(TeleportExampleReceiver):
     def check_details_and_proof(self, details, proof):
         payer, payee, amount = details.split()
         # here we suppose that proof is a string of the form:
@@ -141,7 +141,7 @@ class FlexExamplePaymentProofReceiver(FlexExampleReceiver):
 
 
 
-class FlexExampleNotaryRPCService(pyjsonrpc.HttpRequestHandler):
+class TeleportExampleNotaryRPCService(pyjsonrpc.HttpRequestHandler):
     @pyjsonrpc.rpcmethod
     def _stop(self):
         sys.exit()
@@ -172,19 +172,19 @@ if __name__ == "__main__":
 
     notary_rpc_server = pyjsonrpc.ThreadingHttpServer(
         server_address = ('0.0.0.0', rpc_port),
-        RequestHandlerClass = FlexExampleNotaryRPCService
+        RequestHandlerClass = TeleportExampleNotaryRPCService
     )
     print "Starting notary rpc server"
     print "URL: http://localhost:" + str(rpc_port)
     
     notary_ipn_receiver = HTTPServer(('0.0.0.0', ipn_port),
-                                     FlexExampleIPNReceiver)
+                                     TeleportExampleIPNReceiver)
     
     print "Starting notary ipn receiver"
     print "URL: http://localhost:" + str(ipn_port)
     
     notary_proof_receiver = HTTPServer(('0.0.0.0', proof_port),
-                                       FlexExamplePaymentProofReceiver)
+                                       TeleportExamplePaymentProofReceiver)
 
     print "Starting notary proof receiver"
     print "URL: http://localhost:" + str(proof_port)

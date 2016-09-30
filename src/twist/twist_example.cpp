@@ -2,7 +2,7 @@
  * Copyright 2014, Peer Node
  * Gnu Affero GPLv3 License
  *
- * The twist proof of work was developed for the Flex exchange
+ * The twist proof of work was developed for the Teleport exchange
  */ 
 
 #include <stdio.h>

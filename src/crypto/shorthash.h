@@ -1,10 +1,10 @@
-#ifndef FLEX_SHORTHASH
-#define FLEX_SHORTHASH
+#ifndef TELEPORT_SHORTHASH
+#define TELEPORT_SHORTHASH
 
 #define MAX_HASH_ENTRIES 30000
 #define MAX_HASH_COMBINATIONS 10000000
 
-#include "../../test/flex_tests/flex_data/TestData.h"
+#include "../../test/teleport_tests/teleport_data/TestData.h"
 #include "src/base/util.h"
 #include "src/crypto/hash.h"
 

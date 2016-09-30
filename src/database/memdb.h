@@ -1,5 +1,5 @@
-#ifndef FLEX_MEMDB
-#define FLEX_MEMDB
+#ifndef TELEPORT_MEMDB
+#define TELEPORT_MEMDB
 
 
 #include <stdint.h>

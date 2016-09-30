@@ -15,7 +15,7 @@ import os
 processes = []
 
 def get_pidfilename():
-    return join(flexdir(), "flex.pids")
+    return join(flexdir(), "teleport.pids")
 
 def write_pids():
     pidfile = open(get_pidfilename(), "w")
@@ -88,7 +88,7 @@ def start_obk(config):
         print "notary", process.pid
 
 def start_flex(config):
-    print "starting flex"
+    print "starting teleport"
     sleep(2)
     process = Popen(["flexd", "-debug"], stdout=log, stderr=log)
     print process.pid

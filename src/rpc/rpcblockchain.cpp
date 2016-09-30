@@ -5,9 +5,9 @@
 
 #include "crypto/point.h"
 #include "rpc/rpcserver.h"
-#include "flexnode/main.h"
+#include "teleportnode/main.h"
 #include "base/sync.h"
-#include "flexnode/flexnode.h"
+#include "teleportnode/teleportnode.h"
 
 #include <stdint.h>
 
@@ -19,6 +19,6 @@ using namespace std;
 
 Value getdifficulty(const Array& params, bool fHelp)
 {
-    return flexnode.pit.mined_credit.difficulty.ToString();
+    return teleportnode.pit.mined_credit.difficulty.ToString();
 }
 

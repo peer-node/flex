@@ -1,5 +1,5 @@
-#ifndef FLEX_UTIL_COMPARE_H
-#define FLEX_UTIL_COMPARE_H
+#ifndef TELEPORT_UTIL_COMPARE_H
+#define TELEPORT_UTIL_COMPARE_H
 
 #include <cstdlib>
 #include <vector>
@@ -92,4 +92,4 @@ T* alignup(T* p)
     return u.ptr;
 }
 
-#endif //FLEX_UTIL_COMPARE_H
+#endif //TELEPORT_UTIL_COMPARE_H

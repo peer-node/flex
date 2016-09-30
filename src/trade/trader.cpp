@@ -1,10 +1,10 @@
 #include "trade/trade.h"
-#include "flexnode/flexnode.h"
+#include "teleportnode/teleportnode.h"
 
 #include "log.h"
 #define LOG_CATEGORY "trader.cpp"
 
-extern vch_t FLX;
+extern vch_t TCR;
 
 Point GetTraderPubKey(AcceptCommit accept_commit, uint8_t side)
 {
@@ -56,13 +56,13 @@ bool GetFiatPubKeyAndProof(vch_t currency_code,
     log_ << "GetFiatPubKeyAndProof()\n";
     string address, proof_string;
 
-    Currency currency = flexnode.currencies[currency_code];
+    Currency currency = teleportnode.currencies[currency_code];
     bool result = currency.GetAddressAndProofOfFunds(address,
                                                      proof_string, 
                                                      size);
     
     fund_proof = vch_t(proof_string.begin(), proof_string.end());
-    order_pubkey = flexnode.wallet.NewKey();
+    order_pubkey = teleportnode.wallet.NewKey();
     return result;
 }
 
@@ -74,8 +74,8 @@ bool GetCryptoCurrencyPubKeyAndProof(vch_t currency_code,
                                      Signature &pubkey_authorization)
 {
     string address, proof_string;
-    Currency currency = flexnode.currencies[currency_code];
-    bool success = flexnode.currencies[currency_code].GetAddressAndProofOfFunds(
+    Currency currency = teleportnode.currencies[currency_code];
+    bool success = teleportnode.currencies[currency_code].GetAddressAndProofOfFunds(
                                                       address, 
                                                       proof_string, 
                                                       size);
@@ -115,7 +115,7 @@ bool GetCreditPubKeyAndProof(uint64_t amount,
                              Point &fund_address_pubkey)
 {
     log_ << "GetCreditPubKeyAndProof()\n";
-    CreditInBatch credit = flexnode.wallet.GetCreditWithAmount(amount);
+    CreditInBatch credit = teleportnode.wallet.GetCreditWithAmount(amount);
     if (credit.amount < amount || credit.keydata.size() == 0)
     {
         log_ << "failed to get fund address pubkey & proof\n";
@@ -141,17 +141,17 @@ uint160 PlaceOrder(vch_t currency_code,
                    uint64_t difficulty,
                    string_t auxiliary_data)
 {
-    Currency currency = flexnode.currencies[currency_code];
+    Currency currency = teleportnode.currencies[currency_code];
 
     if (auxiliary_data.size() == 0)
         auxiliary_data = CurrencyInfo(currency_code, "auxiliary_data");
 
     Order order(currency_code, side, size, integer_price, auxiliary_data);
 
-    if (currency_code == FLX)
+    if (currency_code == TCR)
         return 0;
     
-    vch_t funds_currency = order.side == BID ? FLX : currency_code;
+    vch_t funds_currency = order.side == BID ? TCR : currency_code;
 
     if (order.is_cryptocurrency && !order.successfully_funded)
     {
@@ -184,7 +184,7 @@ uint160 PlaceOrder(vch_t currency_code,
     uint160 order_hash = order.GetHash160();
 
     tradedata[order_hash]["is_mine"] = true;
-    flexnode.tradehandler.BroadcastMessage(order);
+    teleportnode.tradehandler.BroadcastMessage(order);
     tradedata[order_hash].Location("my_orders") = GetTimeMicros();
 
     return order_hash;
@@ -194,7 +194,7 @@ uint160 SendAccept(Order order, uint64_t difficulty, string_t auxiliary_data)
 {
     AcceptOrder accept_order(order, auxiliary_data);
     
-    vch_t funds_currency = order.side == BID ? order.currency : FLX;
+    vch_t funds_currency = order.side == BID ? order.currency : TCR;
 
     log_ << "SendAccept(): funds_currency = "
          << string(funds_currency.begin(), funds_currency.end()) << "\n";
@@ -228,7 +228,7 @@ uint160 SendAccept(Order order, uint64_t difficulty, string_t auxiliary_data)
     uint160 accept_order_hash = accept_order.GetHash160();
     tradedata[accept_order_hash]["is_mine"] = true;
     log_ << "broadcasting accept order\n";
-    flexnode.tradehandler.BroadcastMessage(accept_order);
+    teleportnode.tradehandler.BroadcastMessage(accept_order);
     return accept_order_hash;
 }
 
@@ -409,7 +409,7 @@ void SendCurrencyPaymentProof(uint160 accept_commit_hash, vch_t proof)
     payment_proof.Sign();
     log_ << "Sending CurrencyPaymentProof! hash = "
          << payment_proof.GetHash160() << "\n";
-    flexnode.tradehandler.BroadcastMessage(payment_proof);
+    teleportnode.tradehandler.BroadcastMessage(payment_proof);
 }
 
 bool CheckCurrencyPaymentProof(CurrencyPaymentProof payment_proof)
@@ -422,7 +422,7 @@ bool CheckCurrencyPaymentProof(CurrencyPaymentProof payment_proof)
 
 void ScheduleSecretsCheck(uint160 accept_commit_hash, uint32_t seconds)
 {
-    flexnode.scheduler.Schedule("secrets_check", accept_commit_hash,
+    teleportnode.scheduler.Schedule("secrets_check", accept_commit_hash,
                                 GetTimeMicros() + seconds * 1000 * 1000);
 }
 
@@ -505,7 +505,7 @@ void ChooseNewRelays(uint160 accept_commit_hash)
         if (GetTimeMicros() - relay_choice_time < 12 * COMPLAINT_WAIT_TIME)
             return;
     }
-    uint160 credit_hash = flexnode.previous_mined_credit_hash;
+    uint160 credit_hash = teleportnode.previous_mined_credit_hash;
     uint8_t side;
 
     if (tradedata[accept_commit_hash]["my_buy"])
@@ -513,7 +513,7 @@ void ChooseNewRelays(uint160 accept_commit_hash)
     else
         side = ASK;
     NewRelayChoiceMessage msg(accept_commit_hash, credit_hash, side);
-    flexnode.tradehandler.BroadcastMessage(msg);
+    teleportnode.tradehandler.BroadcastMessage(msg);
     tradedata[accept_commit_hash]["new_relays_req_ask"] = true;
 }
 
@@ -584,7 +584,7 @@ void DoScheduledTradeInitiation(uint160 accept_commit_hash)
         log_ << "trade " << commit.GetHash160() << " was cancelled\n";
         return;
     }
-    flexnode.tradehandler.HandleInitiateTrade(accept_commit);
+    teleportnode.tradehandler.HandleInitiateTrade(accept_commit);
 }
 
 
@@ -595,7 +595,7 @@ void SendCurrencyPaymentConfirmation(uint160 accept_commit_hash,
                                              payment_hash);
     confirmation.Sign();
 
-    flexnode.tradehandler.BroadcastMessage(confirmation);
+    teleportnode.tradehandler.BroadcastMessage(confirmation);
     ScheduleSecretsCheck(accept_commit_hash, 15);
 }
 
@@ -623,7 +623,7 @@ bool CheckPaymentConfirmation(CurrencyPaymentConfirmation confirmation)
 void ScheduleCreditPaymentCheck(uint160 accept_commit_hash,
                                 uint32_t seconds = 5)
 {
-    flexnode.scheduler.Schedule("credit_payment_check", accept_commit_hash,
+    teleportnode.scheduler.Schedule("credit_payment_check", accept_commit_hash,
                                 GetTimeMicros() + seconds * 1000 * 1000);
 }
 
@@ -643,7 +643,7 @@ void DoScheduledCreditPaymentCheck(uint160 accept_commit_hash)
     {
         log_ << "my fiat sell\n";
         tradedata[accept_commit_hash]["credit_paid"] = true;
-        flexnode.tradehandler.ProceedWithCurrencyPayment(accept_commit_hash);
+        teleportnode.tradehandler.ProceedWithCurrencyPayment(accept_commit_hash);
     }
     else if (tradedata[accept_commit_hash]["my_sell"])
     {
@@ -668,7 +668,7 @@ void ReleaseCurrencyToCounterParty(uint160 accept_commit_hash)
 {
     CounterpartySecretMessage msg(accept_commit_hash, ASK);
 #ifndef TEST_RELAYS
-    flexnode.tradehandler.BroadcastMessage(msg);
+    teleportnode.tradehandler.BroadcastMessage(msg);
 #endif
 }
 
@@ -676,7 +676,7 @@ void ReleaseCreditToCounterParty(uint160 accept_commit_hash)
 {
     CounterpartySecretMessage msg(accept_commit_hash, BID);
 #ifndef TEST_RELAYS
-    flexnode.tradehandler.BroadcastMessage(msg);
+    teleportnode.tradehandler.BroadcastMessage(msg);
 #endif
 }
 
@@ -684,7 +684,7 @@ void ReleaseCreditToCounterParty(uint160 accept_commit_hash)
 void SendTraderComplaint(uint160 message_hash, uint8_t side)
 {
     TraderComplaint msg(message_hash, side);
-    flexnode.tradehandler.BroadcastMessage(msg);
+    teleportnode.tradehandler.BroadcastMessage(msg);
 }
 
 void WatchEscrowCreditPubKey(Point escrow_key)
@@ -717,12 +717,12 @@ vch_t SendCredit(AcceptCommit accept_commit, Order order)
 
     bool trade_transaction = true;
     UnsignedTransaction rawtx
-        = flexnode.wallet.GetUnsignedTxGivenPubKey(escrow_key, amount, 
+        = teleportnode.wallet.GetUnsignedTxGivenPubKey(escrow_key, amount, 
                                                    trade_transaction);
     
     SignedTransaction tx = SignTransaction(rawtx);
 
-    flexnode.HandleTransaction(tx, NULL);
+    teleportnode.HandleTransaction(tx, NULL);
     log_ << "sent " << amount << " to " << escrow_key << "\n";
     uint256 txhash = tx.GetHash();
     return vch_t(UBEGIN(txhash), UEND(txhash));
@@ -738,7 +738,7 @@ vch_t SendCurrency(AcceptCommit accept_commit, Order order)
     
     WatchEscrowCreditPubKey(escrow_credit_key);
 
-    Currency currency = flexnode.currencies[order.currency];
+    Currency currency = teleportnode.currencies[order.currency];
 
     if (currency.is_cryptocurrency)
     {
@@ -772,7 +772,7 @@ void HandleSecretMessage(MSG message)
     if (!message.VerifySignature())
     {
         log_ << "signature verification failed\n";
-        flexnode.tradehandler.should_forward = false;
+        teleportnode.tradehandler.should_forward = false;
         return;
     }
     Point relay = message.VerificationKey();
@@ -1046,18 +1046,18 @@ void ImportPrivKeyAfterTransaction(CBigNum privkey,
     if (direction == FORWARD && sender_side == BID)
     {
         log_ << "sale completed - importing wallet privkey\n";
-        log_ << "balance before import: " << flexnode.wallet.Balance() << "\n";
-        flexnode.wallet.ImportPrivateKey(privkey);
-        log_ << "balance after import: " << flexnode.wallet.Balance() << "\n";
-        NotifyGuiOfBalance(FLX, flexnode.wallet.Balance());
+        log_ << "balance before import: " << teleportnode.wallet.Balance() << "\n";
+        teleportnode.wallet.ImportPrivateKey(privkey);
+        log_ << "balance after import: " << teleportnode.wallet.Balance() << "\n";
+        NotifyGuiOfBalance(TCR, teleportnode.wallet.Balance());
     }
     if (direction == BACKWARD && sender_side == ASK)
     {
         log_ << "purchase aborted - importing wallet privkey\n";
-        log_ << "balance before import: " << flexnode.wallet.Balance() << "\n";
-        flexnode.wallet.ImportPrivateKey(privkey);
-        log_ << "balance after import: " << flexnode.wallet.Balance() << "\n";
-        NotifyGuiOfBalance(FLX, flexnode.wallet.Balance());
+        log_ << "balance before import: " << teleportnode.wallet.Balance() << "\n";
+        teleportnode.wallet.ImportPrivateKey(privkey);
+        log_ << "balance after import: " << teleportnode.wallet.Balance() << "\n";
+        NotifyGuiOfBalance(TCR, teleportnode.wallet.Balance());
     }
     if (direction == FORWARD && sender_side == ASK)
     {
@@ -1066,7 +1066,7 @@ void ImportPrivKeyAfterTransaction(CBigNum privkey,
         accept_commit = msgdata[accept_commit_hash]["accept_commit"];
         Order order = msgdata[accept_commit.order_hash]["order"];
         vch_t currency_code = order.currency;
-        Currency currency = flexnode.currencies[currency_code];
+        Currency currency = teleportnode.currencies[currency_code];
         log_ << "balance before import: " << currency.Balance() << "\n";
         currency.crypto.ImportPrivateKey(privkey);
         log_ << "balance after import: " << currency.Balance() << "\n";
@@ -1213,7 +1213,7 @@ void ImportPrivKeyAfterTransaction(CBigNum privkey,
 
     void TradeHandler::ScheduleTradeInitiation(uint160 accept_commit_hash)
     {
-        flexnode.scheduler.Schedule("trade_check", accept_commit_hash,
+        teleportnode.scheduler.Schedule("trade_check", accept_commit_hash,
                                     GetTimeMicros() + COMPLAINT_WAIT_TIME);
     }
 

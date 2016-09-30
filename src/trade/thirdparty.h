@@ -1,5 +1,5 @@
-#ifndef FLEX_THIRDPARTY
-#define FLEX_THIRDPARTY
+#ifndef TELEPORT_THIRDPARTY
+#define TELEPORT_THIRDPARTY
 
 
 #include "trade/trade_messages.h"
@@ -18,7 +18,7 @@
         accept = tradedata[commit.accept_order_hash]["accept_order"];
         Order order = tradedata[accept.order_hash]["order"];
 
-        Currency currency = flexnode.currencies[order.currency];
+        Currency currency = teleportnode.currencies[order.currency];
         vch_t payer_data, payee_data;
 
         if (order.side == ASK)

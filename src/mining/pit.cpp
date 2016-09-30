@@ -3,8 +3,8 @@
 
 
 #include "mining/pit.h"
-#include "flexnode/batchchainer.h"
-#include "flexnode/flexnode.h"
+#include "teleportnode/batchchainer.h"
+#include "teleportnode/teleportnode.h"
 #include "relays/relaystate.h"
 
 #include "log.h"
@@ -173,9 +173,9 @@ extern CMemoryDB batchhashesdb;
     void CreditPit::Initialize()
     {
         started = false;
-        flexnode.digging = false;
+        teleportnode.digging = false;
         hashrate = 0;
-        Point pubkey = flexnode.wallet.NewKey();
+        Point pubkey = teleportnode.wallet.NewKey();
         mined_credit.keydata = pubkey.getvch();
         mined_credit.amount = CREDIT_NUGGET;
     }
@@ -183,12 +183,12 @@ extern CMemoryDB batchhashesdb;
     void CreditPit::ResetBatch()
     {
         log_ << "CreditPit::ResetBatch()\n";
-        uint160 credit_hash = flexnode.previous_mined_credit_hash;
+        uint160 credit_hash = teleportnode.previous_mined_credit_hash;
         
         MinedCredit credit = creditdata[credit_hash]["mined_credit"];
 
         MinedCreditMessage prev_msg
-            = creditdata[flexnode.previous_mined_credit_hash]["msg"];
+            = creditdata[teleportnode.previous_mined_credit_hash]["msg"];
         CreditBatch batch_ = ReconstructBatch(prev_msg);
         uint64_t num_credits = batch_.credits.size();
         
@@ -268,18 +268,18 @@ extern CMemoryDB batchhashesdb;
     {
         log_ << "PrepareMinedCredit()\n";
 
-        uint160 previous_credit_hash = flexnode.previous_mined_credit_hash;
+        uint160 previous_credit_hash = teleportnode.previous_mined_credit_hash;
 
         mined_credit.previous_diurn_root
-            = flexnode.calendar.PreviousDiurnRoot();
+            = teleportnode.calendar.PreviousDiurnRoot();
 
         mined_credit.diurnal_block_root
-            = flexnode.calendar.current_diurn.diurnal_block.Root();
+            = teleportnode.calendar.current_diurn.diurnal_block.Root();
 
         mined_credit.diurnal_difficulty
-            = flexnode.calendar.current_diurn.current_difficulty;   
+            = teleportnode.calendar.current_diurn.current_difficulty;   
 
-        Point pubkey = flexnode.wallet.NewKey();
+        Point pubkey = teleportnode.wallet.NewKey();
         mined_credit.keydata = pubkey.getvch();
 
         mined_credit.previous_mined_credit_hash = previous_credit_hash;
@@ -562,7 +562,7 @@ extern CMemoryDB batchhashesdb;
     bool CreditPit::SwitchToNewChain(MinedCreditMessage msg, CNode* pfrom)
     {
         std::vector<uint160> dropped_txs;
-        if (!pool.ChangeChain(flexnode.previous_mined_credit_hash, 
+        if (!pool.ChangeChain(teleportnode.previous_mined_credit_hash, 
                               msg.mined_credit.GetHash160(),
                               dropped_txs))
         {
@@ -597,8 +597,8 @@ extern CMemoryDB batchhashesdb;
 
     void CreditPit::SwitchToNewCalend(uint160 calend_credit_hash)
     {
-        bool was_digging = flexnode.digging;
-        flexnode.digging = false;
+        bool was_digging = teleportnode.digging;
+        teleportnode.digging = false;
 
         log_ << "SwitchToNewCalend() - " << calend_credit_hash << "\n";
 
@@ -615,9 +615,9 @@ extern CMemoryDB batchhashesdb;
         log_ << "diurn root is " << diurn_root << "\n"
              << "calend credit " << mined_credit << "\n";
 
-        flexnode.previous_mined_credit_hash = mined_credit.GetHash160();
+        teleportnode.previous_mined_credit_hash = mined_credit.GetHash160();
 
-        log_ << "hash is " << flexnode.previous_mined_credit_hash << "\n";
+        log_ << "hash is " << teleportnode.previous_mined_credit_hash << "\n";
 
         foreach_(const uint160& txhash, accepted_txs)
         {
@@ -666,12 +666,12 @@ extern CMemoryDB batchhashesdb;
         log_ << "Relay State for " << credit_hash << " is " << state << "\n";
 
         state.latest_credit_hash = credit_hash;
-        flexnode.relayhandler = RelayHandler(state);
+        teleportnode.relayhandler = RelayHandler(state);
 
         log_ << "adding accepted\n";
         AddAccepted();
 
-        flexnode.digging = was_digging;
+        teleportnode.digging = was_digging;
     }
 
     void CreditPit::AddAccepted()
@@ -699,8 +699,8 @@ extern CMemoryDB batchhashesdb;
         }
         else
         {
-            flexnode.digging = true;
-            flexnode.downloader.finished_downloading = true;
+            teleportnode.digging = true;
+            teleportnode.downloader.finished_downloading = true;
         }
     }
 
@@ -721,8 +721,8 @@ extern CMemoryDB batchhashesdb;
         creditdata[credit_hash]["mined_credit"] = mined_credit;
         msg.hash_list.GenerateShortHashes();
 
-        log_ << "sending " << credit_hash << " to flexnode\n";
-        flexnode.HandleMinedCreditMessage(msg, NULL);
+        log_ << "sending " << credit_hash << " to teleportnode\n";
+        teleportnode.HandleMinedCreditMessage(msg, NULL);
         
         if (InMainChain(credit_hash))
         {
@@ -733,15 +733,15 @@ extern CMemoryDB batchhashesdb;
 
     void CreditPit::MineForCredits()
     {
-        flexnode.downloader.finished_downloading = true;
-        flexnode.digging = true;
+        teleportnode.downloader.finished_downloading = true;
+        teleportnode.digging = true;
         SeedMemory();
         
         while (true)
         {
             try
             {
-                if (flexnode.digging)
+                if (teleportnode.digging)
                 {
                     PrepareMinedCredit();
                     log_ << "working on the mined credit:" << mined_credit;
@@ -750,7 +750,7 @@ extern CMemoryDB batchhashesdb;
                                          SEGMENTS_PER_PROOF);
 
                     uint64_t start_time = GetTimeMicros();
-                    bool result = proof.DoWork(&flexnode.digging);
+                    bool result = proof.DoWork(&teleportnode.digging);
                     log_ << "proof.length is " << proof.Length() << "\n";
                     hashrate = 0.5 * (hashrate + 
                                         1000000 * proof.Length() / 
@@ -760,7 +760,7 @@ extern CMemoryDB batchhashesdb;
                     {
                         new_proof = proof;
                         {
-                            LOCK(flexnode.mutex);
+                            LOCK(teleportnode.mutex);
                             log_ << "mining successful. handling new proof\n";
                             HandleNewProof();
                         }
@@ -784,7 +784,7 @@ extern CMemoryDB batchhashesdb;
 
     void CreditPit::StopMining()
     {
-        flexnode.digging = false;
+        teleportnode.digging = false;
         ResetBatch();
         accepted_txs = std::set<uint160>();
         accepted_mined_credits = std::set<uint160>();

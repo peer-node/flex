@@ -12,8 +12,8 @@
 #include "crypto/point.h"
 #include "base/base58.h"
 #include "rpc/rpcserver.h"
-#include "flexnode/init.h"
-#include "flexnode/main.h"
+#include "teleportnode/init.h"
+#include "teleportnode/main.h"
 #include "base/sync.h"
 
 

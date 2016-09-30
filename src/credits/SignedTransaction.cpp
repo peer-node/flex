@@ -1,4 +1,4 @@
-#include "../../test/flex_tests/flex_data/TestData.h"
+#include "../../test/teleport_tests/teleport_data/TestData.h"
 
 #include <boost/foreach.hpp>
 #include "define.h"

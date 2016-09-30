@@ -12,7 +12,7 @@ using namespace std;
 
 boost::filesystem::path GetPidFile()
 {
-    boost::filesystem::path pathPidFile(GetArg("-pid", "flexd.pid"));
+    boost::filesystem::path pathPidFile(GetArg("-pid", "teleportd.pid"));
     if (!pathPidFile.is_complete()) pathPidFile = GetDataDir_() / pathPidFile;
     return pathPidFile;
 }

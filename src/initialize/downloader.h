@@ -1,21 +1,21 @@
 // Distributed under version 3 of the Gnu Affero GPL software license, 
 // see the accompanying file COPYING for details.
 
-#ifndef FLEX_INITIALDOWNLOADER
-#define FLEX_INITIALDOWNLOADER
+#ifndef TELEPORT_INITIALDOWNLOADER
+#define TELEPORT_INITIALDOWNLOADER
 
 #include "database/memdb.h"
-#include "flexnode/wallet.h"
+#include "teleportnode/wallet.h"
 #include "net/net.h"
 #include "database/data.h"
 #include "credits/creditutil.h"
-#include "flexnode/calendar.h"
+#include "teleportnode/calendar.h"
 #include "relays/relays.h"
 #include <deque>
 #include <openssl/rand.h>
 #include "relays/relaystate.h"
-#include "flexnode/main.h"
-#include "flexnode/orphanage.h"
+#include "teleportnode/main.h"
+#include "teleportnode/orphanage.h"
 #include "initialize/datamessages.h"
 
 #include "log.h"

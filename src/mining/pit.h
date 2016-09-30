@@ -2,12 +2,12 @@
 // see the accompanying file COPYING for details.
 
 
-#ifndef FLEX_PIT
-#define FLEX_PIT
+#ifndef TELEPORT_PIT
+#define TELEPORT_PIT
 
 #include "credits/credits.h"
 #include "database/memdb.h"
-#include "flexnode/wallet.h"
+#include "teleportnode/wallet.h"
 #include "net/net.h"
 #include "mining/work.h"
 #include <boost/foreach.hpp>

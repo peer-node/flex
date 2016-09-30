@@ -1,11 +1,11 @@
-#ifndef FLEX_DATASERVER
-#define FLEX_DATASERVER
+#ifndef TELEPORT_DATASERVER
+#define TELEPORT_DATASERVER
 
 #include "net/net.h"
 #include "database/data.h"
-#include "flexnode/main.h"
+#include "teleportnode/main.h"
 #include "credits/creditutil.h"
-#include "flexnode/calendar.h"
+#include "teleportnode/calendar.h"
 #include "relays/relays.h"
 #include "relays/relaystate.h"
 #include "initialize/datamessages.h"

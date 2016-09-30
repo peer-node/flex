@@ -1,5 +1,5 @@
-#ifndef FLEX_RESOURCEMONITOR
-#define FLEX_RESOURCEMONITOR
+#ifndef TELEPORT_RESOURCEMONITOR
+#define TELEPORT_RESOURCEMONITOR
 
 #define MAX_MESSAGE_RATE 50                 // per second
 #define MAX_BANDWIDTH 33000                 // bytes per second

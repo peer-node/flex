@@ -1,7 +1,7 @@
 #include "trade/trade.h"
 #include "relays/relays.h"
-#include "flexnode/flexnode.h"
-#include "flexnode/schedule.h"
+#include "teleportnode/teleportnode.h"
+#include "teleportnode/schedule.h"
 #include "relays/relaystate.h"
 #include "credits/creditutil.h"
 
@@ -38,7 +38,7 @@ bool CheckPubKeyAuthorization(vch_t currency_code,
 
 void SchedulePaymentCheck(uint160 payment_hash)
 {
-    flexnode.scheduler.Schedule("payment_check", payment_hash,
+    teleportnode.scheduler.Schedule("payment_check", payment_hash,
                                 GetTimeMicros() + 9 * 1000 * 1000);
 }
 
@@ -81,12 +81,12 @@ void DoForwarding()
                 if (type == "order")
                 {
                     Order order = msgdata[hash]["order"];
-                    flexnode.tradehandler.BroadcastMessage(order);
+                    teleportnode.tradehandler.BroadcastMessage(order);
                 }
                 else if (type == "accept_order")
                 {
                     AcceptOrder accept = msgdata[hash]["accept_order"];
-                    flexnode.tradehandler.BroadcastMessage(accept);
+                    teleportnode.tradehandler.BroadcastMessage(accept);
                 }
             }
 
@@ -108,23 +108,23 @@ void DoForwarding()
 
 void InitializeTradeTasks()
 {
-    flexnode.scheduler.AddTask(ScheduledTask("trade_check", 
+    teleportnode.scheduler.AddTask(ScheduledTask("trade_check", 
                                     DoScheduledTradeInitiation));
-    flexnode.scheduler.AddTask(ScheduledTask("payment_check", 
+    teleportnode.scheduler.AddTask(ScheduledTask("payment_check", 
                                     DoScheduledPaymentCheck));
-    flexnode.scheduler.AddTask(ScheduledTask("cancellation", 
+    teleportnode.scheduler.AddTask(ScheduledTask("cancellation", 
                                     DoScheduledCancellation));
-    flexnode.scheduler.AddTask(ScheduledTask("timeout", 
+    teleportnode.scheduler.AddTask(ScheduledTask("timeout", 
                                     DoScheduledTimeout));
-    flexnode.scheduler.AddTask(ScheduledTask("secrets_check", 
+    teleportnode.scheduler.AddTask(ScheduledTask("secrets_check", 
                                     DoScheduledSecretsCheck));
-    flexnode.scheduler.AddTask(ScheduledTask("secrets_release_check", 
+    teleportnode.scheduler.AddTask(ScheduledTask("secrets_release_check", 
                                     DoScheduledSecretsReleaseCheck));
-    flexnode.scheduler.AddTask(ScheduledTask("send_backup_secrets", 
+    teleportnode.scheduler.AddTask(ScheduledTask("send_backup_secrets", 
                                     DoScheduledBackupSecretsReleaseCheck));
-    flexnode.scheduler.AddTask(ScheduledTask("secrets_released_check", 
+    teleportnode.scheduler.AddTask(ScheduledTask("secrets_released_check", 
                                     DoScheduledSecretsReleasedCheck));
-    flexnode.scheduler.AddTask(ScheduledTask("credit_payment_check", 
+    teleportnode.scheduler.AddTask(ScheduledTask("credit_payment_check", 
                                     DoScheduledCreditPaymentCheck));
     boost::thread t(&DoForwarding);
 }
@@ -151,7 +151,7 @@ void HandleCurrencyPaymentProof(CurrencyPaymentProof payment_proof,
             = msgdata[accept_commit.order_commit_hash]["commit"];
         Order order = msgdata[accept_commit.order_hash]["order"];
 
-        Currency currency = flexnode.currencies[order.currency];
+        Currency currency = teleportnode.currencies[order.currency];
         string proof(payment_proof.proof.begin(), payment_proof.proof.end());
 
         bool check_result = false;
@@ -201,7 +201,7 @@ void DoThirdPartyConfirmationCheck(CurrencyPaymentProof payment_proof)
     vch_t payee_data = (order.side == BID)
                        ? order.auxiliary_data : accept.auxiliary_data;
 
-    Currency currency = flexnode.currencies[order.currency];
+    Currency currency = teleportnode.currencies[order.currency];
     if (currency.VerifyFiatPayment(payment_proof.proof, 
                                    payer_data, 
                                    payee_data, 
@@ -211,7 +211,7 @@ void DoThirdPartyConfirmationCheck(CurrencyPaymentProof payment_proof)
             = tradedata[accept_commit_hash]["acknowledgement"];
 
         ThirdPartyPaymentConfirmation confirmation(acknowledgement_hash);
-        flexnode.tradehandler.BroadcastMessage(confirmation);
+        teleportnode.tradehandler.BroadcastMessage(confirmation);
     }
 }
 
@@ -264,7 +264,7 @@ void HandleCurrencyPaymentConfirmation(CurrencyPaymentConfirmation confirmation)
         ScheduleSecretsCheck(accept_commit_hash, 15);
     }
 
-    flexnode.scheduler.Schedule("secrets_released_check", 
+    teleportnode.scheduler.Schedule("secrets_released_check", 
                                 accept_commit_hash, 
                                 GetTimeMicros() + DO_SUCCESSION_AFTER);
 }
@@ -325,7 +325,7 @@ void WatchForCreditPayment(uint160 accept_commit_hash)
 
         ScheduleForwarding(order, order_hash);
 
-        flexnode.event_notifier.RecordEvent(order_hash);
+        teleportnode.event_notifier.RecordEvent(order_hash);
     }
 
 
@@ -347,7 +347,7 @@ void WatchForCreditPayment(uint160 accept_commit_hash)
         tradedata[accept_commit.order_hash]["accept_commit"] = accept_commit;
         uint160 accept_commit_hash = accept_commit.GetHash160();
         
-        flexnode.scheduler.Schedule("timeout", accept_commit_hash, 
+        teleportnode.scheduler.Schedule("timeout", accept_commit_hash, 
                                     GetTimeMicros()
                                       + order.timeout * 1000 * 1000);
         if (!CheckForMyRelaySecrets(accept_commit))
@@ -355,7 +355,7 @@ void WatchForCreditPayment(uint160 accept_commit_hash)
 
         if (tradedata[accept_commit_hash]["i_have_secret"])
         {
-            flexnode.scheduler.Schedule("secrets_release_check", 
+            teleportnode.scheduler.Schedule("secrets_release_check", 
                                         accept_commit_hash, 
                                         GetTimeMicros() 
                                             + COMPLAINT_WAIT_TIME);
@@ -410,7 +410,7 @@ void WatchForCreditPayment(uint160 accept_commit_hash)
             WatchEscrowCreditPubKey(accept_commit_hash);
 
         marketdata.Delete(accept_commit.order_hash);
-        flexnode.event_notifier.RecordEvent(accept_commit_hash);
+        teleportnode.event_notifier.RecordEvent(accept_commit_hash);
         
         if (!order.is_cryptocurrency)
         {

@@ -1,8 +1,8 @@
 // Distributed under version 3 of the Gnu Affero GPL software license, 
 // see the accompanying file COPYING for details.
 
-#ifndef FLEX_DEFINE
-#define FLEX_DEFINE
+#ifndef TELEPORT_DEFINE
+#define TELEPORT_DEFINE
 
 #include <vector>
 #include <string>
@@ -233,6 +233,6 @@ template<typename T> std::string PrettyPrint(T item)
 
 #define RFACTOR 4
 
-#define FLEX_WORK_NUMBER_OF_MEGABYTES 4096
+#define TELEPORT_WORK_NUMBER_OF_MEGABYTES 4096
 
 #endif

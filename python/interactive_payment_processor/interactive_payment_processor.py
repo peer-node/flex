@@ -26,7 +26,7 @@ transactions = set()
 balances = defaultdict(lambda: 1000)
 
 def writepid():
-    f = open(join(flexdir(), "flex.pids"), "a+")
+    f = open(join(flexdir(), "teleport.pids"), "a+")
     f.write(str(os.getpid()) + "\n")
     f.close()
 

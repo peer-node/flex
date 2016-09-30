@@ -6,12 +6,12 @@
 
 BOOST_AUTO_TEST_CASE(TestDatastore)
 {
-    CLevelDBWrapper flexdb("db", 1 << 29);
-    CDataStore encdata(&flexdb, "E", "pw1");
+    CLevelDBWrapper teleportdb("db", 1 << 29);
+    CDataStore encdata(&teleportdb, "E", "pw1");
 
-    CDataStore encdatabad(&flexdb, "E", "pw2");
+    CDataStore encdatabad(&teleportdb, "E", "pw2");
 
-    CDataStore encdatagood(&flexdb, "E", "pw1");
+    CDataStore encdatagood(&teleportdb, "E", "pw1");
 
     uint256 x = 256;
 

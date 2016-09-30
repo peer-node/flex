@@ -1,6 +1,6 @@
 
 
-class FlexNode
+class TeleportNode
 {
 public:
     DataServer dataserver;
@@ -17,7 +17,7 @@ public:
     uint32_t num_credits_mined;
     uint32_t num_credits_to_mine;
 
-    FlexNode() {}
+    TeleportNode() {}
 
     void Initialize()
     {

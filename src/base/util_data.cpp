@@ -15,12 +15,12 @@ boost::filesystem::path GetDefaultDataDir_()
 {
     namespace fs = boost::filesystem;
     // Windows < Vista: C:\Documents and Settings\Username\Application Data\Bitcoin
-    // Windows >= Vista: C:\Users\Username\AppData\Roaming\Flex
-    // Mac: ~/Library/Application Support/Flex
-    // Unix: ~/.flex
+    // Windows >= Vista: C:\Users\Username\AppData\Roaming\Teleport
+    // Mac: ~/Library/Application Support/Teleport
+    // Unix: ~/.teleport
 #ifdef WIN32
     // Windows
-    return GetSpecialFolderPath(CSIDL_APPDATA) / "Flex";
+    return GetSpecialFolderPath(CSIDL_APPDATA) / "Teleport";
 #else
     fs::path pathRet;
     char* pszHome = getenv("HOME");
@@ -32,10 +32,10 @@ boost::filesystem::path GetDefaultDataDir_()
     // Mac
     pathRet /= "Library/Application Support";
     TryCreateDirectory(pathRet);
-    return pathRet / "Flex";
+    return pathRet / "Teleport";
 #else
     // Unix
-    return pathRet / ".flex";
+    return pathRet / ".teleport";
 #endif
 #endif
 }
@@ -72,7 +72,7 @@ void ClearDatadirCache()
 
 boost::filesystem::path GetConfigFile()
 {
-    boost::filesystem::path pathConfigFile(GetArg("-conf", "flex.conf"));
+    boost::filesystem::path pathConfigFile(GetArg("-conf", "teleport.conf"));
     if (!pathConfigFile.is_complete()) pathConfigFile = GetDataDir_(false) / pathConfigFile;
     return pathConfigFile;
 }
@@ -101,14 +101,14 @@ void ReadConfigFile(map<string, string>& mapSettingsRet,
     {
         boost::filesystem::ifstream streamConfig(GetConfigFile());
         if (!streamConfig.good())
-            return; // No flex.conf file is OK
+            return; // No teleport.conf file is OK
 
         if (!CheckConfigFilePermissions(GetConfigFile().string().c_str()))
             throw runtime_error(
                 "\nThe configuration file has insecure permissions.\n"
                 "Ensure that only your user can read from and write\n"
                 "to the configuration file. \n"
-                "E.g. chmod 600 ~/.flex/flex.conf\n"
+                "E.g. chmod 600 ~/.teleport/teleport.conf\n"
                 );
         config_stream << streamConfig.rdbuf();
     }
@@ -119,7 +119,7 @@ void ReadConfigFile(map<string, string>& mapSettingsRet,
     for (boost::program_options::detail::config_file_iterator
          it(config_stream, setOptions), end; it != end; ++it)
     {
-        // Don't overwrite existing settings so command line settings override flex.conf
+        // Don't overwrite existing settings so command line settings override teleport.conf
         string strKey = string("-") + it->string_key;
         if (mapSettingsRet.count(strKey) == 0)
         {

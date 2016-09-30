@@ -1,4 +1,4 @@
-#include "flexnode/flexnode.h"
+#include "teleportnode/teleportnode.h"
 
 #include "log.h"
 #define LOG_CATEGORY "deposits.cpp"
@@ -33,7 +33,7 @@ std::vector<Point> GetRelaysForAddress(Point address)
 
 void DoScheduledAddressRequestTimeoutCheck(uint160 request_hash)
 {
-    LOCK(flexnode.mutex);
+    LOCK(teleportnode.mutex);
     uint32_t parts_received = depositdata[request_hash]["parts_received"];
     Point address = depositdata[request_hash]["address"];
 
@@ -45,7 +45,7 @@ void DoScheduledAddressRequestTimeoutCheck(uint160 request_hash)
         Point relay = relays[position];
         if (!(parts_received & (1 << position)))
         {
-            if (flexnode.RelayState().relays[relay] > INHERITANCE_START)
+            if (teleportnode.RelayState().relays[relay] > INHERITANCE_START)
             {
                 log_ << "relay " << position << " has not responded to "
                      << "address request " << request_hash
@@ -56,67 +56,67 @@ void DoScheduledAddressRequestTimeoutCheck(uint160 request_hash)
         }
     }
     if (!all_received)
-        flexnode.scheduler.Schedule("request_timeout_check",
+        teleportnode.scheduler.Schedule("request_timeout_check",
                                     request_hash,
                                     GetTimeMicros() + COMPLAINT_WAIT_TIME);
 }
 
 void DoScheduledAddressPartRefutationCheck(uint160 complaint_hash)
 {
-    LOCK(flexnode.mutex);
+    LOCK(teleportnode.mutex);
     if (depositdata[complaint_hash]["refuted"])
         return;
     DepositAddressPartComplaint complaint;
     complaint = msgdata[complaint_hash]["deposit_part_complaint"];
     DepositAddressPartMessage part_msg;
     part_msg = msgdata[complaint.part_msg_hash]["deposit_part"];
-    flexnode.deposit_handler.CancelRequest(part_msg.address_request_hash);
+    teleportnode.deposit_handler.CancelRequest(part_msg.address_request_hash);
 
     Point bad_relay = part_msg.VerificationKey();
-    flexnode.RelayState().AddDisqualification(bad_relay, complaint_hash);
+    teleportnode.RelayState().AddDisqualification(bad_relay, complaint_hash);
     DoSuccession(bad_relay);
 }
 
 
 void InitializeDepositScheduledTasks()
 {
-    flexnode.scheduler.AddTask(
+    teleportnode.scheduler.AddTask(
         ScheduledTask("request_timeout_check",
                       DoScheduledAddressRequestTimeoutCheck));
 
-    flexnode.scheduler.AddTask(
+    teleportnode.scheduler.AddTask(
         ScheduledTask("part_refutation_check",
                       DoScheduledAddressPartRefutationCheck));
 
-    flexnode.scheduler.AddTask(
+    teleportnode.scheduler.AddTask(
         ScheduledTask("disclosure_timeout_check",
                       DoScheduledDisclosureTimeoutCheck));
 
-    flexnode.scheduler.AddTask(
+    teleportnode.scheduler.AddTask(
         ScheduledTask("disclosure_refutation_check",
                       DoScheduledDisclosureRefutationCheck));
 
-    flexnode.scheduler.AddTask(
+    teleportnode.scheduler.AddTask(
         ScheduledTask("post_disclosure_check",
                       DoScheduledPostDisclosureCheck));
 
-    flexnode.scheduler.AddTask(
+    teleportnode.scheduler.AddTask(
         ScheduledTask("confirm_transfer",
                       DoScheduledConfirmTransferCheck));
 
-    flexnode.scheduler.AddTask(
+    teleportnode.scheduler.AddTask(
         ScheduledTask("withdrawal_timeout_check",
                       DoScheduledWithdrawalTimeoutCheck));
 
-    flexnode.scheduler.AddTask(
+    teleportnode.scheduler.AddTask(
         ScheduledTask("withdrawal_refutation_check",
                       DoScheduledWithdrawalRefutationCheck));
 
-    flexnode.scheduler.AddTask(
+    teleportnode.scheduler.AddTask(
         ScheduledTask("backup_withdrawal_timeout_check",
                       DoScheduledBackupWithdrawalTimeoutCheck));
 
-    flexnode.scheduler.AddTask(
+    teleportnode.scheduler.AddTask(
         ScheduledTask("backup_withdrawal_refutation_check",
                       DoScheduledBackupWithdrawalRefutationCheck));
 }
@@ -156,7 +156,7 @@ void InitializeDepositScheduledTasks()
     {
         uint160 request_hash = request.GetHash160();
         log_ << "HandleDepositAddressRequest: " << request_hash << "\n";
-        if (!flexnode.downloader.finished_downloading)
+        if (!teleportnode.downloader.finished_downloading)
         {
             log_ << "not finished downloading\n";
             return;
@@ -172,7 +172,7 @@ void InitializeDepositScheduledTasks()
             return;
         }
 
-        flexnode.pit.HandleRelayMessage(request_hash);
+        teleportnode.pit.HandleRelayMessage(request_hash);
 
         depositdata[request_hash]["processed"] = true;
     }
@@ -216,7 +216,7 @@ void InitializeDepositScheduledTasks()
                                           part_hashes);
         }
         if (!initdata[part_msg_hash]["from_history"])
-            flexnode.scheduler.Schedule("part_complaint_check",
+            teleportnode.scheduler.Schedule("part_complaint_check",
                                         part_msg_hash,
                                         GetTimeMicros() + COMPLAINT_WAIT_TIME);
 
@@ -286,7 +286,7 @@ void InitializeDepositScheduledTasks()
                      << " for " << address << "\n";
                 depositdata[address]["offset_point"] = offset_point;
                 uint160 secret_address_hash = KeyHash(address + offset_point);
-                if (request.currency_code == FLX)
+                if (request.currency_code == TCR)
                 {
                     walletdata[secret_address_hash]["watched"] = true;
                 }
@@ -331,7 +331,7 @@ void InitializeDepositScheduledTasks()
             DepositAddressPartRefutation refutation(complaint_hash);
             BroadcastMessage(refutation);
         }
-        flexnode.scheduler.Schedule("part_refutation_check",
+        teleportnode.scheduler.Schedule("part_refutation_check",
                                     complaint_hash,
                                     GetTimeMicros() + COMPLAINT_WAIT_TIME);
     }
@@ -349,7 +349,7 @@ void InitializeDepositScheduledTasks()
             DepositAddressPartComplaint complaint;
             complaint = depositdata[complaint_hash]["deposit_part_complaint"];
             Point bad_relay = complaint.VerificationKey();
-            flexnode.RelayState().AddDisqualification(bad_relay, 
+            teleportnode.RelayState().AddDisqualification(bad_relay, 
                                                       refutation_hash);
             DoSuccession(bad_relay);
         }
@@ -362,7 +362,7 @@ void InitializeDepositScheduledTasks()
 
     void DepositHandler::HandleEncodedRequests(MinedCreditMessage& msg)
     {
-        if (!flexnode.downloader.finished_downloading)
+        if (!teleportnode.downloader.finished_downloading)
             return;
         uint160 credit_hash = msg.mined_credit.GetHash160();
         log_ << "HandleEncodedRequests: " << credit_hash << "\n";
@@ -433,7 +433,7 @@ void InitializeDepositScheduledTasks()
         if (depositdata[request_hash]["scheduled"])
             return;
 
-        flexnode.scheduler.Schedule("request_timeout_check",
+        teleportnode.scheduler.Schedule("request_timeout_check",
                                     request_hash,
                                     GetTimeMicros() + COMPLAINT_WAIT_TIME);
         depositdata[request_hash]["scheduled"] = true;
@@ -441,7 +441,7 @@ void InitializeDepositScheduledTasks()
 
     void DepositHandler::HandlePostEncodedRequests(MinedCreditMessage& msg)
     {
-        if (!flexnode.downloader.finished_downloading)
+        if (!teleportnode.downloader.finished_downloading)
             return;
         uint160 credit_hash = msg.mined_credit.GetHash160();
         log_ << "HandlePostEncodedRequests: " << credit_hash << "\n";

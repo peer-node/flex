@@ -1,7 +1,7 @@
 // Distributed under version 3 of the Gnu Affero GPL software license, 
 // see the accompanying file COPYING for details.
 
-#include "flexnode/flexnode.h"
+#include "teleportnode/teleportnode.h"
 
 using namespace std;
 
@@ -15,12 +15,12 @@ using namespace std;
 
 void StartUsing(uint160 latest_credit_hash)
 {
-    flexnode.calendar = calendardata[latest_credit_hash]["calendar"];
+    teleportnode.calendar = calendardata[latest_credit_hash]["calendar"];
 
     log_ << "StartUsing(): " << latest_credit_hash << "\n";
-    log_ << "calendar is:" << flexnode.calendar;
+    log_ << "calendar is:" << teleportnode.calendar;
 
-    foreach_(Calend calend, flexnode.calendar.calends)
+    foreach_(Calend calend, teleportnode.calendar.calends)
     {
         uint160 calend_hash = calend.mined_credit.GetHash160();
         calendardata[calend_hash]["is_calend"] = true;
@@ -28,19 +28,19 @@ void StartUsing(uint160 latest_credit_hash)
 
     uint160 calend_hash = GetCalendCreditHash(latest_credit_hash);
 
-    flexnode.InitiateChainAtCalend(calend_hash);
+    teleportnode.InitiateChainAtCalend(calend_hash);
 
     foreach_(uint160 credit_hash, 
              GetCreditHashesSinceCalend(calend_hash, latest_credit_hash))
     {
         MinedCreditMessage msg = creditdata[credit_hash]["msg"];
-        flexnode.AddBatchToTip(msg);
+        teleportnode.AddBatchToTip(msg);
     }
 
-    flexnode.downloader.finished_downloading = true;
+    teleportnode.downloader.finished_downloading = true;
     log_ << "StartUsing() finished. Initialization complete\n"
          << "requesting credits paid to me from peers\n";
-    flexnode.downloader.RequestCreditsMatchingWallet();
+    teleportnode.downloader.RequestCreditsMatchingWallet();
 }
 
 
@@ -122,7 +122,7 @@ void StartUsing(uint160 latest_credit_hash)
             Misbehaving(peer->GetId(), 100);
             return;
         }
-        flexnode.wallet.HandleReceivedCredits(msg.credits);
+        teleportnode.wallet.HandleReceivedCredits(msg.credits);
     }
 
     void Downloader::HandleDiurnBranches(DiurnBranchMessage msg, CNode *peer)
@@ -154,14 +154,14 @@ void StartUsing(uint160 latest_credit_hash)
                 Misbehaving(peer->GetId(), 100);
                 return;
             }
-            if (flexnode.calendar.ContainsDiurn(diurn_root))
+            if (teleportnode.calendar.ContainsDiurn(diurn_root))
             {
                 creditdata[msg.credit_hashes[i]]["branch"] = msg.branches[i];
                 initdata[msg.credit_hashes[i]]["requested"] = false;
                 branches_received.push_back(msg.credit_hashes[i]);
             }
         }
-        flexnode.chainer.HandleDiurnBranchesReceived(branches_received, peer);
+        teleportnode.chainer.HandleDiurnBranchesReceived(branches_received, peer);
     }
      
     void Downloader::HandleTip(MinedCreditMessage msg, CNode *peer)
@@ -229,17 +229,17 @@ void StartUsing(uint160 latest_credit_hash)
         msgdata[hash]["handled"] = true;
         log_ << "DataHandler::HandleOrphans: " << hash << "\n";
         vector<MinedCreditMessage> non_orphans
-            = flexnode.chainer.orphanage.NuggetNonOrphansAfterHash(hash);
+            = teleportnode.chainer.orphanage.NuggetNonOrphansAfterHash(hash);
         foreach_(MinedCreditMessage msg, non_orphans)
         {
             log_ << "handling erstwhile orphan msg with credit "
                  << msg.mined_credit << "\n";
-            flexnode.chainer.HandleMinedCreditMessage(msg, NULL);
+            teleportnode.chainer.HandleMinedCreditMessage(msg, NULL);
         }
         vector<uint160> orphans = msgdata[hash]["orphans"];
-        flexnode.relayhandler.HandleOrphans(hash);
+        teleportnode.relayhandler.HandleOrphans(hash);
         msgdata[hash]["orphans"] = orphans;
-        flexnode.tradehandler.HandleOrphans(hash);
+        teleportnode.tradehandler.HandleOrphans(hash);
     }
 
     bool DataHandler::CheckInitialDataIsPresent(InitialDataMessage& msg)
@@ -384,7 +384,7 @@ void StartUsing(uint160 latest_credit_hash)
                      << ", not " << previous_hash << "!\n";
                 return false;
             }
-            if (!flexnode.message_validator.ValidateMinedCreditMessage(msg))
+            if (!teleportnode.message_validator.ValidateMinedCreditMessage(msg))
             {
                 log_ << "can't validate " << credit_hash << "\n"
                      << "ValidateInitialDataMessage failed\n";
@@ -467,8 +467,8 @@ void StartUsing(uint160 latest_credit_hash)
             uint160 txhash = tx.GetHash160();
             log_ << "handling transaction " << txhash << "\n";
             
-            if (flexnode.downloader.finished_downloading)
-                flexnode.chainer.HandleTransaction(tx, peer);
+            if (teleportnode.downloader.finished_downloading)
+                teleportnode.chainer.HandleTransaction(tx, peer);
             HandleOrphans(txhash);
         }
         map<uint160,uint160> relay_states_to_credit_hashes;
@@ -481,8 +481,8 @@ void StartUsing(uint160 latest_credit_hash)
             log_ << "relay state " << msg_.mined_credit.relay_state_hash
                  << " has credit hash " << credit_hash << "\n";
             log_ << "handling mined credit msg " << credit_hash << "\n";
-            if (flexnode.downloader.finished_downloading)
-                flexnode.chainer.HandleMinedCreditMessage(msg_, peer);
+            if (teleportnode.downloader.finished_downloading)
+                teleportnode.chainer.HandleMinedCreditMessage(msg_, peer);
             HandleOrphans(credit_hash);
         }
         for(uint32_t i = 0; i < msg.relay_message_contents.size(); i++)
@@ -496,7 +496,7 @@ void StartUsing(uint160 latest_credit_hash)
             log_ << "handling relay message " << hash 
                  << " of type " << type << "\n";
 
-            flexnode.relayhandler.HandleMessage(hash);
+            teleportnode.relayhandler.HandleMessage(hash);
 
             HandleOrphans(hash);
         }
@@ -512,7 +512,7 @@ void StartUsing(uint160 latest_credit_hash)
         {
             MinedCreditMessage msg_ = creditdata[queued_batch]["msg"];
             log_ << "handling queued credit " << queued_batch;
-            flexnode.chainer.HandleMinedCreditMessage(msg_, peer);
+            teleportnode.chainer.HandleMinedCreditMessage(msg_, peer);
             initdata.EraseProperty(msg.data_request_hash, "queued_batch");
         }
 
@@ -523,7 +523,7 @@ void StartUsing(uint160 latest_credit_hash)
             TransferAcknowledgement ack
                 = msgdata[queued_ack_hash]["transfer_ack"];
             initdata.EraseProperty(msg.data_request_hash, "queued_ack");
-            flexnode.deposit_handler.HandleTransferAcknowledgement(ack);
+            teleportnode.deposit_handler.HandleTransferAcknowledgement(ack);
         }
     }
 
@@ -562,8 +562,8 @@ uint32_t FindFork(Calendar calendar1, Calendar calendar2)
         if (InMainChain(bad_credit_hash))
         {
             RemoveBlocksAndChildren(bad_credit_hash);
-            if (bad_credit_hash == flexnode.previous_mined_credit_hash)
-                flexnode.chainer.RemoveBatchFromTip();
+            if (bad_credit_hash == teleportnode.previous_mined_credit_hash)
+                teleportnode.chainer.RemoveBatchFromTip();
         }
     }
     
@@ -649,7 +649,7 @@ uint32_t FindFork(Calendar calendar1, Calendar calendar2)
         log_ << "Scrutinizing calendar: " << calendar;
         uint32_t fork_position = 0;
         
-        fork_position = FindFork(calendar, flexnode.calendar);
+        fork_position = FindFork(calendar, teleportnode.calendar);
         
         uint64_t now = GetTimeMicros();
         while (GetTimeMicros() - now < microseconds)

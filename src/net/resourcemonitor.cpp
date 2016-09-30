@@ -1,6 +1,6 @@
-#include "../../test/flex_tests/flex_data/TestData.h"
+#include "../../test/teleport_tests/teleport_data/TestData.h"
 
-#include "flexnode/flexnode.h"
+#include "teleportnode/teleportnode.h"
 #include "net/resourcemonitor.h"
 
 #include "log.h"
@@ -147,11 +147,11 @@ string_t Channel(string_t message_type)
         string_t channel = Channel(type);
         with_msg_as_instance_of_(type, hash,
             if (channel == "trade")
-                flexnode.tradehandler.BroadcastMessage(msg);
+                teleportnode.tradehandler.BroadcastMessage(msg);
             else if (channel == "relay")
-                flexnode.relayhandler.BroadcastMessage(msg);
+                teleportnode.relayhandler.BroadcastMessage(msg);
             else if (channel == "deposit")
-                flexnode.deposit_handler.BroadcastMessage(msg);
+                teleportnode.deposit_handler.BroadcastMessage(msg);
             )
     }
 

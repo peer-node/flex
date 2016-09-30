@@ -4,9 +4,9 @@ from setuptools import setup,find_packages
 import sys
 import os
 
-setup(name='flex-python-utils',
+setup(name='teleport-python-utils',
       version='0.0.1',
-      description='Python Utilities for Flex',
+      description='Python Utilities for Teleport',
       license='Gnu Affero GPLv3',
       author='peer node',
       packages=find_packages(),
@@ -62,7 +62,7 @@ if 'install' in sys.argv:
     if os.path.exists(os.path.join("src", "flexd")):
         print("compilation successful. installing")
         import shutil
-        for executable in ['flexd', 'flex-cli']:
+        for executable in ['flexd', 'teleport-cli']:
             shutil.copy(os.path.join("src", executable), bindir)
     else:
         print("Compilation failed. Quitting\n")

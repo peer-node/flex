@@ -1,5 +1,5 @@
 ---
-name: "flex"
+name: "teleport"
 suites:
 - "precise"
 architectures:
@@ -19,8 +19,8 @@ packages:
 
 reference_datetime: "2013-06-01 00:00:00"
 remotes:
-- "url": "https://github.com/peer-node/flex.git"
-  "dir": "flex"
+- "url": "https://github.com/peer-node/teleport.git"
+  "dir": "teleport"
   "commit": "f3a4f38ac1b695ab94e09ac9f30166eb1b9711fe"
 files:
 - "qt-win32-5.2.0-gitian-r3.zip"

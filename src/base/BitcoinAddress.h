@@ -1,5 +1,5 @@
-#ifndef FLEX_BITCOINADDRESS_H
-#define FLEX_BITCOINADDRESS_H
+#ifndef TELEPORT_BITCOINADDRESS_H
+#define TELEPORT_BITCOINADDRESS_H
 
 #include "base/base58.h"
 
@@ -79,4 +79,4 @@ public:
 typedef CBitcoinExtKeyBase<CExtKey, 74, CChainParams::EXT_SECRET_KEY> CBitcoinExtKey;
 typedef CBitcoinExtKeyBase<CExtPubKey, 74, CChainParams::EXT_PUBLIC_KEY> CBitcoinExtPubKey;
 
-#endif //FLEX_BITCOINADDRESS_H
+#endif //TELEPORT_BITCOINADDRESS_H

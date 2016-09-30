@@ -35,7 +35,7 @@
 
 #include <boost/signals2/signal.hpp>
 #include <src/credits/SignedTransaction.h>
-#include <test/flex_tests/node/MinedCreditMessage.h>
+#include <test/teleport_tests/node/MinedCreditMessage.h>
 
 #include "log.h"
 #define LOG_CATEGORY "net.h"

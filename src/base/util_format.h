@@ -1,5 +1,5 @@
-#ifndef FLEX_UTIL_FORMAT_H
-#define FLEX_UTIL_FORMAT_H
+#ifndef TELEPORT_UTIL_FORMAT_H
+#define TELEPORT_UTIL_FORMAT_H
 
 #include "tinyformat.h"
 #include <string>
@@ -87,4 +87,4 @@ inline bool IsSwitchChar(char c)
 }
 
 
-#endif //FLEX_UTIL_FORMAT_H
+#endif //TELEPORT_UTIL_FORMAT_H

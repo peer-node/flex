@@ -1,4 +1,4 @@
-#include "flexnode/orphanage.h"
+#include "teleportnode/orphanage.h"
 #include "database/data.h"
 #include "credits/creditutil.h"
 #include "database/memdb.h"
@@ -13,8 +13,8 @@ CMemoryDB keydb;
 
 CMemoryDB txtypedb;
 
-string strFLX("FLX");
-vch_t FLX(strFLX.begin(), strFLX.end());
+string strTCR("TCR");
+vch_t TCR(strTCR.begin(), strTCR.end());
 
 BitChain spent_chain;
 

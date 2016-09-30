@@ -1,19 +1,19 @@
-// Copyright (c) 2014 Flex Developers
+// Copyright (c) 2014 Teleport Developers
 // Distributed under version 3 of the Gnu Affero GPL software license, see the accompanying
 // file COPYING for details
-#ifndef FLEX_WORK_H
-#define FLEX_WORK_H
+#ifndef TELEPORT_WORK_H
+#define TELEPORT_WORK_H
 
-#include "crypto/flexcrypto.h"
+#include "crypto/teleportcrypto.h"
 #include "crypto/uint256.h"
 #include "twist/twistcpp.h"
 
 #include "log.h"
 #define LOG_CATEGORY "work.h"
 
-#define FLEX_WORK_NUMBER_OF_LINKS 128
-#define FLEX_WORK_MINIMUM_NUMBER_OF_LINKS 10
-#define FLEX_WORK_NUMBER_OF_SEGMENTS 32
+#define TELEPORT_WORK_NUMBER_OF_LINKS 128
+#define TELEPORT_WORK_MINIMUM_NUMBER_OF_LINKS 10
+#define TELEPORT_WORK_NUMBER_OF_SEGMENTS 32
 
 uint160 target_from_difficulty(uint160 difficulty);
 
@@ -36,7 +36,7 @@ public:
     std::vector<uint64_t> links;
     std::vector<uint32_t> link_lengths;
     uint160 difficulty_achieved;
-    uint32_t minimum_number_of_links{FLEX_WORK_MINIMUM_NUMBER_OF_LINKS};
+    uint32_t minimum_number_of_links{TELEPORT_WORK_MINIMUM_NUMBER_OF_LINKS};
 
     TwistWorkProof();
     TwistWorkProof(uint256 memory_seed,
@@ -44,7 +44,7 @@ public:
                    uint160 target, 
                    uint160 link_threshold,
                    uint32_t num_segments,
-                   uint32_t minimum_number_of_links=FLEX_WORK_MINIMUM_NUMBER_OF_LINKS);
+                   uint32_t minimum_number_of_links=TELEPORT_WORK_MINIMUM_NUMBER_OF_LINKS);
 
     uint160 DifficultyAchieved();
 

@@ -1,5 +1,5 @@
-#ifndef FLEX_BASE64_H
-#define FLEX_BASE64_H
+#ifndef TELEPORT_BASE64_H
+#define TELEPORT_BASE64_H
 
 #include <string.h>
 #include <string>
@@ -157,4 +157,4 @@ inline std::string DecodeBase64(const std::string& str)
 #include <boost/thread.hpp>
 #include "base/util.h"
 
-#endif //FLEX_BASE64_H
+#endif //TELEPORT_BASE64_H

@@ -1,5 +1,5 @@
 #include "credits/creditutil.h"
-#include "flexnode/flexnode.h"
+#include "teleportnode/teleportnode.h"
 #include <sstream>
 
 #include "log.h"
@@ -273,7 +273,7 @@ bool HaveSameCalend(uint160 credit_hash1, uint160 credit_hash2)
 bool TxContainsSpentInputs(SignedTransaction tx)
 {
     foreach_(const CreditInBatch& credit, tx.rawtx.inputs)
-        if (flexnode.spent_chain.Get(credit.position))
+        if (teleportnode.spent_chain.Get(credit.position))
             return true;
     return false;
 }
@@ -410,7 +410,7 @@ bool TransactionsConflict(SignedTransaction tx1, SignedTransaction tx2)
 uint160 GetNextCalendCreditHash(uint160 credit_hash)
 {
     std::vector<uint160> calend_hashes;
-    calend_hashes = flexnode.calendar.GetCalendCreditHashes();
+    calend_hashes = teleportnode.calendar.GetCalendCreditHashes();
     if (!VectorContainsEntry(calend_hashes, credit_hash)
         || credit_hash == calend_hashes.back())
         return 0;
@@ -473,7 +473,7 @@ uint64_t TransactionDepth(uint160 txhash, uint160 current_credit_hash)
 MinedCredit LatestMinedCredit()
 {
     MinedCredit mined_credit
-        = creditdata[flexnode.previous_mined_credit_hash]["mined_credit"];
+        = creditdata[teleportnode.previous_mined_credit_hash]["mined_credit"];
     return mined_credit;
 }
 
@@ -511,11 +511,11 @@ void UpdateSpentChain(UnsignedTransaction tx)
         log_ << "UpdateSpentChain: setting position " 
              << tx.inputs[i].position << "\n";
 
-        flexnode.spent_chain.Set(tx.inputs[i].position);
+        teleportnode.spent_chain.Set(tx.inputs[i].position);
     }
     
     for (uint32_t i = 0; i < tx.outputs.size(); i++)
-        flexnode.spent_chain.Add();
+        teleportnode.spent_chain.Add();
 }
 
 string string_to_hex(const string& input)
@@ -719,7 +719,7 @@ CreditInBatch GetCreditFromBatch(uint160 batch_root, uint32_t n)
         return CreditInBatch();
     Credit credit = batch.credits[n];
     CreditInBatch credit_in_batch = batch.GetWithPosition(credit);
-    flexnode.wallet.AddDiurnBranch(credit_in_batch);
+    teleportnode.wallet.AddDiurnBranch(credit_in_batch);
     return credit_in_batch;
 }
 
@@ -789,7 +789,7 @@ uint64_t GetKnownPubKeyBalance(Point pubkey)
 
     foreach_(CreditInBatch credit, credits)
     {
-        if (!flexnode.spent_chain.Get(credit.position))
+        if (!teleportnode.spent_chain.Get(credit.position))
             balance += credit.amount;
     }
     return balance;
@@ -923,7 +923,7 @@ void FetchDependencies(std::vector<uint160> dependencies, CNode *peer)
     if (peer != NULL)
     {
         std::vector<uint160> empty;
-        flexnode.downloader.datahandler.SendDataRequest(
+        teleportnode.downloader.datahandler.SendDataRequest(
                                                 empty,
                                                 unreceived_dependencies,
                                                 empty,

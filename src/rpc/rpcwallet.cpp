@@ -5,12 +5,12 @@
 #include "crypto/point.h"
 #include "base/base58.h"
 #include "rpc/rpcserver.h"
-#include "flexnode/init.h"
+#include "teleportnode/init.h"
 #include "net/net.h"
 #include "net/netbase.h"
 #include "base/util.h"
-#include "flexnode/wallet.h"
-#include "flexnode/flexnode.h"
+#include "teleportnode/wallet.h"
+#include "teleportnode/teleportnode.h"
 #include "database/memdb.h"
 #include <stdint.h>
 
@@ -35,13 +35,13 @@ Value getnewaddress(const Array& params, bool fHelp)
     if (fHelp || params.size() > 1)
         throw runtime_error(
             "getnewaddress \n"
-            "\nReturns a new Flex address for receiving payments.\n"
+            "\nReturns a new Teleport address for receiving payments.\n"
             "\nExamples:\n"
             + HelpExampleCli("getnewaddress", "")
         );
 
     // Generate a new key that is added to wallet
-    Point newKey = flexnode.wallet.NewKey();
+    Point newKey = teleportnode.wallet.NewKey();
     if (!newKey)
         throw JSONRPCError(RPC_WALLET_KEYPOOL_RAN_OUT, "Error: failed!");
     CKeyID keyID(KeyHash(newKey));
@@ -53,10 +53,10 @@ Value sendtoaddress(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 2 || params.size() > 4)
         throw runtime_error(
-            "sendtoaddress \"flexaddress\" amount\n"
+            "sendtoaddress \"teleportaddress\" amount\n"
             "\nSent an amount to a given address. The amount is a real and is rounded to the nearest 0.00000001\n"
             "\nArguments:\n"
-            "1. \"flexaddress\"  (string, required) The address to send to.\n"
+            "1. \"teleportaddress\"  (string, required) The address to send to.\n"
             "2. \"amount\"      (numeric, required) The amount in btc to send. eg 0.1\n"
             "\nResult:\n"
             "\"transactionid\"  (string) The transaction id.\n"
@@ -77,7 +77,7 @@ Value sendtoaddress(const Array& params, bool fHelp)
     int64_t amount = AmountFromValue(params[1]);
 
     
-    UnsignedTransaction rawtx = flexnode.wallet.GetUnsignedTxGivenKeyData(
+    UnsignedTransaction rawtx = teleportnode.wallet.GetUnsignedTxGivenKeyData(
                                                                    keydata_,
                                                                    amount,
                                                                    false);
@@ -90,7 +90,7 @@ Value sendtoaddress(const Array& params, bool fHelp)
         log_ << "signature verification failed!\n";
     else
         log_ << "signature verification succeeded!\n";
-    flexnode.HandleTransaction(tx, NULL);
+    teleportnode.HandleTransaction(tx, NULL);
     uint256 txhash = tx.GetHash();
 
     return ValueString(vch_t(BEGIN(txhash), END(txhash)));
@@ -123,7 +123,7 @@ Value getbalance(const Array& params, bool fHelp)
             + HelpExampleRpc("getbalance", "\"tabby\", 6")
         );
 
-    return  ValueFromAmount(flexnode.wallet.Balance());
+    return  ValueFromAmount(teleportnode.wallet.Balance());
 }
 
 Value getunconfirmedbalance(const Array &params, bool fHelp)
@@ -134,7 +134,7 @@ Value getunconfirmedbalance(const Array &params, bool fHelp)
 Value ListReceived(const Array& params)
 {
     Array ret;
-    foreach_(const CreditInBatch& credit, flexnode.wallet.credits)
+    foreach_(const CreditInBatch& credit, teleportnode.wallet.credits)
     {
         Object obj;
         uint160 keyhash;
@@ -168,7 +168,7 @@ Value AggregateReceived(const Array& params)
     vector<uint160> keyhashes;
     CMemoryDB totals;
 
-    foreach_(const CreditInBatch& credit, flexnode.wallet.credits)
+    foreach_(const CreditInBatch& credit, teleportnode.wallet.credits)
     {
         Object obj;
         uint160 keyhash;

@@ -1,5 +1,5 @@
-#ifndef FLEX_UTIL_RAND_H
-#define FLEX_UTIL_RAND_H
+#ifndef TELEPORT_UTIL_RAND_H
+#define TELEPORT_UTIL_RAND_H
 
 
 #include <cstdint>
@@ -38,4 +38,4 @@ static inline uint32_t insecure_rand(void)
 void seed_insecure_rand(bool fDeterministic=false);
 
 
-#endif //FLEX_UTIL_RAND_H
+#endif //TELEPORT_UTIL_RAND_H

@@ -2,11 +2,11 @@
 // see the accompanying file COPYING for details.
 
 
-#ifndef FLEX_DEPOSIT_SECRET
-#define FLEX_DEPOSIT_SECRET
+#ifndef TELEPORT_DEPOSIT_SECRET
+#define TELEPORT_DEPOSIT_SECRET
 
 #include "crypto/polynomial.h"
-#include "crypto/flexcrypto.h"
+#include "crypto/teleportcrypto.h"
 #include "relays/relaystate.h"
 
 #define SECRETS_PER_ADDRESS_PART 4

@@ -1,4 +1,4 @@
-#include "flexnode/flexnode.h"
+#include "teleportnode/teleportnode.h"
 
 
 #include "log.h"
@@ -16,7 +16,7 @@
 
         if (relays.size() == 0)
         {
-            relays = flexnode.RelayState().Executors(relay_number);
+            relays = teleportnode.RelayState().Executors(relay_number);
         }
         return relays;
     }

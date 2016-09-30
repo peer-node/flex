@@ -1,5 +1,5 @@
-#ifndef FLEX_CREDITINBATCH_H
-#define FLEX_CREDITINBATCH_H
+#ifndef TELEPORT_CREDITINBATCH_H
+#define TELEPORT_CREDITINBATCH_H
 
 #include "Credit.h"
 
@@ -40,4 +40,4 @@ public:
 };
 
 
-#endif //FLEX_CREDITINBATCH_H
+#endif //TELEPORT_CREDITINBATCH_H

@@ -1,7 +1,7 @@
 // Distributed under version 3 of the Gnu Affero GPL software license, 
 // see the accompanying file COPYING for details.
 
-#include "flexnode/flexnode.h"
+#include "teleportnode/teleportnode.h"
 
 using namespace std;
 

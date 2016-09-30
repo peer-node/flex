@@ -1,9 +1,9 @@
-#ifndef FLEX_RELAY
-#define FLEX_RELAY
+#ifndef TELEPORT_RELAY
+#define TELEPORT_RELAY
 
 #include "trade/trade_messages.h"
-#include "flexnode/orphanage.h"
-#include "flexnode/schedule.h"
+#include "teleportnode/orphanage.h"
+#include "teleportnode/schedule.h"
 #include "credits/creditutil.h"
 
 

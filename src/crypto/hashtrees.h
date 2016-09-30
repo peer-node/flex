@@ -1,5 +1,5 @@
-#ifndef FLEX_HASHTREES
-#define FLEX_HASHTREES 1
+#ifndef TELEPORT_HASHTREES
+#define TELEPORT_HASHTREES 1
 
 #include "crypto/hash.h"
 #include <string.h>

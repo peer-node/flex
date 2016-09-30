@@ -1,8 +1,8 @@
-#ifndef FLEX_CREDITUTIL
-#define FLEX_CREDITUTIL
+#ifndef TELEPORT_CREDITUTIL
+#define TELEPORT_CREDITUTIL
 
 #include "database/memdb.h"
-#include "flexnode/wallet.h"
+#include "teleportnode/wallet.h"
 #include "net/net.h"
 #include "relays/relaystate.h"
 

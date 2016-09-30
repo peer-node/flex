@@ -1,5 +1,5 @@
-#ifndef FLEX_VECTOR_TOOLS_H
-#define FLEX_VECTOR_TOOLS_H
+#ifndef TELEPORT_VECTOR_TOOLS_H
+#define TELEPORT_VECTOR_TOOLS_H
 
 #include <vector>
 #include <algorithm>
@@ -22,4 +22,4 @@ void EraseEntryFromVector(T entry, std::vector<T>& vector_)
 }
 
 
-#endif //FLEX_VECTOR_TOOLS_H
+#endif //TELEPORT_VECTOR_TOOLS_H

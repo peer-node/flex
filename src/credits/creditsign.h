@@ -1,5 +1,5 @@
-#ifndef FLEX_CREDITSIGN
-#define FLEX_CREDITSIGN 1
+#ifndef TELEPORT_CREDITSIGN
+#define TELEPORT_CREDITSIGN 1
 
 
 #include <openssl/rand.h>

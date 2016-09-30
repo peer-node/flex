@@ -1,5 +1,5 @@
-#ifndef FLEX_RELAY_INHERITANCE
-#define FLEX_RELAY_INHERITANCE
+#ifndef TELEPORT_RELAY_INHERITANCE
+#define TELEPORT_RELAY_INHERITANCE
 
 #include "relays/relay_messages.h"
 

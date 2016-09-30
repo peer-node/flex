@@ -1,8 +1,8 @@
-#ifndef FLEX_TRADE_SECRET
-#define FLEX_TRADE_SECRET
+#ifndef TELEPORT_TRADE_SECRET
+#define TELEPORT_TRADE_SECRET
 
 #include "crypto/polynomial.h"
-#include "crypto/flexcrypto.h"
+#include "crypto/teleportcrypto.h"
 #include "relays/relaystate.h"
 
 #ifndef _PRODUCTION_BUILD

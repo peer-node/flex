@@ -1,5 +1,5 @@
 #include "rpc/rpcobjects.h"
-#include "flexnode/flexnode.h"
+#include "teleportnode/teleportnode.h"
 
 
 #include "log.h"
@@ -206,7 +206,7 @@ Object GetObjectFromCreditInBatch(CreditInBatch credit)
     credit_object.push_back(Pair("amount", credit.amount));
     credit_object.push_back(Pair("position", credit.position));
 
-    bool spent = flexnode.spent_chain.Get(credit.position);
+    bool spent = teleportnode.spent_chain.Get(credit.position);
     credit_object.push_back(Pair("spent", spent));
     
     Array branch, diurn_branch;

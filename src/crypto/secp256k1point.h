@@ -1,9 +1,9 @@
-// Copyright (c) 2014 Flex Developers
+// Copyright (c) 2014 Teleport Developers
 // Distributed under version 3 of the Gnu Affero GPL software license, see the accompanying
 // file COPYING for details
 
-#ifndef FLEX_SECP256K1POINT
-#define FLEX_SECP256K1POINT
+#ifndef TELEPORT_SECP256K1POINT
+#define TELEPORT_SECP256K1POINT
 
 #include "boost/variant.hpp"
 #include "crypto/uint256.h"

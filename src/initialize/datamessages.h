@@ -1,10 +1,10 @@
-#ifndef FLEX_DATAMESSAGES
-#define FLEX_DATAMESSAGES
+#ifndef TELEPORT_DATAMESSAGES
+#define TELEPORT_DATAMESSAGES
 
 
 #include "database/data.h"
 #include "credits/creditutil.h"
-#include "flexnode/calendar.h"
+#include "teleportnode/calendar.h"
 #include "relays/relays.h"
 #include <deque>
 #include <openssl/rand.h>

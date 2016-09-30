@@ -1,7 +1,7 @@
 // Distributed under version 3 of the Gnu Affero GPL software license, 
 // see the accompanying file COPYING for details.
 
-#include "flexnode/flexnode.h"
+#include "teleportnode/teleportnode.h"
 
 #include "log.h"
 #define LOG_CATEGORY "disclosure.cpp"
@@ -21,10 +21,10 @@ void DoScheduledDisclosureRefutationCheck(uint160 complaint_hash)
     part_msg = msgdata[disclosure.address_part_message_hash]["deposit_part"];
 
     uint160 request_hash = part_msg.address_request_hash;
-    flexnode.deposit_handler.CancelRequest(request_hash);
+    teleportnode.deposit_handler.CancelRequest(request_hash);
 
     Point bad_relay = disclosure.VerificationKey();
-    flexnode.RelayState().AddDisqualification(bad_relay, complaint_hash);
+    teleportnode.RelayState().AddDisqualification(bad_relay, complaint_hash);
     DoSuccession(bad_relay);
 }
 
@@ -61,14 +61,14 @@ void DoScheduledPostDisclosureCheck(uint160 request_hash)
     log_ << "keyhash_ is " << FullKeyHash(address) << "\n";
     DepositAddressRequest request = msgdata[request_hash]["deposit_request"];
     string address_string;
-    if (request.currency_code != FLX)
+    if (request.currency_code != TCR)
     {
-        Currency currency = flexnode.currencies[request.currency_code];
+        Currency currency = teleportnode.currencies[request.currency_code];
         address_string = currency.crypto.PubKeyToAddress(address);
     }
     else
     {
-        address_string = FlexAddressFromPubKey(address);
+        address_string = TeleportAddressFromPubKey(address);
     }
     log_ << "final address is " << address_string << "\n";
     CBitcoinAddress address_(address_string);
@@ -133,7 +133,7 @@ void DoScheduledDisclosureTimeoutCheck(uint160 part_msg_hash)
                 BroadcastMessage(disclosure);
                 log_ << "sent disclosure\n";
             }
-            flexnode.scheduler.Schedule("disclosure_timeout_check",
+            teleportnode.scheduler.Schedule("disclosure_timeout_check",
                                         part_msg_hash,
                                         GetTimeMicros() + COMPLAINT_WAIT_TIME);
         }
@@ -192,7 +192,7 @@ void DoScheduledDisclosureTimeoutCheck(uint160 part_msg_hash)
         }
         if (disclosure_hashes.size() == SECRETS_PER_DEPOSIT)
         {
-            flexnode.scheduler.Schedule("post_disclosure_check",
+            teleportnode.scheduler.Schedule("post_disclosure_check",
                                         request_hash,
                                         GetTimeMicros() + COMPLAINT_WAIT_TIME);
         }
@@ -266,7 +266,7 @@ void DoScheduledDisclosureTimeoutCheck(uint160 part_msg_hash)
             BroadcastMessage(refutation);
         }
 
-        flexnode.scheduler.Schedule("disclosure_refutation_check",
+        teleportnode.scheduler.Schedule("disclosure_refutation_check",
                                     complaint_hash,
                                     GetTimeMicros() + COMPLAINT_WAIT_TIME);
     }

@@ -2,8 +2,8 @@
 // see the accompanying file COPYING for details.
 
 
-#ifndef FLEX_POINT
-#define FLEX_POINT
+#ifndef TELEPORT_POINT
+#define TELEPORT_POINT
 
 #include "define.h"
 #include "bignum.h"

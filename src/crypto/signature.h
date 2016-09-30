@@ -1,5 +1,5 @@
-#ifndef FLEX_SIGNATURE
-#define FLEX_SIGNATURE
+#ifndef TELEPORT_SIGNATURE
+#define TELEPORT_SIGNATURE
 
 #include "crypto/point.h"
 

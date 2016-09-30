@@ -1,25 +1,25 @@
 #include "crypto/point.h"
 
-CLevelDBWrapper flexdb("ccdb", 1 << 29);
-CDataStore transactiondata(&flexdb, "t");
-CDataStore scheduledata(&flexdb, "S");
-CDataStore currencydata(&flexdb, "R");
-CDataStore calendardata(&flexdb, "L");
-CDataStore displaydata(&flexdb, "d");
-CDataStore cipherdata(&flexdb, "c");
-CDataStore marketdata(&flexdb, "x");
-CDataStore walletdata(&flexdb, "w");
-CDataStore relaydata(&flexdb, "r");
-CDataStore creditdata(&flexdb, "C");
-CDataStore tradedata(&flexdb, "T");
-CDataStore initdata(&flexdb, "i");
-CDataStore hashdata(&flexdb, "h");
-CDataStore userdata(&flexdb, "u");
-CDataStore workdata(&flexdb, "W");
-CDataStore keydata(&flexdb, "k");
-CDataStore msgdata(&flexdb, "m");
-CDataStore netdata(&flexdb, "n");
-CDataStore mydata(&flexdb, "y");
+CLevelDBWrapper teleportdb("ccdb", 1 << 29);
+CDataStore transactiondata(&teleportdb, "t");
+CDataStore scheduledata(&teleportdb, "S");
+CDataStore currencydata(&teleportdb, "R");
+CDataStore calendardata(&teleportdb, "L");
+CDataStore displaydata(&teleportdb, "d");
+CDataStore cipherdata(&teleportdb, "c");
+CDataStore marketdata(&teleportdb, "x");
+CDataStore walletdata(&teleportdb, "w");
+CDataStore relaydata(&teleportdb, "r");
+CDataStore creditdata(&teleportdb, "C");
+CDataStore tradedata(&teleportdb, "T");
+CDataStore initdata(&teleportdb, "i");
+CDataStore hashdata(&teleportdb, "h");
+CDataStore userdata(&teleportdb, "u");
+CDataStore workdata(&teleportdb, "W");
+CDataStore keydata(&teleportdb, "k");
+CDataStore msgdata(&teleportdb, "m");
+CDataStore netdata(&teleportdb, "n");
+CDataStore mydata(&teleportdb, "y");
 
 int main()
 {

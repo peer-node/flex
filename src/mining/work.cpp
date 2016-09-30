@@ -73,8 +73,8 @@ uint160 target_from_difficulty(uint160 difficulty)
             : memory_seed(memory_seed),
               memory_factor(memory_factor),
               target(target_from_difficulty(difficulty)),
-              link_threshold(target * FLEX_WORK_NUMBER_OF_LINKS),
-              num_segments(FLEX_WORK_NUMBER_OF_SEGMENTS),
+              link_threshold(target * TELEPORT_WORK_NUMBER_OF_LINKS),
+              num_segments(TELEPORT_WORK_NUMBER_OF_SEGMENTS),
               difficulty_achieved(0)
     { }
 

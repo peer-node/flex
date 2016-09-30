@@ -1,7 +1,7 @@
 // Distributed under version 3 of the Gnu Affero GPL software license, 
 // see the accompanying file COPYING for details.
 
-#include "flexnode/flexnode.h"
+#include "teleportnode/teleportnode.h"
 
 #include "log.h"
 #define LOG_CATEGORY "relay_admission.cpp"
@@ -17,7 +17,7 @@ void AddRelayDutyForBatch(uint160 credit_hash)
     relaydata[join_msg.relay_pubkey]["is_mine"] = true;
     relaydata[credit_hash]["is_mine"] = true;
     relaydata[join_msg.relay_pubkey]["credit_hash"] = join_msg.credit_hash;
-    flexnode.relayhandler.BroadcastMessage(join_msg);
+    teleportnode.relayhandler.BroadcastMessage(join_msg);
 }
 
 
@@ -31,12 +31,12 @@ void DoScheduledJoinCheck(uint160 join_hash)
     if (relaydata[join_hash]["complaint_received"] &&
         !relaydata[join_hash]["complaint_check_completed"])
     {
-        flexnode.scheduler.Schedule("join_check", join_hash,
+        teleportnode.scheduler.Schedule("join_check", join_hash,
                                       GetTimeMicros() + COMPLAINT_WAIT_TIME);
         return;
     }
 
-    flexnode.relayhandler.AcceptJoin(join_msg);
+    teleportnode.relayhandler.AcceptJoin(join_msg);
 }
 
 void DoScheduledJoinComplaintCheck(uint160 complaint_hash)
@@ -64,7 +64,7 @@ void DoScheduledJoinComplaintCheck(uint160 complaint_hash)
     }
 
     join = msgdata[join_hash]["join"];
-    flexnode.relayhandler.EjectApplicant(join.relay_pubkey);
+    teleportnode.relayhandler.EjectApplicant(join.relay_pubkey);
     relaydata[join_hash]["complaint_check_completed"] = true;
 }
 
@@ -92,7 +92,7 @@ void DoScheduledFutureSuccessorComplaintCheck(uint160 complaint_hash)
         {
             log_ << "queuing join message from credit not in main chain:"
                  << msg.credit_hash << "\n"
-                 << "calendar is: " << flexnode.calendar;
+                 << "calendar is: " << teleportnode.calendar;
             QueueJoin(msg);
             return false;
         }
@@ -116,11 +116,11 @@ void DoScheduledFutureSuccessorComplaintCheck(uint160 complaint_hash)
     bool RelayHandler::ValidateJoinSuccessionSecrets(RelayJoinMessage& msg)
     {
         if (msg.distributed_succession_secret.Relays()
-            != flexnode.RelayState().Executors(msg.relay_number))
+            != teleportnode.RelayState().Executors(msg.relay_number))
         {
             log_ << "wrong executors!\n"
                  << msg.distributed_succession_secret.Relays() << " vs "
-                 << flexnode.RelayState().Executors(msg.relay_number) << "\n";
+                 << teleportnode.RelayState().Executors(msg.relay_number) << "\n";
             return false;
         }
         if (!msg.distributed_succession_secret.Validate())
@@ -184,14 +184,14 @@ void DoScheduledFutureSuccessorComplaintCheck(uint160 complaint_hash)
                 return;
 
             uint160 hash = join.credit_hash;
-            flexnode.downloader.datahandler.RequestBatch(hash, peer);
+            teleportnode.downloader.datahandler.RequestBatch(hash, peer);
             QueueJoin(join);
         
             return;
         }
 
         log_ << "previous_mined_credit_hash is "
-             << flexnode.previous_mined_credit_hash << "\n";
+             << teleportnode.previous_mined_credit_hash << "\n";
 
         if (!ValidateRelayJoinMessage(join))
         {
@@ -240,7 +240,7 @@ void DoScheduledFutureSuccessorComplaintCheck(uint160 complaint_hash)
             return;
         }
 
-        flexnode.scheduler.Schedule("join_check", join_hash,
+        teleportnode.scheduler.Schedule("join_check", join_hash,
                                     GetTimeMicros() + COMPLAINT_WAIT_TIME);
 
         log_ << "scheduled join check for approximately "
@@ -252,7 +252,7 @@ void DoScheduledFutureSuccessorComplaintCheck(uint160 complaint_hash)
         if (join.relay_number == 13)
         {
             log_ << "Doing test succession for relay 9.\n";
-            DoSuccession(flexnode.RelayState().RelaysByNumber()[9]);
+            DoSuccession(teleportnode.RelayState().RelaysByNumber()[9]);
         }
 #endif
     }
@@ -329,7 +329,7 @@ void DoScheduledFutureSuccessorComplaintCheck(uint160 complaint_hash)
         if (msg.relay_number >= INHERITANCE_START)
             HandleSuccessorSecrets(msg);
         HandleExecutorSecrets(msg);
-        flexnode.pit.HandleRelayMessage(message_hash);
+        teleportnode.pit.HandleRelayMessage(message_hash);
         log_ << "relay " << msg.relay_number << " has joined\n";
 
         log_ << "AcceptJoin(): handling downstream_applicants\n"
@@ -447,7 +447,7 @@ void DoScheduledFutureSuccessorComplaintCheck(uint160 complaint_hash)
             BroadcastMessage(refutation);
         }
 
-        flexnode.scheduler.Schedule("join_complaint", complaint_hash,
+        teleportnode.scheduler.Schedule("join_complaint", complaint_hash,
                                     GetTimeMicros() + COMPLAINT_WAIT_TIME);
     }
 
@@ -563,7 +563,7 @@ void DoScheduledFutureSuccessorComplaintCheck(uint160 complaint_hash)
         }
 
         relay_chain.HandleMessage(msg_hash);
-        flexnode.pit.HandleRelayMessage(msg_hash);
+        teleportnode.pit.HandleRelayMessage(msg_hash);
     }
 
     void RelayHandler::ScheduleFutureSuccessor(uint160 credit_hash, 
@@ -594,7 +594,7 @@ void DoScheduledFutureSuccessorComplaintCheck(uint160 complaint_hash)
             return;
         }
         relaydata[complaint.join_hash]["complaint_received"] = true;
-        flexnode.scheduler.Schedule("join_complaint", 
+        teleportnode.scheduler.Schedule("join_complaint", 
                                     complaint.GetHash160(),
                                     GetTimeMicros() + COMPLAINT_WAIT_TIME);
     }
@@ -609,7 +609,7 @@ void DoScheduledFutureSuccessorComplaintCheck(uint160 complaint_hash)
     void RelayHandler::HandleComplaintFromFutureSuccessor(
         ComplaintFromFutureSuccessor complaint)
     {
-        flexnode.scheduler.Schedule("future_successor_complaint",
+        teleportnode.scheduler.Schedule("future_successor_complaint",
                                       complaint.GetHash160(),
                                       GetTimeMicros() + COMPLAINT_WAIT_TIME);
     }

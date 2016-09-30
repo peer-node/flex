@@ -2,7 +2,7 @@
 // see the accompanying file COPYING for details.
 
 
-#include "flexnode/flexnode.h"
+#include "teleportnode/teleportnode.h"
 
 #include "log.h"
 #define LOG_CATEGORY "withdraw.cpp"
@@ -27,7 +27,7 @@ void SendBackupWithdrawalsFromPartMessage(uint160 withdraw_request_hash,
     BackupWithdrawalMessage backup_withdraw(withdraw_request_hash,
                                             part_msg.GetHash160(),
                                             position);
-    flexnode.deposit_handler.BroadcastMessage(backup_withdraw);
+    teleportnode.deposit_handler.BroadcastMessage(backup_withdraw);
 }
 
 void SendBackupWithdrawalsFromPartMessages(uint160 withdraw_request_hash,
@@ -67,7 +67,7 @@ void SendBackupWithdrawalsFromDisclosure(
     BackupWithdrawalMessage backup_withdraw(withdraw_request_hash,
                                             disclosure.GetHash160(),
                                             position);
-    flexnode.deposit_handler.BroadcastMessage(backup_withdraw);
+    teleportnode.deposit_handler.BroadcastMessage(backup_withdraw);
 }
 
 void SendBackupWithdrawalsFromDisclosures(uint160 withdraw_request_hash,
@@ -107,7 +107,7 @@ void SendBackupWithdrawalsFromDisclosures(uint160 withdraw_request_hash,
 
 void DoScheduledWithdrawalTimeoutCheck(uint160 withdraw_request_hash)
 {
-    LOCK(flexnode.mutex);
+    LOCK(teleportnode.mutex);
     log_ << "DoScheduledWithdrawalTimeoutCheck: "
          << withdraw_request_hash << "\n";
     uint32_t parts_received;
@@ -132,7 +132,7 @@ void DoScheduledWithdrawalTimeoutCheck(uint160 withdraw_request_hash)
         }
     }
     if (!all_received)
-        flexnode.scheduler.Schedule("backup_withdrawal_timeout_check",
+        teleportnode.scheduler.Schedule("backup_withdrawal_timeout_check",
                                     withdraw_request_hash,
                                     GetTimeMicros() + COMPLAINT_WAIT_TIME);
 }
@@ -147,7 +147,7 @@ void MarkTaskAsCompletedByRelay(uint160 task_hash, Point relay)
 
 void DoScheduledWithdrawalRefutationCheck(uint160 complaint_hash)
 {
-    LOCK(flexnode.mutex);
+    LOCK(teleportnode.mutex);
     log_ << "DoScheduledWithdrawalRefutationCheck: " << complaint_hash << "\n";
     WithdrawalComplaint complaint;
     complaint = msgdata[complaint_hash]["withdraw_complaint"];
@@ -168,7 +168,7 @@ void DoScheduledWithdrawalRefutationCheck(uint160 complaint_hash)
 
 void DoScheduledBackupWithdrawalTimeoutCheck(uint160 withdraw_request_hash)
 {
-    LOCK(flexnode.mutex);
+    LOCK(teleportnode.mutex);
     log_ << "DoScheduledBackupWithdrawalTimeoutCheck: "
          << withdraw_request_hash << "\n";
     uint32_t parts_received;
@@ -189,7 +189,7 @@ void DoScheduledBackupWithdrawalTimeoutCheck(uint160 withdraw_request_hash)
 
 void DoScheduledBackupWithdrawalRefutationCheck(uint160 complaint_hash)
 {
-    LOCK(flexnode.mutex);
+    LOCK(teleportnode.mutex);
     log_ << "DoScheduledBackupWithdrawalRefutationCheck: "
          << complaint_hash << "\n";
     BackupWithdrawalComplaint complaint;
@@ -310,7 +310,7 @@ void DoScheduledBackupWithdrawalRefutationCheck(uint160 complaint_hash)
                 CheckForAllSecretsOfAddress(address_request_hash);
             }
         }
-        flexnode.scheduler.Schedule("withdrawal_timeout_check",
+        teleportnode.scheduler.Schedule("withdrawal_timeout_check",
                                     withdraw_request_hash,
                                     GetTimeMicros() + COMPLAINT_WAIT_TIME);
     }
@@ -336,7 +336,7 @@ void DoScheduledBackupWithdrawalRefutationCheck(uint160 complaint_hash)
         depositdata[withdraw_request_hash]["parts_received"] = received;
 
         depositdata[complaint.withdraw_msg_hash]["complaint"] = complaint_hash;
-        flexnode.scheduler.Schedule("withdrawal_refutation_check",
+        teleportnode.scheduler.Schedule("withdrawal_refutation_check",
                                     complaint_hash,
                                     GetTimeMicros() + COMPLAINT_WAIT_TIME);
     }
@@ -519,16 +519,16 @@ void DoScheduledBackupWithdrawalRefutationCheck(uint160 complaint_hash)
             keydata[address + offset_point]["privkey"] = address_privkey;
         }
         
-        if (request.currency_code != FLX)
+        if (request.currency_code != TCR)
         {
-            Currency currency = flexnode.currencies[request.currency_code];
+            Currency currency = teleportnode.currencies[request.currency_code];
             log_ << "balance before import: " << currency.Balance() << "\n";
             currency.crypto.ImportPrivateKey(address_privkey);
             log_ << "balance after import: " << currency.Balance() << "\n";
         }
         else
         {
-            flexnode.wallet.ImportPrivateKey(address_privkey);
+            teleportnode.wallet.ImportPrivateKey(address_privkey);
         }
 
         RemoveAddress(address, request.currency_code);
@@ -572,7 +572,7 @@ void DoScheduledBackupWithdrawalRefutationCheck(uint160 complaint_hash)
             depositdata[withdraw_request_hash]["parts_received"] = received_;
         }
 
-        flexnode.scheduler.Schedule("backup_withdrawal_refutation_check",
+        teleportnode.scheduler.Schedule("backup_withdrawal_refutation_check",
                                     complaint.GetHash160(),
                                     GetTimeMicros() + COMPLAINT_WAIT_TIME);
     }

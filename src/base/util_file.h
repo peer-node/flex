@@ -1,5 +1,5 @@
-#ifndef FLEX_UTIL_FILE_H
-#define FLEX_UTIL_FILE_H
+#ifndef TELEPORT_UTIL_FILE_H
+#define TELEPORT_UTIL_FILE_H
 
 #include <boost/filesystem/path.hpp>
 
@@ -15,4 +15,4 @@ boost::filesystem::path GetTempPath();
 
 void ShrinkDebugFile();
 
-#endif //FLEX_UTIL_FILE_H
+#endif //TELEPORT_UTIL_FILE_H

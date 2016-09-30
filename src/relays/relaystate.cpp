@@ -1,7 +1,7 @@
 #include "relays/relaystate.h"
 #include "relays/relays.h"
 #include "credits/creditsign.h"
-#include "flexnode/flexnode.h"
+#include "teleportnode/teleportnode.h"
 
 #include "log.h"
 #define LOG_CATEGORY "relaystate.cpp"
@@ -465,7 +465,7 @@ void RecordRelayState(RelayState state, uint160 credit_hash)
         if (!result)
         {
             log_ << "RelayStateChain::ValidateBatch FAILED\n";
-            log_ << "calendar is " << flexnode.calendar;
+            log_ << "calendar is " << teleportnode.calendar;
         }
 
         (*this) = existing_state_chain;

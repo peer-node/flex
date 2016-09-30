@@ -2,8 +2,8 @@
 // see the accompanying file COPYING for details.
 
 
-#ifndef FLEX_RELAY_ADMISSION
-#define FLEX_RELAY_ADMISSION
+#ifndef TELEPORT_RELAY_ADMISSION
+#define TELEPORT_RELAY_ADMISSION
 
 #include "relays/relay_messages.h"
 

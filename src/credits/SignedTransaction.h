@@ -1,6 +1,7 @@
-#ifndef FLEX_SIGNEDTRANSACTION_H
-#define FLEX_SIGNEDTRANSACTION_H
-#include "../../test/flex_tests/flex_data/TestData.h"
+#ifndef TELEPORT_SIGNEDTRANSACTION_H
+#define TELEPORT_SIGNEDTRANSACTION_H
+
+#include "../../test/teleport_tests/teleport_data/TestData.h"
 #include "crypto/uint256.h"
 #include "vector_tools.h"
 #include "crypto/signature.h"
@@ -59,4 +60,4 @@ public:
 };
 
 
-#endif //FLEX_SIGNEDTRANSACTION_H
+#endif //TELEPORT_SIGNEDTRANSACTION_H

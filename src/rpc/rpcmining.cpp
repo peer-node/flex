@@ -4,13 +4,13 @@
 #include "crypto/point.h"
 #include "rpc/rpcserver.h"
 #include "base/chainparams.h"
-#include "flexnode/init.h"
+#include "teleportnode/init.h"
 #include "net/net.h"
-#include "flexnode/main.h"
+#include "teleportnode/main.h"
 
 #include <stdint.h>
-#include "flexnode/wallet.h"
-#include "flexnode/flexnode.h"
+#include "teleportnode/wallet.h"
+#include "teleportnode/teleportnode.h"
 
 #include "json/json_spirit_utils.h"
 #include "json/json_spirit_value.h"
@@ -20,7 +20,7 @@ using namespace std;
 
 uint160 networkhashps160()
 {
-    uint160 credit_hash = flexnode.previous_mined_credit_hash;
+    uint160 credit_hash = teleportnode.previous_mined_credit_hash;
     uint32_t batches_to_sample = 5;
     uint32_t i;
     uint160 total_difficulty = 0;
@@ -38,7 +38,7 @@ uint160 networkhashps160()
 
 double estimatednumberofminers()
 {
-    uint160 credit_hash = flexnode.previous_mined_credit_hash;
+    uint160 credit_hash = teleportnode.previous_mined_credit_hash;
     uint32_t batches_to_sample = 30;
     uint32_t i;
     uint160 total_difficulty = 0;
@@ -70,7 +70,7 @@ Value getgenerate(const Array& params, bool fHelp)
         throw runtime_error(
             "getgenerate\n"
             "\nReturn if the server is set to generate credits or not. The default is false.\n"
-            "It is set with the command line argument -gen (or flex.conf setting gen)\n"
+            "It is set with the command line argument -gen (or teleport.conf setting gen)\n"
             "It can also be set with the setgenerate call.\n"
             "\nResult\n"
             "true|false      (boolean) If the server is set to generate credits or not\n"
@@ -79,7 +79,7 @@ Value getgenerate(const Array& params, bool fHelp)
             + HelpExampleRpc("getgenerate", "")
         );
 
-    return (bool)flexnode.digging;
+    return (bool)teleportnode.digging;
 }
 
 
@@ -101,29 +101,29 @@ Value setgenerate(const Array& params, bool fHelp)
             + HelpExampleRpc("setgenerate", "true")
         );
 
-    LOCK(flexnode.mutex);
+    LOCK(teleportnode.mutex);
     bool fGenerate = true;
     if (params.size() > 0)
         fGenerate = params[0].get_bool();
 
     if (fGenerate)
-        flexnode.pit.StartMining();
+        teleportnode.pit.StartMining();
     else
-        flexnode.pit.StopMining();
+        teleportnode.pit.StopMining();
 
     return Value::null;
 }
 
 Value gethashespersec(const Array& params, bool fHelp)
 {
-    return flexnode.pit.hashrate;
+    return teleportnode.pit.hashrate;
 }
 
 Value getmininginfo(const Array& params, bool fHelp)
 {
     Object obj;
-    obj.push_back(Pair("mining", (bool)flexnode.digging));
-    obj.push_back(Pair("hashrate", flexnode.pit.hashrate));
+    obj.push_back(Pair("mining", (bool)teleportnode.digging));
+    obj.push_back(Pair("hashrate", teleportnode.pit.hashrate));
     obj.push_back(Pair("networkhashrate",
                   (uint64_t)networkhashps160().getdouble()));
     obj.push_back(Pair("estimatednumberofminers", estimatednumberofminers()));

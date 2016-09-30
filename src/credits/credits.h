@@ -2,8 +2,8 @@
 // see the accompanying file COPYING for details.
 
 
-#ifndef FLEX_CREDITS
-#define FLEX_CREDITS
+#ifndef TELEPORT_CREDITS
+#define TELEPORT_CREDITS
 
 #include "vector_tools.h"
 #include "crypto/signature.h"

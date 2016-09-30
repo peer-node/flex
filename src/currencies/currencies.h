@@ -1,12 +1,12 @@
 // Distributed under version 3 of the Gnu Affero GPL software license, 
 // see the accompanying file COPYING for details.
 
-#ifndef FLEX_CURRENCIES_H
-#define FLEX_CURRENCIES_H
+#ifndef TELEPORT_CURRENCIES_H
+#define TELEPORT_CURRENCIES_H
 
 
 #include "crypto/point.h"
-#include "flexnode/init.h"
+#include "teleportnode/init.h"
 #include "crypto/key.h"
 #include "base/base58.h"
 

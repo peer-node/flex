@@ -1,7 +1,7 @@
 // Distributed under version 3 of the Gnu Affero GPL software license, 
 // see the accompanying file COPYING for details.
 
-#include "flexnode/flexnode.h"
+#include "teleportnode/teleportnode.h"
 
 #include "log.h"
 #define LOG_CATEGORY "transfer.cpp"
@@ -30,7 +30,7 @@ void AddAddress(Point address, vch_t currency)
     
     depositdata[currency]["addresses"] = my_addresses;
 
-    if (currency == FLX)
+    if (currency == TCR)
         walletdata[KeyHash(address)]["watched"] = true;
 }
 
@@ -170,7 +170,7 @@ void CheckForSecretDepositAddress(DepositTransferMessage transfer)
             vector<uint160> empty;
             
             uint160 request_hash
-                = flexnode.downloader.datahandler.SendDataRequest(
+                = teleportnode.downloader.datahandler.SendDataRequest(
                     empty, empty, empty, addresses, GetPeer(transfer_hash));
             initdata[request_hash]["queued_transfer"] = transfer_hash;
             return;
@@ -321,7 +321,7 @@ void CheckForSecretDepositAddress(DepositTransferMessage transfer)
             vector<uint160> empty;
             
             uint160 request_hash
-                = flexnode.downloader.datahandler.SendDataRequest(
+                = teleportnode.downloader.datahandler.SendDataRequest(
                     empty, empty, empty, addresses, GetPeer(ack_hash));
             initdata[request_hash]["queued_ack"] = ack_hash;
             depositdata[ack_hash]["queued"] = true;
@@ -425,7 +425,7 @@ void CheckForSecretDepositAddress(DepositTransferMessage transfer)
             depositdata[ack_hash]["ready"])
         {
             log_ << "transfer ok; scheduling confirmation\n";
-            flexnode.scheduler.Schedule("confirm_transfer",
+            teleportnode.scheduler.Schedule("confirm_transfer",
                                         ack_hash,
                                         GetTimeMicros() + TRANSFER_CONFIRM_TIME);
         }

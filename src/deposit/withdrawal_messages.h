@@ -1,8 +1,8 @@
 // Distributed under version 3 of the Gnu Affero GPL software license, 
 // see the accompanying file COPYING for details.
 
-#ifndef FLEX_WITHDRAWAL_MESSAGES
-#define FLEX_WITHDRAWAL_MESSAGES
+#ifndef TELEPORT_WITHDRAWAL_MESSAGES
+#define TELEPORT_WITHDRAWAL_MESSAGES
 
 #include "deposit/deposit_secret.h"
 #include "deposit/deposit_messages.h"

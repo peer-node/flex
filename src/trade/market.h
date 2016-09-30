@@ -1,5 +1,5 @@
-#ifndef FLEX_MARKET
-#define FLEX_MARKET
+#ifndef TELEPORT_MARKET
+#define TELEPORT_MARKET
 
 
 #include "trade/trade_messages.h"

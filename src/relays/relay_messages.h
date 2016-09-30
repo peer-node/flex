@@ -1,15 +1,15 @@
-#ifndef FLEX_RELAY_MESSAGES
-#define FLEX_RELAY_MESSAGES
+#ifndef TELEPORT_RELAY_MESSAGES
+#define TELEPORT_RELAY_MESSAGES
 
 #include "database/data.h"
-#include "crypto/flexcrypto.h"
+#include "crypto/teleportcrypto.h"
 #include "crypto/shorthash.h"
 #include "credits/credits.h"
 #include "trade/trade.h"
-#include "flexnode/schedule.h"
+#include "teleportnode/schedule.h"
 #include "relays/relaystate.h"
 #include "relays/successionsecret.h"
-#include "flexnode/message_handler.h"
+#include "teleportnode/message_handler.h"
 #include "relays/RelayJoinMessage.h"
 
 #include "log.h"

@@ -1,5 +1,5 @@
-#ifndef FLEX_NET_SERVICES_H
-#define FLEX_NET_SERVICES_H
+#ifndef TELEPORT_NET_SERVICES_H
+#define TELEPORT_NET_SERVICES_H
 
 
 #include <src/base/protocol.h>
@@ -18,4 +18,4 @@ enum
 };
 
 
-#endif //FLEX_NET_SERVICES_H
+#endif //TELEPORT_NET_SERVICES_H

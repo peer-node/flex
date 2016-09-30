@@ -2,8 +2,8 @@
 // see the accompanying file COPYING for details.
 
 
-#ifndef FLEX_TRADE
-#define FLEX_TRADE
+#ifndef TELEPORT_TRADE
+#define TELEPORT_TRADE
 
 #include "trade/trader.h"
 #include "trade/relay.h"

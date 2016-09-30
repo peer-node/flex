@@ -1,5 +1,5 @@
-#ifndef FLEX_UTIL_ARGS_H
-#define FLEX_UTIL_ARGS_H
+#ifndef TELEPORT_UTIL_ARGS_H
+#define TELEPORT_UTIL_ARGS_H
 
 #include <string>
 #include <cstdint>
@@ -75,4 +75,4 @@ static void InterpretNegativeSetting(std::string name, std::map<std::string, std
 }
 
 
-#endif //FLEX_UTIL_ARGS_H
+#endif //TELEPORT_UTIL_ARGS_H

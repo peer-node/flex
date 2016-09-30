@@ -1,5 +1,5 @@
-#ifndef FLEX_25519_POINTS
-#define FLEX_25519_POINTS
+#ifndef TELEPORT_25519_POINTS
+#define TELEPORT_25519_POINTS
 #include <stdio.h>
 #include "crypto/25519/ed25519.h"
 #include "crypto/25519/ed25519-donna.h"

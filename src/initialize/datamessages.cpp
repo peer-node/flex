@@ -1,4 +1,4 @@
-#include "flexnode/flexnode.h"
+#include "teleportnode/teleportnode.h"
 
 #include "log.h"
 #define LOG_CATEGORY "datamessages.cpp"
@@ -25,7 +25,7 @@ using namespace std;
 
     void MatchingCreditsRequestMessage::SetFilter()
     {
-        vector<uint160> key_hashes = flexnode.wallet.GetKeyHashes();
+        vector<uint160> key_hashes = teleportnode.wallet.GetKeyHashes();
         stubs.resize(0);
 
         foreach_(uint160 key_hash, key_hashes)
@@ -407,7 +407,7 @@ vector<uint160> GetTransfersAndAcks(Point address)
                  << creditdata[msg_hash].HasProperty("msg") << "\n"
                  << "have mined credit: "
                  << creditdata[msg_hash].HasProperty("mined_credit") << "\n";
-            log_ << "calendar is " << flexnode.calendar;
+            log_ << "calendar is " << teleportnode.calendar;
             MinedCreditMessage msg = creditdata[msg_hash]["msg"];
             log_ << "recovery succeeded: " 
                  << msg.hash_list.RecoverFullHashes() << "\n";

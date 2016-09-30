@@ -70,8 +70,8 @@ set(SOURCE_FILES
     src/crypto/bignum.h
     src/crypto/crypter.cpp
     src/crypto/crypter.h
-    src/crypto/flexcrypto.cpp
-    src/crypto/flexcrypto.h
+        src/crypto/teleportcrypto.cpp
+        src/crypto/teleportcrypto.h
     src/crypto/hash.cpp
     src/crypto/hash.h
     src/crypto/hashtrees.h
@@ -103,21 +103,21 @@ set(SOURCE_FILES
     src/deposit/transfer_messages.h
     src/deposit/withdraw.cpp
     src/deposit/withdrawal_messages.h
-    src/flexnode/calendar.cpp
-    src/flexnode/calendar.h
-    src/flexnode/eventnotifier.cpp
-    src/flexnode/eventnotifier.h
-    src/flexnode/flexnode.cpp
-    src/flexnode/flexnode.h
-    src/flexnode/init.cpp
-    src/flexnode/init.h
-    src/flexnode/main.cpp
-    src/flexnode/main.h
-    src/flexnode/message_handler.h
-    src/flexnode/orphanage.h
-    src/flexnode/schedule.h
-    src/flexnode/wallet.cpp
-    src/flexnode/wallet.h
+        src/teleportnode/calendar.cpp
+        src/teleportnode/calendar.h
+        src/teleportnode/eventnotifier.cpp
+        src/teleportnode/eventnotifier.h
+        src/teleportnode/flexnode.cpp
+        src/teleportnode/flexnode.h
+        src/teleportnode/init.cpp
+        src/teleportnode/init.h
+        src/teleportnode/main.cpp
+        src/teleportnode/main.h
+        src/teleportnode/message_handler.h
+        src/teleportnode/orphanage.h
+        src/teleportnode/schedule.h
+        src/teleportnode/wallet.cpp
+        src/teleportnode/wallet.h
         src/initialize/datamessages.cpp
     src/initialize/datamessages.h
     src/initialize/dataserver.cpp
@@ -323,7 +323,7 @@ set(SOURCE_FILES
     src/log.h)
 
 add_subdirectory(test)
-add_subdirectory(test/flex_tests)
+add_subdirectory(test/teleport_tests)
 add_subdirectory(test/lib/googlemock)
 
 include_directories(test/lib/googletest/include
@@ -338,9 +338,9 @@ include_directories(test/lib/googletest/include
 
 set(TEST_SOURCE_FILES
         ${SOURCE_FILES}
-        test/flex_tests/test_main.cpp
-        test/flex_tests/crypto/test_point.cpp
-        test/flex_tests/crypto/test_secret.cpp)
+        test/teleport_tests/test_main.cpp
+        test/teleport_tests/crypto/test_point.cpp
+        test/teleport_tests/crypto/test_secret.cpp)
 
 set(NET_FILES
         src/net/addrman.cpp
@@ -378,16 +378,14 @@ set(NET_FILES
 
 set(MESSAGING_FILES
         ${NET_FILES}
-        src/flexnode/main.h
-        src/flexnode/main_signals.cpp
-        src/flexnode/main_send_messages.cpp
-        src/flexnode/main_process_messages.cpp
-        src/flexnode/MainFlexNode.h
-        src/flexnode/MockInit.h
-        src/flexnode/MockInit.cpp
-        src/flexnode/MainFlexNode.cpp
-        test/flex_tests/main_tests/Communicator.cpp
-        test/flex_tests/main_tests/Communicator.h)
+        src/teleportnode/main.h
+        src/teleportnode/main_signals.cpp
+        src/teleportnode/main_send_messages.cpp
+        src/teleportnode/main_process_messages.cpp
+        src/teleportnode/MockInit.h
+        src/teleportnode/MockInit.cpp
+        test/teleport_tests/main_tests/Communicator.cpp
+        test/teleport_tests/main_tests/Communicator.h)
 
 set(DATABASE_FILES
         src/database/datastore.h
@@ -484,14 +482,14 @@ set(DATABASE_FILES
         src/leveldb/util/status.cc
         src/leveldbwrapper.cpp
         src/leveldbwrapper.h
-        test/flex_tests/flex_data/MockProperty.cpp
-        test/flex_tests/flex_data/MockProperty.h
-        test/flex_tests/flex_data/MockData.cpp
-        test/flex_tests/flex_data/MockData.h
-        test/flex_tests/flex_data/LocationIterator.cpp
-        test/flex_tests/flex_data/LocationIterator.h
-        test/flex_tests/flex_data/MockDimension.cpp
-        test/flex_tests/flex_data/MockDimension.h)
+        test/teleport_tests/teleport_data/MockProperty.cpp
+        test/teleport_tests/teleport_data/MockProperty.h
+        test/teleport_tests/teleport_data/MockData.cpp
+        test/teleport_tests/teleport_data/MockData.h
+        test/teleport_tests/teleport_data/LocationIterator.cpp
+        test/teleport_tests/teleport_data/LocationIterator.h
+        test/teleport_tests/teleport_data/MockDimension.cpp
+        test/teleport_tests/teleport_data/MockDimension.h)
 
 set(BASE_FILES
         src/base/allocators.cpp
@@ -610,12 +608,12 @@ set(MINCRYPTO_FILES
 
 set(CRYPTO_FILES
         ${MINCRYPTO_FILES}
-        src/crypto/flexcrypto.cpp
-        src/crypto/flexcrypto.h
-        test/flex_tests/crypto/DistributedSecret.cpp
-        test/flex_tests/crypto/DistributedSecret.h
-        test/flex_tests/crypto/EncryptedSecret.cpp
-        test/flex_tests/crypto/EncryptedSecret.h)
+        src/crypto/teleportcrypto.cpp
+        src/crypto/teleportcrypto.h
+        test/teleport_tests/crypto/DistributedSecret.cpp
+        test/teleport_tests/crypto/DistributedSecret.h
+        test/teleport_tests/crypto/EncryptedSecret.cpp
+        test/teleport_tests/crypto/EncryptedSecret.h)
 
 set(WORK_FILES
         src/mining/work.cpp
@@ -695,223 +693,223 @@ set(NEW_CREDITS_FILES
         src/credits/SignedTransaction.cpp
         src/credits/SignedTransaction.h
         src/credits/creditsign.h
-        test/flex_tests/node/testCreditSystem.cpp
-        test/flex_tests/node/CreditSystem.cpp
-        test/flex_tests/node/CreditSystem.h
-        test/flex_tests/node/testMinedCreditMessageValidator.cpp
-        test/flex_tests/node/MinedCreditMessageValidator.cpp
-        test/flex_tests/node/MinedCreditMessageValidator.h
-        test/flex_tests/node/testTransactionValidator.cpp
-        test/flex_tests/node/TransactionValidator.cpp
-        test/flex_tests/node/TransactionValidator.h
-        test/flex_tests/node/testDiurn.cpp
-        test/flex_tests/node/Diurn.cpp
-        test/flex_tests/node/Diurn.h
-        test/flex_tests/node/testCalendar.cpp
-        test/flex_tests/node/Calendar.cpp
-        test/flex_tests/node/Calendar.h
-        test/flex_tests/node/testCalend.cpp
-        test/flex_tests/node/Calend.cpp
-        test/flex_tests/node/Calend.h
-        test/flex_tests/node/testCreditMessageHandler.cpp
-        test/flex_tests/node/CreditMessageHandler.cpp
-        test/flex_tests/node/CreditMessageHandler.h
-        test/flex_tests/node/TestPeer.h
-        test/flex_tests/node/BadBatchMessage.cpp
-        test/flex_tests/node/BadBatchMessage.h
-        test/flex_tests/node/testWallet.cpp
-        test/flex_tests/node/Wallet.cpp
-        test/flex_tests/node/Wallet.h
-        test/flex_tests/node/testShortHashList.cpp
-        test/flex_tests/node/testFlexNetworkNode.cpp
-        test/flex_tests/node/FlexNetworkNode.cpp
-        test/flex_tests/node/FlexNetworkNode.h)
+        test/teleport_tests/node/testCreditSystem.cpp
+        test/teleport_tests/node/CreditSystem.cpp
+        test/teleport_tests/node/CreditSystem.h
+        test/teleport_tests/node/testMinedCreditMessageValidator.cpp
+        test/teleport_tests/node/MinedCreditMessageValidator.cpp
+        test/teleport_tests/node/MinedCreditMessageValidator.h
+        test/teleport_tests/node/testTransactionValidator.cpp
+        test/teleport_tests/node/TransactionValidator.cpp
+        test/teleport_tests/node/TransactionValidator.h
+        test/teleport_tests/node/testDiurn.cpp
+        test/teleport_tests/node/Diurn.cpp
+        test/teleport_tests/node/Diurn.h
+        test/teleport_tests/node/testCalendar.cpp
+        test/teleport_tests/node/Calendar.cpp
+        test/teleport_tests/node/Calendar.h
+        test/teleport_tests/node/testCalend.cpp
+        test/teleport_tests/node/Calend.cpp
+        test/teleport_tests/node/Calend.h
+        test/teleport_tests/node/testCreditMessageHandler.cpp
+        test/teleport_tests/node/CreditMessageHandler.cpp
+        test/teleport_tests/node/CreditMessageHandler.h
+        test/teleport_tests/node/TestPeer.h
+        test/teleport_tests/node/BadBatchMessage.cpp
+        test/teleport_tests/node/BadBatchMessage.h
+        test/teleport_tests/node/testWallet.cpp
+        test/teleport_tests/node/Wallet.cpp
+        test/teleport_tests/node/Wallet.h
+        test/teleport_tests/node/testShortHashList.cpp
+        test/teleport_tests/node/testTeleportNetworkNode.cpp
+        test/teleport_tests/node/TeleportNetworkNode.cpp
+        test/teleport_tests/node/TeleportNetworkNode.h)
 
 add_executable(runRPCTests
-        test/flex_tests/test_main.cpp
-        test/flex_tests/rpc/test_rpc.cpp)
+        test/teleport_tests/test_main.cpp
+        test/teleport_tests/rpc/test_rpc.cpp)
 
 add_executable(runCryptoTests
-        test/flex_tests/flex_data/TestData.h
+        test/teleport_tests/teleport_data/TestData.h
         ${REMAINING_BASE_FILES}
-        test/flex_tests/flex_data/MemoryDataStore.cpp
+        test/teleport_tests/teleport_data/MemoryDataStore.cpp
         ${DATABASE_FILES}
         ${CREDITS_FILES}
         ${MINCRYPTO_FILES}
-        test/flex_tests/crypto/DistributedSecret.cpp
-        test/flex_tests/crypto/DistributedSecret.h
-        test/flex_tests/crypto/EncryptedSecret.cpp
-        test/flex_tests/crypto/EncryptedSecret.h
-        test/flex_tests/test_main.cpp
-        test/flex_tests/crypto/test_point.cpp
-        test/flex_tests/crypto/test_secret.cpp)
+        test/teleport_tests/crypto/DistributedSecret.cpp
+        test/teleport_tests/crypto/DistributedSecret.h
+        test/teleport_tests/crypto/EncryptedSecret.cpp
+        test/teleport_tests/crypto/EncryptedSecret.h
+        test/teleport_tests/test_main.cpp
+        test/teleport_tests/crypto/test_point.cpp
+        test/teleport_tests/crypto/test_secret.cpp)
 
 add_executable(runTwistWorkProofTests
-        test/flex_tests/flex_data/TestData.h
+        test/teleport_tests/teleport_data/TestData.h
         ${REMAINING_BASE_FILES}
         ${MINCRYPTO_FILES}
-        test/flex_tests/flex_data/MemoryDataStore.cpp
+        test/teleport_tests/teleport_data/MemoryDataStore.cpp
         ${DATABASE_FILES}
         ${WORK_FILES}
-        test/flex_tests/test_main.cpp
-        test/flex_tests/mining/testTwistWorkProof.cpp)
+        test/teleport_tests/test_main.cpp
+        test/teleport_tests/mining/testTwistWorkProof.cpp)
 
 add_executable(runNetworkSpecificProofOfWorkTests
         ${REMAINING_BASE_FILES}
         ${MINCRYPTO_FILES}
         ${WORK_FILES}
-        test/flex_tests/test_main.cpp
-        test/flex_tests/mining/MiningHashTree.cpp
-        test/flex_tests/mining/MiningHashTree.h
-        test/flex_tests/mining/testNetworkSpecificProofOfWork.cpp
-        test/flex_tests/mining/NetworkSpecificProofOfWork.cpp
-        test/flex_tests/mining/NetworkSpecificProofOfWork.h)
+        test/teleport_tests/test_main.cpp
+        test/teleport_tests/mining/MiningHashTree.cpp
+        test/teleport_tests/mining/MiningHashTree.h
+        test/teleport_tests/mining/testNetworkSpecificProofOfWork.cpp
+        test/teleport_tests/mining/NetworkSpecificProofOfWork.cpp
+        test/teleport_tests/mining/NetworkSpecificProofOfWork.h)
 
 add_executable(runMiningTests
         ${WORK_FILES}
-        test/flex_tests/test_main.cpp
-        test/flex_tests/mining/test_mining.cpp
-        test/flex_tests/mining/FlexMiner.cpp
-        test/flex_tests/mining/FlexMiner.h
-        test/flex_tests/mining/NetworkMiningInfo.cpp
-        test/flex_tests/mining/NetworkMiningInfo.h
-        test/flex_tests/mining/MiningHashTree.cpp
-        test/flex_tests/mining/MiningHashTree.h
-        test/flex_tests/mining/testMiningRPCServer.cpp
-        test/flex_tests/mining/MiningRPCServer.cpp
-        test/flex_tests/mining/MiningRPCServer.h
-        test/flex_tests/mining/testNetworkSpecificProofOfWork.cpp
-        test/flex_tests/mining/NetworkSpecificProofOfWork.cpp
-        test/flex_tests/mining/NetworkSpecificProofOfWork.h
-        test/flex_tests/mining/server_key.h
-        test/flex_tests/node/HttpAuthServer.cpp
-        test/flex_tests/node/HttpAuthServer.h)
+        test/teleport_tests/test_main.cpp
+        test/teleport_tests/mining/test_mining.cpp
+        test/teleport_tests/mining/TeleportMiner.cpp
+        test/teleport_tests/mining/TeleportMiner.h
+        test/teleport_tests/mining/NetworkMiningInfo.cpp
+        test/teleport_tests/mining/NetworkMiningInfo.h
+        test/teleport_tests/mining/MiningHashTree.cpp
+        test/teleport_tests/mining/MiningHashTree.h
+        test/teleport_tests/mining/testMiningRPCServer.cpp
+        test/teleport_tests/mining/MiningRPCServer.cpp
+        test/teleport_tests/mining/MiningRPCServer.h
+        test/teleport_tests/mining/testNetworkSpecificProofOfWork.cpp
+        test/teleport_tests/mining/NetworkSpecificProofOfWork.cpp
+        test/teleport_tests/mining/NetworkSpecificProofOfWork.h
+        test/teleport_tests/mining/server_key.h
+        test/teleport_tests/node/HttpAuthServer.cpp
+        test/teleport_tests/node/HttpAuthServer.h)
 
 add_executable(miner_cli
         ${WORK_FILES}
-        test/flex_tests/mining/FlexMiner.cpp
-        test/flex_tests/mining/FlexMiner.h
-        test/flex_tests/mining/NetworkMiningInfo.cpp
-        test/flex_tests/mining/NetworkMiningInfo.h
-        test/flex_tests/mining/MiningHashTree.cpp
-        test/flex_tests/mining/MiningHashTree.h
-        test/flex_tests/mining/MiningRPCServer.cpp
-        test/flex_tests/mining/MiningRPCServer.h
-        test/flex_tests/mining/NetworkSpecificProofOfWork.cpp
-        test/flex_tests/mining/NetworkSpecificProofOfWork.h
-        test/flex_tests/mining/miner_cli.cpp
-        test/flex_tests/node/HttpAuthServer.cpp
-        test/flex_tests/node/HttpAuthServer.h)
+        test/teleport_tests/mining/TeleportMiner.cpp
+        test/teleport_tests/mining/TeleportMiner.h
+        test/teleport_tests/mining/NetworkMiningInfo.cpp
+        test/teleport_tests/mining/NetworkMiningInfo.h
+        test/teleport_tests/mining/MiningHashTree.cpp
+        test/teleport_tests/mining/MiningHashTree.h
+        test/teleport_tests/mining/MiningRPCServer.cpp
+        test/teleport_tests/mining/MiningRPCServer.h
+        test/teleport_tests/mining/NetworkSpecificProofOfWork.cpp
+        test/teleport_tests/mining/NetworkSpecificProofOfWork.h
+        test/teleport_tests/mining/miner_cli.cpp
+        test/teleport_tests/node/HttpAuthServer.cpp
+        test/teleport_tests/node/HttpAuthServer.h)
 
 add_executable(runSchedulerTests
-        test/flex_tests/flex_data/TestData.h
+        test/teleport_tests/teleport_data/TestData.h
         ${REMAINING_BASE_FILES}
         ${MINCRYPTO_FILES}
-        test/flex_tests/flex_data/MemoryDataStore.cpp
+        test/teleport_tests/teleport_data/MemoryDataStore.cpp
         ${DATABASE_FILES}
-        test/flex_tests/test_main.cpp
-        test/flex_tests/scheduler/test_scheduler.cpp)
+        test/teleport_tests/test_main.cpp
+        test/teleport_tests/scheduler/test_scheduler.cpp)
 
 add_executable(runDataTests
-        test/flex_tests/flex_data/TestData.h
+        test/teleport_tests/teleport_data/TestData.h
         ${REMAINING_BASE_FILES}
         ${MINCRYPTO_FILES}
         ${DATABASE_FILES}
-        test/flex_tests/test_main.cpp
-        test/flex_tests/flex_data/test_data.cpp
-        test/flex_tests/flex_data/MemoryDataStore.cpp
-        test/flex_tests/flex_data/MockLocation.cpp
-        test/flex_tests/flex_data/MockLocation.h)
+        test/teleport_tests/test_main.cpp
+        test/teleport_tests/teleport_data/test_data.cpp
+        test/teleport_tests/teleport_data/MemoryDataStore.cpp
+        test/teleport_tests/teleport_data/MockLocation.cpp
+        test/teleport_tests/teleport_data/MockLocation.h)
 
 set(NODE_TEST_FILES
-        test/flex_tests/flex_data/TestData.h
+        test/teleport_tests/teleport_data/TestData.h
         ${REMAINING_BASE_FILES}
         ${MINCRYPTO_FILES}
         ${NEW_CREDITS_FILES}
         ${NET_FILES}
-        test/flex_tests/flex_data/MemoryDataStore.cpp
+        test/teleport_tests/teleport_data/MemoryDataStore.cpp
         ${DATABASE_FILES}
         ${WORK_FILES}
         ${MESSAGING_FILES}
-        src/flexnode/main.cpp
-        src/flexnode/main.h
-        test/flex_tests/node/FlexRPCServer.cpp
-        test/flex_tests/node/FlexRPCServer.h
-        test/flex_tests/node/FlexConfig.cpp
-        test/flex_tests/node/FlexConfig.h
-        test/flex_tests/node/FlexConfigDefaults.h
-        test/flex_tests/node/ConfigParser.cpp
-        test/flex_tests/node/ConfigParser.h
-        test/flex_tests/node/FlexLocalServer.cpp
-        test/flex_tests/node/FlexLocalServer.h
+        src/teleportnode/main.cpp
+        src/teleportnode/main.h
+        test/teleport_tests/node/TeleportRPCServer.cpp
+        test/teleport_tests/node/TeleportRPCServer.h
+        test/teleport_tests/node/TeleportConfig.cpp
+        test/teleport_tests/node/TeleportConfig.h
+        test/teleport_tests/node/TeleportConfigDefaults.h
+        test/teleport_tests/node/ConfigParser.cpp
+        test/teleport_tests/node/ConfigParser.h
+        test/teleport_tests/node/TeleportLocalServer.cpp
+        test/teleport_tests/node/TeleportLocalServer.h
         src/base/base58.cpp
         src/base/base58.h
-        test/flex_tests/node/HttpAuthServer.cpp
-        test/flex_tests/node/HttpAuthServer.h
-        test/flex_tests/mining/FlexMiner.cpp
-        test/flex_tests/mining/FlexMiner.h
-        test/flex_tests/mining/NetworkMiningInfo.cpp
-        test/flex_tests/mining/NetworkMiningInfo.h
-        test/flex_tests/mining/MiningHashTree.cpp
-        test/flex_tests/mining/MiningHashTree.h
-        test/flex_tests/mining/MiningRPCServer.cpp
-        test/flex_tests/mining/MiningRPCServer.h
-        test/flex_tests/mining/NetworkSpecificProofOfWork.cpp
-        test/flex_tests/mining/NetworkSpecificProofOfWork.h
-        test/flex_tests/node/MinedCreditMessage.cpp
-        test/flex_tests/node/MinedCreditMessage.h
-        test/flex_tests/node/MessageHandlerWithOrphanage.cpp
-        test/flex_tests/node/MessageHandlerWithOrphanage.h
-        test/flex_tests/node/MinedCreditConstructor.cpp
-        test/flex_tests/node/MinedCreditConstructor.h
-        test/flex_tests/node/NetworkStateConstructor.cpp
-        test/flex_tests/node/NetworkStateConstructor.h
-        test/flex_tests/node/NetworkState.cpp
-        test/flex_tests/node/NetworkState.h
-        test/flex_tests/node/data_handler/DataMessageHandler.cpp
-        test/flex_tests/node/data_handler/DataMessageHandler.h
-        test/flex_tests/node/TipRequestMessage.cpp
-        test/flex_tests/node/TipRequestMessage.h
-        test/flex_tests/node/TipMessage.cpp
-        test/flex_tests/node/TipMessage.h
-        test/flex_tests/node/data_handler/CalendarRequestMessage.cpp
-        test/flex_tests/node/data_handler/CalendarRequestMessage.h
-        test/flex_tests/node/data_handler/CalendarMessage.cpp
-        test/flex_tests/node/data_handler/CalendarMessage.h
-        test/flex_tests/node/data_handler/CalendarFailureDetails.cpp
-        test/flex_tests/node/data_handler/CalendarFailureDetails.h
-        test/flex_tests/node/data_handler/CalendarFailureMessage.cpp
-        test/flex_tests/node/data_handler/CalendarFailureMessage.h
-        test/flex_tests/node/data_handler/InitialDataRequestMessage.cpp
-        test/flex_tests/node/data_handler/InitialDataRequestMessage.h
-        test/flex_tests/node/data_handler/InitialDataMessage.cpp
-        test/flex_tests/node/data_handler/InitialDataMessage.h
-        test/flex_tests/node/TestPeerWithNetworkNode.h
-        test/flex_tests/node/ListExpansionRequestMessage.cpp
-        test/flex_tests/node/ListExpansionRequestMessage.h
-        test/flex_tests/node/ListExpansionMessage.cpp
-        test/flex_tests/node/ListExpansionMessage.h)
+        test/teleport_tests/node/HttpAuthServer.cpp
+        test/teleport_tests/node/HttpAuthServer.h
+        test/teleport_tests/mining/TeleportMiner.cpp
+        test/teleport_tests/mining/TeleportMiner.h
+        test/teleport_tests/mining/NetworkMiningInfo.cpp
+        test/teleport_tests/mining/NetworkMiningInfo.h
+        test/teleport_tests/mining/MiningHashTree.cpp
+        test/teleport_tests/mining/MiningHashTree.h
+        test/teleport_tests/mining/MiningRPCServer.cpp
+        test/teleport_tests/mining/MiningRPCServer.h
+        test/teleport_tests/mining/NetworkSpecificProofOfWork.cpp
+        test/teleport_tests/mining/NetworkSpecificProofOfWork.h
+        test/teleport_tests/node/MinedCreditMessage.cpp
+        test/teleport_tests/node/MinedCreditMessage.h
+        test/teleport_tests/node/MessageHandlerWithOrphanage.cpp
+        test/teleport_tests/node/MessageHandlerWithOrphanage.h
+        test/teleport_tests/node/MinedCreditConstructor.cpp
+        test/teleport_tests/node/MinedCreditConstructor.h
+        test/teleport_tests/node/NetworkStateConstructor.cpp
+        test/teleport_tests/node/NetworkStateConstructor.h
+        test/teleport_tests/node/NetworkState.cpp
+        test/teleport_tests/node/NetworkState.h
+        test/teleport_tests/node/data_handler/DataMessageHandler.cpp
+        test/teleport_tests/node/data_handler/DataMessageHandler.h
+        test/teleport_tests/node/TipRequestMessage.cpp
+        test/teleport_tests/node/TipRequestMessage.h
+        test/teleport_tests/node/TipMessage.cpp
+        test/teleport_tests/node/TipMessage.h
+        test/teleport_tests/node/data_handler/CalendarRequestMessage.cpp
+        test/teleport_tests/node/data_handler/CalendarRequestMessage.h
+        test/teleport_tests/node/data_handler/CalendarMessage.cpp
+        test/teleport_tests/node/data_handler/CalendarMessage.h
+        test/teleport_tests/node/data_handler/CalendarFailureDetails.cpp
+        test/teleport_tests/node/data_handler/CalendarFailureDetails.h
+        test/teleport_tests/node/data_handler/CalendarFailureMessage.cpp
+        test/teleport_tests/node/data_handler/CalendarFailureMessage.h
+        test/teleport_tests/node/data_handler/InitialDataRequestMessage.cpp
+        test/teleport_tests/node/data_handler/InitialDataRequestMessage.h
+        test/teleport_tests/node/data_handler/InitialDataMessage.cpp
+        test/teleport_tests/node/data_handler/InitialDataMessage.h
+        test/teleport_tests/node/TestPeerWithNetworkNode.h
+        test/teleport_tests/node/ListExpansionRequestMessage.cpp
+        test/teleport_tests/node/ListExpansionRequestMessage.h
+        test/teleport_tests/node/ListExpansionMessage.cpp
+        test/teleport_tests/node/ListExpansionMessage.h)
 
 add_executable(runNodeTests
         ${NODE_TEST_FILES}
-        test/flex_tests/test_main.cpp
-        test/flex_tests/main_tests/testCommunicator.cpp
-        test/flex_tests/node/testDataMessageHandler.cpp
-        test/flex_tests/main_tests/testNetwork.cpp
-        test/flex_tests/node/testConfigParser.cpp
-        test/flex_tests/node/testFlexLocalServer.cpp
-        test/flex_tests/node/testMinedCreditMessage.cpp
-        test/flex_tests/node/testMessageHandlerWithOrphanage.cpp
-        test/flex_tests/node/testNetworkStateConstructor.cpp
-        test/flex_tests/node/testMinedCreditConstructor.cpp
-        test/flex_tests/node/testHttpAuthServer.cpp
-        test/flex_tests/node/testFlexConfig.cpp
-        test/flex_tests/node/testFlexRPCServer.cpp test/flex_tests/node/data_handler/KnownHistoryMessage.cpp test/flex_tests/node/data_handler/KnownHistoryMessage.h test/flex_tests/node/data_handler/KnownHistoryDeclaration.cpp test/flex_tests/node/data_handler/KnownHistoryDeclaration.h test/flex_tests/node/data_handler/DiurnMessageData.cpp test/flex_tests/node/data_handler/DiurnMessageData.h test/flex_tests/node/data_handler/EnclosedMessageData.h test/flex_tests/node/data_handler/EnclosedMessageData.cpp test/flex_tests/node/data_handler/TipHandler.cpp test/flex_tests/node/data_handler/TipHandler.h test/flex_tests/node/data_handler/CalendarHandler.cpp test/flex_tests/node/data_handler/CalendarHandler.h test/flex_tests/node/data_handler/InitialDataHandler.cpp test/flex_tests/node/data_handler/InitialDataHandler.h test/flex_tests/node/data_handler/KnownHistoryHandler.cpp test/flex_tests/node/data_handler/KnownHistoryHandler.h test/flex_tests/node/data_handler/KnownHistoryRequest.cpp test/flex_tests/node/data_handler/KnownHistoryRequest.h test/flex_tests/node/data_handler/DiurnDataRequest.cpp test/flex_tests/node/data_handler/DiurnDataRequest.h test/flex_tests/node/data_handler/DiurnDataMessage.cpp test/flex_tests/node/data_handler/DiurnDataMessage.h)
+        test/teleport_tests/test_main.cpp
+        test/teleport_tests/main_tests/testCommunicator.cpp
+        test/teleport_tests/node/testDataMessageHandler.cpp
+        test/teleport_tests/main_tests/testNetwork.cpp
+        test/teleport_tests/node/testConfigParser.cpp
+        test/teleport_tests/node/testTeleportLocalServer.cpp
+        test/teleport_tests/node/testMinedCreditMessage.cpp
+        test/teleport_tests/node/testMessageHandlerWithOrphanage.cpp
+        test/teleport_tests/node/testNetworkStateConstructor.cpp
+        test/teleport_tests/node/testMinedCreditConstructor.cpp
+        test/teleport_tests/node/testHttpAuthServer.cpp
+        test/teleport_tests/node/testTeleportConfig.cpp
+        test/teleport_tests/node/testTeleportRPCServer.cpp test/teleport_tests/node/data_handler/KnownHistoryMessage.cpp test/teleport_tests/node/data_handler/KnownHistoryMessage.h test/teleport_tests/node/data_handler/KnownHistoryDeclaration.cpp test/teleport_tests/node/data_handler/KnownHistoryDeclaration.h test/teleport_tests/node/data_handler/DiurnMessageData.cpp test/teleport_tests/node/data_handler/DiurnMessageData.h test/teleport_tests/node/data_handler/EnclosedMessageData.h test/teleport_tests/node/data_handler/EnclosedMessageData.cpp test/teleport_tests/node/data_handler/TipHandler.cpp test/teleport_tests/node/data_handler/TipHandler.h test/teleport_tests/node/data_handler/CalendarHandler.cpp test/teleport_tests/node/data_handler/CalendarHandler.h test/teleport_tests/node/data_handler/InitialDataHandler.cpp test/teleport_tests/node/data_handler/InitialDataHandler.h test/teleport_tests/node/data_handler/KnownHistoryHandler.cpp test/teleport_tests/node/data_handler/KnownHistoryHandler.h test/teleport_tests/node/data_handler/KnownHistoryRequest.cpp test/teleport_tests/node/data_handler/KnownHistoryRequest.h test/teleport_tests/node/data_handler/DiurnDataRequest.cpp test/teleport_tests/node/data_handler/DiurnDataRequest.h test/teleport_tests/node/data_handler/DiurnDataMessage.cpp test/teleport_tests/node/data_handler/DiurnDataMessage.h)
 
 add_executable(flexnetd
-        test/flex_tests/flex_data/TestData.h
+        test/teleport_tests/teleport_data/TestData.h
         ${NODE_TEST_FILES}
-        test/flex_tests/node/flexnetd.cpp)
+        test/teleport_tests/node/teleportd.cpp)
 
 target_link_libraries(runRPCTests gmock gmock_main ssl crypto boost_system boost_program_options
         boost_filesystem boost_thread jsoncpp microhttpd jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client)

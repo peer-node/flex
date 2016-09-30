@@ -1,4 +1,4 @@
-#ifndef FLEX_NET_SYNC_H
-#define FLEX_NET_SYNC_H
+#ifndef TELEPORT_NET_SYNC_H
+#define TELEPORT_NET_SYNC_H
 
-#endif //FLEX_NET_SYNC_H
+#endif //TELEPORT_NET_SYNC_H

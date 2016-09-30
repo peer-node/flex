@@ -1,5 +1,5 @@
-#ifndef FLEX_UTIL_LOG_H
-#define FLEX_UTIL_LOG_H
+#ifndef TELEPORT_UTIL_LOG_H
+#define TELEPORT_UTIL_LOG_H
 
 #include <string>
 #include "tinyformat.h"
@@ -59,4 +59,4 @@ void LogException(std::exception* pex, const char* pszThread);
 void PrintExceptionContinue(std::exception* pex, const char* pszThread);
 void DebugPrintStop();
 
-#endif //FLEX_UTIL_LOG_H
+#endif //TELEPORT_UTIL_LOG_H

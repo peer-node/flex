@@ -82,7 +82,7 @@ def show_default():
 def writepid():
     from flex import flexdir
     import os
-    f = open(join(flexdir(), "flex.pids"), "a+")
+    f = open(join(flexdir(), "teleport.pids"), "a+")
     f.write(str(os.getpid()) + "\n")
     f.close()
 

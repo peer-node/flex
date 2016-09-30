@@ -4,13 +4,13 @@
 
 #include "rpc/rpcserver.h"
 
-#include "flexnode/main.h"
+#include "teleportnode/main.h"
 #include "net/net.h"
 #include "net/netbase.h"
 #include "base/protocol.h"
 #include "base/sync.h"
 #include "base/util.h"
-#include "flexnode/flexnode.h"
+#include "teleportnode/teleportnode.h"
 
 #include <boost/foreach.hpp>
 #include "json/json_spirit_value.h"
@@ -72,7 +72,7 @@ static void CopyNodeStats(std::vector<CNodeStats>& vstats)
 
 Value startdownloading(const Array& params, bool fHelp)
 {
-    flexnode.downloader.RequestTips();
+    teleportnode.downloader.RequestTips();
     return Value::null;
 }
 

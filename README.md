@@ -1,11 +1,11 @@
-The Flex Network: A New Way to Move and Trade Cryptocurrencies
-==============================================================
+Teleport: A New Way to Move and Trade Cryptocurrencies
+=======================================================
 
-Copyleft (c) 2015 Flex Developers
+Copyleft (c) 2015-2016 Teleport Developers
 
 An Exchange for Cryptocurrencies and Fiat
 -----------------------------------------
-Flex allows you to trade cryptocurrencies without the need
+Teleport allows you to trade cryptocurrencies without the need
 for a centralized exchange. It does this by breaking secrets
 into many parts and distributing these parts to a large
 number of miners, who are unlikely to all be colluding.
@@ -21,14 +21,14 @@ spend them.
 You can then request that they send you the parts of the private key,
 and have the funds back in your wallet in seconds, or you could
 transfer the deposit (i.e. give the right to withdraw the secret
-parts or to transfer again) to another Flex address in seconds. 
+parts or to transfer again) to another Teleport address in seconds. 
 
 There are no fees other than the fees for sending the cryptocurrencies
 themselves.
 
 Free Software
 -------------
-The Flex software is available under the terms of the AGPLv3.
+The Teleport software is available under the terms of the AGPLv3.
 
 Unstable Version for Testing Purposes Only
 ------------------------------------------
@@ -53,26 +53,26 @@ Then create and activate a virtualenv:
     virtualenv venv
     . venv/bin/activate
 
-Then install Flex:
+Then install Teleport:
 
-    tar zxf flex.tgz
-    cd flex/python
+    tar zxf Teleport.tgz
+    cd Teleport/python
     python setup.py install
 
 It may take a long time to compile if you don't have many cores.
 
 Then you'll need to configure the installation:
 
-    flexcontrol autoconfigure
+    teleportcontrol autoconfigure
 
 Then start:
 
-    flexcontrol start
+    teleportcontrol start
 
 Adding a Currency
 -----------------
 
-Communication between Flex and other currencies is conducted via RPC.
+Communication between Teleport and other currencies is conducted via RPC.
 Each currency listens on a specific port. To add a currency, specify
 its rpc port in the configuration file.
 
@@ -92,7 +92,7 @@ on 8182. If you're using a currency like bitcoin which is already listening
 on an rpc port, then you don't need to use `daemonize`. If, however, you're
 using a light wallet like electrum, you will.
 
-You can then add the currencies to Flex with the configuration lines:
+You can then add the currencies to Teleport with the configuration lines:
 
     CBF-rpcport=8181
     CBF-decimalplaces=0
@@ -101,10 +101,10 @@ You can then add the currencies to Flex with the configuration lines:
 
 Or by doing:
 
-    flexcontrol configure CBF-rpcport 8181
-    flexcontrol configure CBF-decimalplaces 0
-    flexcontrol configure EGT-rpcport 8182
-    flexcontrol configure EGT-decimalplaces 0    
+    teleportcontrol configure CBF-rpcport 8181
+    teleportcontrol configure CBF-decimalplaces 0
+    teleportcontrol configure EGT-rpcport 8182
+    teleportcontrol configure EGT-decimalplaces 0    
 
 For most currencies, the number of decimal places will be 8. CBF and EGT
 are not divisible below 1 unit.
@@ -131,38 +131,7 @@ say host1 and host2, you'll need to do something like:
 Electrum
 --------
 
-With electrum, you need to use version 2.5.2 or higher. There's a bug
-in the electrum server which means that you have to open the gui,
-disable autoconnect, and select ecdsa.net.
-
-Another bug (https://github.com/spesmilo/electrum/issues/1494) makes it 
-impossible to use the command line to make a wallet that can import keys.
-Doing:
-
-    $ mv ~/.electrum/wallets/default_wallet ~/.electrum/wallets/default_wallet_backup
-
-and then:
-
-    $ echo '{
-    "accounts": {
-        "/x": {
-            "imported": {}
-        }
-    }, 
-    "accounts_expanded": {}, 
-    "pruned_txo": {}, 
-    "stored_height": 379471, 
-    "transactions": {}, 
-    "txi": {}, 
-    "txo": {}, 
-    "use_encryption": false, 
-    "wallet_type": "imported"
-    }' > ~/.electrum/wallets/default_wallet
-    $ chmod 600 ~/.electrum/wallets/default_wallet
-
-will give you a wallet that can import keys. 
-
-To use electrum with Flex, the daemon needs to be running, so you need to exit
+To use electrum with Teleport, the daemon needs to be running, so you need to exit
 the gui and do:
 
     $ electrum daemon start
@@ -171,56 +140,56 @@ Now you can set up an rpc process for it using the included daemonize script:
 
     $ daemonize electrum 8181 &
 
-Then tell Flex about the currency code and the port:
+Then tell Teleport about the currency code and the port:
 
-    $ flexcontrol configure BTC-rpcport 8181
+    $ teleportcontrol configure BTC-rpcport 8181
 
-You can have a look at ~/.flex/flex.conf to see what's there if you want.
+You can have a look at ~/.teleport/teleport.conf to see what's there if you want.
 
 Depositing and Withdrawing Some Bitcoins
 ----------------------------------------
 
-Presuming you've configured electrum as explained above, start Flex:
+Presuming you've configured electrum as explained above, start Teleport:
 
-    $ flexcontrol start clean
+    $ teleportcontrol start clean
 
 You have to wait for a few seconds after starting it before it will
 be responsive to commands:
 
-    $ flex-cli getinfo
+    $ teleport-cli getinfo
 
 Check that electrum is working:
 
     $ electrum getbalance
     0
 
-    $ flex-cli currencygetbalance BTC
+    $ teleport-cli currencygetbalance BTC
     0
 
-If Flex says your BTC balance is -1, then it means electrum isn't
+If Teleport says your BTC balance is -1, then it means electrum isn't
 responding on the port specified as BTC-rpcport in the configuration
 file. 
 
-Once electrum is working with Flex, you can start mining:
+Once electrum is working with Teleport, you can start mining:
 
-    $ flex-cli setgenerate true
+    $ teleport-cli setgenerate true
 
 You'll need to wait about ten minutes or so until there are enough
 relays to create a deposit address. When you see that the number
-of relays reported by `flex-cli getinfo` is about 9 or so, you can
+of relays reported by `teleport-cli getinfo` is about 9 or so, you can
 request a deposit address:
 
-    $ flex-cli requestdepositaddress BTC
+    $ teleport-cli requestdepositaddress BTC
 
 You can see that you don't get one straight away by doing:
 
-    $ flex-cli listdepositaddresses BTC
+    $ teleport-cli listdepositaddresses BTC
     [
     ]
 
 After two more batches, you'll get a deposit address:
 
-    $ flex-cli listdepositaddresses BTC
+    $ teleport-cli listdepositaddresses BTC
     [
         {
             "address" : "1MUjir2tv3onkE1Bq46sTEaWdEqEeEXb4J",
@@ -234,7 +203,7 @@ address.
 
 Once it's there, you can do:
     
-    $ flex-cli listdepositaddresses BTC
+    $ teleport-cli listdepositaddresses BTC
     [
         {
             "address" : "1MUjir2tv3onkE1Bq46sTEaWdEqEeEXb4J",
@@ -244,7 +213,7 @@ Once it's there, you can do:
 
 Then you can withdraw the bitcoins to your electrum wallet:
     
-    $ flex-cli withdrawdeposit 1MUjir2tv3onkE1Bq46sTEaWdEqEeEXb4J
+    $ teleport-cli withdrawdeposit 1MUjir2tv3onkE1Bq46sTEaWdEqEeEXb4J
 
 Then you can list the addresses in your electrum wallet:
 
@@ -272,34 +241,34 @@ Transfers
 ---------
 
 If, instead of withdrawing, you want to transfer control over the 
-bitcoin deposit address to another Flex user, you can do:
+bitcoin deposit address to another Teleport user, you can do:
 
-    $ flex-cli transferdeposit 1MUjir2tv3onkE1Bq46sTEaWdEqEeEXb4J 19z6LKYqNXRYMgAnb1gSpJHAHcopfrZLTo
+    $ teleport-cli transferdeposit 1MUjir2tv3onkE1Bq46sTEaWdEqEeEXb4J 19z6LKYqNXRYMgAnb1gSpJHAHcopfrZLTo
 
-where `19z6LKYqNXRYMgAnb1gSpJHAHcopfrZLTo` is a Flex address owned
+where `19z6LKYqNXRYMgAnb1gSpJHAHcopfrZLTo` is a Teleport address owned
 by the recipient (e.g. an address which was the result of doing
-`flex-cli getnewaddress`).
+`teleport-cli getnewaddress`).
 
 The recipient will also need to be connected and synchronized with
 your chain:
 
-    user2@host2$ flex-cli addnode 123.456.789.10:8733 onetry
-    user2@host2$ flex-cli startdownloading
+    user2@host2$ teleport-cli addnode 123.456.789.10:8733 onetry
+    user2@host2$ teleport-cli startdownloading
 
 It may take a five or ten seconds for user2 to get his or her chain
 synchronized with the first user's.
 
-Once they're reporting the same output from `flex-cli getinfo`,
+Once they're reporting the same output from `teleport-cli getinfo`,
 user1 can transfer the deposit to user2:
 
-    user2@host2$ flex-cli getnewaddress
+    user2@host2$ teleport-cli getnewaddress
     19z6LKYqNXRYMgAnb1gSpJHAHcopfrZLTo
 
-    user1@host1$ flex-cli transferdeposit 1MUjir2tv3onkE1Bq46sTEaWdEqEeEXb4J 19z6LKYqNXRYMgAnb1gSpJHAHcopfrZLTo
+    user1@host1$ teleport-cli transferdeposit 1MUjir2tv3onkE1Bq46sTEaWdEqEeEXb4J 19z6LKYqNXRYMgAnb1gSpJHAHcopfrZLTo
 
 Eight seconds later:
 
-    user2@host2$ flex-cli listdepositaddresses BTC
+    user2@host2$ teleport-cli listdepositaddresses BTC
     [
         {
             "address" : "1MUjir2tv3onkE1Bq46sTEaWdEqEeEXb4J",
@@ -307,7 +276,7 @@ Eight seconds later:
         }
     ]
 
-    user1@host1$ flex-cli listdepositaddresses BTC
+    user1@host1$ teleport-cli listdepositaddresses BTC
     [
     ]
 
@@ -316,13 +285,13 @@ user2 can then withdraw and spend the coins.
 Connecting to Another Node
 --------------------------
 
-    ./flex-cli addnode 123.456.789.10:8733 onetry
-    ./flex-cli startdownloading
+    ./teleport-cli addnode 123.456.789.10:8733 onetry
+    ./teleport-cli startdownloading
 
 Mining for Credits
 ------------------
 
-    ./flex-cli setgenerate true
+    ./teleport-cli setgenerate true
 
 Trading
 ------------------
@@ -342,30 +311,30 @@ First, you'll need to make configuration files for user1 and user2:
 <tr>
 <td>
 <pre>
-user1@host$ mkdir .flex
-user1@host$ cat > .flex/flex.conf
-rpcuser=flexrpc
+user1@host$ mkdir .teleport
+user1@host$ cat > .teleport/teleport.conf
+rpcuser=teleportrpc
 rpcpassword=AAak8SBifo8ogLZUGBua3qvG
 walletpassword=23794827394jof42398rjo
 CBF-rpcport=8181
 CBF-decimalplaces=0
 
 
-user1@host$ chmod 600 .flex/flex.conf
+user1@host$ chmod 600 .teleport/teleport.conf
 </pre>
 </td>
 <td>
 <pre>
-user2@host$ mkdir .flex
-user2@host$ cat > .flex/flex.conf
-rpcuser=flexrpc
+user2@host$ mkdir .teleport
+user2@host$ cat > .teleport/teleport.conf
+rpcuser=teleportrpc
 rpcpassword=2qfkTF5Csm6cWwRdg7ya42QuP
 walletpassword=kjsdfhskfjhdsk
 port=8011
 rpcport=8010
 CBF-rpcport=9191
 CBF-decimalplaces=0
-user2@host$ chmod 600 .flex/flex.conf
+user2@host$ chmod 600 .teleport/teleport.conf
 </pre>
 </td>
 </tr>
@@ -381,12 +350,12 @@ Then you can start the servers
 <tr>
 <td>
 <pre>
-user1@host$ flexd -debug > .log &amp;             
+user1@host$ Teleportd -debug > .log &amp;             
 </pre>
 </td>
 <td>
 <pre>
-user2@host$ flexd -debug > .log &amp;           
+user2@host$ Teleportd -debug > .log &amp;           
 </pre>
 </td>
 </tr>
@@ -402,7 +371,7 @@ Check that cyberfarthings are working:
 <tr>
 <td>
 <pre>
-user1@host$ flex-cli listcurrencies   
+user1@host$ teleport-cli listcurrencies   
 [         
     "CBF"
 ]
@@ -410,7 +379,7 @@ user1@host$ flex-cli listcurrencies
 </td>
 <td>
 <pre>
-user2@host$ flex-cli listcurrencies   
+user2@host$ teleport-cli listcurrencies   
 [         
     "CBF"
 ]
@@ -430,7 +399,7 @@ Check the initial balances:
 <pre>
 user1@host$ cbf getbalance       
 10000                              
-user1@host$ flex-cli getbalance       
+user1@host$ teleport-cli getbalance       
 0.00000000                           
 </pre>
 </td>
@@ -438,7 +407,7 @@ user1@host$ flex-cli getbalance
 <pre>
 user2@host$ cbf getbalance        
 10000                              
-user2@host$ flex-cli getbalance   
+user2@host$ teleport-cli getbalance   
 0.00000000                            
 </pre>
 </td>
@@ -455,7 +424,7 @@ user1 can start mining:
 <tr>
 <td>
 <pre>
-user1@host$ flex-cli setgenerate true  
+user1@host$ teleport-cli setgenerate true  
 </pre>
 </td>
 <td>
@@ -476,7 +445,7 @@ It shouldn't take more than a minute or so. You can check using the getinfo comm
 <tr>
 <td>
 <pre>
-user1@host$ flex-cli getinfo
+user1@host$ teleport-cli getinfo
 {                           
     "latest mined credit hash" :
         "3ba939a273b9140d7bfe47610d9e37ab0e042959",
@@ -508,10 +477,10 @@ Once the batch number is greater than or equal to 1, user2 can start downloading
 </td>
 <td>
 <pre>
-user2@host$ flex-cli addnode 127.0.0.1:8333 onetry
-user2@host$ flex-cli startdownloading
+user2@host$ teleport-cli addnode 127.0.0.1:8333 onetry
+user2@host$ teleport-cli startdownloading
 user2@host$ sleep 2
-user2@host$ flex-cli getinfo
+user2@host$ teleport-cli getinfo
 {
     "latest mined credit hash" :
         "3ba939a273b9140d7bfe47610d9e37ab0e042959",
@@ -538,7 +507,7 @@ Now user2 can place an order:
 </td>
 <td>
 <pre>
-user2@host$ flex-cli placeorder sell CBF 5000 0.0000001
+user2@host$ teleport-cli placeorder sell CBF 5000 0.0000001
 b5353593611e2bc8bb13061777a4690fc581f1
 </pre>
 </td>
@@ -555,7 +524,7 @@ to be encoded at least one block deep.
 <tr>
 <td>
 <pre>
-user1@host$ flex-cli getinfo
+user1@host$ teleport-cli getinfo
 {
     "latest mined credit hash" : 
         "d07d87e9c19c6231153d1832985c629663502e8e",
@@ -583,7 +552,7 @@ Then user1 can check the order book:
 <tr>
 <td>
 <pre>
-user1@host$ flex-cli book CBF                                
+user1@host$ teleport-cli book CBF                                
 {                                                            
     "bids" : [                                               
     ],                                                       
@@ -615,7 +584,7 @@ Then user1 can accept the order:
 <tr>
 <td>
 <pre>
-user1@host$ ./flex-cli acceptorder b5353593611e2bc8bb13061777a4690fc581f1
+user1@host$ ./teleport-cli acceptorder b5353593611e2bc8bb13061777a4690fc581f1
 </pre>
 </td>
 <td>
@@ -627,7 +596,7 @@ user1@host$ ./flex-cli acceptorder b5353593611e2bc8bb13061777a4690fc581f1
 </table>
 
 Then a lot of stuff will happen in the background. Because you used
-the -debug argument to flexd then it will create a ~/.flex/debug.log
+the -debug argument to Teleportd then it will create a ~/.Teleport/debug.log
 file which will have a verbose but possibly incoherent description of
 what's happening.
 
@@ -635,7 +604,7 @@ If the procedure described here doesn't work, there'll be an explanation
 in the logs, which you can send to me and I'll try to reproduce and fix
 the problem.
 
-Shortly after the order is accepted, user1's FLX balance and user2's CBF balance
+Shortly after the order is accepted, user1's TCR balance and user2's CBF balance
 will decrease:
    
 <table>
@@ -647,7 +616,7 @@ will decrease:
 <pre>
 user1@host$ cbf getbalance       
 10000                              
-user1@host$ flex-cli getbalance     
+user1@host$ teleport-cli getbalance     
 0.45000000                            
 </pre>
 </td>
@@ -655,7 +624,7 @@ user1@host$ flex-cli getbalance
 <pre>
 user2@host$ cbf getbalance        
 5000                              
-user2@host$ flex-cli getbalance   
+user2@host$ teleport-cli getbalance   
 0.00000000                           
 </pre>
 </td>
@@ -668,7 +637,7 @@ hasn't yet been encoded in a batch. user1 will receive the change in
 the next batch.
 
 Since you're using the -debug option, you can look at what's going on
-in ~/.flex/debug.log, or else you can just wait for two more batches.
+in ~/.Teleport/debug.log, or else you can just wait for two more batches.
 
 Then check the balances again:
 <table>
@@ -680,7 +649,7 @@ Then check the balances again:
 <pre>
 user1@host$ cbf getbalance       
 15000                              
-user1@host$ flex-cli getbalance     
+user1@host$ teleport-cli getbalance     
 0.54950000                            
 </pre>
 </td>
@@ -688,7 +657,7 @@ user1@host$ flex-cli getbalance
 <pre>
 user2@host$ cbf getbalance        
 5000                              
-user2@host$ flex-cli getbalance   
+user2@host$ teleport-cli getbalance   
 0.00050000                           
 </pre>
 </td>
@@ -702,15 +671,15 @@ Binary Compilation
 ------------------
 On Linux, download the tarball and extract it:
 
-    tar zxvf flex-xxxxxxxx.tgz
-    cd flex
+    tar zxvf teleport-xxxxxxxx.tgz
+    cd teleport
     ./autogen.sh
     ./configure
     cd src
     make
-    ./flexd
+    ./teleportd
 
 Manual Configuration
 --------------------
 
-The configuration file is ~/.flex/flex.conf.
+The configuration file is ~/.teleport/teleport.conf.

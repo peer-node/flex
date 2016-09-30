@@ -1,7 +1,7 @@
 from socket import gethostname
 import getpass
 
-default_ports = {'FLX': {'port': 8733,
+default_ports = {'TCR': {'port': 8733,
                          'rpcport': 8732,
                          'explorerport': 8729},
                  'CBF': {'rpcport': 8181},

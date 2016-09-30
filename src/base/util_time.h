@@ -1,5 +1,5 @@
-#ifndef FLEX_UTIL_TIME_H
-#define FLEX_UTIL_TIME_H
+#ifndef TELEPORT_UTIL_TIME_H
+#define TELEPORT_UTIL_TIME_H
 
 #include <cstdint>
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -50,4 +50,4 @@ class CNetAddr;
 
 void AddTimeData(const CNetAddr& ip, int64_t nTime);
 
-#endif //FLEX_UTIL_TIME_H
+#endif //TELEPORT_UTIL_TIME_H

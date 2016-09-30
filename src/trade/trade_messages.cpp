@@ -1,4 +1,4 @@
-#include "flexnode/flexnode.h"
+#include "teleportnode/teleportnode.h"
 
 #include "log.h"
 #define LOG_CATEGORY "trade_messages.cpp"
@@ -24,7 +24,7 @@
         timestamp = GetTimeMicros();
         timeout = 1800;
         successfully_funded = GetFundAddressPubKeyAndProof();
-        is_cryptocurrency = flexnode.currencies[currency].is_cryptocurrency;
+        is_cryptocurrency = teleportnode.currencies[currency].is_cryptocurrency;
         log_ << "Order(): " << currency << "  crypto: "
              << is_cryptocurrency << "\n";
 
@@ -51,7 +51,7 @@
         if (side == BID)
             return GetCreditPubKeyAndProof();
 
-        if (flexnode.currencies[currency].is_cryptocurrency)
+        if (teleportnode.currencies[currency].is_cryptocurrency)
             return GetCryptoCurrencyPubKeyAndProof();
 
         return GetFiatPubKeyAndProof();
@@ -106,7 +106,7 @@ string OrderStatus(uint160 order_hash);
 
         relay_chooser = Rand160();
 
-        uint160 latest_hash = flexnode.previous_mined_credit_hash;
+        uint160 latest_hash = teleportnode.previous_mined_credit_hash;
 
         MinedCredit latest_credit = creditdata[latest_hash]["mined_credit"];
 
@@ -123,7 +123,7 @@ string OrderStatus(uint160 order_hash);
         if (accept_side == BID)
             return GetCreditPubKeyAndProof();
 
-        if (flexnode.currencies[currency].is_cryptocurrency)
+        if (teleportnode.currencies[currency].is_cryptocurrency)
             return GetCryptoCurrencyPubKeyAndProof();
 
         return GetFiatPubKeyAndProof();
@@ -144,7 +144,7 @@ string OrderStatus(uint160 order_hash);
     {
         Order order = msgdata[order_hash]["order"];
         log_ << "retrieved order\n";
-        Currency currency = flexnode.currencies[order.currency];
+        Currency currency = teleportnode.currencies[order.currency];
         if (currency.is_cryptocurrency)
             curve = currency.crypto.curve;
         else

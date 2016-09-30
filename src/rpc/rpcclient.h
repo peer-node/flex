@@ -14,11 +14,11 @@ int CommandLineRPC(int argc, char *argv[]);
 
 json_spirit::Array RPCConvertValues(const std::string &strMethod, const std::vector<std::string> &strParams);
 
-/** Show help message for flex-cli.
+/** Show help message for teleport-cli.
  * The mainProgram argument is used to determine whether to show this message as main program
  * (and include some common options) or as sub-header of another help message.
  *
- * @note the argument can be removed once flex-cli functionality is removed from flexd
+ * @note the argument can be removed once teleport-cli functionality is removed from teleportd
  */
 std::string HelpMessageCli(bool mainProgram);
 

@@ -7,10 +7,10 @@ import os
 def flexdir():
     if 'FLEXDIR' in os.environ.keys():
         return os.environ['FLEXDIR']
-    return join(expanduser("~"), ".flex")
+    return join(expanduser("~"), ".teleport")
 
 def get_config_file():
-    return join(flexdir(), "flex.conf")
+    return join(flexdir(), "teleport.conf")
 
 def write_config_file(text):
     with open(get_config_file(), "w") as file_:

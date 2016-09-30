@@ -1,4 +1,4 @@
-#include "flexnode/flexnode.h"
+#include "teleportnode/teleportnode.h"
 
 using namespace std;
 
@@ -14,7 +14,7 @@ using namespace std;
     void DataServer::SendTip(CNode *peer)
     {
         MinedCreditMessage msg
-            = creditdata[flexnode.previous_mined_credit_hash]["msg"];
+            = creditdata[teleportnode.previous_mined_credit_hash]["msg"];
 
         log_ << "DataServer(): sending tip" << msg;
         peer->PushMessage("initdata", "tip", msg);

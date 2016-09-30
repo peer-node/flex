@@ -1,5 +1,5 @@
-#ifndef FLEX_CREDITBATCH_H
-#define FLEX_CREDITBATCH_H
+#ifndef TELEPORT_CREDITBATCH_H
+#define TELEPORT_CREDITBATCH_H
 
 #include "crypto/hashtrees.h"
 #include "Credit.h"
@@ -46,4 +46,4 @@ public:
 
 
 
-#endif //FLEX_CREDITBATCH_H
+#endif //TELEPORT_CREDITBATCH_H

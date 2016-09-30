@@ -1,5 +1,5 @@
-#ifndef FLEX_UTIL_DATA_H
-#define FLEX_UTIL_DATA_H
+#ifndef TELEPORT_UTIL_DATA_H
+#define TELEPORT_UTIL_DATA_H
 
 #include <boost/filesystem.hpp>
 #include <map>
@@ -18,4 +18,4 @@ boost::filesystem::path GetSpecialFolderPath(int nFolder, bool fCreate = true);
 #endif
 
 
-#endif //FLEX_UTIL_DATA_H
+#endif //TELEPORT_UTIL_DATA_H

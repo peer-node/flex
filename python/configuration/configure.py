@@ -92,7 +92,7 @@ def get_chosen_currencies(request):
     return currencies
 
 def select_default_ports():
-    chosen_settings['currencies'].append("FLX")
+    chosen_settings['currencies'].append("TCR")
     if chosen_settings['installtestcurrencies'] == 'yes':
         chosen_settings['currencies'].extend(["CBF", "EGT", "CBT", "OBK"])
     selected_ports = {}
@@ -138,8 +138,8 @@ def write_configuration(chosen_settings, assigned_ports):
     settings = [(s, chosen_settings[s]) for s in settings_to_write]
     settings += [(service, port) for (service, port) in assigned_ports.items()]
     for key, value in settings:
-        if key.startswith("FLX-"):
-            key = key.replace("FLX-", "")
+        if key.startswith("TCR-"):
+            key = key.replace("TCR-", "")
         f.write("%s=%s\n" % (key, value))
     f.close()
 
@@ -148,12 +148,12 @@ def get_confirmation_key(currency_code):
     pid = process.pid
     tries = 0
     while tries < 5:
-        process = Popen(["flex-cli", "getconfirmationkey"],
+        process = Popen(["teleport-cli", "getconfirmationkey"],
                         stdout=PIPE)
         result = process.stdout.read().strip()
         if len(result) > 0:
             chosen_settings[currency_code + '-confirmationkey'] = result
-            process = Popen(["flex-cli", "stop"])
+            process = Popen(["teleport-cli", "stop"])
             return
         sleep(5)
         tries += 1

@@ -5,7 +5,7 @@
 #include <boost/algorithm/string.hpp>
 #include "json/json_spirit_reader.h"
 #include "json/json_spirit.h"
-#include "flexnode/flexnode.h"
+#include "teleportnode/teleportnode.h"
 #include "boost/assign.hpp"
 #include "rpc/rpcprotocol.h"
 
@@ -53,7 +53,7 @@ StringMap default_commands
                   ("getprivatekeys", 
                    "getprivatekeys ADDRESS")
                   ("importprivkey",
-                   "importprivkey PRIVKEY flex false")
+                   "importprivkey PRIVKEY teleport false")
                   ("sweepprivkey",
                    "sweepprivkey PRIVKEY 0")
                   ("sweep",
@@ -292,7 +292,7 @@ bool Contains(string text, string target)
 
 string PubKeyToCurrencyAddress(Point pubkey, vch_t currency_code)
 {
-    Currency currency = flexnode.currencies[currency_code];
+    Currency currency = teleportnode.currencies[currency_code];
 
     if (currency.crypto.curve == SECP256K1)
     {
@@ -317,7 +317,7 @@ string PubKeyToCurrencyAddress(Point pubkey, vch_t currency_code)
 
 string PrivKeyToCurrencySecret(CBigNum privkey, vch_t currency_code)
 {
-    Currency currency = flexnode.currencies[currency_code];
+    Currency currency = teleportnode.currencies[currency_code];
     vch_t bytes = currency.crypto.privkey_prefix;
 
     log_ << "PrivKeyToCurrencySecret: prefix is " << bytes[0] << "\n";
@@ -1500,11 +1500,11 @@ vch_t PrefixFromBase58Data(string base58string)
     string CryptoCurrencyCommands::ImportPrivateKeyCommand(CBigNum privkey)
     {
         string secret = PrivKeyToCurrencySecret(privkey, currency_code);
-        Currency currency = flexnode.currencies[currency_code];
+        Currency currency = teleportnode.currencies[currency_code];
         string command = commanddata[currency_code]["importprivkey"];
         if (currencydata[currency_code]["electrum"])
         {
-            command = Replace(command, " flex false", "");
+            command = Replace(command, " teleport false", "");
         }
         return Replace(command, "PRIVKEY", secret);
     }
@@ -1537,7 +1537,7 @@ vch_t PrefixFromBase58Data(string base58string)
                                                        uint64_t amount)
     {
         string address = PubKeyToCurrencyAddress(pubkey, currency_code);
-        Currency currency = flexnode.currencies[currency_code];
+        Currency currency = teleportnode.currencies[currency_code];
         return currency.commands.SendToAddressCommand(address, amount);
     }
 
@@ -1624,18 +1624,18 @@ void InitializeCryptoCurrencies()
             bool is_cryptocurrency = CurrencyInfo(currency_code, "fiat") == "";
             Currency currency(currency_code, is_cryptocurrency);
             log_ << "Generated currency: " << currency_string << "\n";
-            flexnode.currencies[currency_code] = currency;
+            teleportnode.currencies[currency_code] = currency;
             if (is_cryptocurrency)
             {
                 currency.crypto.Initialize();
             }
             if (!is_cryptocurrency || currency.crypto.usable)
-                flexnode.currencies[currency_code] = currency;
+                teleportnode.currencies[currency_code] = currency;
         }
     }
     log_ << "finished initializing currencies\n";
     std::map<vch_t,Currency>::iterator it;
-    std::map<vch_t,Currency>& currencies = flexnode.currencies;
+    std::map<vch_t,Currency>& currencies = teleportnode.currencies;
     for (it = currencies.begin(); it != currencies.end(); ++it)
         log_ << string(it->first.begin(), it->first.end()) << "\n";
 }

@@ -1,5 +1,5 @@
-#ifndef FLEX_NET_RELAY_H
-#define FLEX_NET_RELAY_H
+#ifndef TELEPORT_NET_RELAY_H
+#define TELEPORT_NET_RELAY_H
 
 
-#endif //FLEX_NET_RELAY_H
+#endif //TELEPORT_NET_RELAY_H

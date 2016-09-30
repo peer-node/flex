@@ -1,5 +1,5 @@
-#ifndef FLEX_NET_CADDRDB_H
-#define FLEX_NET_CADDRDB_H
+#ifndef TELEPORT_NET_CADDRDB_H
+#define TELEPORT_NET_CADDRDB_H
 
 #include <boost/filesystem/path.hpp>
 #include "addrman.h"
@@ -16,4 +16,4 @@ public:
     bool Read(CAddrMan& addr);
 };
 
-#endif //FLEX_NET_CADDRDB_H
+#endif //TELEPORT_NET_CADDRDB_H

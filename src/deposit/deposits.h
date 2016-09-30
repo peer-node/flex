@@ -1,8 +1,8 @@
 // Distributed under version 3 of the Gnu Affero GPL software license, 
 // see the accompanying file COPYING for details.
 
-#ifndef FLEX_DEPOSITS
-#define FLEX_DEPOSITS
+#ifndef TELEPORT_DEPOSITS
+#define TELEPORT_DEPOSITS
 
 #define DEPOSIT_MEMORY_FACTOR 16  // 0.5 Gb
 #define DEPOSIT_NUM_SEGMENTS 64   // 8 Mb
@@ -10,7 +10,7 @@
 #define DEPOSIT_NUM_RELAYS 5
 #define DEPOSIT_LOG_TARGET 109
 
-#include "flexnode/message_handler.h"
+#include "teleportnode/message_handler.h"
 #include "deposit/deposit_messages.h"
 #include "deposit/disclosure_messages.h"
 #include "deposit/transfer_messages.h"

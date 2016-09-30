@@ -1,5 +1,5 @@
-#ifndef FLEX_NET_CNODE_H
-#define FLEX_NET_CNODE_H
+#ifndef TELEPORT_NET_CNODE_H
+#define TELEPORT_NET_CNODE_H
 
 
 #include <cstdint>
@@ -583,4 +583,4 @@ public:
 
 
 
-#endif //FLEX_NET_CNODE_H
+#endif //TELEPORT_NET_CNODE_H

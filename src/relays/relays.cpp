@@ -1,7 +1,7 @@
 // Distributed under version 3 of the Gnu Affero GPL software license, 
 // see the accompanying file COPYING for details.
 
-#include "flexnode/flexnode.h"
+#include "teleportnode/teleportnode.h"
 
 #include "log.h"
 #define LOG_CATEGORY "relays.cpp"
@@ -28,17 +28,17 @@ Point SelectRelayFromState(uint64_t chooser_number, uint160 credit_hash)
 
 void InitializeRelayTasks()
 {
-    flexnode.scheduler.AddTask(ScheduledTask("join_check", 
+    teleportnode.scheduler.AddTask(ScheduledTask("join_check", 
                                                DoScheduledJoinCheck));
-    flexnode.scheduler.AddTask(ScheduledTask("join_complaint", 
+    teleportnode.scheduler.AddTask(ScheduledTask("join_complaint", 
                                                DoScheduledJoinComplaintCheck));
-    flexnode.scheduler.AddTask(
+    teleportnode.scheduler.AddTask(
         ScheduledTask("future_successor_complaint", 
                       DoScheduledFutureSuccessorComplaintCheck));
-    flexnode.scheduler.AddTask(
+    teleportnode.scheduler.AddTask(
         ScheduledTask("succession_complaint", 
                       DoScheduledSuccessionComplaintCheck));
-    flexnode.scheduler.AddTask(ScheduledTask("succession_check", 
+    teleportnode.scheduler.AddTask(ScheduledTask("succession_check", 
                                                DoScheduledSuccessionCheck));
 }
 

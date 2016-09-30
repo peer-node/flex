@@ -1,5 +1,5 @@
 #include "trade/trade.h"
-#include "flexnode/flexnode.h"
+#include "teleportnode/teleportnode.h"
 
 #include "log.h"
 #define LOG_CATEGORY "relay.cpp"
@@ -106,7 +106,7 @@ void HandleNewRelayChoiceMessage(NewRelayChoiceMessage msg)
                                          1 - msg.chooser_side);
             if (my_msg.positions != msg.positions)
                 return;
-            flexnode.tradehandler.BroadcastMessage(my_msg);
+            teleportnode.tradehandler.BroadcastMessage(my_msg);
         }
         
         tradedata[msg.accept_commit_hash]["new_relay_choice_handled"] = true;
@@ -117,7 +117,7 @@ void HandleNewRelayChoiceMessage(NewRelayChoiceMessage msg)
 
 void ScheduleSendBackupSecrets(uint160 accept_commit_hash, uint8_t direction)
 {
-    flexnode.scheduler.Schedule("send_backup_secrets", 
+    teleportnode.scheduler.Schedule("send_backup_secrets", 
                                 accept_commit_hash,
                                 GetTimeMicros() + SEND_BACKUP_SECRETS_AFTER);
 }
@@ -239,7 +239,7 @@ void SendTradeSecretMessage(uint160 accept_commit_hash,
     {
         message.Sign();
         tradedata[message.GetHash160()]["is_mine"] = true;
-        flexnode.tradehandler.BroadcastMessage(message);
+        teleportnode.tradehandler.BroadcastMessage(message);
     }
     else
     {
@@ -250,13 +250,13 @@ void SendTradeSecretMessage(uint160 accept_commit_hash,
                                          position);
         message.Sign();
         tradedata[message.GetHash160()]["is_mine"] = true;
-        flexnode.tradehandler.BroadcastMessage(message);
+        teleportnode.tradehandler.BroadcastMessage(message);
     }
 }
 
 void ScheduleCancellation(uint160 complaint_hash)
 {
-    flexnode.scheduler.Schedule("cancellation", complaint_hash, 
+    teleportnode.scheduler.Schedule("cancellation", complaint_hash, 
                                 GetTimeMicros() + COMPLAINT_WAIT_TIME);
 }
 
@@ -311,7 +311,7 @@ void DoScheduledTimeout(uint160 accept_commit_hash)
             return;
         }
         tradedata[refutation.complaint_hash]["refuted"] = true;
-        flexnode.pit.HandleRelayMessage(refutation_hash);
+        teleportnode.pit.HandleRelayMessage(refutation_hash);
     }
 
     void TradeHandler::HandleTraderComplaint(TraderComplaint complaint)
@@ -338,7 +338,7 @@ void DoScheduledTimeout(uint160 accept_commit_hash)
         awaited_relays.push_back(msg.VerificationKey());
         tradedata[msg.accept_commit_hash]["awaited_relays"] = awaited_relays;
 
-        flexnode.pit.HandleRelayMessage(message_hash);
+        teleportnode.pit.HandleRelayMessage(message_hash);
 
         if (tradedata[message_hash]["is_mine"])
         {
@@ -357,7 +357,7 @@ void DoScheduledTimeout(uint160 accept_commit_hash)
             return;
         }
         tradedata[refutation.complaint_hash]["refuted"] = true;
-        flexnode.pit.HandleRelayMessage(refutation_hash);
+        teleportnode.pit.HandleRelayMessage(refutation_hash);
 
         uint160 accept_commit_hash = refutation.GetAcceptCommitHash();
 
@@ -591,7 +591,7 @@ void DoScheduledSecretsReleaseCheck(uint160 accept_commit_hash)
     if (!CheckForCreditPayment(accept_commit_hash))
     {
         log_ << "no credit payment yet - scheduling another check\n";
-        flexnode.scheduler.Schedule("secrets_release_check", 
+        teleportnode.scheduler.Schedule("secrets_release_check", 
                                       accept_commit_hash, 
                                       GetTimeMicros() + 5 * 1000 * 1000);
         return;
@@ -600,7 +600,7 @@ void DoScheduledSecretsReleaseCheck(uint160 accept_commit_hash)
     if (!tradedata[accept_commit_hash]["currency_paid"])
     {
         log_ << "currency not paid. scheduling another check\n";
-        flexnode.scheduler.Schedule("secrets_release_check", 
+        teleportnode.scheduler.Schedule("secrets_release_check", 
                                       accept_commit_hash, 
                                       GetTimeMicros() + 5 * 1000 * 1000);
         return;
@@ -631,7 +631,7 @@ void DoScheduledSecretsReleaseCheck(uint160 accept_commit_hash)
         return;
     }
     log_ << "too early to send\n";
-    flexnode.scheduler.Schedule("secrets_release_check", 
+    teleportnode.scheduler.Schedule("secrets_release_check", 
                                   accept_commit_hash, 
                                   when_both_were_paid
                                    + SEND_RELAY_SECRETS_AFTER);

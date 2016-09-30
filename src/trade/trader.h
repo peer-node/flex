@@ -1,9 +1,9 @@
-#ifndef FLEX_TRADER
-#define FLEX_TRADER
+#ifndef TELEPORT_TRADER
+#define TELEPORT_TRADER
 
 #include "trade/trade_messages.h"
-#include "flexnode/orphanage.h"
-#include "flexnode/schedule.h"
+#include "teleportnode/orphanage.h"
+#include "teleportnode/schedule.h"
 #include "credits/creditutil.h"
 
 std::pair<uint8_t,vch_t> BidSide(vch_t currency);

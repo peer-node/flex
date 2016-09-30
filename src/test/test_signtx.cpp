@@ -2,8 +2,8 @@
 
 using namespace std;
 
-string strFLX("FLX");
-vch_t FLX(strFLX.begin(), strFLX.end());
+string strTCR("TCR");
+vch_t TCR(strTCR.begin(), strTCR.end());
 
 BitChain spent_chain;
 

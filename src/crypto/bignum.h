@@ -10,7 +10,7 @@
 #include <vector>
 #include <openssl/bn.h>
 #include <stdint.h>
-#include <test/flex_tests/flex_data/MockProperty.h>
+#include <test/teleport_tests/teleport_data/MockProperty.h>
 #include "base/serialize.h"
 #include "define.h"
 #include "crypto/uint256.h"

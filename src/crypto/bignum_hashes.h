@@ -1,5 +1,5 @@
-#ifndef FLEX_BIGNUM_HASHES_H
-#define FLEX_BIGNUM_HASHES_H
+#ifndef TELEPORT_BIGNUM_HASHES_H
+#define TELEPORT_BIGNUM_HASHES_H
 
 #include "crypto/point.h"
 
@@ -17,4 +17,4 @@ inline CBigNum Hash(CBigNum number)
 
 
 
-#endif //FLEX_BIGNUM_HASHES_H
+#endif //TELEPORT_BIGNUM_HASHES_H

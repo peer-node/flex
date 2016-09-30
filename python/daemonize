@@ -27,7 +27,7 @@ class RequestHandler(pyjsonrpc.HttpRequestHandler):
         return process.stdout.read()
     return rpccommand
 
-log = open(join(expanduser("~"), ".flex", program + ".log"), "a+")
+log = open(join(expanduser("~"), ".teleport", program + ".log"), "a+")
 sys.stdout = log
 sys.stderr = log
 

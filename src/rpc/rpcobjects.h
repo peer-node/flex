@@ -1,11 +1,11 @@
-#ifndef FLEX_RPCOBJECTS
-#define FLEX_RPCOBJECTS
+#ifndef TELEPORT_RPCOBJECTS
+#define TELEPORT_RPCOBJECTS
 
 #include "json/json_spirit_writer_template.h"
 #include "json/json_spirit_reader.h"
 #include "json/json_spirit.h"
 
-#include "flexnode/calendar.h"
+#include "teleportnode/calendar.h"
 #include "trade/trade_messages.h"
 #include "relays/relaystate.h"
 #include "relays/relay_messages.h"

@@ -1,11 +1,11 @@
 // Distributed under version 3 of the Gnu Affero GPL software license, 
 // see the accompanying file COPYING for details.
 
-#ifndef FLEX_SUCCESSION_SECRET
-#define FLEX_SUCCESSION_SECRET
+#ifndef TELEPORT_SUCCESSION_SECRET
+#define TELEPORT_SUCCESSION_SECRET
 
 #include "crypto/polynomial.h"
-#include "crypto/flexcrypto.h"
+#include "crypto/teleportcrypto.h"
 #include "relays/relaystate.h"
 
 #include "log.h"

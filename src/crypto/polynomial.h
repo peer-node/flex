@@ -1,9 +1,9 @@
-// Copyright (c) 2014 Flex Developers
+// Copyright (c) 2014 Teleport Developers
 // Distributed under version 3 of the Gnu Affero GPL software license, see the accompanying
 // file COPYING for details
 
-#ifndef FLEX_POLYNOMIAL_H
-#define FLEX_POLYNOMIAL_H
+#ifndef TELEPORT_POLYNOMIAL_H
+#define TELEPORT_POLYNOMIAL_H
 
 #include <map>
 

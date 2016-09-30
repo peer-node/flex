@@ -1,8 +1,8 @@
 // Distributed under version 3 of the Gnu Affero GPL software license, 
 // see the accompanying file COPYING for details.
 
-#ifndef FLEX_SHAREDCHAIN
-#define FLEX_SHAREDCHAIN
+#ifndef TELEPORT_SHAREDCHAIN
+#define TELEPORT_SHAREDCHAIN
 
 #include "crypto/uint256.h"
 #include "crypto/point.h"

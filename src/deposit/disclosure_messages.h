@@ -1,8 +1,8 @@
 // Distributed under version 3 of the Gnu Affero GPL software license, 
 // see the accompanying file COPYING for details.
 
-#ifndef FLEX_DISCLOSURE_MESSAGES
-#define FLEX_DISCLOSURE_MESSAGES
+#ifndef TELEPORT_DISCLOSURE_MESSAGES
+#define TELEPORT_DISCLOSURE_MESSAGES
 
 #include "deposit/deposit_messages.h"
 

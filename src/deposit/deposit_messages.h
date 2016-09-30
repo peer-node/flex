@@ -1,10 +1,10 @@
 // Distributed under version 3 of the Gnu Affero GPL software license, 
 // see the accompanying file COPYING for details.
 
-#ifndef FLEX_DEPOSIT_MESSAGES
-#define FLEX_DEPOSIT_MESSAGES
+#ifndef TELEPORT_DEPOSIT_MESSAGES
+#define TELEPORT_DEPOSIT_MESSAGES
 
-#include "crypto/flexcrypto.h"
+#include "crypto/teleportcrypto.h"
 #include "credits/creditutil.h"
 #include "deposit/deposit_secret.h"
 #include "mining/work.h"

@@ -3,7 +3,7 @@
 
 
 #include "relays/relay_messages.h"
-#include "flexnode/flexnode.h"
+#include "teleportnode/teleportnode.h"
 
 #include "log.h"
 #define LOG_CATEGORY "relay_messages.cpp"
@@ -52,7 +52,7 @@
         Point point = dist_secret.point_values[position];
         CBigNum secret = keydata[point]["privkey"];
         log_ << "dead relay: " << dead_relay << "\n";
-        Point successor = flexnode.RelayState().Successor(dead_relay);
+        Point successor = teleportnode.RelayState().Successor(dead_relay);
         log_ << "successor: " << successor << "\n";
         CBigNum shared_secret = Hash(secret * successor);
         succession_secret_xor_shared_secret =  secret ^ shared_secret;
@@ -62,7 +62,7 @@
              << "succession_secret_xor_shared_secret is "
              << succession_secret_xor_shared_secret << "\n";
 #endif
-        successor_join_hash = flexnode.RelayState().GetJoinHash(successor);
+        successor_join_hash = teleportnode.RelayState().GetJoinHash(successor);
     }
 
 /*
@@ -77,7 +77,7 @@
     RelayLeaveMessage::RelayLeaveMessage(Point relay_leaving):
         relay_leaving(relay_leaving)
     {
-        successor = flexnode.RelayState().Successor(relay_leaving);
+        successor = teleportnode.RelayState().Successor(relay_leaving);
         
         DistributedSuccessionSecret secret
             = GetDistributedSuccessionSecret(relay_leaving);
@@ -101,7 +101,7 @@
     {
         RelayLeaveMessage leave = msgdata[leave_msg_hash]["relay_leave"];
         Point relay = leave.VerificationKey();
-        return flexnode.RelayState().Successor(relay);
+        return teleportnode.RelayState().Successor(relay);
     }
 
 /*

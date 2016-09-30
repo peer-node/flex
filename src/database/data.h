@@ -1,9 +1,9 @@
-// Copyright (c) 2015 Flex Developers
+// Copyright (c) 2015 Teleport Developers
 // Distributed under version 3 of the Gnu Affero GPL software license, see the accompanying
 // file COPYING for details
 
-#ifndef FLEX_DATA_H
-#define FLEX_DATA_H
+#ifndef TELEPORT_DATA_H
+#define TELEPORT_DATA_H
 
 
-#endif /* FLEX_DATA_H */
+#endif /* TELEPORT_DATA_H */

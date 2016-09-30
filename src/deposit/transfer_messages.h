@@ -2,8 +2,8 @@
 // see the accompanying file COPYING for details.
 
 
-#ifndef FLEX_TRANSFER_MESSAGES
-#define FLEX_TRANSFER_MESSAGES
+#ifndef TELEPORT_TRANSFER_MESSAGES
+#define TELEPORT_TRANSFER_MESSAGES
 
 #include "deposit/deposit_messages.h"
 #include "deposit/disclosure_messages.h"

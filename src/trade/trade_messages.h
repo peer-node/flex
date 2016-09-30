@@ -1,17 +1,17 @@
-#ifndef FLEX_TRADE_MESSAGES
-#define FLEX_TRADE_MESSAGES
+#ifndef TELEPORT_TRADE_MESSAGES
+#define TELEPORT_TRADE_MESSAGES
 
 
 #include "mining/work.h"
 #include "database/data.h"
-#include "crypto/flexcrypto.h"
+#include "crypto/teleportcrypto.h"
 #include "credits/creditutil.h"
 #include "currencies/currencies.h"
-#include "flexnode/wallet.h"
+#include "teleportnode/wallet.h"
 #include "net/net.h"
 #include "mining/pit.h"
 #include "trade/tradesecret.h"
-#include "flexnode/message_handler.h"
+#include "teleportnode/message_handler.h"
 
 #include "log.h"
 #define LOG_CATEGORY "trade_messages.h"

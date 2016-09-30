@@ -1,5 +1,5 @@
-#ifndef FLEX_CREDIT_H
-#define FLEX_CREDIT_H
+#ifndef TELEPORT_CREDIT_H
+#define TELEPORT_CREDIT_H
 
 #include "crypto/uint256.h"
 #include "base/serialize.h"
@@ -44,4 +44,4 @@ public:
 };
 
 
-#endif //FLEX_CREDIT_H
+#endif //TELEPORT_CREDIT_H

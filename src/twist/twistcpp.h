@@ -2,7 +2,7 @@
  * Copyright 2015, Peer Node
  * Gnu Affero GPLv3 License
  *
- * The twist proof of work was developed for Flex
+ * The twist proof of work was developed for Teleport
  *
  * This project contains code previously released under the MIT License
  * by floodyberry.

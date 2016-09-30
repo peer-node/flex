@@ -1,4 +1,4 @@
-#include "flexnode/flexnode.h"
+#include "teleportnode/teleportnode.h"
 
 #include "log.h"
 #define LOG_CATEGORY "relay_inheritance.cpp"
@@ -17,13 +17,13 @@ bool CheckSuccessionMessage(SuccessionMessage msg)
     log_ << "CheckSuccessionMessage()\n";
     RelayJoinMessage join = msgdata[msg.dead_relay_join_hash]["join"];
     Point relay = join.relay_pubkey;
-    vector<Point> executors = flexnode.relayhandler.Executors(relay);
-    Point successor = flexnode.relayhandler.Successor(relay);
-    if (flexnode.RelayState().GetJoinHash(successor) != msg.successor_join_hash)
+    vector<Point> executors = teleportnode.relayhandler.Executors(relay);
+    Point successor = teleportnode.relayhandler.Successor(relay);
+    if (teleportnode.RelayState().GetJoinHash(successor) != msg.successor_join_hash)
     {
         log_ << "bad successor join hash: "
              << msg.successor_join_hash << " vs "
-             << flexnode.RelayState().GetJoinHash(successor) << "\n";
+             << teleportnode.RelayState().GetJoinHash(successor) << "\n";
         return false;
     }
     if (!VectorContainsEntry(executors, msg.executor))
@@ -54,7 +54,7 @@ void HandleQueuedSuccessionMessages(Point dead_relay)
     vector<SuccessionMessage> msgs = relaydata[dead_relay]["queued_succession_msgs"];
     foreach_(SuccessionMessage msg, msgs)
     {
-        flexnode.relayhandler.HandleSuccessionMessage(msg);
+        teleportnode.relayhandler.HandleSuccessionMessage(msg);
     }
     relaydata.EraseProperty(dead_relay, "queued_succession_msgs");
 }
@@ -136,7 +136,7 @@ void InheritDuties(RelayJoinMessage join)
         return;
     }
 
-    RelayState state = flexnode.RelayState();
+    RelayState state = teleportnode.RelayState();
     Point dead_predecessor = state.DeadPredecessor(relay);
 
     while (!dead_predecessor.IsAtInfinity())
@@ -169,7 +169,7 @@ void HandleInheritedTrade(uint160 accept_commit_hash)
     tradedata[accept_commit_hash]["ask_secret_sent"] = false;
 
     AcceptCommit accept_commit = msgdata[accept_commit_hash]["accept_commit"];
-    flexnode.tradehandler.CheckForMyRelaySecrets(accept_commit);
+    teleportnode.tradehandler.CheckForMyRelaySecrets(accept_commit);
 
     if (tradedata[accept_commit_hash]["cancelled"])
         SendSecrets(accept_commit_hash, BACKWARD);
@@ -180,7 +180,7 @@ void HandleInheritedTrade(uint160 accept_commit_hash)
 void HandleInheritedSuccession(uint160 dead_relay_join_hash)
 {
     RelayJoinMessage join = msgdata[dead_relay_join_hash]["join"];
-    flexnode.relayhandler.HandleExecutorSecrets(join);
+    teleportnode.relayhandler.HandleExecutorSecrets(join);
     DoSuccession(join.relay_pubkey);
 }
 
@@ -189,7 +189,7 @@ void HandleInheritedDepositRequest(uint160 request_hash)
     depositdata[request_hash]["inherited"] = true;
     uint160 encoding_credit_hash;
     encoding_credit_hash = depositdata[request_hash]["encoding_credit_hash"];
-    flexnode.deposit_handler.HandleEncodedRequest(request_hash,
+    teleportnode.deposit_handler.HandleEncodedRequest(request_hash,
                                                   encoding_credit_hash);
 }
 
@@ -197,7 +197,7 @@ void HandleInheritedDepositTransfer(uint160 transfer_hash)
 {
     depositdata[transfer_hash]["inherited"] = true;
     DepositTransferMessage transfer = depositdata[transfer_hash]["transfer"];
-    flexnode.deposit_handler.HandleDepositTransferMessage(transfer);
+    teleportnode.deposit_handler.HandleDepositTransferMessage(transfer);
 }
 
 void HandleInheritedWithdrawalRequest(uint160 part_msg_hash)
@@ -205,7 +205,7 @@ void HandleInheritedWithdrawalRequest(uint160 part_msg_hash)
     DepositAddressPartMessage part_msg;
     part_msg = msgdata[part_msg_hash]["deposit_part"];
 
-    flexnode.deposit_handler.CheckAndSaveSharesFromAddressPart(
+    teleportnode.deposit_handler.CheckAndSaveSharesFromAddressPart(
                                                         part_msg,
                                                         part_msg.position);
 
@@ -264,7 +264,7 @@ void HandleInheritedTasks(Point successor)
 bool ValidateRelayLeaveMessage(RelayLeaveMessage msg)
 {
     if (msg.successor != 
-        flexnode.relayhandler.relay_chain.state.Successor(msg.relay_leaving))
+        teleportnode.relayhandler.relay_chain.state.Successor(msg.relay_leaving))
         return false;
     if (relaydata[msg.relay_leaving]["dead"])
         return false;
@@ -311,7 +311,7 @@ void LeaveRelayPool()
         if (now - join_time > NO_SUCCESSION_AFTER * 1e6)
             break;
         RelayLeaveMessage msg(relay_key);
-        flexnode.relayhandler.BroadcastMessage(msg);
+        teleportnode.relayhandler.BroadcastMessage(msg);
         relaydata.RemoveFromLocation("my_relays", join_time);
 
         duty_scanner = relaydata.LocationIterator("my_relays");
@@ -348,8 +348,8 @@ void DoScheduledSuccessionCheck(uint160 join_hash)
 void SendSuccessionSecrets(Point dead_relay)
 {
     uint64_t time_of_death = relaydata[dead_relay]["time_of_death"];
-    Point successor = flexnode.relayhandler.Successor(dead_relay);
-    vector<Point> executors = flexnode.relayhandler.Executors(dead_relay);
+    Point successor = teleportnode.relayhandler.Successor(dead_relay);
+    vector<Point> executors = teleportnode.relayhandler.Executors(dead_relay);
 
     foreach_(const Point& executor, executors)
     {
@@ -357,7 +357,7 @@ void SendSuccessionSecrets(Point dead_relay)
         if (keydata[executor].HasProperty("privkey"))
         {
             SuccessionMessage succession_msg(dead_relay, executor);
-            flexnode.relayhandler.BroadcastMessage(succession_msg);
+            teleportnode.relayhandler.BroadcastMessage(succession_msg);
         }
     }
 }
@@ -367,7 +367,7 @@ void DoSuccession(Point key_to_recover, Point dead_keyholder)
     log_ << "DoSuccession() recover: " << key_to_recover 
          << " through succession of " << dead_keyholder << "\n";
 
-    uint160 join_hash = flexnode.RelayState().GetJoinHash(dead_keyholder);
+    uint160 join_hash = teleportnode.RelayState().GetJoinHash(dead_keyholder);
 
     RelayJoinMessage join = msgdata[join_hash]["join"];
     if (join.relay_number < INHERITANCE_START)
@@ -389,8 +389,8 @@ void DoSuccession(Point key_to_recover, Point dead_keyholder)
 
     HandleQueuedSuccessionMessages(dead_keyholder);
 
-    Point successor = flexnode.relayhandler.Successor(dead_keyholder);
-    vector<Point> executors = flexnode.relayhandler.Executors(dead_keyholder);
+    Point successor = teleportnode.relayhandler.Successor(dead_keyholder);
+    vector<Point> executors = teleportnode.relayhandler.Executors(dead_keyholder);
 
     relaydata[dead_keyholder]["awaited"] = executors;
     
@@ -398,7 +398,7 @@ void DoSuccession(Point key_to_recover, Point dead_keyholder)
 
     SendSuccessionSecrets(dead_keyholder);
 
-    flexnode.scheduler.Schedule("succession_check", join_hash,
+    teleportnode.scheduler.Schedule("succession_check", join_hash,
                                 GetTimeMicros() + 3 * COMPLAINT_WAIT_TIME);
 }
 
@@ -407,7 +407,7 @@ void DoSuccession(Point key_to_recover)
     Point dead_keyholder = key_to_recover;
     while (relaydata[dead_keyholder]["dead"])
     {
-        dead_keyholder = flexnode.relayhandler.Successor(dead_keyholder);
+        dead_keyholder = teleportnode.relayhandler.Successor(dead_keyholder);
     }
     DoSuccession(key_to_recover, dead_keyholder);
 }
@@ -470,7 +470,7 @@ void DoSuccession(Point key_to_recover)
         int32_t position = dist_secret.RelayPosition(msg.executor);
 
         relay_chain.HandleMessage(msg_hash);
-        flexnode.pit.HandleRelayMessage(msg_hash);
+        teleportnode.pit.HandleRelayMessage(msg_hash);
 
         RelayJoinMessage successor_join 
             = msgdata[msg.successor_join_hash]["join"];
@@ -522,7 +522,7 @@ void DoSuccession(Point key_to_recover)
             should_forward = false;
             return;
         }
-        flexnode.scheduler.Schedule("succession_complaint", 
+        teleportnode.scheduler.Schedule("succession_complaint", 
                                       complaint.GetHash160(),
                                       GetTimeMicros() + COMPLAINT_WAIT_TIME);
     }

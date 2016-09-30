@@ -1,5 +1,5 @@
-#ifndef FLEX_DATASTORE
-#define FLEX_DATASTORE
+#ifndef TELEPORT_DATASTORE
+#define TELEPORT_DATASTORE
 
 #include "leveldbwrapper.h"
 #include <stdint.h>

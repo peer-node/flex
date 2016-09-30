@@ -1,5 +1,5 @@
-#ifndef FLEX_LOG
-#define FLEX_LOG
+#ifndef TELEPORT_LOG
+#define TELEPORT_LOG
 
 #include "base/util_log.h"
 #include "define.h"

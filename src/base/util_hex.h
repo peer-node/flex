@@ -1,5 +1,5 @@
-#ifndef FLEX_UTIL_HEX_H_H
-#define FLEX_UTIL_HEX_H_H
+#ifndef TELEPORT_UTIL_HEX_H_H
+#define TELEPORT_UTIL_HEX_H_H
 
 #include <vector>
 #include <string>
@@ -52,4 +52,4 @@ inline void PrintHex(const std::vector<unsigned char>& vch, const char* pszForma
 }
 
 
-#endif //FLEX_UTIL_HEX_H_H
+#endif //TELEPORT_UTIL_HEX_H_H
