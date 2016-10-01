@@ -245,26 +245,12 @@ public:
         {
             AddABatch();
         }
-
-        uint160 credit_hash = calendar->LastMinedCreditMessageHash();
-        vector<uint160> credit_hashes;
-        while (credit_hash != 0)
-        {
-            credit_hashes.push_back(credit_hash);
-            credit_hash = credit_system->PreviousMinedCreditMessageHash(credit_hash);
-        }
-        reverse(credit_hashes.begin(), credit_hashes.end());
     }
 
     virtual void TearDown()
     {
         ADataMessageHandlerWithSomeBatches::TearDown();
     }
-
-    CalendarMessage CalendarMessageWithABadCalendar();
-
-    CalendarMessage CalendarMessageWithACalendarWithTheMostWork();
-
 
     void AddABatchToCalendar(Calendar *calendar_)
     {
@@ -275,6 +261,10 @@ public:
         calendar_->AddToTip(msg, credit_system);
         credit_message_handler->calendar = calendar;
     }
+
+    CalendarMessage CalendarMessageWithABadCalendar();
+
+    CalendarMessage CalendarMessageWithACalendarWithTheMostWork();
 
     InitialDataMessage AValidInitialDataMessageThatWasRequested();
 };
@@ -303,7 +293,16 @@ CalendarMessage ADataMessageHandlerWithACalendarWithCalends::CalendarMessageWith
     msgdata[calendar_request.GetHash160()]["is_calendar_request"] = true;
     CalendarMessage calendar_message(calendar_request, credit_system);
 
+    // introduce a failure into the proof of work of the second calend, then
+    // truncate the calendar after the bad calend and add more batches after it
+
     calendar_message.calendar.calends[1].proof_of_work.proof.link_lengths[2] += 1;
+    credit_system->StoreMinedCreditMessage(calendar_message.calendar.calends[1]);
+    calendar_message.calendar = Calendar(calendar_message.calendar.calends[1].GetHash160(), credit_system);
+
+    for (uint32_t i = 0; i < 20; i++)
+        AddABatchToCalendar(&calendar_message.calendar);
+
     return calendar_message;
 }
 
@@ -533,6 +532,17 @@ TEST_F(ADataMessageHandlerWithACalendarWithCalends, RejectsAKnownHistoryMessageW
     data_message_handler->HandleMessage(GetDataStream(known_history_message), &peer);
     bool rejected = msgdata[known_history_message.GetHash160()]["rejected"];
     ASSERT_THAT(rejected, Eq(true));
+}
+
+TEST_F(ADataMessageHandlerWithACalendarWithCalends, RecordsWhichPeersKnowWhichDiurnsWhenHandlingAKnownHistoryMessage)
+{
+    auto known_history_message = data_message_handler->known_history_handler->GenerateKnownHistoryMessage();
+    msgdata[known_history_message.request_hash]["is_history_request"] = true;
+    data_message_handler->HandleMessage(GetDataStream(known_history_message), &peer);
+
+    uint160 first_diurn_root = calendar->calends[0].DiurnRoot();
+    std::vector<int> ids_of_peers_who_know_the_first_diurn = msgdata[first_diurn_root]["peers_with_data"];
+    ASSERT_TRUE(VectorContainsEntry(ids_of_peers_who_know_the_first_diurn, peer.id));
 }
 
 TEST_F(ADataMessageHandlerWithACalendarWithCalends, SendsAKnownHistoryMessageWhenRequested)

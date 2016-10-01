@@ -2,6 +2,9 @@
 #include "test/teleport_tests/node/TeleportNetworkNode.h"
 
 
+#include "log.h"
+#define LOG_CATEGORY "CalendarHandler.cpp"
+
 void CalendarHandler::HandleCalendarRequestMessage(CalendarRequestMessage request)
 {
     CalendarMessage calendar_message(request, data_message_handler->credit_system);
@@ -32,6 +35,7 @@ void CalendarHandler::HandleCalendarMessage(CalendarMessage calendar_message)
     }
     if (not ValidateCalendarMessage(calendar_message))
     {
+        log_ << "Failed to validate\n";
         data_message_handler->RejectMessage(calendar_message.GetHash160());
         return;
     }

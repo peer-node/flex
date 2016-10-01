@@ -51,6 +51,8 @@ public:
     bool DataRequiredToCalculateDiurnalBlockRootIsPresent(MinedCreditMessage &msg);
 
     MinedCreditMessage GetPreviousMinedCreditMessage(MinedCreditMessage &msg);
+
+    bool CheckPreviousCalendHash(MinedCreditMessage msg);
 };
 
 

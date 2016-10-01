@@ -229,9 +229,39 @@ bool Calendar::CheckDiurnRoots()
     return true;
 }
 
+bool Calendar::CheckCalendHashes()
+{
+    uint160 previous_calend_hash = 0;
+    for (auto calend : calends)
+    {
+        if (calend.mined_credit.network_state.previous_calend_hash != previous_calend_hash)
+        {
+            log_ << "failed in calends: "
+                 << calend.mined_credit.network_state.previous_calend_hash << " vs " << previous_calend_hash << "\n";
+            return false;
+        }
+        previous_calend_hash = calend.GetHash160();
+    }
+
+    if (calends.size() > 0 and current_diurn.credits_in_diurn[0].GetHash160() != previous_calend_hash)
+    {
+        log_ << "failed at start of diurn: " << current_diurn.credits_in_diurn[0].GetHash160() << "\n";
+        return false;
+    }
+
+    for (uint64_t i = 1; i < current_diurn.Size(); i++)
+    {
+        auto msg = current_diurn.credits_in_diurn[i];
+        if (msg.mined_credit.network_state.previous_calend_hash != previous_calend_hash)
+            return false;
+    }
+    return true;
+}
+
 bool Calendar::CheckDiurnRootsAndCreditHashes()
 {
-    return CheckDiurnRoots() and CheckCreditMessageHashesInCurrentDiurn() and CheckCreditHashesInExtraWork();
+    return CheckDiurnRoots() and CheckCalendHashes() and
+            CheckCreditMessageHashesInCurrentDiurn() and CheckCreditHashesInExtraWork();
 }
 
 bool Calendar::CheckExtraWorkDifficultiesForDiurn(Calend calend, std::vector<MinedCreditMessage> msgs)
@@ -467,6 +497,3 @@ bool Calendar::SpotCheckWork(CalendarFailureDetails &details)
     }
     return true;
 }
-
-
-

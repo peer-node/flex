@@ -108,6 +108,8 @@ public:
     std::vector<uint160> GetCalendHashes();
 
     MinedCreditMessage LastMinedCreditMessage();
+
+    bool CheckCalendHashes();
 };
 
 

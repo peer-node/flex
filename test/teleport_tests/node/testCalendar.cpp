@@ -111,6 +111,7 @@ public:
 
         next_state.previous_mined_credit_message_hash = msg.GetHash160();
         next_state.previous_diurn_root = previous_state.previous_diurn_root;
+        next_state.previous_calend_hash = previous_state.previous_calend_hash;
         next_state.batch_number = previous_state.batch_number + 1;
         if (next_state.batch_number % 2 == 0)
             next_state.timestamp = previous_state.timestamp + 59 * 1000 * 1000;
@@ -199,6 +200,7 @@ public:
         auto msg = SucceedingMinedCreditMessage(calend_msg);
         uint160 diurn_root = calend_msg.mined_credit.network_state.DiurnRoot();
         msg.mined_credit.network_state.previous_diurn_root = diurn_root;
+        msg.mined_credit.network_state.previous_calend_hash = calend_msg.GetHash160();
         credit_system->StoreMinedCreditMessage(msg);
         return msg;
     }
@@ -337,6 +339,13 @@ TEST_F(ACalendarWithMinedCreditsWhoseDifficultiesVary, ChecksTheDiurnRoots)
 {
     calendar = Calendar(MinedCreditMessageHashAtTipOfChainContainingCalends(), credit_system);
     bool ok = calendar.CheckDiurnRoots();
+    ASSERT_THAT(ok, Eq(true));
+}
+
+TEST_F(ACalendarWithMinedCreditsWhoseDifficultiesVary, ChecksTheCalendHashes)
+{
+    calendar = Calendar(MinedCreditMessageHashAtTipOfChainContainingCalends(), credit_system);
+    bool ok = calendar.CheckCalendHashes();
     ASSERT_THAT(ok, Eq(true));
 }
 

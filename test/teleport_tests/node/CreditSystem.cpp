@@ -129,21 +129,12 @@ void CreditSystem::StoreMinedCreditMessage(MinedCreditMessage msg)
     msgdata[msg_hash]["type"] = "msg";
     msgdata[msg_hash]["msg"] = msg;
     creditdata[msg_hash]["msg"] = msg;
-    if (IsCalend(msg_hash))
-    {
-        uint160 diurn_root = msg.mined_credit.network_state.DiurnRoot();
-        creditdata[diurn_root]["calend_hash"] = msg_hash;
-    }
 }
 
 uint160 CreditSystem::PrecedingCalendHash(uint160 msg_hash)
 {
     MinedCreditMessage msg = msgdata[msg_hash]["msg"];
-    uint160 diurn_root = msg.mined_credit.network_state.previous_diurn_root;
-    if (diurn_root == 0)
-        return 0;
-    uint160 calend_hash = creditdata[diurn_root]["calend_hash"];
-    return creditdata[diurn_root]["calend_hash"];
+    return msg.mined_credit.network_state.previous_calend_hash;
 }
 
 CreditBatch CreditSystem::ReconstructBatch(MinedCreditMessage &msg)
@@ -449,7 +440,7 @@ uint160 CreditSystem::GetNextDiurnalDifficulty(MinedCreditMessage msg)
         return msg_.mined_credit.network_state.diurnal_difficulty;
     }
 
-    uint160 calend_hash = creditdata[prev_diurn_root]["calend_hash"];
+    uint160 calend_hash = msg.mined_credit.network_state.previous_calend_hash;
 
     MinedCreditMessage previous_calend = msgdata[calend_hash]["msg"];
     auto prev_state = previous_calend.mined_credit.network_state;
@@ -474,10 +465,16 @@ EncodedNetworkState CreditSystem::SucceedingNetworkState(MinedCreditMessage msg)
     next_state.difficulty = GetNextDifficulty(msg);
     next_state.diurnal_difficulty = GetNextDiurnalDifficulty(msg);
     if (IsCalend(msg.GetHash160()))
-            next_state.previous_diurn_root = SymmetricCombine(prev_state.previous_diurn_root,
-                                                              prev_state.diurnal_block_root);
+    {
+        next_state.previous_calend_hash = msg.GetHash160();
+        next_state.previous_diurn_root = SymmetricCombine(prev_state.previous_diurn_root,
+                                                          prev_state.diurnal_block_root);
+    }
     else
+    {
+        next_state.previous_calend_hash = prev_state.previous_calend_hash;
         next_state.previous_diurn_root = prev_state.previous_diurn_root;
+    }
     next_state.diurnal_block_root = GetNextDiurnalBlockRoot(msg);
 
     next_state.network_id = prev_state.network_id;
@@ -599,11 +596,15 @@ bool CreditSystem::QuickCheckProofOfWorkInCalend(Calend calend)
 
 uint160 CreditSystem::GetNextPreviousDiurnRoot(MinedCreditMessage &msg)
 {
-    if (creditdata[msg.GetHash160()]["is_calend"])
+    if (IsCalend(msg.GetHash160()))
+    {
         return SymmetricCombine(msg.mined_credit.network_state.previous_diurn_root,
                                 msg.mined_credit.network_state.diurnal_block_root);
+    }
     else
+    {
         return msg.mined_credit.network_state.previous_diurn_root;
+    }
 }
 
 uint160 CreditSystem::GetNextDiurnalBlockRoot(MinedCreditMessage msg)

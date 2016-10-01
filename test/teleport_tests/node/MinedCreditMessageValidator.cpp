@@ -31,6 +31,8 @@ bool MinedCreditMessageValidator::CheckBatchOffset(MinedCreditMessage &msg)
 
 bool MinedCreditMessageValidator::CheckBatchNumber(MinedCreditMessage &msg)
 {
+    if (msg.mined_credit.network_state.batch_number == 0)
+        return false;
     auto previous_msg = GetPreviousMinedCreditMessage(msg);
     return msg.mined_credit.network_state.batch_number == previous_msg.mined_credit.network_state.batch_number + 1;
 }
@@ -115,9 +117,6 @@ bool MinedCreditMessageValidator::CheckMessageListContainsPreviousMinedCreditHas
 bool MinedCreditMessageValidator::ValidateNetworkState(MinedCreditMessage &msg)
 {
     bool ok = true;
-    uint32_t& batch_number = msg.mined_credit.network_state.batch_number;
-
-    ok &= batch_number > 0;
 
     ok &= CheckBatchNumber(msg);
 
@@ -135,6 +134,8 @@ bool MinedCreditMessageValidator::ValidateNetworkState(MinedCreditMessage &msg)
     ok &= CheckTimeStampIsNotInFuture(msg);
 
     ok &= CheckPreviousDiurnRoot(msg);
+
+    ok &= CheckPreviousCalendHash(msg);
 
     ok &= CheckTimeStampSucceedsPreviousTimestamp(msg);
 
@@ -171,5 +172,17 @@ bool MinedCreditMessageValidator::DataRequiredToCalculateDifficultyIsPresent(Min
 bool MinedCreditMessageValidator::DataRequiredToCalculateDiurnalBlockRootIsPresent(MinedCreditMessage &msg)
 {
     return credit_system->DataIsPresentFromMinedCreditToPrecedingCalendOrStart(msg);
+}
+
+bool MinedCreditMessageValidator::CheckPreviousCalendHash(MinedCreditMessage msg)
+{
+    uint160 previous_msg_hash = msg.mined_credit.network_state.previous_mined_credit_message_hash;
+    MinedCreditMessage previous_msg = credit_system->msgdata[previous_msg_hash]["msg"];
+
+    if (credit_system->IsCalend(previous_msg_hash))
+        return msg.mined_credit.network_state.previous_calend_hash == previous_msg_hash;
+
+    return msg.mined_credit.network_state.previous_calend_hash ==
+            previous_msg.mined_credit.network_state.previous_calend_hash;
 }
 

@@ -2,6 +2,8 @@
 #include "test/teleport_tests/node/TeleportNetworkNode.h"
 #include "CalendarHandler.h"
 
+#include "log.h"
+#define LOG_CATEGORY "InitialDataHandler.cpp"
 
 void InitialDataHandler::HandleInitialDataRequestMessage(InitialDataRequestMessage request)
 {
@@ -233,8 +235,8 @@ void InitialDataHandler::SetMiningParametersForInitialDataMessageValidation(uint
                                                                             uint160 initial_diurnal_difficulty_)
 {
     data_message_handler->calendar_handler->number_of_megabytes_for_mining = number_of_megabytes_;
-    data_message_handler->initial_data_handler->initial_difficulty = initial_difficulty_;
-    data_message_handler->initial_data_handler->initial_diurnal_difficulty = initial_diurnal_difficulty_;
+    initial_difficulty = initial_difficulty_;
+    initial_diurnal_difficulty = initial_diurnal_difficulty_;
 }
 
 bool InitialDataHandler::ValidateMinedCreditMessagesInInitialDataMessage(InitialDataMessage initial_data_message)
@@ -243,8 +245,7 @@ bool InitialDataHandler::ValidateMinedCreditMessagesInInitialDataMessage(Initial
     CreditSystem credit_system_(msgdata_, creditdata_);
 
     credit_system_.SetMiningParameters(data_message_handler->calendar_handler->number_of_megabytes_for_mining,
-                                       data_message_handler->initial_data_handler->initial_difficulty,
-                                       data_message_handler->initial_data_handler->initial_diurnal_difficulty);
+                                       initial_difficulty, initial_diurnal_difficulty);
     StoreDataFromInitialDataMessageInCreditSystem(initial_data_message, credit_system_);
 
     CreditMessageHandler credit_message_handler(msgdata_, creditdata_, keydata_);

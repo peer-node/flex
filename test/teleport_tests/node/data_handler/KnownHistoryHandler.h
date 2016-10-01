@@ -34,6 +34,10 @@ public:
     void HandleDiurnDataMessage(DiurnDataMessage diurn_data_message);
 
     void HandlerDiurnDataRequest(DiurnDataRequest request);
+
+    void RecordDiurnsWhichPeerKnows(KnownHistoryDeclaration &declaration);
+
+    void RecordDiurnsWhichPeerKnows(KnownHistoryMessage known_history);
 };
 
 

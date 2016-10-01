@@ -243,6 +243,23 @@ TEST_F(AMinedCreditMessageValidator, ChecksThePreviousDiurnRoot)
     ASSERT_THAT(ok, Eq(false));
 }
 
+TEST_F(AMinedCreditMessageValidator, ChecksThePreviousCalendHash)
+{
+    auto msg = MinedCreditMessageWithABatch();
+    msg.mined_credit.network_state.previous_calend_hash= 1;
+    credit_system->StoreMinedCreditMessage(msg);
+
+    MinedCreditMessage next_msg;
+    next_msg.mined_credit.network_state.previous_mined_credit_message_hash = msg.GetHash160();
+    next_msg.mined_credit.network_state.previous_calend_hash = 1;
+
+    bool ok = validator.CheckPreviousCalendHash(next_msg);
+    ASSERT_THAT(ok, Eq(true));
+    next_msg.mined_credit.network_state.previous_calend_hash = 2;
+    ok = validator.CheckPreviousCalendHash(next_msg);
+    ASSERT_THAT(ok, Eq(false));
+}
+
 TEST_F(AMinedCreditMessageValidator, ChecksTheDiurnalBlockRoot)
 {
     auto msg = MinedCreditMessageWithABatch();

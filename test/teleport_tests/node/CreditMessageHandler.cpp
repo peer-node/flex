@@ -44,7 +44,6 @@ void CreditMessageHandler::HandleMinedCreditMessage(MinedCreditMessage msg)
 
     Broadcast(msg);
 
-
     if (do_spot_checks and not ProofOfWorkPassesSpotCheck(msg))
         Broadcast(GetBadBatchMessage(msg.GetHash160()));
     else

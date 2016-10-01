@@ -4,8 +4,8 @@
 
 KnownHistoryMessage KnownHistoryHandler::GenerateKnownHistoryMessage()
 {
-    KnownHistoryMessage known_history(data_message_handler->calendar->LastMinedCreditMessageHash(),
-                                      data_message_handler->credit_system);
+    KnownHistoryRequest request(data_message_handler->calendar->LastMinedCreditMessageHash());
+    KnownHistoryMessage known_history(request, data_message_handler->credit_system);
     return known_history;
 }
 
@@ -40,12 +40,33 @@ bool KnownHistoryHandler::ValidateKnownHistoryMessage(KnownHistoryMessage known_
 
 void KnownHistoryHandler::HandleKnownHistoryMessage(KnownHistoryMessage known_history)
 {
-    if (not msgdata[known_history.request_hash]["is_history_request"])
+    if (not msgdata[known_history.request_hash]["is_history_request"] or not ValidateKnownHistoryMessage(known_history))
     {
         data_message_handler->RejectMessage(known_history.GetHash160());
         return;
     }
+    RecordDiurnsWhichPeerKnows(known_history);
 }
+
+void KnownHistoryHandler::RecordDiurnsWhichPeerKnows(KnownHistoryMessage known_history)
+{
+    CNode *peer = data_message_handler->GetPeer(known_history.GetHash160());
+    if (peer == NULL)
+        return;
+    int peer_id = peer->id;
+    Calendar calendar_(known_history.mined_credit_message_hash, data_message_handler->credit_system);
+    for (uint32_t i = 0; i < calendar_.calends.size(); i++)
+    {
+        if (known_history.history_declaration.known_diurns.Get(i))
+        {
+            std::vector<int> peers_with_data = msgdata[calendar_.calends[i].DiurnRoot()]["peers_with_data"];
+            if (not VectorContainsEntry(peers_with_data, peer_id))
+                peers_with_data.push_back(peer_id);
+            msgdata[calendar_.calends[i].DiurnRoot()]["peers_with_data"] = peers_with_data;
+        }
+    }
+}
+
 
 void KnownHistoryHandler::HandleKnownHistoryRequest(KnownHistoryRequest request)
 {

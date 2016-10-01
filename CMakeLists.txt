@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.3)
-project(flex)
+project(teleport)
 
 set(CMAKE_CXX_FLAGS "-O3 ${CMAKE_CXX_FLAGS} -std=c++11 -lboost_system -DSCRYPT_SALSA64 -DSCRYPT_BLAKE512 -lssl -lboost_thread -pthread")
 
@@ -904,7 +904,29 @@ add_executable(runNodeTests
         test/teleport_tests/node/testMinedCreditConstructor.cpp
         test/teleport_tests/node/testHttpAuthServer.cpp
         test/teleport_tests/node/testTeleportConfig.cpp
-        test/teleport_tests/node/testTeleportRPCServer.cpp test/teleport_tests/node/data_handler/KnownHistoryMessage.cpp test/teleport_tests/node/data_handler/KnownHistoryMessage.h test/teleport_tests/node/data_handler/KnownHistoryDeclaration.cpp test/teleport_tests/node/data_handler/KnownHistoryDeclaration.h test/teleport_tests/node/data_handler/DiurnMessageData.cpp test/teleport_tests/node/data_handler/DiurnMessageData.h test/teleport_tests/node/data_handler/EnclosedMessageData.h test/teleport_tests/node/data_handler/EnclosedMessageData.cpp test/teleport_tests/node/data_handler/TipHandler.cpp test/teleport_tests/node/data_handler/TipHandler.h test/teleport_tests/node/data_handler/CalendarHandler.cpp test/teleport_tests/node/data_handler/CalendarHandler.h test/teleport_tests/node/data_handler/InitialDataHandler.cpp test/teleport_tests/node/data_handler/InitialDataHandler.h test/teleport_tests/node/data_handler/KnownHistoryHandler.cpp test/teleport_tests/node/data_handler/KnownHistoryHandler.h test/teleport_tests/node/data_handler/KnownHistoryRequest.cpp test/teleport_tests/node/data_handler/KnownHistoryRequest.h test/teleport_tests/node/data_handler/DiurnDataRequest.cpp test/teleport_tests/node/data_handler/DiurnDataRequest.h test/teleport_tests/node/data_handler/DiurnDataMessage.cpp test/teleport_tests/node/data_handler/DiurnDataMessage.h)
+        test/teleport_tests/node/testTeleportRPCServer.cpp
+        test/teleport_tests/node/data_handler/KnownHistoryMessage.cpp
+        test/teleport_tests/node/data_handler/KnownHistoryMessage.h
+        test/teleport_tests/node/data_handler/KnownHistoryDeclaration.cpp
+        test/teleport_tests/node/data_handler/KnownHistoryDeclaration.h
+        test/teleport_tests/node/data_handler/DiurnMessageData.cpp
+        test/teleport_tests/node/data_handler/DiurnMessageData.h
+        test/teleport_tests/node/data_handler/EnclosedMessageData.h
+        test/teleport_tests/node/data_handler/EnclosedMessageData.cpp
+        test/teleport_tests/node/data_handler/TipHandler.cpp
+        test/teleport_tests/node/data_handler/TipHandler.h
+        test/teleport_tests/node/data_handler/CalendarHandler.cpp
+        test/teleport_tests/node/data_handler/CalendarHandler.h
+        test/teleport_tests/node/data_handler/InitialDataHandler.cpp
+        test/teleport_tests/node/data_handler/InitialDataHandler.h
+        test/teleport_tests/node/data_handler/KnownHistoryHandler.cpp
+        test/teleport_tests/node/data_handler/KnownHistoryHandler.h
+        test/teleport_tests/node/data_handler/KnownHistoryRequest.cpp
+        test/teleport_tests/node/data_handler/KnownHistoryRequest.h
+        test/teleport_tests/node/data_handler/DiurnDataRequest.cpp
+        test/teleport_tests/node/data_handler/DiurnDataRequest.h
+        test/teleport_tests/node/data_handler/DiurnDataMessage.cpp
+        test/teleport_tests/node/data_handler/DiurnDataMessage.h)
 
 add_executable(flexnetd
         test/teleport_tests/teleport_data/TestData.h
