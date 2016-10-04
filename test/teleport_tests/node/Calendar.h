@@ -110,6 +110,8 @@ public:
     MinedCreditMessage LastMinedCreditMessage();
 
     bool CheckCalendHashes();
+
+    void FinishCurrentDiurnAndStartNext(MinedCreditMessage &msg, CreditSystem *credit_system);
 };
 
 

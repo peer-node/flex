@@ -22,6 +22,8 @@ uint160 AdjustDifficultyAfterBatchInterval(uint160 earlier_difficulty, uint64_t 
 uint160 AdjustDiurnalDifficultyAfterDiurnDuration(uint160 earlier_diurnal_difficulty, uint64_t duration);
 
 class CalendarMessage;
+class InitialDataMessage;
+class DiurnDataMessage;
 
 class CreditSystem
 {
@@ -168,6 +170,22 @@ public:
     uint160 GetNextDiurnalBlockRoot(MinedCreditMessage msg);
 
     Diurn PopulateDiurn(uint160 msg_hash);
+
+    Diurn PopulateDiurnPrecedingCalend(uint160 msg_hash);
+
+    void StoreMessageWithSpecificTypeAndContent(std::string type, vch_t content);
+
+    void StoreEnclosedMessages(EnclosedMessageData message_data);
+
+    void StoreDataFromInitialDataMessage(InitialDataMessage &initial_data_message);
+
+    Calendar GetRequestedCalendar(InitialDataMessage &initial_data_message);
+
+    void StoreDataFromDiurnDataMessage(DiurnDataMessage diurn_data_message);
+
+    void MarkMinedCreditMessageAsHandled(uint160 msg_hash);
+
+    bool MinedCreditMessageWasHandled(uint160 msg_hash);
 };
 
 

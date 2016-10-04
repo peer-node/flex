@@ -4,6 +4,8 @@
 #include <src/credits/CreditBatch.h>
 #include <test/teleport_tests/mining/MiningHashTree.h>
 #include <src/base/util_time.h>
+#include <test/teleport_tests/node/data_handler/InitialDataMessage.h>
+#include <test/teleport_tests/node/data_handler/DiurnDataMessage.h>
 #include "CreditSystem.h"
 #include "MinedCreditMessage.h"
 #include "Calend.h"
@@ -90,6 +92,16 @@ void CreditSystem::AcceptMinedCreditMessageAsValidByRecordingTotalWorkAndParent(
     uint160 total_work = msg.mined_credit.network_state.difficulty + msg.mined_credit.network_state.previous_total_work;
     RecordTotalWork(msg_hash, total_work);
     SetChildBatch(msg.mined_credit.network_state.previous_mined_credit_message_hash, msg_hash);
+}
+
+void CreditSystem::MarkMinedCreditMessageAsHandled(uint160 msg_hash)
+{
+    creditdata[msg_hash]["handled"] = true;
+}
+
+bool CreditSystem::MinedCreditMessageWasHandled(uint160 msg_hash)
+{
+    return creditdata[msg_hash]["handled"];
 }
 
 void CreditSystem::SetChildBatch(uint160 parent_hash, uint160 child_hash)
@@ -304,6 +316,7 @@ void CreditSystem::AddToMainChain(MinedCreditMessage &msg)
     uint160 msg_hash = msg.GetHash160();
     creditdata[msg_hash].Location("main_chain") = msg.mined_credit.ReportedWork();
     creditdata[msg.mined_credit.network_state.batch_root]["msg_hash"] = msg_hash;
+    AcceptMinedCreditMessageAsValidByRecordingTotalWorkAndParent(msg);
 }
 
 void CreditSystem::AddMinedCreditMessageAndPredecessorsToMainChain(uint160 msg_hash)
@@ -816,6 +829,58 @@ void CreditSystem::StoreCalendsFromCalendar(Calendar &calendar_)
     }
 }
 
+void CreditSystem::StoreMessageWithSpecificTypeAndContent(std::string type, vch_t content)
+{
+    if (type == "msg")
+    {
+        CDataStream ss(content, SER_NETWORK, CLIENT_VERSION);
+        MinedCreditMessage msg;
+        ss >> msg;
+        StoreMinedCreditMessage(msg);
+    }
+    else if (type == "tx")
+    {
+        CDataStream ss(content, SER_NETWORK, CLIENT_VERSION);
+        SignedTransaction tx;
+        ss >> tx;
+        StoreTransaction(tx);
+    }
+}
+
+void CreditSystem::StoreEnclosedMessages(EnclosedMessageData message_data)
+{
+    for (uint32_t i = 0; i < message_data.enclosed_message_types.size(); i++)
+    {
+        StoreMessageWithSpecificTypeAndContent(message_data.enclosed_message_types[i],
+                                               message_data.enclosed_message_contents[i]);
+    }
+}
+
+void CreditSystem::StoreDataFromInitialDataMessage(InitialDataMessage &initial_data_message)
+{
+    uint160 calend_hash = initial_data_message.mined_credit_messages_in_current_diurn[0].GetHash160();
+    creditdata[calend_hash]["first_in_data_message"] = true;
+
+    Calendar calendar = GetRequestedCalendar(initial_data_message);
+
+    for (auto calend : calendar.calends)
+        StoreMinedCreditMessage(calend);
+
+    for (auto mined_credit_message : initial_data_message.mined_credit_messages_in_current_diurn)
+        StoreMinedCreditMessage(mined_credit_message);
+
+    StoreEnclosedMessages(initial_data_message.message_data);
+}
+
+Calendar CreditSystem::GetRequestedCalendar(InitialDataMessage &initial_data_message)
+{
+    uint160 request_hash = initial_data_message.request_hash;
+    uint160 calendar_message_hash = msgdata[request_hash]["calendar_message_hash"];
+    CalendarMessage calendar_message = msgdata[calendar_message_hash]["calendar"];
+    return calendar_message.calendar;
+}
+
+
 void CreditSystem::RemoveReportedTotalWorkOfMinedCreditsSucceedingInvalidCalend(CalendarFailureMessage message)
 {
     uint160 calend_hash = message.details.mined_credit_message_hash;
@@ -876,4 +941,28 @@ Diurn CreditSystem::PopulateDiurn(uint160 msg_hash)
     diurn.previous_diurn_root = Calend(msgs[0]).DiurnRoot();
 
     return diurn;
+}
+
+Diurn CreditSystem::PopulateDiurnPrecedingCalend(uint160 msg_hash)
+{
+    return PopulateDiurn(PreviousMinedCreditMessageHash(msg_hash));
+}
+
+void CreditSystem::StoreDataFromDiurnDataMessage(DiurnDataMessage diurn_data_message)
+{
+    for (uint32_t i = 0; i < diurn_data_message.diurns.size(); i++)
+    {
+        uint160 first_msg_hash = diurn_data_message.diurns[i].credits_in_diurn[0].GetHash160();
+        creditdata[first_msg_hash]["first_in_data_message"] = true;
+
+        for (auto msg : diurn_data_message.diurns[i].credits_in_diurn)
+            StoreMinedCreditMessage(msg);
+
+        EnclosedMessageData &data = diurn_data_message.message_data[i].message_data;
+
+        for (uint32_t j = 0; j < data.enclosed_message_types.size(); j++)
+        {
+            StoreMessageWithSpecificTypeAndContent(data.enclosed_message_types[j], data.enclosed_message_contents[j]);
+        }
+    }
 }

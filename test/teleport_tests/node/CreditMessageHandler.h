@@ -42,7 +42,7 @@ public:
 
     void SetConfig(TeleportConfig& config_) { config = config_; }
 
-    void SetCalendar(Calendar& calendar_) { calendar = &calendar_; }
+    void SetCalendar(Calendar& calendar_);
 
     void SetSpentChain(BitChain& spent_chain_) { spent_chain = &spent_chain_; }
 

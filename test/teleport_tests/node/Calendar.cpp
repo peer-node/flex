@@ -235,19 +235,12 @@ bool Calendar::CheckCalendHashes()
     for (auto calend : calends)
     {
         if (calend.mined_credit.network_state.previous_calend_hash != previous_calend_hash)
-        {
-            log_ << "failed in calends: "
-                 << calend.mined_credit.network_state.previous_calend_hash << " vs " << previous_calend_hash << "\n";
             return false;
-        }
         previous_calend_hash = calend.GetHash160();
     }
 
     if (calends.size() > 0 and current_diurn.credits_in_diurn[0].GetHash160() != previous_calend_hash)
-    {
-        log_ << "failed at start of diurn: " << current_diurn.credits_in_diurn[0].GetHash160() << "\n";
         return false;
-    }
 
     for (uint64_t i = 1; i < current_diurn.Size(); i++)
     {
@@ -415,21 +408,26 @@ void Calendar::AddToTip(MinedCreditMessage &msg, CreditSystem* credit_system)
     }
     else
     {
-        calends.push_back(msg);
-        uint160 diurn_root = calends.back().DiurnRoot();
-
-        credit_system->creditdata[diurn_root]["data_is_known"] = true;
-        credit_system->creditdata[diurn_root]["message_data_is_known"] = true;
-        credit_system->creditdata[diurn_root]["diurn_hash"] = current_diurn.GetHash160();
-
-        DiurnMessageData message_data = calends.back().GenerateDiurnMessageData(credit_system);
-        credit_system->creditdata[diurn_root]["message_data_hash"] = message_data.GetHash160();
-
-        current_diurn = Diurn();
-        current_diurn.previous_diurn_root = diurn_root;
-        current_diurn.Add(msg);
-        PopulateTopUpWork(msg.mined_credit.GetHash160(), credit_system);
+        FinishCurrentDiurnAndStartNext(msg, credit_system);
     }
+}
+
+void Calendar::FinishCurrentDiurnAndStartNext(MinedCreditMessage &msg, CreditSystem *credit_system)
+{
+    calends.push_back(msg);
+    uint160 diurn_root = calends.back().DiurnRoot();
+
+    credit_system->creditdata[diurn_root]["data_is_known"] = true;
+    credit_system->creditdata[diurn_root]["message_data_is_known"] = true;
+    credit_system->creditdata[diurn_root]["diurn_hash"] = current_diurn.GetHash160();
+
+    DiurnMessageData message_data = calends.back().GenerateDiurnMessageData(credit_system);
+    credit_system->creditdata[diurn_root]["message_data_hash"] = message_data.GetHash160();
+
+    current_diurn = Diurn();
+    current_diurn.previous_diurn_root = diurn_root;
+    current_diurn.Add(msg);
+    PopulateTopUpWork(msg.mined_credit.GetHash160(), credit_system);
 }
 
 void Calendar::RemoveLast(CreditSystem* credit_system)

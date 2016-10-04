@@ -7,7 +7,7 @@
 
 void CalendarHandler::HandleCalendarRequestMessage(CalendarRequestMessage request)
 {
-    CalendarMessage calendar_message(request, data_message_handler->credit_system);
+    CalendarMessage calendar_message(request, credit_system);
     CNode *peer = data_message_handler->GetPeer(request.GetHash160());
     if (peer != NULL)
         data_message_handler->SendMessageToPeer(calendar_message, peer);
@@ -19,7 +19,7 @@ bool CalendarHandler::ValidateCalendarMessage(CalendarMessage calendar_message)
     {
         return false;
     }
-    else if (not calendar_message.calendar.CheckRootsAndDifficulties(data_message_handler->credit_system))
+    else if (not calendar_message.calendar.CheckRootsAndDifficulties(credit_system))
     {
         return false;
     }
@@ -28,7 +28,7 @@ bool CalendarHandler::ValidateCalendarMessage(CalendarMessage calendar_message)
 
 void CalendarHandler::HandleCalendarMessage(CalendarMessage calendar_message)
 {
-    if (data_message_handler->credit_system->CalendarContainsAKnownBadCalend(calendar_message.calendar))
+    if (credit_system->CalendarContainsAKnownBadCalend(calendar_message.calendar))
     {
         SendCalendarFailureMessageInResponseToCalendarMessage(calendar_message);
         return;
@@ -45,10 +45,10 @@ void CalendarHandler::HandleCalendarMessage(CalendarMessage calendar_message)
 void CalendarHandler::HandleIncomingCalendar(CalendarMessage calendar_message)
 {
     uint160 reported_work = calendar_message.calendar.LastMinedCreditMessage().mined_credit.ReportedWork();
-    data_message_handler->credit_system->RecordCalendarReportedWork(calendar_message, reported_work);
-    data_message_handler->credit_system->StoreCalendsFromCalendar(calendar_message.calendar);
+    credit_system->RecordCalendarReportedWork(calendar_message, reported_work);
+    credit_system->StoreCalendsFromCalendar(calendar_message.calendar);
 
-    uint160 maximum_reported_work = data_message_handler->credit_system->MaximumReportedCalendarWork();
+    uint160 maximum_reported_work = credit_system->MaximumReportedCalendarWork();
 
     bool ok = false;
     if (maximum_reported_work == reported_work)
@@ -86,7 +86,7 @@ void CalendarHandler::RequestInitialDataMessage(CalendarMessage calendar_message
 
 bool CalendarHandler::ScrutinizeCalendarWithTheMostWork()
 {
-    CalendarMessage calendar_message = data_message_handler->credit_system->CalendarMessageWithMaximumReportedWork();
+    CalendarMessage calendar_message = credit_system->CalendarMessageWithMaximumReportedWork();
     CalendarFailureDetails details;
 
     uint160 message_hash = calendar_message.GetHash160();
@@ -100,15 +100,15 @@ bool CalendarHandler::ScrutinizeCalendarWithTheMostWork()
     else
     {
         uint160 work = calendar_message.calendar.TotalWork();
-        data_message_handler->credit_system->RecordCalendarScrutinizedWork(calendar_message, work);
+        credit_system->RecordCalendarScrutinizedWork(calendar_message, work);
     }
     return ok;
 }
 
 bool CalendarHandler::CheckDifficultiesRootsAndProofsOfWork(Calendar &calendar)
 {
-    return calendar.CheckRootsAndDifficulties(data_message_handler->credit_system) and
-            calendar.CheckProofsOfWork(data_message_handler->credit_system);
+    return calendar.CheckRootsAndDifficulties(credit_system) and
+            calendar.CheckProofsOfWork(credit_system);
 }
 
 bool CalendarHandler::Scrutinize(Calendar calendar, uint64_t scrutiny_time, CalendarFailureDetails &details)
@@ -125,9 +125,9 @@ bool CalendarHandler::Scrutinize(Calendar calendar, uint64_t scrutiny_time, Cale
 
 void CalendarHandler::HandleCalendarFailureMessage(CalendarFailureMessage message)
 {
-    if (not data_message_handler->credit_system->ReportedFailedCalendHasBeenReceived(message))
+    if (not credit_system->ReportedFailedCalendHasBeenReceived(message))
     {
-        data_message_handler->credit_system->RecordReportedFailureOfCalend(message);
+        credit_system->RecordReportedFailureOfCalend(message);
         return;
     }
     if (not ValidateCalendarFailureMessage(message))
@@ -144,8 +144,8 @@ bool CalendarHandler::ValidateCalendarFailureMessage(CalendarFailureMessage fail
 
 void CalendarHandler::MarkCalendarsAsInvalidAndSwitchToNewCalendar(CalendarFailureMessage message)
 {
-    data_message_handler->credit_system->MarkCalendAndSucceedingCalendsAsInvalid(message);
-    data_message_handler->credit_system->RemoveReportedTotalWorkOfMinedCreditsSucceedingInvalidCalend(message);
+    credit_system->MarkCalendAndSucceedingCalendsAsInvalid(message);
+    credit_system->RemoveReportedTotalWorkOfMinedCreditsSucceedingInvalidCalend(message);
     if (data_message_handler->teleport_network_node != NULL)
         data_message_handler->teleport_network_node->credit_message_handler->SwitchToNewTipIfAppropriate();
 }

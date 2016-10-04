@@ -56,14 +56,15 @@ void CreditMessageHandler::HandleMinedCreditMessage(MinedCreditMessage msg)
 
 bool CreditMessageHandler::MinedCreditMessageWasRegardedAsValidAndHandled(MinedCreditMessage& msg)
 {
-    return credit_system->MinedCreditWasRecordedToHaveTotalWork(msg.GetHash160(), msg.mined_credit.ReportedWork());
+    uint160 msg_hash = msg.GetHash160();
+    return credit_system->MinedCreditWasRecordedToHaveTotalWork(msg_hash, msg.mined_credit.ReportedWork())
+            and credit_system->MinedCreditMessageWasHandled(msg_hash);
 }
 
 bool CreditMessageHandler::PreviousMinedCreditMessageWasHandled(MinedCreditMessage& msg)
 {
     uint160 previous_msg_hash = msg.mined_credit.network_state.previous_mined_credit_message_hash;
-    uint160 previous_total_work = msg.mined_credit.network_state.previous_total_work;
-    return credit_system->MinedCreditWasRecordedToHaveTotalWork(previous_msg_hash, previous_total_work);
+    return credit_system->MinedCreditMessageWasHandled(previous_msg_hash);
 }
 
 void CreditMessageHandler::QueueMinedCreditMessageBehindPrevious(MinedCreditMessage& msg)
@@ -135,6 +136,7 @@ void CreditMessageHandler::HandleValidMinedCreditMessage(MinedCreditMessage& msg
 {
     credit_system->AcceptMinedCreditMessageAsValidByRecordingTotalWorkAndParent(msg);
     SwitchToNewTipIfAppropriate();
+    credit_system->MarkMinedCreditMessageAsHandled(msg.GetHash160());
 }
 
 MinedCreditMessage CreditMessageHandler::Tip()
@@ -541,4 +543,16 @@ MinedCreditMessage CreditMessageHandler::GenerateMinedCreditMessageWithoutProofO
 void CreditMessageHandler::SetNetworkNode(TeleportNetworkNode *teleport_network_node_)
 {
     teleport_network_node = teleport_network_node_;
+}
+
+void CreditMessageHandler::SetCalendar(Calendar& calendar_)
+{
+    calendar = &calendar_;
+//    for (auto calend : calendar->calends)
+//    {
+//        credit_system->AddToMainChain(calend);
+//        credit_system->AcceptMinedCreditMessageAsValidByRecordingTotalWorkAndParent(calend);
+//    }
+//    for (auto mined_credit_message : calendar->current_diurn.credits_in_diurn)
+//        credit_system->AddToMainChain(mined_credit_message);
 }

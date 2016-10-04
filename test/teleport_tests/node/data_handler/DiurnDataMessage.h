@@ -5,6 +5,7 @@
 
 #include "test/teleport_tests/node/Diurn.h"
 #include "DiurnDataRequest.h"
+#include "DiurnMessageData.h"
 #include "test/teleport_tests/node/CreditSystem.h"
 
 class DiurnDataMessage
@@ -12,25 +13,14 @@ class DiurnDataMessage
 public:
     uint160 request_hash;
     std::vector<Diurn> diurns;
+    std::vector<BitChain> initial_spent_chains;
+    std::vector<DiurnMessageData> message_data;
 
     DiurnDataMessage() { }
 
-    DiurnDataMessage(DiurnDataRequest request, CreditSystem *credit_system)
-    {
-        request_hash = request.GetHash160();
-        PopulateDiurnData(request, credit_system);
-    }
+    DiurnDataMessage(DiurnDataRequest request, CreditSystem *credit_system);
 
-    void PopulateDiurnData(DiurnDataRequest request, CreditSystem *credit_system)
-    {
-        Calendar calendar(request.msg_hash, credit_system);
-
-        for (auto diurn_number : request.requested_diurns)
-        {
-            Diurn diurn = credit_system->PopulateDiurn(calendar.calends[diurn_number].GetHash160());
-            diurns.push_back(diurn);
-        }
-    }
+    void PopulateDiurnData(DiurnDataRequest request, CreditSystem *credit_system);
 
     static std::string Type() { return "diurn_data"; }
 
@@ -38,9 +28,10 @@ public:
     (
         READWRITE(request_hash);
         READWRITE(diurns);
+        READWRITE(message_data);
     )
 
-    JSON(request_hash, diurns);
+    JSON(request_hash, diurns, message_data);
 
     DEPENDENCIES();
 

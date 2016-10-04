@@ -10,6 +10,7 @@ class CalendarHandler
 public:
     MemoryDataStore &msgdata, &creditdata;
     DataMessageHandler *data_message_handler;
+    CreditSystem *credit_system;
 
     uint64_t calendar_scrutiny_time{CALENDAR_SCRUTINY_TIME};
     uint64_t number_of_megabytes_for_mining{TELEPORT_WORK_NUMBER_OF_MEGABYTES};
@@ -17,7 +18,8 @@ public:
     CalendarHandler(DataMessageHandler *data_message_handler_) :
         data_message_handler(data_message_handler_),
         msgdata(data_message_handler_->msgdata),
-        creditdata(data_message_handler_->creditdata)
+        creditdata(data_message_handler_->creditdata),
+        credit_system(data_message_handler_->credit_system)
     { }
 
     void HandleCalendarRequestMessage(CalendarRequestMessage request);

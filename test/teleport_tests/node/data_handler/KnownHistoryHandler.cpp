@@ -1,11 +1,15 @@
 #include <test/teleport_tests/node/data_handler/DiurnDataRequest.h>
+#include <test/teleport_tests/node/data_handler/CalendarHandler.h>
+#include <test/teleport_tests/node/CreditMessageHandler.h>
 #include "KnownHistoryHandler.h"
 
+#include "log.h"
+#define LOG_CATEGORY "KnownHistoryHandler.cpp"
 
 KnownHistoryMessage KnownHistoryHandler::GenerateKnownHistoryMessage()
 {
     KnownHistoryRequest request(data_message_handler->calendar->LastMinedCreditMessageHash());
-    KnownHistoryMessage known_history(request, data_message_handler->credit_system);
+    KnownHistoryMessage known_history(request, credit_system);
     return known_history;
 }
 
@@ -25,17 +29,11 @@ bool KnownHistoryHandler::ValidateKnownHistoryMessage(KnownHistoryMessage known_
     if (diurns_known != known_history_message.history_declaration.diurn_hashes.size())
         return false;
 
-    uint64_t data_known = NumberOfBitsSet(known_history_message.history_declaration.known_diurn_message_data);
-
-    if (data_known != known_history_message.history_declaration.diurn_message_data_hashes.size())
-        return false;
-
     uint160 msg_hash = known_history_message.mined_credit_message_hash;
 
-    uint64_t number_of_calends = Calendar(msg_hash, data_message_handler->credit_system).calends.size();
+    uint64_t number_of_calends = Calendar(msg_hash, credit_system).calends.size();
 
-    return number_of_calends == known_history_message.history_declaration.known_diurns.length and
-        number_of_calends == known_history_message.history_declaration.known_diurn_message_data.length;
+    return number_of_calends == known_history_message.history_declaration.known_diurns.length;
 }
 
 void KnownHistoryHandler::HandleKnownHistoryMessage(KnownHistoryMessage known_history)
@@ -54,7 +52,7 @@ void KnownHistoryHandler::RecordDiurnsWhichPeerKnows(KnownHistoryMessage known_h
     if (peer == NULL)
         return;
     int peer_id = peer->id;
-    Calendar calendar_(known_history.mined_credit_message_hash, data_message_handler->credit_system);
+    Calendar calendar_(known_history.mined_credit_message_hash, credit_system);
     for (uint32_t i = 0; i < calendar_.calends.size(); i++)
     {
         if (known_history.history_declaration.known_diurns.Get(i))
@@ -70,7 +68,7 @@ void KnownHistoryHandler::RecordDiurnsWhichPeerKnows(KnownHistoryMessage known_h
 
 void KnownHistoryHandler::HandleKnownHistoryRequest(KnownHistoryRequest request)
 {
-    KnownHistoryMessage history_message(request, data_message_handler->credit_system);
+    KnownHistoryMessage history_message(request, credit_system);
     CNode *peer = data_message_handler->GetPeer(request.GetHash160());
     if (peer != NULL)
         peer->PushMessage("data", "known_history", history_message);
@@ -88,11 +86,11 @@ uint160 KnownHistoryHandler::RequestKnownHistoryMessages(uint160 mined_credit_me
     return request_hash;
 }
 
-uint160 KnownHistoryHandler::RequestDiurnData(uint160 msg_hash, std::vector<uint32_t> requested_diurns, CNode *peer)
+uint160 KnownHistoryHandler::RequestDiurnData(KnownHistoryMessage history_message, std::vector<uint32_t> requested_diurns, CNode *peer)
 {
     if (peer == NULL)
         return 0;
-    DiurnDataRequest request(msg_hash, requested_diurns);
+    DiurnDataRequest request(history_message, requested_diurns);
     uint160 request_hash = request.GetHash160();
 
     msgdata[request_hash]["is_diurn_data_request"] = true;
@@ -116,6 +114,65 @@ void KnownHistoryHandler::HandlerDiurnDataRequest(DiurnDataRequest request)
     CNode *peer = data_message_handler->GetPeer(request.GetHash160());
     if (peer == NULL)
         return;
-    DiurnDataMessage diurn_data_message(request, data_message_handler->credit_system);
+    DiurnDataMessage diurn_data_message(request, credit_system);
     peer->PushMessage("data", "diurn_data", diurn_data_message);
+}
+
+bool KnownHistoryHandler::CheckIfDiurnDataMatchesHashes(DiurnDataMessage diurn_data,
+                                                        KnownHistoryMessage history_message,
+                                                        DiurnDataRequest diurn_data_request)
+{
+    KnownHistoryDeclaration &declaration = history_message.history_declaration;
+    for (uint64_t i = 0; i < diurn_data_request.requested_diurns.size(); i++)
+    {
+        uint64_t diurn_index = diurn_data_request.requested_diurns[i];
+        if (diurn_data.diurns[i].GetHash160() != declaration.diurn_hashes[diurn_index])
+            return false;
+        if (diurn_data.message_data[i].GetHash160() != declaration.diurn_message_data_hashes[diurn_index])
+            return false;
+    }
+    return true;
+}
+
+bool KnownHistoryHandler::ValidateDataInDiurnDataMessage(DiurnDataMessage diurn_data_message)
+{
+    MemoryDataStore msgdata_, creditdata_, keydata_;
+    CreditSystem credit_system_(msgdata_, creditdata_);
+
+    credit_system_.StoreDataFromDiurnDataMessage(diurn_data_message);
+
+    credit_system_.SetMiningParameters(data_message_handler->calendar_handler->number_of_megabytes_for_mining,
+                                       credit_system->initial_difficulty,
+                                       credit_system->initial_diurnal_difficulty);
+
+
+    for (uint32_t i = 0; i < diurn_data_message.diurns.size(); i++)
+    {
+        CreditMessageHandler credit_message_handler(msgdata_, creditdata_, keydata_);
+        credit_message_handler.SetCreditSystem(&credit_system_);
+
+        BitChain spent_chain = diurn_data_message.initial_spent_chains[i];
+        credit_message_handler.SetSpentChain(spent_chain);
+
+        Diurn diurn = diurn_data_message.diurns[i];
+        Calendar calendar_(diurn.credits_in_diurn[0].GetHash160(), &credit_system_);
+        TrimLastDiurnFromCalendar(calendar_, &credit_system_);
+        credit_message_handler.SetCalendar(calendar_);
+
+        for (auto mined_credit_message : diurn.credits_in_diurn)
+            credit_message_handler.Handle(mined_credit_message, NULL);
+
+        if (calendar_.LastMinedCreditMessageHash() != diurn.credits_in_diurn.back().GetHash160())
+            return false;
+    }
+    return true;
+}
+
+void KnownHistoryHandler::TrimLastDiurnFromCalendar(Calendar& calendar, CreditSystem *credit_system)
+{
+    if (calendar.current_diurn.Size() == 1 and calendar.calends.size() > 0)
+        calendar.RemoveLast(credit_system);
+
+    while (calendar.current_diurn.Size() > 1)
+        calendar.RemoveLast(credit_system);
 }

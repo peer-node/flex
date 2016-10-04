@@ -1,6 +1,8 @@
 #include "EnclosedMessageData.h"
 #include "test/teleport_tests/node/CreditSystem.h"
 
+#include "log.h"
+#define LOG_CATEGORY "EnclosedMessageData.cpp"
 
 void EnclosedMessageData::PopulateMinedCreditMessagesAndEnclosedData(uint160 msg_hash, CreditSystem *credit_system)
 {

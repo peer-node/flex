@@ -5,19 +5,22 @@
 #include <src/crypto/uint256.h>
 #include <src/base/serialize.h>
 #include "define.h"
+#include "KnownHistoryMessage.h"
 
 
 class DiurnDataRequest
 {
 public:
-    uint160 msg_hash;
+    uint160 msg_hash{0};
+    uint160 known_history_message_hash{0};
     std::vector<uint32_t> requested_diurns;
 
     DiurnDataRequest() { }
 
-    DiurnDataRequest(uint160 msg_hash_, std::vector<uint32_t> requested_diurns_)
+    DiurnDataRequest(KnownHistoryMessage history_message, std::vector<uint32_t> requested_diurns_)
     {
-        msg_hash = msg_hash_;
+        known_history_message_hash = history_message.GetHash160();
+        msg_hash = history_message.mined_credit_message_hash;
         requested_diurns = requested_diurns_;
     }
 
@@ -26,8 +29,11 @@ public:
     IMPLEMENT_SERIALIZE
     (
         READWRITE(msg_hash);
+        READWRITE(known_history_message_hash);
         READWRITE(requested_diurns);
     )
+
+    JSON(msg_hash, known_history_message_hash, requested_diurns);
 
     DEPENDENCIES();
 

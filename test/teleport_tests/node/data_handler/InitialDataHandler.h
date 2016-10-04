@@ -9,6 +9,7 @@ class InitialDataHandler
 public:
     MemoryDataStore &msgdata, &creditdata;
     DataMessageHandler *data_message_handler;
+    CreditSystem *credit_system;
 
     uint160 initial_difficulty{INITIAL_DIFFICULTY};
     uint160 initial_diurnal_difficulty{INITIAL_DIURNAL_DIFFICULTY};
@@ -16,14 +17,14 @@ public:
     InitialDataHandler(DataMessageHandler *data_message_handler_) :
         data_message_handler(data_message_handler_),
         msgdata(data_message_handler_->msgdata),
-        creditdata(data_message_handler_->creditdata)
+        creditdata(data_message_handler_->creditdata),
+        credit_system(data_message_handler_->credit_system)
     { }
 
 
     void HandleInitialDataRequestMessage(InitialDataRequestMessage request);
 
     void HandleInitialDataMessage(InitialDataMessage request);
-
 
     bool CheckSpentChainInInitialDataMessage(InitialDataMessage message);
 

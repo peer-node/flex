@@ -24,6 +24,7 @@ DiurnMessageData Calend::GenerateDiurnMessageData(CreditSystem *credit_system)
 {
     DiurnMessageData message_data;
 
+    message_data.message_data.PopulateMinedCreditMessagesAndEnclosedData(GetHash160(), credit_system);
 
     return message_data;
 }

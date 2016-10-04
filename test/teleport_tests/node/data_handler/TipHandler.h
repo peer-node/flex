@@ -9,11 +9,13 @@ class TipHandler
 public:
     MemoryDataStore &msgdata, &creditdata;
     DataMessageHandler *data_message_handler;
+    CreditSystem *credit_system;
 
     TipHandler(DataMessageHandler *data_message_handler_) :
         data_message_handler(data_message_handler_),
         msgdata(data_message_handler_->msgdata),
-        creditdata(data_message_handler_->creditdata)
+        creditdata(data_message_handler_->creditdata),
+        credit_system(data_message_handler_->credit_system)
     { }
 
     void HandleTipRequestMessage(TipRequestMessage request);
