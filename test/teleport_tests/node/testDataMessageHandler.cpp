@@ -1,20 +1,13 @@
 #include "gmock/gmock.h"
 
 #include "TestPeer.h"
-#include "test/teleport_tests/node/data_handler/DataMessageHandler.h"
-#include "test/teleport_tests/node/data_handler/CalendarFailureMessage.h"
+#include "data_handler/DataMessageHandler.h"
 #include "CreditMessageHandler.h"
 #include "TeleportNetworkNode.h"
-#include "test/teleport_tests/node/data_handler/KnownHistoryMessage.h"
-#include "test/teleport_tests/node/data_handler/KnownHistoryDeclaration.h"
-#include "test/teleport_tests/node/data_handler/DiurnMessageData.h"
-#include "test/teleport_tests/node/data_handler/TipHandler.h"
-#include "test/teleport_tests/node/data_handler/CalendarHandler.h"
-#include "test/teleport_tests/node/data_handler/InitialDataHandler.h"
-#include "test/teleport_tests/node/data_handler/KnownHistoryHandler.h"
-#include "test/teleport_tests/node/data_handler/KnownHistoryRequest.h"
-#include "test/teleport_tests/node/data_handler/DiurnDataRequest.h"
-#include "test/teleport_tests/node/data_handler/DiurnDataMessage.h"
+#include "data_handler/TipHandler.h"
+#include "data_handler/CalendarHandler.h"
+#include "data_handler/InitialDataHandler.h"
+#include "data_handler/KnownHistoryHandler.h"
 
 using namespace ::testing;
 using namespace std;
@@ -582,25 +575,40 @@ TEST_F(ADataMessageHandlerWithACalendarWithCalends, RespondsToDiurnDataRequestsW
     ASSERT_TRUE(peer.HasReceived("data", "diurn_data", diurn_data_message));
 }
 
-TEST_F(ADataMessageHandlerWithACalendarWithCalends, RejectsDiurnDataMessagesThatWerentRequested)
+class ADataMessageHandlerWithADiurnDataMessage : public ADataMessageHandlerWithACalendarWithCalends
 {
-    uint160 msg_hash = calendar->LastMinedCreditMessageHash();
-    KnownHistoryRequest request(msg_hash);
-    KnownHistoryMessage known_history(request, credit_system);
-    DiurnDataMessage diurn_data_message(DiurnDataRequest(known_history, std::vector<uint32_t>{1, 2}), credit_system);
+public:
+    KnownHistoryRequest request;
+    KnownHistoryMessage known_history;
+    DiurnDataRequest diurn_data_request;
+    DiurnDataMessage diurn_data_message;
+
+    virtual void SetUp()
+    {
+        ADataMessageHandlerWithACalendarWithCalends::SetUp();
+
+        uint160 msg_hash = calendar->LastMinedCreditMessageHash();
+        request = KnownHistoryRequest(msg_hash);
+        known_history = KnownHistoryMessage(request, credit_system);
+        diurn_data_request = DiurnDataRequest(known_history, std::vector<uint32_t>{1, 2});
+        diurn_data_message = DiurnDataMessage(diurn_data_request, credit_system);
+    }
+
+    virtual void TearDown()
+    {
+        ADataMessageHandlerWithACalendarWithCalends::TearDown();
+    }
+};
+
+TEST_F(ADataMessageHandlerWithADiurnDataMessage, RejectsDiurnDataMessagesThatWerentRequested)
+{
     data_message_handler->HandleMessage(GetDataStream(diurn_data_message), &peer);
     bool rejected = msgdata[diurn_data_message.GetHash160()]["rejected"];
     ASSERT_THAT(rejected, Eq(true));
 }
 
-TEST_F(ADataMessageHandlerWithACalendarWithCalends, DetectsIfTheContentsOfADiurnDataMessageMatchTheKnownHistoryMessage)
+TEST_F(ADataMessageHandlerWithADiurnDataMessage, DetectsIfTheContentsOfTheDiurnDataMessageMatchTheKnownHistoryMessage)
 {
-    uint160 msg_hash = calendar->LastMinedCreditMessageHash();
-    KnownHistoryRequest request(msg_hash);
-    KnownHistoryMessage known_history(request, credit_system);
-    DiurnDataRequest diurn_data_request(known_history, std::vector<uint32_t>{1, 2});
-    DiurnDataMessage diurn_data_message(diurn_data_request, credit_system);
-
     bool ok = data_message_handler->known_history_handler->CheckIfDiurnDataMatchesHashes(diurn_data_message,
                                                                                          known_history,
                                                                                          diurn_data_request);
@@ -608,15 +616,9 @@ TEST_F(ADataMessageHandlerWithACalendarWithCalends, DetectsIfTheContentsOfADiurn
     ASSERT_THAT(ok, Eq(true));
 }
 
-TEST_F(ADataMessageHandlerWithACalendarWithCalends,
-       DetectsIfTheContentsOfADiurnDataMessageDontMatchTheKnownHistoryMessage)
+TEST_F(ADataMessageHandlerWithADiurnDataMessage,
+       DetectsIfTheContentsOfTheDiurnDataMessageDontMatchTheKnownHistoryMessage)
 {
-    uint160 msg_hash = calendar->LastMinedCreditMessageHash();
-    KnownHistoryRequest request(msg_hash);
-    KnownHistoryMessage known_history(request, credit_system);
-    DiurnDataRequest diurn_data_request(known_history, std::vector<uint32_t>{1, 2});
-    DiurnDataMessage diurn_data_message(diurn_data_request, credit_system);
-
     known_history.history_declaration.diurn_hashes[1] += 1;
 
     bool ok = data_message_handler->known_history_handler->CheckIfDiurnDataMatchesHashes(diurn_data_message,
@@ -626,15 +628,106 @@ TEST_F(ADataMessageHandlerWithACalendarWithCalends,
     ASSERT_THAT(ok, Eq(false));
 }
 
-TEST_F(ADataMessageHandlerWithACalendarWithCalends, DetectsIfTheDataInADiurnDataMessageIsValid)
+TEST_F(ADataMessageHandlerWithADiurnDataMessage, DetectsIfTheDataInTheDiurnDataMessageIsValid)
 {
-    uint160 msg_hash = calendar->LastMinedCreditMessageHash();
-    KnownHistoryRequest request(msg_hash);
-    KnownHistoryMessage known_history(request, credit_system);
-    DiurnDataRequest diurn_data_request(known_history, std::vector<uint32_t>{1, 2});
-    DiurnDataMessage diurn_data_message(diurn_data_request, credit_system);
-
     bool ok = data_message_handler->known_history_handler->ValidateDataInDiurnDataMessage(diurn_data_message);
-
     ASSERT_THAT(ok, Eq(true));
+}
+
+TEST_F(ADataMessageHandlerWithADiurnDataMessage, DetectsIfTheNumbersOfEntriesInTheDiurnDataMessageDontMatch)
+{
+    auto original_data_message = diurn_data_message;
+    auto bad_diurn_data_message = diurn_data_message;
+    bad_diurn_data_message.initial_spent_chains.pop_back();
+    bool ok = data_message_handler->known_history_handler->ValidateDataInDiurnDataMessage(bad_diurn_data_message);
+    ASSERT_THAT(ok, Eq(false));
+
+    bad_diurn_data_message = diurn_data_message;
+    bad_diurn_data_message.diurns.pop_back();
+    ok = data_message_handler->known_history_handler->ValidateDataInDiurnDataMessage(bad_diurn_data_message);
+    ASSERT_THAT(ok, Eq(false));
+
+    bad_diurn_data_message = diurn_data_message;
+    bad_diurn_data_message.message_data.pop_back();
+    ok = data_message_handler->known_history_handler->ValidateDataInDiurnDataMessage(bad_diurn_data_message);
+    ASSERT_THAT(ok, Eq(false));
+}
+
+
+class ADataMessageHandlerWithADiurnMessageWithABadProofOfWork : public ADataMessageHandlerWithACalendarWithCalends
+{
+public:
+    KnownHistoryRequest request;
+    KnownHistoryMessage known_history;
+    DiurnDataRequest diurn_data_request;
+    DiurnDataMessage diurn_data_message;
+    uint32_t bad_batch_number, bad_diurn_number;
+    uint160 bad_mined_credit_message_hash;
+
+    virtual void SetUp()
+    {
+        ADataMessageHandlerWithSomeBatches::SetUp();
+
+        BuildACalendarWithABadProofOfWorkInADiurn();
+
+        uint160 msg_hash = calendar->LastMinedCreditMessageHash();
+        request = KnownHistoryRequest(msg_hash);
+        known_history = KnownHistoryMessage(request, credit_system);
+        diurn_data_request = DiurnDataRequest(known_history, std::vector<uint32_t>{bad_diurn_number});
+        diurn_data_message = DiurnDataMessage(diurn_data_request, credit_system);
+    }
+
+    void AddTipToCalendar(MinedCreditMessage tip)
+    {
+        credit_system->AcceptMinedCreditMessageAsValidByRecordingTotalWorkAndParent(tip);
+        credit_system->StoreMinedCreditMessage(tip);
+        creditdata[tip.GetHash160()]["passed_verification"] = true;
+        creditdata[tip.GetHash160()]["is_calend"] = true;
+
+        calendar->AddToTip(tip, credit_system);
+    }
+
+    void IntroduceAFailureIntoTheProofOfWorkAtTheTip()
+    {
+        auto tip = calendar->LastMinedCreditMessage();
+
+        calendar->RemoveLast(credit_system);
+        credit_system->RemoveFromMainChainAndDeleteRecordOfTotalWork(tip);
+
+        tip.proof_of_work.proof.link_lengths[2] += 1;
+
+        AddTipToCalendar(tip);
+
+        bad_diurn_number = (uint32_t) calendar->calends.size();
+        bad_batch_number = tip.mined_credit.network_state.batch_number;
+        bad_mined_credit_message_hash = tip.GetHash160();
+    }
+
+    void BuildACalendarWithABadProofOfWorkInADiurn()
+    {
+        for (uint32_t i = 0; calendar->calends.size() < 2 and calendar->current_diurn.Size() < 2; i++)
+            AddABatch();
+
+        IntroduceAFailureIntoTheProofOfWorkAtTheTip();
+
+        while (calendar->calends.size() < 5)
+            AddABatch();
+    }
+
+    virtual void TearDown()
+    {
+        ADataMessageHandlerWithACalendarWithCalends::TearDown();
+    }
+};
+
+TEST_F(ADataMessageHandlerWithADiurnMessageWithABadProofOfWork, FindsTheFailureInTheProofOfWork)
+{
+    uint64_t scrutiny_time = 10 * 1000000; // microseconds
+    DiurnFailureDetails failure_details;
+    KnownHistoryHandler *history_handler = data_message_handler->known_history_handler;
+    bool ok = history_handler->CheckForFailuresInProofsOfWorkInDiurn(diurn_data_message.diurns[0],
+                                                                     failure_details,
+                                                                     scrutiny_time);
+    ASSERT_THAT(ok, Eq(false));
+    ASSERT_THAT(failure_details.mined_credit_message_hash, Eq(bad_mined_credit_message_hash));
 }

@@ -139,6 +139,9 @@ bool KnownHistoryHandler::ValidateDataInDiurnDataMessage(DiurnDataMessage diurn_
     MemoryDataStore msgdata_, creditdata_, keydata_;
     CreditSystem credit_system_(msgdata_, creditdata_);
 
+    if (not CheckSizesInDiurnDataMessage(diurn_data_message))
+        return false;
+
     credit_system_.StoreDataFromDiurnDataMessage(diurn_data_message);
 
     credit_system_.SetMiningParameters(data_message_handler->calendar_handler->number_of_megabytes_for_mining,
@@ -175,4 +178,31 @@ void KnownHistoryHandler::TrimLastDiurnFromCalendar(Calendar& calendar, CreditSy
 
     while (calendar.current_diurn.Size() > 1)
         calendar.RemoveLast(credit_system);
+}
+
+bool KnownHistoryHandler::CheckSizesInDiurnDataMessage(DiurnDataMessage diurn_data_message)
+{
+    uint64_t number_of_diurns = diurn_data_message.diurns.size();
+    return diurn_data_message.message_data.size() == number_of_diurns and
+           diurn_data_message.initial_spent_chains.size() == number_of_diurns;
+}
+
+bool KnownHistoryHandler::CheckForFailuresInProofsOfWorkInDiurn(Diurn &diurn, DiurnFailureDetails &failure_details,
+                                                                uint64_t scrutiny_time)
+{
+    uint64_t start_time = GetTimeMicros();
+
+    while (GetTimeMicros() - start_time < scrutiny_time)
+    {
+        auto random_msg = diurn.credits_in_diurn[GetRand(diurn.Size())];
+        auto check = random_msg.proof_of_work.proof.SpotCheck();
+        if (not check.valid)
+        {
+            failure_details.check = check;
+            failure_details.mined_credit_message_hash = random_msg.GetHash160();
+            failure_details.calend_hash = diurn.credits_in_diurn.front().GetHash160();
+            return false;
+        }
+    }
+    return true;
 }

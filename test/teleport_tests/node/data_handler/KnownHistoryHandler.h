@@ -2,6 +2,7 @@
 #ifndef TELEPORT_KNOWNHISTORYHANDLER_H
 #define TELEPORT_KNOWNHISTORYHANDLER_H
 
+#include <test/teleport_tests/node/DiurnFailureDetails.h>
 #include "DataMessageHandler.h"
 
 
@@ -38,14 +39,16 @@ public:
     void RecordDiurnsWhichPeerKnows(KnownHistoryMessage known_history);
 
     bool CheckIfDiurnDataMatchesHashes(DiurnDataMessage diurn_data, KnownHistoryMessage history_message,
-                                           KnownHistoryRequest request);
-
-    bool CheckIfDiurnDataMatchesHashes(DiurnDataMessage diurn_data, KnownHistoryMessage history_message,
                                        DiurnDataRequest diurn_data_request);
 
     bool ValidateDataInDiurnDataMessage(DiurnDataMessage diurn_data_message);
 
     void TrimLastDiurnFromCalendar(Calendar &calendar, CreditSystem *credit_system);
+
+    bool CheckSizesInDiurnDataMessage(DiurnDataMessage diurn_data_message);
+
+    bool CheckForFailuresInProofsOfWorkInDiurn(Diurn &diurn, DiurnFailureDetails &failure_details,
+                                               uint64_t scrutiny_time);
 };
 
 

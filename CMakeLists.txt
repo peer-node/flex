@@ -926,7 +926,7 @@ add_executable(runNodeTests
         test/teleport_tests/node/data_handler/DiurnDataRequest.cpp
         test/teleport_tests/node/data_handler/DiurnDataRequest.h
         test/teleport_tests/node/data_handler/DiurnDataMessage.cpp
-        test/teleport_tests/node/data_handler/DiurnDataMessage.h)
+        test/teleport_tests/node/data_handler/DiurnDataMessage.h test/teleport_tests/node/DiurnFailureDetails.cpp test/teleport_tests/node/DiurnFailureDetails.h)
 
 add_executable(flexnetd
         test/teleport_tests/teleport_data/TestData.h
