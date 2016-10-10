@@ -868,10 +868,10 @@ set(NODE_TEST_FILES
         test/teleport_tests/node/NetworkState.h
         test/teleport_tests/node/data_handler/DataMessageHandler.cpp
         test/teleport_tests/node/data_handler/DataMessageHandler.h
-        test/teleport_tests/node/TipRequestMessage.cpp
-        test/teleport_tests/node/TipRequestMessage.h
-        test/teleport_tests/node/TipMessage.cpp
-        test/teleport_tests/node/TipMessage.h
+        test/teleport_tests/node/data_handler/TipRequestMessage.cpp
+        test/teleport_tests/node/data_handler/TipRequestMessage.h
+        test/teleport_tests/node/data_handler/TipMessage.cpp
+        test/teleport_tests/node/data_handler/TipMessage.h
         test/teleport_tests/node/data_handler/CalendarRequestMessage.cpp
         test/teleport_tests/node/data_handler/CalendarRequestMessage.h
         test/teleport_tests/node/data_handler/CalendarMessage.cpp
@@ -926,7 +926,7 @@ add_executable(runNodeTests
         test/teleport_tests/node/data_handler/DiurnDataRequest.cpp
         test/teleport_tests/node/data_handler/DiurnDataRequest.h
         test/teleport_tests/node/data_handler/DiurnDataMessage.cpp
-        test/teleport_tests/node/data_handler/DiurnDataMessage.h test/teleport_tests/node/DiurnFailureDetails.cpp test/teleport_tests/node/DiurnFailureDetails.h)
+        test/teleport_tests/node/data_handler/DiurnDataMessage.h test/teleport_tests/node/data_handler/DiurnFailureDetails.cpp test/teleport_tests/node/data_handler/DiurnFailureDetails.h test/teleport_tests/node/data_handler/DiurnFailureMessage.cpp test/teleport_tests/node/data_handler/DiurnFailureMessage.h)
 
 add_executable(flexnetd
         test/teleport_tests/teleport_data/TestData.h

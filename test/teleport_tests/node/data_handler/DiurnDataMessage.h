@@ -13,6 +13,7 @@ class DiurnDataMessage
 public:
     uint160 request_hash;
     std::vector<Diurn> diurns;
+    std::vector<Calend> calends;
     std::vector<BitChain> initial_spent_chains;
     std::vector<DiurnMessageData> message_data;
 
@@ -28,10 +29,12 @@ public:
     (
         READWRITE(request_hash);
         READWRITE(diurns);
+        READWRITE(calends);
+        READWRITE(initial_spent_chains);
         READWRITE(message_data);
     )
 
-    JSON(request_hash, diurns, message_data);
+    JSON(request_hash, diurns, calends, initial_spent_chains, message_data);
 
     DEPENDENCIES();
 

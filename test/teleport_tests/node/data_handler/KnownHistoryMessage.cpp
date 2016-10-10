@@ -1,6 +1,8 @@
 #include "KnownHistoryMessage.h"
 #include "../CreditSystem.h"
 
+#include "log.h"
+#define LOG_CATEGORY "KnownHistoryMessage.cpp"
 
 KnownHistoryMessage::KnownHistoryMessage(KnownHistoryRequest request, CreditSystem *credit_system)
 {

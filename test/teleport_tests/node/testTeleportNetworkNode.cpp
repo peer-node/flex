@@ -266,7 +266,7 @@ public:
     }
 };
 
-void WaitForCalendarSwitch(TeleportNetworkNode &node, uint160 last_tip = 0, uint32_t millisecond_timeout=10000)
+void WaitForCalendarSwitch(TeleportNetworkNode &node, uint160 last_tip = 0, uint32_t millisecond_timeout=15000)
 {
     if (last_tip == 0)
         last_tip = node.calendar.LastMinedCreditMessageHash();

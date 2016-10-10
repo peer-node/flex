@@ -4,10 +4,10 @@
 
 #include <test/teleport_tests/teleport_data/MemoryDataStore.h>
 #include "test/teleport_tests/node/MessageHandlerWithOrphanage.h"
-#include "test/teleport_tests/node/TipRequestMessage.h"
+#include "TipRequestMessage.h"
 #include "test/teleport_tests/node/CreditSystem.h"
 #include "test/teleport_tests/node/Calendar.h"
-#include "test/teleport_tests/node/TipMessage.h"
+#include "TipMessage.h"
 #include "CalendarRequestMessage.h"
 #include "CalendarMessage.h"
 #include "CalendarFailureDetails.h"
@@ -17,8 +17,10 @@
 #include "KnownHistoryMessage.h"
 #include "DiurnDataRequest.h"
 #include "DiurnDataMessage.h"
+#include "DiurnFailureMessage.h"
 
-
+#include "log.h"
+#define LOG_CATEGORY "DataMessageHandler.h"
 
 #define CALENDAR_SCRUTINY_TIME 5000000 // microseconds
 
@@ -66,6 +68,7 @@ public:
         HANDLESTREAM(KnownHistoryMessage);
         HANDLESTREAM(DiurnDataRequest);
         HANDLESTREAM(DiurnDataMessage);
+        HANDLESTREAM(DiurnFailureMessage);
     }
 
     void HandleMessage(uint160 message_hash)
@@ -81,6 +84,7 @@ public:
         HANDLEHASH(KnownHistoryRequest);
         HANDLEHASH(DiurnDataRequest);
         HANDLEHASH(DiurnDataMessage);
+        HANDLEHASH(DiurnFailureMessage);
     }
 
     HANDLECLASS(TipRequestMessage);
@@ -94,6 +98,7 @@ public:
     HANDLECLASS(KnownHistoryRequest);
     HANDLECLASS(DiurnDataRequest);
     HANDLECLASS(DiurnDataMessage);
+    HANDLECLASS(DiurnFailureMessage);
 
     void HandleTipRequestMessage(TipRequestMessage request);
 
@@ -116,6 +121,8 @@ public:
     void HandleDiurnDataRequest(DiurnDataRequest request);
 
     void HandleDiurnDataMessage(DiurnDataMessage diurn_data_message);
+
+    void HandleDiurnFailureMessage(DiurnFailureMessage diurn_failure_message);
 };
 
 void LoadHashesIntoDataStoreFromMessageTypesAndContents(MemoryDataStore &hashdata,

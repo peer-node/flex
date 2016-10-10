@@ -109,3 +109,8 @@ void DataMessageHandler::HandleDiurnDataMessage(DiurnDataMessage diurn_data_mess
 {
     known_history_handler->HandleDiurnDataMessage(diurn_data_message);
 }
+
+void DataMessageHandler::HandleDiurnFailureMessage(DiurnFailureMessage diurn_failure_message)
+{
+    known_history_handler->HandleDiurnFailureMessage(diurn_failure_message);
+}

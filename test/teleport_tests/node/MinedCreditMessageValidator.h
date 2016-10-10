@@ -53,6 +53,8 @@ public:
     MinedCreditMessage GetPreviousMinedCreditMessage(MinedCreditMessage &msg);
 
     bool CheckPreviousCalendHash(MinedCreditMessage msg);
+
+    bool DataRequiredToCalculateDiurnalDifficultyIsPresent(MinedCreditMessage &msg);
 };
 
 

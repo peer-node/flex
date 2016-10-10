@@ -125,9 +125,20 @@ bool MinedCreditMessageValidator::ValidateNetworkState(MinedCreditMessage &msg)
     if (DataRequiredToCalculateDifficultyIsPresent(msg))
     {
         ok &= CheckDifficulty(msg);
+        if (not CheckDifficulty(msg))
+        {
+            log_ << "bad difficulty\n";
+        }
     }
 
-    ok &= CheckDiurnalDifficulty(msg);
+    if (DataRequiredToCalculateDiurnalDifficultyIsPresent(msg))
+    {
+        ok &= CheckDiurnalDifficulty(msg);
+        if (not CheckDiurnalDifficulty(msg))
+        {
+            log_ << "bad diurnal difficulty\n";
+        }
+    }
 
     ok &= CheckBatchOffset(msg);
 
@@ -167,6 +178,23 @@ bool MinedCreditMessageValidator::DataRequiredToCalculateDifficultyIsPresent(Min
     uint160 preceding_hash = previous_msg.mined_credit.network_state.previous_mined_credit_message_hash;
 
     return credit_system->msgdata[preceding_hash].HasProperty("msg");
+}
+
+bool MinedCreditMessageValidator::DataRequiredToCalculateDiurnalDifficultyIsPresent(MinedCreditMessage &msg)
+{
+    uint160 previous_msg_hash = msg.mined_credit.network_state.previous_mined_credit_message_hash;
+    uint160 previous_calend_hash = msg.mined_credit.network_state.previous_calend_hash;
+
+    if (previous_msg_hash != previous_calend_hash)
+        return credit_system->msgdata[previous_msg_hash].HasProperty("msg");
+
+    if (previous_calend_hash == 0)
+        return true;
+
+    MinedCreditMessage previous_msg = credit_system->msgdata[previous_msg_hash]["msg"];
+    uint160 preceding_calend_hash = previous_msg.mined_credit.network_state.previous_calend_hash;
+    MinedCreditMessage preceding_calend = credit_system->msgdata[preceding_calend_hash]["msg"];
+    return credit_system->msgdata[preceding_calend_hash].HasProperty("msg");
 }
 
 bool MinedCreditMessageValidator::DataRequiredToCalculateDiurnalBlockRootIsPresent(MinedCreditMessage &msg)

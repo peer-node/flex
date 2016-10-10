@@ -64,7 +64,7 @@ public:
         return stream1.str() == stream2.str();
     }
 
-    uint160 DiurnRoot()
+    uint160 DiurnRoot() const
     {
         return SymmetricCombine(previous_diurn_root, diurnal_block_root);
     }

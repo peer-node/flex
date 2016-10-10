@@ -7,6 +7,7 @@
 #include <test/teleport_tests/mined_credits/MinedCredit.h>
 #include <src/credits/SignedTransaction.h>
 #include <src/credits/CreditBatch.h>
+#include <test/teleport_tests/node/data_handler/DiurnFailureMessage.h>
 #include "MinedCreditMessage.h"
 #include "Calend.h"
 #include "test/teleport_tests/node/data_handler/CalendarFailureMessage.h"
@@ -186,6 +187,14 @@ public:
     void MarkMinedCreditMessageAsHandled(uint160 msg_hash);
 
     bool MinedCreditMessageWasHandled(uint160 msg_hash);
+
+    void RemoveMinedCreditMessagesDownstreamOfDiurnFailure(DiurnFailureMessage diurn_failure_message);
+
+    void RemoveMinedCreditMessageAndThoseDownstreamFromRecordOfTotalWork(MinedCreditMessage msg);
+
+    void SwitchMainChainToTipWithTheMostWork();
+
+    uint160 CurrentTipOfMainChain();
 };
 
 

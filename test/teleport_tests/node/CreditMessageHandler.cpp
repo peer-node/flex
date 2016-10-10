@@ -107,7 +107,10 @@ bool CreditMessageHandler::MinedCreditMessagePassesVerification(MinedCreditMessa
         return RejectMessage(msg_hash);
 
     if (not mined_credit_message_validator.ValidateNetworkState(msg))
+    {
+        log_ << "bad network state\n";
         return RejectMessage(msg_hash);
+    }
 
     if (not credit_system->QuickCheckProofOfWorkInMinedCreditMessage(msg))
     {

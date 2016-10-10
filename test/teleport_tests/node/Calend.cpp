@@ -11,8 +11,7 @@ Calend::Calend(MinedCreditMessage msg)
 
 uint160 Calend::DiurnRoot() const
 {
-    return SymmetricCombine(mined_credit.network_state.previous_diurn_root,
-                            mined_credit.network_state.diurnal_block_root);
+    return mined_credit.network_state.DiurnRoot();
 }
 
 uint160 Calend::TotalCreditWork()

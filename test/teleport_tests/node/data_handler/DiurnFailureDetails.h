@@ -8,22 +8,22 @@
 class DiurnFailureDetails
 {
 public:
-    uint160 calend_hash{0};
+    uint160 preceding_calend_hash{0};
     uint160 mined_credit_message_hash{0};
+    uint160 succeeding_calend_hash{0};
     TwistWorkCheck check;
 
     DiurnFailureDetails() { }
 
     IMPLEMENT_SERIALIZE
     (
-        READWRITE(calend_hash);
+        READWRITE(preceding_calend_hash);
         READWRITE(mined_credit_message_hash);
+        READWRITE(succeeding_calend_hash);
         READWRITE(check);
     )
 
-    JSON(calend_hash, mined_credit_message_hash, check);
-
-    DEPENDENCIES(calend_hash, mined_credit_message_hash);
+    JSON(preceding_calend_hash, mined_credit_message_hash, succeeding_calend_hash, check);
 };
 
 

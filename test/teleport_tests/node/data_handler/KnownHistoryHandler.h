@@ -2,9 +2,11 @@
 #ifndef TELEPORT_KNOWNHISTORYHANDLER_H
 #define TELEPORT_KNOWNHISTORYHANDLER_H
 
-#include <test/teleport_tests/node/DiurnFailureDetails.h>
+#include <test/teleport_tests/node/data_handler/DiurnFailureDetails.h>
 #include "DataMessageHandler.h"
+#include "DiurnFailureMessage.h"
 
+#define DIURN_SCRUTINY_TIME 20000000
 
 class KnownHistoryHandler
 {
@@ -12,6 +14,7 @@ public:
     MemoryDataStore &msgdata, &creditdata;
     DataMessageHandler *data_message_handler;
     CreditSystem *credit_system;
+    uint64_t diurn_scrutiny_time{DIURN_SCRUTINY_TIME};
 
     KnownHistoryHandler(DataMessageHandler *data_message_handler_) :
         data_message_handler(data_message_handler_),
@@ -47,8 +50,33 @@ public:
 
     bool CheckSizesInDiurnDataMessage(DiurnDataMessage diurn_data_message);
 
-    bool CheckForFailuresInProofsOfWorkInDiurn(Diurn &diurn, DiurnFailureDetails &failure_details,
-                                               uint64_t scrutiny_time);
+    bool CheckHashesInDiurnDataMessage(DiurnDataMessage diurn_data_message);
+
+    void ScrutinizeDiurnsAndSendAFailureMessageIfABadBatchIsFound(DiurnDataMessage diurn_data_message);
+
+    bool CheckForFailuresInProofsOfWorkInDiurnDataMessage(DiurnDataMessage &diurn_data_message,
+                                                          DiurnFailureDetails &failure_details, uint64_t &bad_diurn,
+                                                          uint64_t scrutiny_time);
+
+    void HandleDiurnFailureMessage(DiurnFailureMessage diurn_failure_message);
+
+    bool CheckForFailuresInMinedCreditMessageFromDiurnDataMessage(DiurnDataMessage &diurn_data_message,
+                                                                  DiurnFailureDetails &failure_details, uint64_t &bad_diurn,
+                                                                  uint64_t diurn_to_check, uint64_t msg_to_check);
+
+    bool CheckForFailuresInProofsOfWorkInDiurnDataMessage(DiurnDataMessage &diurn_data_message,
+                                                          DiurnFailureDetails &failure_details, uint32_t &bad_diurn,
+                                                          uint64_t scrutiny_time);
+
+    bool CheckForFailuresInMinedCreditMessageFromDiurnDataMessage(DiurnDataMessage &diurn_data_message,
+                                                                  DiurnFailureDetails &failure_details, uint32_t &bad_diurn,
+                                                                  uint32_t diurn_to_check, uint32_t msg_to_check);
+
+    bool ValidateDiurnFailureMessage(DiurnFailureMessage diurn_failure_message);
+
+    bool CheckHashesInDiurn(Diurn &diurn);
+
+    bool VerifyFailureInDiurnFailureMessage(DiurnFailureMessage diurn_failure_message);
 };
 
 
