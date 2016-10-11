@@ -1,6 +1,6 @@
 #include "gmock/gmock.h"
 #include "CreditSystem.h"
-#include "Diurn.h"
+#include "test/teleport_tests/node/calendar/Diurn.h"
 
 using namespace ::testing;
 using namespace std;

@@ -2,7 +2,7 @@
 #define TELEPORT_TRANSACTIONVALIDATOR_H
 
 
-#include "CreditSystem.h"
+#include "test/teleport_tests/node/CreditSystem.h"
 
 class TransactionValidator
 {

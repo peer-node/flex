@@ -3,7 +3,7 @@
 
 
 #include <src/crypto/hashtrees.h>
-#include "MinedCreditMessage.h"
+#include "test/teleport_tests/node/credit_handler/MinedCreditMessage.h"
 
 class Diurn
 {

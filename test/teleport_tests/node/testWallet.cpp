@@ -2,8 +2,8 @@
 #include <test/teleport_tests/mining/MiningHashTree.h>
 #include <src/credits/CreditBatch.h>
 #include "gmock/gmock.h"
-#include "Wallet.h"
-#include "MinedCreditMessage.h"
+#include "test/teleport_tests/node/wallet/Wallet.h"
+#include "test/teleport_tests/node/credit_handler/MinedCreditMessage.h"
 #include "CreditSystem.h"
 
 using namespace ::testing;

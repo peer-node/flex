@@ -5,8 +5,8 @@
 #include "gmock/gmock.h"
 
 
-#include "TeleportLocalServer.h"
-#include "MinedCreditMessage.h"
+#include "test/teleport_tests/node/server/TeleportLocalServer.h"
+#include "test/teleport_tests/node/credit_handler/MinedCreditMessage.h"
 
 
 using namespace ::testing;

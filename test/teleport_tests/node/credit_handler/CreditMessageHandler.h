@@ -3,14 +3,14 @@
 
 
 #include <test/teleport_tests/teleport_data/MemoryDataStore.h>
-#include "MessageHandlerWithOrphanage.h"
-#include "CreditSystem.h"
-#include "TeleportConfig.h"
+#include "test/teleport_tests/node/MessageHandlerWithOrphanage.h"
+#include "test/teleport_tests/node/CreditSystem.h"
+#include "test/teleport_tests/node/config/TeleportConfig.h"
 #include "MinedCreditMessageValidator.h"
-#include "Calendar.h"
+#include "test/teleport_tests/node/calendar/Calendar.h"
 #include "TransactionValidator.h"
 #include "BadBatchMessage.h"
-#include "Wallet.h"
+#include "test/teleport_tests/node/wallet/Wallet.h"
 #include "ListExpansionMessage.h"
 
 class TeleportNetworkNode;

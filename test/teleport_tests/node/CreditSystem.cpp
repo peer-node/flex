@@ -8,8 +8,8 @@
 #include <test/teleport_tests/node/data_handler/DiurnDataMessage.h>
 #include <test/teleport_tests/node/data_handler/DiurnFailureMessage.h>
 #include "CreditSystem.h"
-#include "MinedCreditMessage.h"
-#include "Calend.h"
+#include "test/teleport_tests/node/credit_handler/MinedCreditMessage.h"
+#include "test/teleport_tests/node/calendar/Calend.h"
 #include "test/teleport_tests/node/data_handler/CalendarMessage.h"
 
 #include "log.h"

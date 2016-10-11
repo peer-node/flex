@@ -4,7 +4,7 @@
 
 #include "CalendarRequestMessage.h"
 #include "test/teleport_tests/node/CreditSystem.h"
-#include "test/teleport_tests/node/Calendar.h"
+#include "test/teleport_tests/node/calendar/Calendar.h"
 
 #include "log.h"
 #define LOG_CATEGORY "CalendarMessage.h"

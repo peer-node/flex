@@ -1,7 +1,7 @@
 #include <src/base/util_time.h>
 #include "gmock/gmock.h"
 #include "CreditSystem.h"
-#include "MinedCreditMessageValidator.h"
+#include "test/teleport_tests/node/credit_handler/MinedCreditMessageValidator.h"
 
 using namespace ::testing;
 using namespace std;

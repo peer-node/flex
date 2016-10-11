@@ -1,5 +1,5 @@
 #include "gmock/gmock.h"
-#include "TeleportConfig.h"
+#include "test/teleport_tests/node/config/TeleportConfig.h"
 
 using namespace ::testing;
 using namespace std;

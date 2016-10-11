@@ -3,7 +3,7 @@
 
 #include <jsonrpccpp/server.h>
 #include <jsonrpccpp/server/connectors/httpserver.h>
-#include <test/teleport_tests/node/HttpAuthServer.h>
+#include <test/teleport_tests/node/server/HttpAuthServer.h>
 
 #include "TeleportMiner.h"
 #include "NetworkSpecificProofOfWork.h"

@@ -77,6 +77,8 @@ public:
     bool CheckHashesInDiurn(Diurn &diurn);
 
     bool VerifyFailureInDiurnFailureMessage(DiurnFailureMessage diurn_failure_message);
+
+    bool ValidateDataInDiurn(Diurn &diurn, CreditSystem *credit_system_, BitChain &initial_spent_chain);
 };
 
 

@@ -2,7 +2,7 @@
 #define TELEPORT_CALENDARREQUESTMESSAGE_H
 
 
-#include "test/teleport_tests/node/MinedCreditMessage.h"
+#include "test/teleport_tests/node/credit_handler/MinedCreditMessage.h"
 
 class CalendarRequestMessage
 {

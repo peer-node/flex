@@ -1,5 +1,4 @@
 #include <test/teleport_tests/mined_credits/EncodedNetworkState.h>
-#include "NetworkState.h"
 #include <src/crypto/point.h>
 #include <test/teleport_tests/teleport_data/MemoryDataStore.h>
 #include <src/credits/SignedTransaction.h>
@@ -7,7 +6,7 @@
 #include <test/teleport_tests/mining/MiningHashTree.h>
 #include "gmock/gmock.h"
 #include "CreditSystem.h"
-#include "Diurn.h"
+#include "test/teleport_tests/node/calendar/Diurn.h"
 
 using namespace ::testing;
 using namespace std;

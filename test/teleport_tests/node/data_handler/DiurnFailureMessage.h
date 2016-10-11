@@ -4,7 +4,7 @@
 
 #include <src/define.h>
 #include "DiurnFailureDetails.h"
-#include "test/teleport_tests/node/Diurn.h"
+#include "test/teleport_tests/node/calendar/Diurn.h"
 
 class DiurnFailureMessage
 {

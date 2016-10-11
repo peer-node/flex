@@ -3,9 +3,9 @@
 
 
 #include <test/teleport_tests/main_tests/Communicator.h>
-#include "Calendar.h"
-#include "Wallet.h"
-#include "CreditMessageHandler.h"
+#include "test/teleport_tests/node/calendar/Calendar.h"
+#include "test/teleport_tests/node/wallet/Wallet.h"
+#include "test/teleport_tests/node/credit_handler/CreditMessageHandler.h"
 #include "test/teleport_tests/node/data_handler/DataMessageHandler.h"
 
 

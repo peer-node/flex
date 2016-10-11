@@ -5,7 +5,7 @@
 #include <src/crypto/uint256.h>
 #include <src/base/serialize.h>
 #include "TipRequestMessage.h"
-#include "test/teleport_tests/node/Calendar.h"
+#include "test/teleport_tests/node/calendar/Calendar.h"
 
 class TipMessage
 {

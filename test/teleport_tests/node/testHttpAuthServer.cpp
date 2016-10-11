@@ -1,5 +1,5 @@
 #include "gmock/gmock.h"
-#include "HttpAuthServer.h"
+#include "test/teleport_tests/node/server/HttpAuthServer.h"
 #include <jsonrpccpp/client.h>
 #include "../mining/server_key.h"
 

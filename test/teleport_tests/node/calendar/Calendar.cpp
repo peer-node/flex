@@ -1,5 +1,5 @@
 #include "Calendar.h"
-#include "CreditSystem.h"
+#include "test/teleport_tests/node/CreditSystem.h"
 #include <boost/range/adaptor/reversed.hpp>
 
 #include "log.h"

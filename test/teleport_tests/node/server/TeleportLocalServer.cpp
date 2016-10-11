@@ -4,7 +4,7 @@
 #include <jsonrpccpp/client.h>
 #include <test/teleport_tests/mining/NetworkSpecificProofOfWork.h>
 #include "TeleportLocalServer.h"
-#include "TeleportNetworkNode.h"
+#include "test/teleport_tests/node/TeleportNetworkNode.h"
 
 using jsonrpc::HttpAuthServer;
 

@@ -6,7 +6,7 @@
 #include "test/teleport_tests/node/MessageHandlerWithOrphanage.h"
 #include "TipRequestMessage.h"
 #include "test/teleport_tests/node/CreditSystem.h"
-#include "test/teleport_tests/node/Calendar.h"
+#include "test/teleport_tests/node/calendar/Calendar.h"
 #include "TipMessage.h"
 #include "CalendarRequestMessage.h"
 #include "CalendarMessage.h"

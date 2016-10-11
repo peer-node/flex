@@ -6,7 +6,7 @@
 #include "ListExpansionRequestMessage.h"
 
 #include "log.h"
-#include "TeleportNetworkNode.h"
+#include "test/teleport_tests/node/TeleportNetworkNode.h"
 
 #define LOG_CATEGORY "CreditMessageHandler.cpp"
 

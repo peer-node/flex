@@ -697,29 +697,29 @@ set(NEW_CREDITS_FILES
         test/teleport_tests/node/CreditSystem.cpp
         test/teleport_tests/node/CreditSystem.h
         test/teleport_tests/node/testMinedCreditMessageValidator.cpp
-        test/teleport_tests/node/MinedCreditMessageValidator.cpp
-        test/teleport_tests/node/MinedCreditMessageValidator.h
+        test/teleport_tests/node/credit_handler/MinedCreditMessageValidator.cpp
+        test/teleport_tests/node/credit_handler/MinedCreditMessageValidator.h
         test/teleport_tests/node/testTransactionValidator.cpp
-        test/teleport_tests/node/TransactionValidator.cpp
-        test/teleport_tests/node/TransactionValidator.h
+        test/teleport_tests/node/credit_handler/TransactionValidator.cpp
+        test/teleport_tests/node/credit_handler/TransactionValidator.h
         test/teleport_tests/node/testDiurn.cpp
-        test/teleport_tests/node/Diurn.cpp
-        test/teleport_tests/node/Diurn.h
+        test/teleport_tests/node/calendar/Diurn.cpp
+        test/teleport_tests/node/calendar/Diurn.h
         test/teleport_tests/node/testCalendar.cpp
-        test/teleport_tests/node/Calendar.cpp
-        test/teleport_tests/node/Calendar.h
+        test/teleport_tests/node/calendar/Calendar.cpp
+        test/teleport_tests/node/calendar/Calendar.h
         test/teleport_tests/node/testCalend.cpp
-        test/teleport_tests/node/Calend.cpp
-        test/teleport_tests/node/Calend.h
+        test/teleport_tests/node/calendar/Calend.cpp
+        test/teleport_tests/node/calendar/Calend.h
         test/teleport_tests/node/testCreditMessageHandler.cpp
-        test/teleport_tests/node/CreditMessageHandler.cpp
-        test/teleport_tests/node/CreditMessageHandler.h
+        test/teleport_tests/node/credit_handler/CreditMessageHandler.cpp
+        test/teleport_tests/node/credit_handler/CreditMessageHandler.h
         test/teleport_tests/node/TestPeer.h
-        test/teleport_tests/node/BadBatchMessage.cpp
-        test/teleport_tests/node/BadBatchMessage.h
+        test/teleport_tests/node/credit_handler/BadBatchMessage.cpp
+        test/teleport_tests/node/credit_handler/BadBatchMessage.h
         test/teleport_tests/node/testWallet.cpp
-        test/teleport_tests/node/Wallet.cpp
-        test/teleport_tests/node/Wallet.h
+        test/teleport_tests/node/wallet/Wallet.cpp
+        test/teleport_tests/node/wallet/Wallet.h
         test/teleport_tests/node/testShortHashList.cpp
         test/teleport_tests/node/testTeleportNetworkNode.cpp
         test/teleport_tests/node/TeleportNetworkNode.cpp
@@ -782,8 +782,8 @@ add_executable(runMiningTests
         test/teleport_tests/mining/NetworkSpecificProofOfWork.cpp
         test/teleport_tests/mining/NetworkSpecificProofOfWork.h
         test/teleport_tests/mining/server_key.h
-        test/teleport_tests/node/HttpAuthServer.cpp
-        test/teleport_tests/node/HttpAuthServer.h)
+        test/teleport_tests/node/server/HttpAuthServer.cpp
+        test/teleport_tests/node/server/HttpAuthServer.h)
 
 add_executable(miner_cli
         ${WORK_FILES}
@@ -798,8 +798,8 @@ add_executable(miner_cli
         test/teleport_tests/mining/NetworkSpecificProofOfWork.cpp
         test/teleport_tests/mining/NetworkSpecificProofOfWork.h
         test/teleport_tests/mining/miner_cli.cpp
-        test/teleport_tests/node/HttpAuthServer.cpp
-        test/teleport_tests/node/HttpAuthServer.h)
+        test/teleport_tests/node/server/HttpAuthServer.cpp
+        test/teleport_tests/node/server/HttpAuthServer.h)
 
 add_executable(runSchedulerTests
         test/teleport_tests/teleport_data/TestData.h
@@ -833,19 +833,19 @@ set(NODE_TEST_FILES
         ${MESSAGING_FILES}
         src/teleportnode/main.cpp
         src/teleportnode/main.h
-        test/teleport_tests/node/TeleportRPCServer.cpp
-        test/teleport_tests/node/TeleportRPCServer.h
-        test/teleport_tests/node/TeleportConfig.cpp
-        test/teleport_tests/node/TeleportConfig.h
-        test/teleport_tests/node/TeleportConfigDefaults.h
-        test/teleport_tests/node/ConfigParser.cpp
-        test/teleport_tests/node/ConfigParser.h
-        test/teleport_tests/node/TeleportLocalServer.cpp
-        test/teleport_tests/node/TeleportLocalServer.h
+        test/teleport_tests/node/server/TeleportRPCServer.cpp
+        test/teleport_tests/node/server/TeleportRPCServer.h
+        test/teleport_tests/node/config/TeleportConfig.cpp
+        test/teleport_tests/node/config/TeleportConfig.h
+        test/teleport_tests/node/config/TeleportConfigDefaults.h
+        test/teleport_tests/node/config/ConfigParser.cpp
+        test/teleport_tests/node/config/ConfigParser.h
+        test/teleport_tests/node/server/TeleportLocalServer.cpp
+        test/teleport_tests/node/server/TeleportLocalServer.h
         src/base/base58.cpp
         src/base/base58.h
-        test/teleport_tests/node/HttpAuthServer.cpp
-        test/teleport_tests/node/HttpAuthServer.h
+        test/teleport_tests/node/server/HttpAuthServer.cpp
+        test/teleport_tests/node/server/HttpAuthServer.h
         test/teleport_tests/mining/TeleportMiner.cpp
         test/teleport_tests/mining/TeleportMiner.h
         test/teleport_tests/mining/NetworkMiningInfo.cpp
@@ -856,16 +856,10 @@ set(NODE_TEST_FILES
         test/teleport_tests/mining/MiningRPCServer.h
         test/teleport_tests/mining/NetworkSpecificProofOfWork.cpp
         test/teleport_tests/mining/NetworkSpecificProofOfWork.h
-        test/teleport_tests/node/MinedCreditMessage.cpp
-        test/teleport_tests/node/MinedCreditMessage.h
+        test/teleport_tests/node/credit_handler/MinedCreditMessage.cpp
+        test/teleport_tests/node/credit_handler/MinedCreditMessage.h
         test/teleport_tests/node/MessageHandlerWithOrphanage.cpp
         test/teleport_tests/node/MessageHandlerWithOrphanage.h
-        test/teleport_tests/node/MinedCreditConstructor.cpp
-        test/teleport_tests/node/MinedCreditConstructor.h
-        test/teleport_tests/node/NetworkStateConstructor.cpp
-        test/teleport_tests/node/NetworkStateConstructor.h
-        test/teleport_tests/node/NetworkState.cpp
-        test/teleport_tests/node/NetworkState.h
         test/teleport_tests/node/data_handler/DataMessageHandler.cpp
         test/teleport_tests/node/data_handler/DataMessageHandler.h
         test/teleport_tests/node/data_handler/TipRequestMessage.cpp
@@ -885,10 +879,10 @@ set(NODE_TEST_FILES
         test/teleport_tests/node/data_handler/InitialDataMessage.cpp
         test/teleport_tests/node/data_handler/InitialDataMessage.h
         test/teleport_tests/node/TestPeerWithNetworkNode.h
-        test/teleport_tests/node/ListExpansionRequestMessage.cpp
-        test/teleport_tests/node/ListExpansionRequestMessage.h
-        test/teleport_tests/node/ListExpansionMessage.cpp
-        test/teleport_tests/node/ListExpansionMessage.h)
+        test/teleport_tests/node/credit_handler/ListExpansionRequestMessage.cpp
+        test/teleport_tests/node/credit_handler/ListExpansionRequestMessage.h
+        test/teleport_tests/node/credit_handler/ListExpansionMessage.cpp
+        test/teleport_tests/node/credit_handler/ListExpansionMessage.h)
 
 add_executable(runNodeTests
         ${NODE_TEST_FILES}
@@ -900,8 +894,6 @@ add_executable(runNodeTests
         test/teleport_tests/node/testTeleportLocalServer.cpp
         test/teleport_tests/node/testMinedCreditMessage.cpp
         test/teleport_tests/node/testMessageHandlerWithOrphanage.cpp
-        test/teleport_tests/node/testNetworkStateConstructor.cpp
-        test/teleport_tests/node/testMinedCreditConstructor.cpp
         test/teleport_tests/node/testHttpAuthServer.cpp
         test/teleport_tests/node/testTeleportConfig.cpp
         test/teleport_tests/node/testTeleportRPCServer.cpp

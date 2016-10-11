@@ -2,7 +2,7 @@
 #define TELEPORT_MINEDCREDITMESSAGEVALIDATOR_H
 
 
-#include "CreditSystem.h"
+#include "test/teleport_tests/node/CreditSystem.h"
 
 class MinedCreditMessageValidator
 {

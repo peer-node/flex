@@ -8,10 +8,10 @@
 #include <src/credits/SignedTransaction.h>
 #include <src/credits/CreditBatch.h>
 #include <test/teleport_tests/node/data_handler/DiurnFailureMessage.h>
-#include "MinedCreditMessage.h"
-#include "Calend.h"
+#include "test/teleport_tests/node/credit_handler/MinedCreditMessage.h"
+#include "test/teleport_tests/node/calendar/Calend.h"
 #include "test/teleport_tests/node/data_handler/CalendarFailureMessage.h"
-#include "Calendar.h"
+#include "test/teleport_tests/node/calendar/Calendar.h"
 
 
 #define TARGET_BATCH_INTERVAL 60000000ULL // one minute

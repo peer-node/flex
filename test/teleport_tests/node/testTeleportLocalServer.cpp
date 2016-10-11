@@ -7,7 +7,7 @@
 #include <fstream>
 #include <test/teleport_tests/mining/MiningRPCServer.h>
 #include "gmock/gmock.h"
-#include "TeleportLocalServer.h"
+#include "test/teleport_tests/node/server/TeleportLocalServer.h"
 #include "TeleportNetworkNode.h"
 
 

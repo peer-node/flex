@@ -2,7 +2,7 @@
 #ifndef TELEPORT_LISTEXPANSIONMESSAGE_H
 #define TELEPORT_LISTEXPANSIONMESSAGE_H
 
-#include "CreditSystem.h"
+#include "test/teleport_tests/node/CreditSystem.h"
 #include "ListExpansionRequestMessage.h"
 
 #include "log.h"

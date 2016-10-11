@@ -2,8 +2,8 @@
 #include <src/base/util_time.h>
 #include <boost/filesystem.hpp>
 #include "gmock/gmock.h"
-#include "TeleportConfig.h"
-#include "ConfigParser.h"
+#include "test/teleport_tests/node/config/TeleportConfig.h"
+#include "test/teleport_tests/node/config/ConfigParser.h"
 
 using namespace ::testing;
 using namespace std;

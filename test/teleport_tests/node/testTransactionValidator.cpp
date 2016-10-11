@@ -1,6 +1,6 @@
 #include "gmock/gmock.h"
 #include "CreditSystem.h"
-#include "TransactionValidator.h"
+#include "test/teleport_tests/node/credit_handler/TransactionValidator.h"
 
 using namespace ::testing;
 using namespace std;

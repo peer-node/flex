@@ -1,9 +1,9 @@
 #ifndef TELEPORT_TELEPORTLOCALSERVER_H
 #define TELEPORT_TELEPORTLOCALSERVER_H
 
-#include "ConfigParser.h"
+#include "test/teleport_tests/node/config/ConfigParser.h"
 #include "TeleportRPCServer.h"
-#include "TeleportNetworkNode.h"
+#include "test/teleport_tests/node/TeleportNetworkNode.h"
 #include <jsonrpccpp/server/connectors/httpserver.h>
 #include <test/teleport_tests/mining/NetworkSpecificProofOfWork.h>
 

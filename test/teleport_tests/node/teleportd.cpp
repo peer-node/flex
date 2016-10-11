@@ -1,6 +1,6 @@
 #include <boost/program_options/detail/config_file.hpp>
 
-#include "TeleportLocalServer.h"
+#include "test/teleport_tests/node/server/TeleportLocalServer.h"
 
 
 using namespace std;

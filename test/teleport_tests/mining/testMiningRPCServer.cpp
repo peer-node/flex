@@ -13,7 +13,7 @@
 #undef private
 
 #include <fstream>
-#include <test/teleport_tests/node/HttpAuthServer.h>
+#include <test/teleport_tests/node/server/HttpAuthServer.h>
 
 using namespace ::testing;
 using namespace jsonrpc;

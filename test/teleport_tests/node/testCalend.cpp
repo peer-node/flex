@@ -1,6 +1,6 @@
 #include "gmock/gmock.h"
 #include "CreditSystem.h"
-#include "Calend.h"
+#include "test/teleport_tests/node/calendar/Calend.h"
 
 using namespace ::testing;
 using namespace std;

@@ -1,9 +1,9 @@
 #include <src/credits/creditsign.h>
 #include <test/teleport_tests/mining/MiningHashTree.h>
 #include "gmock/gmock.h"
-#include "CreditMessageHandler.h"
+#include "test/teleport_tests/node/credit_handler/CreditMessageHandler.h"
 #include "TestPeer.h"
-#include "ListExpansionRequestMessage.h"
+#include "test/teleport_tests/node/credit_handler/ListExpansionRequestMessage.h"
 
 using namespace ::testing;
 using namespace std;

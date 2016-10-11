@@ -1,6 +1,6 @@
 #include <test/teleport_tests/node/data_handler/DiurnDataRequest.h>
 #include <test/teleport_tests/node/data_handler/CalendarHandler.h>
-#include <test/teleport_tests/node/CreditMessageHandler.h>
+#include <test/teleport_tests/node/credit_handler/CreditMessageHandler.h>
 #include <test/teleport_tests/node/TeleportNetworkNode.h>
 #include "KnownHistoryHandler.h"
 
@@ -65,7 +65,6 @@ void KnownHistoryHandler::RecordDiurnsWhichPeerKnows(KnownHistoryMessage known_h
         }
     }
 }
-
 
 void KnownHistoryHandler::HandleKnownHistoryRequest(KnownHistoryRequest request)
 {
@@ -171,7 +170,7 @@ bool KnownHistoryHandler::CheckIfDiurnDataMatchesHashes(DiurnDataMessage diurn_d
 
 bool KnownHistoryHandler::ValidateDataInDiurnDataMessage(DiurnDataMessage diurn_data_message)
 {
-    MemoryDataStore msgdata_, creditdata_, keydata_;
+    MemoryDataStore msgdata_, creditdata_;
     CreditSystem credit_system_(msgdata_, creditdata_);
 
     if (not CheckSizesInDiurnDataMessage(diurn_data_message))
@@ -195,31 +194,37 @@ bool KnownHistoryHandler::ValidateDataInDiurnDataMessage(DiurnDataMessage diurn_
                                        credit_system->initial_difficulty,
                                        credit_system->initial_diurnal_difficulty);
 
-
     for (uint32_t i = 0; i < diurn_data_message.diurns.size(); i++)
     {
-        CreditMessageHandler credit_message_handler(msgdata_, creditdata_, keydata_);
-        credit_message_handler.SetCreditSystem(&credit_system_);
-        credit_message_handler.do_spot_checks = false;
-
-        BitChain spent_chain = diurn_data_message.initial_spent_chains[i];
-        credit_message_handler.SetSpentChain(spent_chain);
-
-        Diurn diurn = diurn_data_message.diurns[i];
-        Calendar calendar_(diurn.credits_in_diurn[0].GetHash160(), &credit_system_);
-        TrimLastDiurnFromCalendar(calendar_, &credit_system_);
-        credit_message_handler.SetCalendar(calendar_);
-
-        for (auto mined_credit_message : diurn.credits_in_diurn)
-            credit_message_handler.Handle(mined_credit_message, NULL);
-
-        if (calendar_.LastMinedCreditMessageHash() != diurn.credits_in_diurn.back().GetHash160())
-        {
-            log_ << "failed at " << i << "\n";
-            log_ << "diurn size is " << diurn.Size() << "\n";
-            log_ << "calendar diurn size is " << calendar_.current_diurn.Size() << "\n";
+        if (not ValidateDataInDiurn(diurn_data_message.diurns[i], &credit_system_,
+                                    diurn_data_message.initial_spent_chains[i]))
             return false;
-        }
+    }
+    return true;
+}
+
+bool KnownHistoryHandler::ValidateDataInDiurn(Diurn &diurn, CreditSystem *credit_system_, BitChain &initial_spent_chain)
+{
+    MemoryDataStore keydata_;
+    CreditMessageHandler credit_message_handler(credit_system_->msgdata, credit_system_->creditdata, keydata_);
+    credit_message_handler.SetCreditSystem(credit_system_);
+    credit_message_handler.do_spot_checks = false;
+
+    credit_message_handler.SetSpentChain(initial_spent_chain);
+
+    Calendar calendar_(diurn.credits_in_diurn[0].GetHash160(), credit_system_);
+    TrimLastDiurnFromCalendar(calendar_, credit_system_);
+    credit_message_handler.SetCalendar(calendar_);
+
+    for (auto mined_credit_message : diurn.credits_in_diurn)
+        credit_message_handler.Handle(mined_credit_message, NULL);
+
+    if (calendar_.LastMinedCreditMessageHash() != diurn.credits_in_diurn.back().GetHash160())
+    {
+        log_ << "failed at " << calendar_.LastMinedCreditMessageHash() << "\n";
+        log_ << "diurn size is " << diurn.Size() << "\n";
+        log_ << "calendar diurn size is " << calendar_.current_diurn.Size() << "\n";
+        return false;
     }
     return true;
 }

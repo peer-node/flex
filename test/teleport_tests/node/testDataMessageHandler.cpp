@@ -2,7 +2,7 @@
 
 #include "TestPeer.h"
 #include "data_handler/DataMessageHandler.h"
-#include "CreditMessageHandler.h"
+#include "test/teleport_tests/node/credit_handler/CreditMessageHandler.h"
 #include "TeleportNetworkNode.h"
 #include "data_handler/TipHandler.h"
 #include "data_handler/CalendarHandler.h"

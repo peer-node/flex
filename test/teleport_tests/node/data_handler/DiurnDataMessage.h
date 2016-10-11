@@ -3,7 +3,7 @@
 #define TELEPORT_DIURNDATAMESSAGE_H
 
 
-#include "test/teleport_tests/node/Diurn.h"
+#include "test/teleport_tests/node/calendar/Diurn.h"
 #include "DiurnDataRequest.h"
 #include "DiurnMessageData.h"
 #include "test/teleport_tests/node/CreditSystem.h"

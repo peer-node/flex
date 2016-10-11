@@ -8,8 +8,8 @@
 #include <src/credits/creditsign.h>
 #include <src/crypto/key.h>
 #include <src/base/BitcoinAddress.h>
-#include "MinedCreditMessage.h"
-#include "CreditSystem.h"
+#include "test/teleport_tests/node/credit_handler/MinedCreditMessage.h"
+#include "test/teleport_tests/node/CreditSystem.h"
 
 class Wallet
 {
