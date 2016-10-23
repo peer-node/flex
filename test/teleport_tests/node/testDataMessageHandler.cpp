@@ -8,7 +8,6 @@
 #include "data_handler/CalendarHandler.h"
 #include "data_handler/InitialDataHandler.h"
 #include "data_handler/KnownHistoryHandler.h"
-#include "test/teleport_tests/node/data_handler/DiurnFailureMessage.h"
 
 using namespace ::testing;
 using namespace std;
