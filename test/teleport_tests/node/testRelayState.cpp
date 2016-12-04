@@ -1,3 +1,4 @@
+#include <src/vector_tools.h>
 #include "gmock/gmock.h"
 #include "RelayState.h"
 #include "Relay.h"
@@ -28,11 +29,9 @@ TEST_F(ARelayState, InitiallyHasNoRelays)
 
 TEST_F(ARelayState, AddsARelayWhenProcessingARelayJoinMessage)
 {
-    relay_join_message.public_key = Point(SECP256K1, 2);
     relay_state.ProcessRelayJoinMessage(relay_join_message);
     vector<Relay> relays = relay_state.relays;
     ASSERT_THAT(relays.size(), Eq(1));
-    ASSERT_THAT(relays[0].public_key, Eq(relay_join_message.public_key));
 }
 
 TEST_F(ARelayState, AssignsARelayNumberToAJoiningRelay)
@@ -50,25 +49,92 @@ TEST_F(ARelayState, PopulatesTheRelaysJoinMessageHash)
     ASSERT_THAT(join_message_hash, Eq(relay_join_message.GetHash160()));
 }
 
-class ARelayStateWithFiveRelays : public ARelayState
+class ARelayStateWith37Relays : public ARelayState
 {
 public:
     virtual void SetUp()
     {
-        for (uint32_t i = 1; i <= 5; i ++)
+        for (uint32_t i = 1; i <= 37; i ++)
         {
             RelayJoinMessage join_message;
-            join_message.public_key = Point(SECP256K1, i);
             relay_state.ProcessRelayJoinMessage(join_message);
         }
     }
 };
 
-TEST_F(ARelayStateWithFiveRelays, AssignsQuarterKeyHoldersToARelay)
+bool VectorContainsANumberGreaterThan(std::vector<uint64_t> numbers, uint64_t given_number)
 {
-    Relay& relay = relay_state.relays[4];
-    relay_state.AssignQuarterKeyHoldersToRelay(relay);
+    for (auto number : numbers)
+        if (number > given_number)
+            return true;
+    return false;
+}
 
-    vector<uint64_t> quarter_key_holders_for_relay1 = relay.quarter_key_holders;
-    ASSERT_THAT(quarter_key_holders_for_relay1, Eq(vector<uint64_t>{6, 4, 3, 2}));
+TEST_F(ARelayStateWith37Relays, AssignsKeyPartHoldersToEachRelayWithThreeRelaysWhoJoinedLaterThanIt)
+{
+    uint160 encoding_message_hash = 1;
+    for (auto relay : relay_state.relays)
+    {
+        bool holders_assigned = relay_state.AssignKeyPartHoldersToRelay(relay, encoding_message_hash);
+        ASSERT_THAT(holders_assigned, Eq(relay.number <= 34));
+    }
+}
+
+TEST_F(ARelayStateWith37Relays, AssignsFourQuarterKeyHoldersAtLeastOneOfWhichJoinedLaterThanTheGivenRelay)
+{
+    for (auto relay : relay_state.relays)
+    {
+        if (relay_state.AssignKeyPartHoldersToRelay(relay, 1))
+        {
+            ASSERT_THAT(relay.quarter_key_holders.size(), Eq(4));
+            ASSERT_TRUE(VectorContainsANumberGreaterThan(relay.quarter_key_holders, relay.number));
+        }
+    }
+}
+
+TEST_F(ARelayStateWith37Relays, AssignsKeySixteenthHoldersAtLeastOneOfWhichJoinedLaterThanTheGivenRelay)
+{
+    for (auto relay : relay_state.relays)
+    {
+        if (relay_state.AssignKeyPartHoldersToRelay(relay, 1))
+        {
+            ASSERT_THAT(relay.first_set_of_key_sixteenth_holders.size(), Eq(16));
+            ASSERT_TRUE(VectorContainsANumberGreaterThan(relay.first_set_of_key_sixteenth_holders, relay.number));
+            ASSERT_THAT(relay.second_set_of_key_sixteenth_holders.size(), Eq(16));
+            ASSERT_TRUE(VectorContainsANumberGreaterThan(relay.second_set_of_key_sixteenth_holders, relay.number));
+        }
+    }
+}
+
+bool RelayHasDistinctKeyPartHolders(Relay &relay)
+{
+    std::set<uint64_t> key_part_holders;
+    for (auto key_holder_group : relay.KeyPartHolderGroups())
+        for (auto key_part_holder : key_holder_group)
+            if (key_part_holders.count(key_part_holder))
+                return false;
+            else
+                key_part_holders.insert(key_part_holder);
+    return true;
+}
+
+TEST_F(ARelayStateWith37Relays, Assigns36DistinctKeyPartHolders)
+{
+    for (auto relay : relay_state.relays)
+    {
+        if (relay_state.AssignKeyPartHoldersToRelay(relay, 1))
+        {
+            ASSERT_TRUE(RelayHasDistinctKeyPartHolders(relay));
+        }
+    }
+}
+
+TEST_F(ARelayStateWith37Relays, DoesntAssignARelayToHoldItsOwnKeyParts)
+{
+    for (auto relay : relay_state.relays)
+    {
+        relay_state.AssignKeyPartHoldersToRelay(relay, 1);
+        for (auto key_holder_group : relay.KeyPartHolderGroups())
+            ASSERT_THAT(VectorContainsEntry(key_holder_group, relay.number), Eq(false));
+    }
 }

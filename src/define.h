@@ -75,17 +75,17 @@ typedef std::string string_t;
         return Hash(ss.begin(), ss.end());                      \
     }                                                           \
                                                                 \
-    void Sign()                                                 \
+    void Sign(Databases data)                                   \
     {                                                           \
-        CBigNum privkey = SigningKey();                         \
+        CBigNum privkey = SigningKey(data);                     \
         signature = Signature(0, 0);                            \
         uint256 hash = GetHash();                               \
         signature = SignHashWithKey(hash, privkey, SECP256K1);  \
     }                                                           \
                                                                 \
-    bool VerifySignature()                                      \
+    bool VerifySignature(Databases data)                        \
     {                                                           \
-        Point pubkey = VerificationKey();                       \
+        Point pubkey = VerificationKey(data);                   \
         if (pubkey.IsAtInfinity())                              \
             return false;                                       \
         Signature stored_signature = signature;                 \
@@ -95,10 +95,10 @@ typedef std::string string_t;
         return VerifySignatureOfHash(signature, hash, pubkey);  \
     }                                                           \
                                                                 \
-    CBigNum SigningKey()                                        \
+    CBigNum SigningKey(Databases data)                          \
     {                                                           \
-        Point pubkey = VerificationKey();                       \
-        CBigNum privkey = keydata[pubkey]["privkey"];           \
+        Point pubkey = VerificationKey(data);                   \
+        CBigNum privkey = data.keydata[pubkey]["privkey"];      \
         return privkey;                                         \
     }
 

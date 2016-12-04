@@ -344,6 +344,11 @@ public:
         return *this;
     }
 
+    std::string json()
+    {
+        return ToString();
+    }
+
     // The "compact" format is a representation of a whole
     // number N using an unsigned 32bit number similar to a
     // floating point format.

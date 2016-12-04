@@ -1,0 +1,85 @@
+#ifndef TELEPORT_KEYDISTRIBUTIONMESSAGE_H
+#define TELEPORT_KEYDISTRIBUTIONMESSAGE_H
+
+
+#include <src/crypto/bignum.h>
+#include <src/crypto/signature.h>
+#include <test/teleport_tests/teleport_data/MemoryDataStore.h>
+#include "RelayJoinMessage.h"
+
+class Relay;
+class RelayState;
+
+class KeyDistributionMessage
+{
+public:
+    uint160 relay_join_hash;
+    uint160 encoding_message_hash;
+    uint64_t relay_number;
+    std::vector<CBigNum> key_sixteenths_encrypted_for_key_quarter_holders;
+    std::vector<CBigNum> key_sixteenths_encrypted_for_first_set_of_key_sixteenth_holders;
+    std::vector<CBigNum> key_sixteenths_encrypted_for_second_set_of_key_sixteenth_holders;
+    Signature signature;
+
+    static std::string Type() { return "key_distribution"; }
+
+    KeyDistributionMessage() { }
+
+    IMPLEMENT_SERIALIZE
+    (
+        READWRITE(relay_join_hash);
+        READWRITE(encoding_message_hash);
+        READWRITE(relay_number);
+        READWRITE(key_sixteenths_encrypted_for_key_quarter_holders);
+        READWRITE(key_sixteenths_encrypted_for_first_set_of_key_sixteenth_holders);
+        READWRITE(key_sixteenths_encrypted_for_second_set_of_key_sixteenth_holders);
+    );
+
+    JSON(relay_join_hash, encoding_message_hash, relay_number, key_sixteenths_encrypted_for_key_quarter_holders,
+         key_sixteenths_encrypted_for_first_set_of_key_sixteenth_holders,
+         key_sixteenths_encrypted_for_second_set_of_key_sixteenth_holders);
+
+    DEPENDENCIES(relay_join_hash, encoding_message_hash);
+
+    IMPLEMENT_HASH_SIGN_VERIFY();
+
+    Point VerificationKey(Databases data)
+    {
+        RelayJoinMessage join_message = data.msgdata[relay_join_hash]["relay_join"];
+        return join_message.PublicKey();
+    }
+
+    void PopulateKeySixteenthsEncryptedForKeyQuarterHolders(MemoryDataStore &keydata,
+                                                            Relay &relay,
+                                                            RelayState &relay_state);
+
+    void PopulateKeySixteenthsEncryptedForFirstSetOfKeySixteenthHolders(MemoryDataStore &keydata, Relay &relay,
+                                                                        RelayState &state);
+
+    bool KeySixteenthHolderPrivateKeyIsAvailable(uint32_t position, Databases first_or_second_set, RelayState data, Relay relay);
+
+    bool KeyQuarterHolderPrivateKeyIsAvailable(uint64_t position, Databases data, RelayState &relay_state, Relay &relay);
+
+    bool KeySixteenthHolderPrivateKeyIsAvailable(uint32_t position, uint32_t first_or_second_set, Databases data,
+                                                 RelayState &relay_state, Relay &relay);
+
+    bool
+    TryToRecoverKeySixteenthEncryptedToQuarterKeyHolder(uint32_t position, Databases data, RelayState &state, Relay &relay);
+
+    bool KeySixteenthForKeyQuarterHolderIsCorrectlyEncrypted(uint64_t position, Databases data, RelayState &relay_state,
+                                                             Relay &relay);
+
+    bool
+    TryToRecoverKeySixteenthEncryptedToKeySixteenthHolder(uint32_t position, uint32_t first_or_second_set, Databases data,
+                                                          RelayState &state, Relay &relay);
+
+    bool
+    KeySixteenthForKeySixteenthHolderIsCorrectlyEncrypted(uint64_t position, uint32_t first_or_second_set, Databases data,
+                                                          RelayState &relay_state, Relay &relay);
+
+    bool AuditKeySixteenthEncryptedInRelayJoinMessage(RelayJoinMessage &join_message, uint64_t position,
+                                                      MemoryDataStore &keydata);
+};
+
+
+#endif //TELEPORT_KEYDISTRIBUTIONMESSAGE_H

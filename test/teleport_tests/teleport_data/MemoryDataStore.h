@@ -119,4 +119,15 @@ public:
 };
 
 
+class Databases
+{
+public:
+    MemoryDataStore &msgdata, &creditdata, &keydata;
+
+    Databases(MemoryDataStore &msgdata, MemoryDataStore &creditdata, MemoryDataStore &keydata):
+            msgdata(msgdata), creditdata(creditdata), keydata(keydata)
+    { }
+};
+
+
 #endif //TELEPORT_MOCKDATASTORE_H
