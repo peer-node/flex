@@ -7,7 +7,6 @@
 #include "database/memdb.h"
 #include "teleportnode/wallet.h"
 #include "net/net.h"
-#include "database/data.h"
 #include "credits/creditutil.h"
 #include "teleportnode/calendar.h"
 #include "relays/relays.h"

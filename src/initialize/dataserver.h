@@ -2,7 +2,6 @@
 #define TELEPORT_DATASERVER
 
 #include "net/net.h"
-#include "database/data.h"
 #include "teleportnode/main.h"
 #include "credits/creditutil.h"
 #include "teleportnode/calendar.h"

@@ -1,7 +1,7 @@
 #ifndef TELEPORT_SIGNEDTRANSACTION_H
 #define TELEPORT_SIGNEDTRANSACTION_H
 
-#include "../../test/teleport_tests/teleport_data/TestData.h"
+#include "../../test/teleport_tests/teleport_data/MemoryDataStore.h"
 #include "crypto/uint256.h"
 #include "vector_tools.h"
 #include "crypto/signature.h"

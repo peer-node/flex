@@ -11,7 +11,6 @@
 #include "crypto/shorthash.h"
 #include <boost/foreach.hpp>
 #include "mining/work.h"
-#include "database/data.h"
 #include "Credit.h"
 #include "CreditInBatch.h"
 #include "CreditBatch.h"

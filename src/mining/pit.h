@@ -11,7 +11,6 @@
 #include "net/net.h"
 #include "mining/work.h"
 #include <boost/foreach.hpp>
-#include "database/data.h"
 #include "credits/creditsign.h"
 #include "relays/relaystate.h"
 

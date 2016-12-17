@@ -75,7 +75,7 @@ typedef std::string string_t;
         return Hash(ss.begin(), ss.end());                      \
     }                                                           \
                                                                 \
-    void Sign(Databases data)                                   \
+    void Sign(Data data)                                        \
     {                                                           \
         CBigNum privkey = SigningKey(data);                     \
         signature = Signature(0, 0);                            \
@@ -83,7 +83,7 @@ typedef std::string string_t;
         signature = SignHashWithKey(hash, privkey, SECP256K1);  \
     }                                                           \
                                                                 \
-    bool VerifySignature(Databases data)                        \
+    bool VerifySignature(Data data)                             \
     {                                                           \
         Point pubkey = VerificationKey(data);                   \
         if (pubkey.IsAtInfinity())                              \
@@ -95,7 +95,7 @@ typedef std::string string_t;
         return VerifySignatureOfHash(signature, hash, pubkey);  \
     }                                                           \
                                                                 \
-    CBigNum SigningKey(Databases data)                          \
+    CBigNum SigningKey(Data data)                               \
     {                                                           \
         Point pubkey = VerificationKey(data);                   \
         CBigNum privkey = data.keydata[pubkey]["privkey"];      \
@@ -171,6 +171,8 @@ typedef std::string string_t;
     {                                                                       \
         return "\"" + s + "\"";                                             \
     }                                                                       \
+    std::string _json_format(bool n)                                        \
+    { std::stringstream ss; ss << n; return ss.str(); }                     \
     std::string _json_format(uint8_t n)                                     \
     { std::stringstream ss; ss << n; return ss.str(); }                     \
     std::string _json_format(int64_t n)                                     \

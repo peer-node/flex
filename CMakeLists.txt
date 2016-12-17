@@ -87,8 +87,7 @@ set(SOURCE_FILES
     src/crypto/uint256.h
     src/currencies/currencies.cpp
     src/currencies/currencies.h
-    src/database/data.h
-    src/database/datastore.h
+        src/database/datastore.h
     src/database/keystore.cpp
     src/database/keystore.h
     src/database/memdb.h
@@ -892,7 +891,6 @@ add_executable(runNodeTests
         test/teleport_tests/main_tests/testNetwork.cpp
         test/teleport_tests/node/testConfigParser.cpp
         test/teleport_tests/node/testTeleportLocalServer.cpp
-        test/teleport_tests/node/testMinedCreditMessage.cpp
         test/teleport_tests/node/testMessageHandlerWithOrphanage.cpp
         test/teleport_tests/node/testHttpAuthServer.cpp
         test/teleport_tests/node/testTeleportConfig.cpp
@@ -918,7 +916,7 @@ add_executable(runNodeTests
         test/teleport_tests/node/data_handler/DiurnDataRequest.cpp
         test/teleport_tests/node/data_handler/DiurnDataRequest.h
         test/teleport_tests/node/data_handler/DiurnDataMessage.cpp
-        test/teleport_tests/node/data_handler/DiurnDataMessage.h test/teleport_tests/node/data_handler/DiurnFailureDetails.cpp test/teleport_tests/node/data_handler/DiurnFailureDetails.h test/teleport_tests/node/data_handler/DiurnFailureMessage.cpp test/teleport_tests/node/data_handler/DiurnFailureMessage.h test/teleport_tests/node/testRelayState.cpp test/teleport_tests/node/RelayState.cpp test/teleport_tests/node/RelayState.h test/teleport_tests/node/Relay.cpp test/teleport_tests/node/Relay.h test/teleport_tests/node/RelayJoinMessage.cpp test/teleport_tests/node/RelayJoinMessage.h test/teleport_tests/node/testRelay.cpp test/teleport_tests/node/testRelayMessageHandler.cpp test/teleport_tests/node/RelayMessageHandler.cpp test/teleport_tests/node/RelayMessageHandler.h test/teleport_tests/node/testRelayJoinMessage.cpp test/teleport_tests/node/KeyDistributionMessage.cpp test/teleport_tests/node/KeyDistributionMessage.h)
+        test/teleport_tests/node/data_handler/DiurnDataMessage.h test/teleport_tests/node/data_handler/DiurnFailureDetails.cpp test/teleport_tests/node/data_handler/DiurnFailureDetails.h test/teleport_tests/node/data_handler/DiurnFailureMessage.cpp test/teleport_tests/node/data_handler/DiurnFailureMessage.h test/teleport_tests/node/testRelayState.cpp test/teleport_tests/node/RelayState.cpp test/teleport_tests/node/RelayState.h test/teleport_tests/node/Relay.cpp test/teleport_tests/node/Relay.h test/teleport_tests/node/RelayJoinMessage.cpp test/teleport_tests/node/RelayJoinMessage.h test/teleport_tests/node/testRelay.cpp test/teleport_tests/node/testRelayMessageHandler.cpp test/teleport_tests/node/RelayMessageHandler.cpp test/teleport_tests/node/RelayMessageHandler.h test/teleport_tests/node/testRelayJoinMessage.cpp test/teleport_tests/node/KeyDistributionMessage.cpp test/teleport_tests/node/KeyDistributionMessage.h test/teleport_tests/node/SecretRecoveryMessage.cpp test/teleport_tests/node/SecretRecoveryMessage.h test/teleport_tests/node/Data.h test/teleport_tests/node/Obituary.cpp test/teleport_tests/node/Obituary.h test/teleport_tests/node/RelayExit.cpp test/teleport_tests/node/RelayExit.h test/teleport_tests/node/testPointPrecomputation.cpp test/teleport_tests/node/KeyDistributionComplaint.cpp test/teleport_tests/node/KeyDistributionComplaint.h test/teleport_tests/node/DurationWithoutResponse.cpp test/teleport_tests/node/DurationWithoutResponse.h test/teleport_tests/node/KeyDistributionRefutation.cpp test/teleport_tests/node/KeyDistributionRefutation.h test/teleport_tests/node/DurationWithoutResponseFromRelay.cpp test/teleport_tests/node/DurationWithoutResponseFromRelay.h)
 
 add_executable(flexnetd
         test/teleport_tests/teleport_data/TestData.h

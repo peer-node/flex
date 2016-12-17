@@ -22,9 +22,9 @@ void KeyDistributionMessage::PopulateKeySixteenthsEncryptedForKeyQuarterHolders(
                                                                                              recipient_public_keys[i]));
 }
 
-void KeyDistributionMessage::PopulateKeySixteenthsEncryptedForFirstSetOfKeySixteenthHolders(MemoryDataStore &keydata,
-                                                                                            Relay &relay,
-                                                                                            RelayState &relay_state)
+void KeyDistributionMessage::PopulateKeySixteenthsEncryptedForKeySixteenthHolders(MemoryDataStore &keydata,
+                                                                                  Relay &relay,
+                                                                                  RelayState &relay_state)
 {
     auto private_key_sixteenths = relay.PrivateKeySixteenths(keydata);
     auto first_set_of_recipient_public_keys = relay_state.GetKeySixteenthHoldersAsListOf16Recipients(relay.number, 1);
@@ -39,14 +39,14 @@ void KeyDistributionMessage::PopulateKeySixteenthsEncryptedForFirstSetOfKeySixte
     }
 }
 
-bool KeyDistributionMessage::KeyQuarterHolderPrivateKeyIsAvailable(uint64_t position, Databases data,
+bool KeyDistributionMessage::KeyQuarterHolderPrivateKeyIsAvailable(uint64_t position, Data data,
                                                                    RelayState &relay_state, Relay &relay)
 {
     auto recipient_public_keys = relay_state.GetKeyQuarterHoldersAsListOf16Recipients(relay.number);
     return data.keydata[recipient_public_keys[position]].HasProperty("privkey");
 }
 
-bool KeyDistributionMessage::KeySixteenthForKeyQuarterHolderIsCorrectlyEncrypted(uint64_t position, Databases data,
+bool KeyDistributionMessage::KeySixteenthForKeyQuarterHolderIsCorrectlyEncrypted(uint64_t position, Data data,
                                                                                  RelayState &relay_state, Relay &relay)
 {
     auto recipient_public_keys = relay_state.GetKeyQuarterHoldersAsListOf16Recipients(relay.number);
@@ -57,7 +57,7 @@ bool KeyDistributionMessage::KeySixteenthForKeyQuarterHolderIsCorrectlyEncrypted
 }
 
 bool KeyDistributionMessage::KeySixteenthHolderPrivateKeyIsAvailable(uint32_t position, uint32_t first_or_second_set,
-                                                                     Databases data, RelayState &relay_state,
+                                                                     Data data, RelayState &relay_state,
                                                                      Relay &relay)
 {
     auto recipient_pubkeys = relay_state.GetKeySixteenthHoldersAsListOf16Recipients(relay.number, first_or_second_set);
@@ -66,7 +66,7 @@ bool KeyDistributionMessage::KeySixteenthHolderPrivateKeyIsAvailable(uint32_t po
 
 bool KeyDistributionMessage::KeySixteenthForKeySixteenthHolderIsCorrectlyEncrypted(uint64_t position,
                                                                                    uint32_t first_or_second_set,
-                                                                                   Databases data, RelayState &state,
+                                                                                   Data data, RelayState &state,
                                                                                    Relay &relay)
 {
     auto recipient_pubkey = state.GetKeySixteenthHoldersAsListOf16Recipients(relay.number, first_or_second_set)[position];
@@ -82,7 +82,7 @@ bool KeyDistributionMessage::KeySixteenthForKeySixteenthHolderIsCorrectlyEncrypt
     return true;
 }
 
-bool KeyDistributionMessage::TryToRecoverKeySixteenthEncryptedToQuarterKeyHolder(uint32_t position, Databases data,
+bool KeyDistributionMessage::TryToRecoverKeySixteenthEncryptedToQuarterKeyHolder(uint32_t position, Data data,
                                                                                  RelayState &state, Relay &relay)
 {
     auto recipient_pubkey = state.GetKeyQuarterHoldersAsListOf16Recipients(relay.number)[position];
@@ -97,7 +97,7 @@ bool KeyDistributionMessage::TryToRecoverKeySixteenthEncryptedToQuarterKeyHolder
 
 bool KeyDistributionMessage::TryToRecoverKeySixteenthEncryptedToKeySixteenthHolder(uint32_t position,
                                                                                    uint32_t first_or_second_set,
-                                                                                   Databases data, RelayState &state,
+                                                                                   Data data, RelayState &state,
                                                                                    Relay &relay)
 {
     auto recipient_pubkey = state.GetKeySixteenthHoldersAsListOf16Recipients(relay.number, first_or_second_set)[position];

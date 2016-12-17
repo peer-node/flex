@@ -8,6 +8,7 @@
 #include <test/teleport_tests/node/credit_handler/MinedCreditMessage.h>
 #include <src/crypto/secp256k1point.h>
 #include "../teleport_data/MemoryDataStore.h"
+#include "Data.h"
 
 
 inline Point SumOfPoints(std::vector<Point> points)
@@ -47,7 +48,7 @@ public:
 
     IMPLEMENT_HASH_SIGN_VERIFY();
 
-    Point VerificationKey(Databases data)
+    Point VerificationKey(Data data)
     {
         MinedCreditMessage msg = data.msgdata[mined_credit_message_hash]["msg"];
         Point pubkey;

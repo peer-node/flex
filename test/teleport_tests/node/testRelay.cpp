@@ -20,7 +20,7 @@ class ARelay : public Test
 public:
     MemoryDataStore msgdata, creditdata;
     CreditSystem *credit_system;
-    Databases *data;
+    Data *data;
     Relay relay;
     RelayState state;
     MinedCreditMessage msg;
@@ -28,7 +28,7 @@ public:
     virtual void SetUp()
     {
         credit_system = new CreditSystem(msgdata, creditdata);
-        data = new Databases(msgdata, creditdata, keydata);
+        data = new Data(msgdata, creditdata, keydata);
         msg.mined_credit.keydata = Point(SECP256K1, 5).getvch();
         keydata[Point(SECP256K1, 5)]["privkey"] = CBigNum(5);
         msg.mined_credit.network_state.batch_number = 1;
@@ -62,10 +62,7 @@ TEST_F(ARelay, HasItsKeySixteenthsSetWhenTheRelayStateProcessesItsJoinMessage)
 }
 
 
-// these persistent variables are used so that the time-consuming test setup need only be executed once
-static bool is_first_setup{true};
-static RelayState persistent_relay_state;
-static std::vector<RelayJoinMessage> relay_join_messages;
+
 
 class ARelayWithKeyPartHoldersAssigned : public ARelay
 {
@@ -77,38 +74,39 @@ public:
     virtual void SetUp()
     {
         ARelay::SetUp();
-
-        if (is_first_setup)
+        static RelayState persistent_relay_state;
+        static MemoryDataStore persistent_keydata;
+        static MemoryDataStore persistent_msgdata;
+        if (persistent_relay_state.relays.size() == 0)
+        {
             DoFirstSetUp();
+            persistent_relay_state = relay_state;
+            persistent_keydata = keydata;
+            persistent_msgdata = msgdata;
+        }
         else
-            DoNonFirstSetUp();
+        {
+            relay_state = persistent_relay_state;
+            keydata = persistent_keydata;
+            msgdata = persistent_msgdata;
+            relay = &relay_state.relays[30];
+        }
     }
 
     virtual void DoFirstSetUp()
     {
         for (uint32_t i = 1; i <= 37; i ++)
-        {
-            Relay new_relay;
-            RelayJoinMessage join_message;
-            join_message = Relay().GenerateJoinMessage(keydata, i);
-            relay_state.ProcessRelayJoinMessage(join_message);
-            msgdata[join_message.GetHash160()]["relay_join"] = join_message;
-            relay_join_messages.push_back(join_message);
-        }
+            AddARelayToTheRelayState(i);
+
         relay = &relay_state.relays[30];
         relay_state.AssignKeyPartHoldersToRelay(*relay, 1);
-        persistent_relay_state = relay_state;
-        is_first_setup = false;
     }
 
-    virtual void DoNonFirstSetUp()
+    virtual void AddARelayToTheRelayState(uint64_t random_seed)
     {
-        relay_state = persistent_relay_state;
-        for (auto join_message : relay_join_messages)
-            msgdata[join_message.GetHash160()]["relay_join"] = join_message;
-
-        relay = &relay_state.relays[30];
-        relay_state.AssignKeyPartHoldersToRelay(*relay, 1);
+        RelayJoinMessage join_message = Relay().GenerateJoinMessage(keydata, random_seed);
+        relay_state.ProcessRelayJoinMessage(join_message);
+        msgdata[join_message.GetHash160()]["relay_join"] = join_message;
     }
 
     virtual void TearDown()
@@ -116,6 +114,9 @@ public:
         ARelay::TearDown();
     }
 };
+
+
+
 
 TEST_F(ARelayWithKeyPartHoldersAssigned, GeneratesAKeyDistributionMessageWithAValidSignature)
 {
@@ -129,8 +130,8 @@ TEST_F(ARelayWithKeyPartHoldersAssigned, GeneratesAKeyDistributionMessageWithAVa
 
 CBigNum EncryptSecretForRelay(CBigNum secret, RelayState &state, uint64_t relay_number)
 {
-    Relay &relay = state.GetRelayByNumber(relay_number);
-    CBigNum shared_secret = Hash(relay.public_key * secret);
+    Relay *relay = state.GetRelayByNumber(relay_number);
+    CBigNum shared_secret = Hash(relay->public_key * secret);
     return secret ^ shared_secret;
 }
 
@@ -143,8 +144,9 @@ TEST_F(ARelayWithKeyPartHoldersAssigned, GeneratesAKeyDistributionMessageWhichRe
     for (uint64_t i = 0; i < 16; i ++)
     {
         CBigNum private_key_sixteenth = keydata[relay->public_key_sixteenths[i]]["privkey"];
-        CBigNum encrypted_private_key_sixteenth = EncryptSecretForRelay(private_key_sixteenth, relay_state,
-                                                                        relay->quarter_key_holders[i / 4]);
+        CBigNum encrypted_private_key_sixteenth
+                = EncryptSecretForRelay(private_key_sixteenth, relay_state,
+                                        relay->key_quarter_holders[i / 4]);
 
         ASSERT_THAT(key_distribution_message.key_sixteenths_encrypted_for_key_quarter_holders[i],
                     Eq(encrypted_private_key_sixteenth));
@@ -273,4 +275,3 @@ TEST_F(ARelayWithKeyPartHoldersAssigned,
         ASSERT_THAT(ok, Eq(false));
     }
 }
-

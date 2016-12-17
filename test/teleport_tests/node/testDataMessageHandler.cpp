@@ -234,9 +234,26 @@ public:
     virtual void SetUp()
     {
         ADataMessageHandlerWithSomeBatches::SetUp();
-        for (uint32_t i = 0; i < 20 or calendar->calends.size() < 2; i++)
+
+        static Calendar reference_test_calendar;
+        static MemoryDataStore reference_test_msgdata;
+        static MemoryDataStore reference_test_creditdata;
+        
+        if (reference_test_calendar.calends.size() == 0)
         {
-            AddABatch();
+            for (uint32_t i = 0; i < 20 or calendar->calends.size() < 2; i++)
+            {
+                AddABatch();
+            }
+            reference_test_calendar = *calendar;
+            reference_test_msgdata = msgdata;
+            reference_test_creditdata = creditdata;
+        }
+        else
+        {
+            *calendar = reference_test_calendar;
+            msgdata = reference_test_msgdata;
+            creditdata = reference_test_creditdata;
         }
     }
 

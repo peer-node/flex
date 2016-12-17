@@ -8,7 +8,6 @@
 #include "credits/Credit.h"
 #include "credits/SignedTransaction.h"
 #include "database/memdb.h"
-#include "database/data.h"
 
 #include "log.h"
 #define LOG_CATEGORY "creditsign.h"

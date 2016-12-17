@@ -76,13 +76,13 @@ RelayJoinMessage ARelayMessageHandler::ARelayJoinMessageWithAValidSignature()
     credit_system->StoreMinedCreditMessage(msg);
     RelayJoinMessage relay_join_message;
     relay_join_message.mined_credit_message_hash = msg.GetHash160();
-    relay_join_message.Sign(Databases(msgdata, creditdata, keydata));
+    relay_join_message.Sign(Data(msgdata, creditdata, keydata));
     return relay_join_message;
 }
 
 TEST_F(ARelayMessageHandler, UsesTheMinedCreditMessagePublicKeyToCheckTheSignatureInARelayJoinMessage)
 {
     RelayJoinMessage signed_join_message = ARelayJoinMessageWithAValidSignature();
-    bool ok = signed_join_message.VerifySignature(Databases(msgdata, creditdata, keydata));
+    bool ok = signed_join_message.VerifySignature(Data(msgdata, creditdata, keydata));
     ASSERT_THAT(ok, Eq(true));
 }

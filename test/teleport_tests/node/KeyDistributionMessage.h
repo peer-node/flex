@@ -6,6 +6,7 @@
 #include <src/crypto/signature.h>
 #include <test/teleport_tests/teleport_data/MemoryDataStore.h>
 #include "RelayJoinMessage.h"
+#include "Data.h"
 
 class Relay;
 class RelayState;
@@ -43,7 +44,7 @@ public:
 
     IMPLEMENT_HASH_SIGN_VERIFY();
 
-    Point VerificationKey(Databases data)
+    Point VerificationKey(Data data)
     {
         RelayJoinMessage join_message = data.msgdata[relay_join_hash]["relay_join"];
         return join_message.PublicKey();
@@ -53,28 +54,28 @@ public:
                                                             Relay &relay,
                                                             RelayState &relay_state);
 
-    void PopulateKeySixteenthsEncryptedForFirstSetOfKeySixteenthHolders(MemoryDataStore &keydata, Relay &relay,
+    void PopulateKeySixteenthsEncryptedForKeySixteenthHolders(MemoryDataStore &keydata, Relay &relay,
                                                                         RelayState &state);
 
-    bool KeySixteenthHolderPrivateKeyIsAvailable(uint32_t position, Databases first_or_second_set, RelayState data, Relay relay);
+    bool KeySixteenthHolderPrivateKeyIsAvailable(uint32_t position, Data first_or_second_set, RelayState data, Relay relay);
 
-    bool KeyQuarterHolderPrivateKeyIsAvailable(uint64_t position, Databases data, RelayState &relay_state, Relay &relay);
+    bool KeyQuarterHolderPrivateKeyIsAvailable(uint64_t position, Data data, RelayState &relay_state, Relay &relay);
 
-    bool KeySixteenthHolderPrivateKeyIsAvailable(uint32_t position, uint32_t first_or_second_set, Databases data,
+    bool KeySixteenthHolderPrivateKeyIsAvailable(uint32_t position, uint32_t first_or_second_set, Data data,
                                                  RelayState &relay_state, Relay &relay);
 
     bool
-    TryToRecoverKeySixteenthEncryptedToQuarterKeyHolder(uint32_t position, Databases data, RelayState &state, Relay &relay);
+    TryToRecoverKeySixteenthEncryptedToQuarterKeyHolder(uint32_t position, Data data, RelayState &state, Relay &relay);
 
-    bool KeySixteenthForKeyQuarterHolderIsCorrectlyEncrypted(uint64_t position, Databases data, RelayState &relay_state,
+    bool KeySixteenthForKeyQuarterHolderIsCorrectlyEncrypted(uint64_t position, Data data, RelayState &relay_state,
                                                              Relay &relay);
 
     bool
-    TryToRecoverKeySixteenthEncryptedToKeySixteenthHolder(uint32_t position, uint32_t first_or_second_set, Databases data,
+    TryToRecoverKeySixteenthEncryptedToKeySixteenthHolder(uint32_t position, uint32_t first_or_second_set, Data data,
                                                           RelayState &state, Relay &relay);
 
     bool
-    KeySixteenthForKeySixteenthHolderIsCorrectlyEncrypted(uint64_t position, uint32_t first_or_second_set, Databases data,
+    KeySixteenthForKeySixteenthHolderIsCorrectlyEncrypted(uint64_t position, uint32_t first_or_second_set, Data data,
                                                           RelayState &relay_state, Relay &relay);
 
     bool AuditKeySixteenthEncryptedInRelayJoinMessage(RelayJoinMessage &join_message, uint64_t position,

@@ -43,7 +43,7 @@ public:
     {
         group = EC_GROUP_new_by_curve_name(NID_secp256k1);
         context = BN_CTX_new();
-        //EC_GROUP_precompute_mult(group, context);
+        EC_GROUP_precompute_mult(group, context);
         modulus = BN_new();
         EC_GROUP_get_order(group, modulus, context);
         generator = EC_GROUP_get0_generator(group);

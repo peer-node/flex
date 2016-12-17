@@ -4,7 +4,7 @@
 #define MAX_HASH_ENTRIES 30000
 #define MAX_HASH_COMBINATIONS 10000000
 
-#include "../../test/teleport_tests/teleport_data/TestData.h"
+#include "../../test/teleport_tests/teleport_data/MemoryDataStore.h"
 #include "src/base/util.h"
 #include "src/crypto/hash.h"
 

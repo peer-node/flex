@@ -16,21 +16,20 @@ RelayJoinMessage Relay::GenerateJoinMessage(MemoryDataStore &keydata, uint160 mi
     return join_message;
 }
 
-KeyDistributionMessage Relay::GenerateKeyDistributionMessage(Databases data, uint160 encoding_message_hash, RelayState &relay_state)
+KeyDistributionMessage Relay::GenerateKeyDistributionMessage(Data data, uint160 encoding_message_hash, RelayState &relay_state)
 {
     KeyDistributionMessage key_distribution_message;
     key_distribution_message.encoding_message_hash = encoding_message_hash;
     key_distribution_message.relay_join_hash = join_message_hash;
     key_distribution_message.relay_number = number;
     key_distribution_message.PopulateKeySixteenthsEncryptedForKeyQuarterHolders(data.keydata, *this, relay_state);
-    key_distribution_message.PopulateKeySixteenthsEncryptedForFirstSetOfKeySixteenthHolders(data.keydata, *this,
-                                                                                            relay_state);
+    key_distribution_message.PopulateKeySixteenthsEncryptedForKeySixteenthHolders(data.keydata, *this, relay_state);
     return key_distribution_message;
 }
 
 std::vector<std::vector<uint64_t> > Relay::KeyPartHolderGroups()
 {
-    return std::vector<std::vector<uint64_t> >{quarter_key_holders,
+    return std::vector<std::vector<uint64_t> >{key_quarter_holders,
                                                first_set_of_key_sixteenth_holders,
                                                second_set_of_key_sixteenth_holders};
 }
@@ -45,4 +44,12 @@ std::vector<CBigNum> Relay::PrivateKeySixteenths(MemoryDataStore &keydata)
         private_key_sixteenths.push_back(private_key_sixteenth);
     }
     return private_key_sixteenths;
+}
+
+uint160 Relay::GetSeedForDeterminingSuccessor()
+{
+    Relay temp_relay = *this;
+    temp_relay.secret_recovery_message_hashes.resize(0);
+    temp_relay.obituary_hash = 0;
+    return temp_relay.GetHash160();
 }

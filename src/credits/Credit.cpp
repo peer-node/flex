@@ -1,6 +1,5 @@
 #include "Credit.h"
 #include "crypto/point.h"
-#include "database/data.h"
 #include "creditsign.h"
 
 using namespace std;
