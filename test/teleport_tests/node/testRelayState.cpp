@@ -300,7 +300,6 @@ TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
 
     ASSERT_TRUE(VectorContainsEntry(complainer->pending_complaints_sent, complaint.GetHash160()));
     ASSERT_TRUE(VectorContainsEntry(secret_sender->pending_complaints, complaint.GetHash160()));
-
 }
 
 TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage, AcceptsTheMessageAfterADurationWithoutAResponse)
@@ -352,14 +351,26 @@ TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
 }
 
 TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
-       AssignsTheObituaryAsATaskForTheKeyQuarterHoldersWhenProcessingIt)
+       AssignsTheObituaryAsATaskForTheKeyQuarterHoldersWhenProcessingItIfTheRelayDidntSayGoodbyeCorrectly)
+{
+    Obituary obituary = relay_state.GenerateObituary(relay, OBITUARY_UNREFUTED_COMPLAINT);
+    relay_state.ProcessObituary(obituary);
+    for (auto key_quarter_holder_relay_number : relay->key_quarter_holders)
+    {
+        auto key_quarter_holder = relay_state.GetRelayByNumber(key_quarter_holder_relay_number);
+        ASSERT_TRUE(VectorContainsEntry(key_quarter_holder->tasks, obituary.GetHash160()));
+    }
+}
+
+TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
+       DoesntAssignTheObituaryAsATaskForTheKeyQuarterHoldersWhenProcessingItIfTheRelayDidSayGoodbyeCorrectly)
 {
     Obituary obituary = relay_state.GenerateObituary(relay, OBITUARY_SAID_GOODBYE);
     relay_state.ProcessObituary(obituary);
     for (auto key_quarter_holder_relay_number : relay->key_quarter_holders)
     {
         auto key_quarter_holder = relay_state.GetRelayByNumber(key_quarter_holder_relay_number);
-        ASSERT_TRUE(VectorContainsEntry(key_quarter_holder->tasks, obituary.GetHash160()));
+        ASSERT_FALSE(VectorContainsEntry(key_quarter_holder->tasks, obituary.GetHash160()));
     }
 }
 
@@ -482,6 +493,55 @@ TEST_F(ARelayStateWhichHasProcessedAComplaintAboutAKeyDistributionMessage,
 }
 
 
+class ARelayStateWithAGoodbyeMessage : public ARelayStateWhichHasProcessedAKeyDistributionMessage
+{
+public:
+    GoodbyeMessage goodbye;
+
+    virtual void SetUp()
+    {
+        ARelayStateWhichHasProcessedAKeyDistributionMessage::SetUp();
+        goodbye = relay->GenerateGoodbyeMessage(*data);
+        data->StoreMessage(goodbye);
+    }
+
+    virtual void TearDown()
+    {
+        ARelayStateWhichHasProcessedAKeyDistributionMessage::TearDown();
+    }
+};
+
+TEST_F(ARelayStateWithAGoodbyeMessage, RecordsTheGoodbyeMessageHashOfTheDeadRelay)
+{
+    relay_state.ProcessGoodbyeMessage(goodbye);
+    uint160 goodbye_message_hash = relay->goodbye_message_hash;
+    ASSERT_THAT(goodbye_message_hash, Eq(goodbye.GetHash160()));
+}
+
+
+class ARelayStateWhichHasProcessedAGoodbyeMessage : public ARelayStateWithAGoodbyeMessage
+{
+public:
+    virtual void SetUp()
+    {
+        ARelayStateWithAGoodbyeMessage::SetUp();
+        relay_state.ProcessGoodbyeMessage(goodbye);
+    }
+
+    virtual void TearDown()
+    {
+        ARelayStateWithAGoodbyeMessage::TearDown();
+    }
+};
+
+TEST_F(ARelayStateWhichHasProcessedAGoodbyeMessage, GeneratesAnObituaryInGoodStandingAfterADurationWithoutAResponse)
+{
+    DurationWithoutResponse duration;
+    duration.message_hash = goodbye.GetHash160();
+    relay_state.ProcessDurationWithoutResponse(duration, *data);
+    ASSERT_TRUE(RelayHasAnObituary(relay, *data));
+}
+
 class ARelayStateWhichHasProcessedAnObituary : public ARelayStateWhichHasProcessedAKeyDistributionMessage
 {
 public:
@@ -490,7 +550,7 @@ public:
     virtual void SetUp()
     {
         ARelayStateWhichHasProcessedAKeyDistributionMessage::SetUp();
-        obituary = relay_state.GenerateObituary(relay, OBITUARY_SAID_GOODBYE);
+        obituary = relay_state.GenerateObituary(relay, OBITUARY_NOT_RESPONDING);
         data->StoreMessage(obituary);
         relay_state.ProcessObituary(obituary);
     }

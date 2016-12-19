@@ -1,11 +1,7 @@
 #include <test/teleport_tests/teleport_data/MemoryDataStore.h>
 #include "gmock/gmock.h"
 #include "RelayState.h"
-#include "Relay.h"
-#include "RelayJoinMessage.h"
-#include "src/crypto/bignum_hashes.h"
 #include "CreditSystem.h"
-#include "KeyDistributionMessage.h"
 
 using namespace ::testing;
 using namespace std;
@@ -22,13 +18,13 @@ public:
     CreditSystem *credit_system;
     Data *data;
     Relay relay;
-    RelayState state;
+    RelayState relay_state;
     MinedCreditMessage msg;
 
     virtual void SetUp()
     {
         credit_system = new CreditSystem(msgdata, creditdata);
-        data = new Data(msgdata, creditdata, keydata);
+        data = new Data(msgdata, creditdata, keydata, &relay_state);
         msg.mined_credit.keydata = Point(SECP256K1, 5).getvch();
         keydata[Point(SECP256K1, 5)]["privkey"] = CBigNum(5);
         msg.mined_credit.network_state.batch_number = 1;
@@ -53,12 +49,12 @@ TEST_F(ARelay, GeneratesARelayJoinMessageWithAValidSignature)
 TEST_F(ARelay, HasItsKeySixteenthsSetWhenTheRelayStateProcessesItsJoinMessage)
 {
     RelayJoinMessage relay_join_message = relay.GenerateJoinMessage(keydata, msg.GetHash160());
-    state.ProcessRelayJoinMessage(relay_join_message);
+    relay_state.ProcessRelayJoinMessage(relay_join_message);
 
-    ASSERT_THAT(state.relays[0].public_key_sixteenths.size(), Eq(16));
+    ASSERT_THAT(relay_state.relays[0].public_key_sixteenths.size(), Eq(16));
 
     for (uint64_t i = 0; i < 16; i++)
-        ASSERT_THAT(state.relays[0].public_key_sixteenths[i], Eq(relay_join_message.public_key_sixteenths[i]));
+        ASSERT_THAT(relay_state.relays[0].public_key_sixteenths[i], Eq(relay_join_message.public_key_sixteenths[i]));
 }
 
 
@@ -68,7 +64,6 @@ class ARelayWithKeyPartHoldersAssigned : public ARelay
 {
 public:
     Relay *relay;
-    RelayState relay_state;
     uint160 encoding_message_hash{5};
 
     virtual void SetUp()
@@ -89,8 +84,8 @@ public:
             relay_state = persistent_relay_state;
             keydata = persistent_keydata;
             msgdata = persistent_msgdata;
-            relay = &relay_state.relays[30];
         }
+        relay = relay_state.GetRelayByNumber(TheNumberOfARelayWhichIsAQuarterKeyHolderAndHasKeyPartHoldersAssigned());
     }
 
     virtual void DoFirstSetUp()
@@ -98,15 +93,27 @@ public:
         for (uint32_t i = 1; i <= 37; i ++)
             AddARelayToTheRelayState(i);
 
-        relay = &relay_state.relays[30];
-        relay_state.AssignKeyPartHoldersToRelay(*relay, 1);
+        for (uint32_t i = 1; i <= 37; i ++)
+            relay_state.AssignKeyPartHoldersToRelay(relay_state.relays[i - 1], i + 1);
+
+    }
+
+    uint64_t TheNumberOfARelayWhichIsAQuarterKeyHolderAndHasKeyPartHoldersAssigned()
+    {
+        for (Relay &relay : relay_state.relays)
+        {
+            uint64_t candidate = relay.key_quarter_holders[1];
+            if (relay_state.GetRelayByNumber(candidate)->key_quarter_holders.size() > 0)
+                return candidate;
+        }
+        return 0;
     }
 
     virtual void AddARelayToTheRelayState(uint64_t random_seed)
     {
         RelayJoinMessage join_message = Relay().GenerateJoinMessage(keydata, random_seed);
+        data->StoreMessage(join_message);
         relay_state.ProcessRelayJoinMessage(join_message);
-        msgdata[join_message.GetHash160()]["relay_join"] = join_message;
     }
 
     virtual void TearDown()
@@ -273,5 +280,60 @@ TEST_F(ARelayWithKeyPartHoldersAssigned,
         join_message.encrypted_private_key_sixteenths[position] += 1;
         bool ok = key_distribution_message.AuditKeySixteenthEncryptedInRelayJoinMessage(join_message, position, keydata);
         ASSERT_THAT(ok, Eq(false));
+    }
+}
+
+class ARelayInARelayStateWhichHasProcessedItsKeyDistributionMessage : public ARelayWithKeyPartHoldersAssigned
+{
+public:
+    virtual void SetUp()
+    {
+        ARelayWithKeyPartHoldersAssigned::SetUp();
+        auto key_distribution_message = relay->GenerateKeyDistributionMessage(*data, encoding_message_hash,
+                                                                              relay_state);
+        relay_state.ProcessKeyDistributionMessage(key_distribution_message);
+    }
+
+    virtual void TearDown()
+    {
+        ARelayWithKeyPartHoldersAssigned::TearDown();
+    }
+};
+
+TEST_F(ARelayInARelayStateWhichHasProcessedItsKeyDistributionMessage,
+       GeneratesAGoodbyeMessageWithTheSameSuccessorAsItsObituary)
+{
+    GoodbyeMessage goodbye = relay->GenerateGoodbyeMessage(*data);
+    Obituary obituary = relay_state.GenerateObituary(relay, OBITUARY_SAID_GOODBYE);
+    ASSERT_THAT(goodbye.successor_relay_number, Eq(obituary.successor));
+}
+
+TEST_F(ARelayInARelayStateWhichHasProcessedItsKeyDistributionMessage,
+       GeneratesAGoodbyeMessageWithAValidSignature)
+{
+    GoodbyeMessage goodbye = relay->GenerateGoodbyeMessage(*data);
+    goodbye.Sign(*data);
+    ASSERT_TRUE(goodbye.VerifySignature(*data));
+}
+
+TEST_F(ARelayInARelayStateWhichHasProcessedItsKeyDistributionMessage,
+       GeneratesAGoodbyeMessageWhichEncryptsHeldKeyQuartersForTheSuccessor)
+{
+    GoodbyeMessage goodbye = relay->GenerateGoodbyeMessage(*data);
+    ASSERT_THAT(goodbye.key_quarter_sharers.size(), Gt(0));
+
+    for (uint32_t i = 0; i < goodbye.key_quarter_sharers.size(); i++)
+    {
+        Relay *key_sharer = relay_state.GetRelayByNumber(goodbye.key_quarter_sharers[i]);
+        ASSERT_FALSE(key_sharer == NULL);
+        ASSERT_THAT(goodbye.encrypted_key_sixteenths[i].size(), Eq(4));
+        for (uint32_t j = 0; j < 4; j++)
+        {
+            Point public_key_sixteenth = key_sharer->public_key_sixteenths[goodbye.key_quarter_positions[i] * 4 + j];
+            CBigNum private_key_sixteenth = keydata[public_key_sixteenth]["privkey"];
+            ASSERT_THAT(goodbye.encrypted_key_sixteenths[i][j], Eq(EncryptSecretForRelay(private_key_sixteenth,
+                                                                                         relay_state,
+                                                                                         goodbye.successor_relay_number)));
+        }
     }
 }

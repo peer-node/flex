@@ -4,6 +4,8 @@
 #include "RelayState.h"
 
 #include "log.h"
+#include "GoodbyeMessage.h"
+
 #define LOG_CATEGORY "Relay.cpp"
 
 RelayJoinMessage Relay::GenerateJoinMessage(MemoryDataStore &keydata, uint160 mined_credit_message_hash)
@@ -50,6 +52,17 @@ uint160 Relay::GetSeedForDeterminingSuccessor()
 {
     Relay temp_relay = *this;
     temp_relay.secret_recovery_message_hashes.resize(0);
+    temp_relay.tasks.resize(0);
     temp_relay.obituary_hash = 0;
+    temp_relay.goodbye_message_hash = 0;
     return temp_relay.GetHash160();
+}
+
+GoodbyeMessage Relay::GenerateGoodbyeMessage(Data data)
+{
+    GoodbyeMessage goodbye_message;
+    goodbye_message.dead_relay_number = number;
+    goodbye_message.successor_relay_number = data.relay_state->AssignSuccessorToRelay(this);
+    goodbye_message.PopulateEncryptedKeySixteenths(data);
+    return goodbye_message;
 }

@@ -119,6 +119,10 @@ public:
     void ProcessDurationWithoutResponseFromRelay(DurationWithoutResponseFromRelay duration, Data data);
 
     void ProcessDurationWithoutRelayResponseAfterObituary(Obituary obituary, uint64_t relay_number, Data data);
+
+    void ProcessGoodbyeMessage(GoodbyeMessage goodbye);
+
+    void ProcessDurationAfterGoodbyeMessage(GoodbyeMessage goodbye, Data data);
 };
 
 class RelayStateException : public std::runtime_error

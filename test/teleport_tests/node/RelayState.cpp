@@ -325,11 +325,12 @@ void RelayState::ProcessObituary(Obituary obituary)
     Relay *relay = GetRelayByNumber(obituary.relay.number);
     relay->obituary_hash = obituary.GetHash160();
 
-    for (auto key_quarter_holder_relay_number : relay->key_quarter_holders)
-    {
-        Relay *key_quarter_holder = GetRelayByNumber(key_quarter_holder_relay_number);
-        key_quarter_holder->tasks.push_back(relay->obituary_hash);
-    }
+    if (obituary.reason_for_leaving != OBITUARY_SAID_GOODBYE)
+        for (auto key_quarter_holder_relay_number : relay->key_quarter_holders)
+        {
+            Relay *key_quarter_holder = GetRelayByNumber(key_quarter_holder_relay_number);
+            key_quarter_holder->tasks.push_back(relay->obituary_hash);
+        }
 }
 
 RelayExit RelayState::GenerateRelayExit(Relay *relay)
@@ -383,6 +384,9 @@ void RelayState::ProcessDurationWithoutResponse(DurationWithoutResponse duration
 
     else if (message_type == "key_distribution_complaint")
         ProcessDurationAfterKeyDistributionComplaint(data.msgdata[duration.message_hash][message_type], data);
+
+    else if (message_type == "goodbye")
+        ProcessDurationAfterGoodbyeMessage(data.msgdata[duration.message_hash][message_type], data);
 }
 
 void RelayState::ProcessDurationAfterKeyDistributionMessage(KeyDistributionMessage key_distribution_message, Data data)
@@ -402,6 +406,12 @@ void RelayState::ProcessDurationAfterKeyDistributionComplaint(KeyDistributionCom
     EraseEntryFromVector(complaint.GetHash160(), complainer->pending_complaints_sent);
 
     RecordRelayDeath(secret_sender, data, OBITUARY_UNREFUTED_COMPLAINT);
+}
+
+void RelayState::ProcessDurationAfterGoodbyeMessage(GoodbyeMessage goodbye, Data data)
+{
+    Relay *dead_relay = data.relay_state->GetRelayByNumber(goodbye.dead_relay_number);
+    RecordRelayDeath(dead_relay, data, OBITUARY_SAID_GOODBYE);
 }
 
 void RelayState::ProcessKeyDistributionRefutation(KeyDistributionRefutation refutation, Data data)
@@ -439,4 +449,10 @@ void RelayState::ProcessDurationWithoutRelayResponseAfterObituary(Obituary obitu
 {
     Relay *key_quarter_holder = GetRelayByNumber(relay_number);
     RecordRelayDeath(key_quarter_holder, data, OBITUARY_NOT_RESPONDING);
+}
+
+void RelayState::ProcessGoodbyeMessage(GoodbyeMessage goodbye)
+{
+    Relay *relay = GetRelayByNumber(goodbye.dead_relay_number);
+    relay->goodbye_message_hash = goodbye.GetHash160();
 }
