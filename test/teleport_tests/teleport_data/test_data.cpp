@@ -2,8 +2,8 @@
 #include <src/base/util_time.h>
 #include <src/base/util_rand.h>
 #include "gmock/gmock.h"
-#include "TestData.h"
 #include "crypto/uint256.h"
+#include "MemoryDataStore.h"
 
 using namespace ::testing;
 

@@ -213,6 +213,14 @@ typedef std::string string_t;
             result.resize(result.size() - 1);                               \
         return result + "]";                                                \
     }                                                                       \
+    template<typename T, typename K>                                        \
+    std::string _json_format(std::pair<T, K> pair)                          \
+    {                                                                       \
+        std::string result{"["};                                            \
+        result += _json_format(pair.first) + ","                            \
+                                           + _json_format(pair.second);     \
+        return result + "]";                                                \
+    }                                                                       \
     std::string json()                                                      \
     {                                                                       \
         _json_serialization = "{";                                          \

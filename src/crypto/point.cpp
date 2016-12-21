@@ -7,8 +7,6 @@
 #define CURVE25519 2
 #define ED25519 3
 
-
-
 /***********
  *  Point
  */
@@ -47,7 +45,8 @@
         else if (curve == ED25519)
             e_point = new Ed25519Point();
 
-        SetToMultipleOfGenerator(n);
+        if (n != 0)
+            SetToMultipleOfGenerator(n);
     }
 
     Point::Point(CBigNum n):
@@ -56,7 +55,8 @@
         e_point(NULL)
     {
         s_point = new Secp256k1Point();
-        SetToMultipleOfGenerator(n);
+        if (n != 0)
+            SetToMultipleOfGenerator(n);
     }
 
     Point::Point(const Point& other):

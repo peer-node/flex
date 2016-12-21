@@ -22,14 +22,13 @@
 #include "log.h"
 #define LOG_CATEGORY "secp256k1point.h"
 
-/** Errors thrown by the cpoint class */
+/** Errors thrown by the Secp256k1Point class */
 class point_error : public std::runtime_error
 {
 public:
     explicit point_error(const string_t& str) : std::runtime_error(str) {}
 };
 
- 
 /** C++ wrapper for OpenSSL EC_GROUP on curve secp256k1 */
 class CGroup
 {
@@ -209,7 +208,7 @@ public:
 
     bool operator!=(const Secp256k1Point& p)
     {
-        return EC_POINT_cmp(curve_group.group, point, p.point, context);
+        return (bool)EC_POINT_cmp(curve_group.group, point, p.point, context);
     }
 
     bool operator<(const Secp256k1Point& p) const
@@ -334,9 +333,9 @@ inline Secp256k1Point operator*(const CBigNum& bn, const Secp256k1Point& p)
 
 
 inline Secp256k1Point& Secp256k1Point::operator*=(const CBigNum& bn)
-    {
-        *this = bn * (*this);
-        return *this;
-    }
+{
+    *this = bn * (*this);
+    return *this;
+}
 
 #endif

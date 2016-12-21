@@ -12,6 +12,10 @@
 #include "DurationWithoutResponse.h"
 #include "KeyDistributionRefutation.h"
 #include "DurationWithoutResponseFromRelay.h"
+#include "GoodbyeComplaint.h"
+#include "GoodbyeRefutation.h"
+#include "SecretRecoveryComplaint.h"
+#include "SecretRecoveryRefutation.h"
 
 
 class RelayState
@@ -114,7 +118,7 @@ public:
 
     void ProcessKeyDistributionRefutation(KeyDistributionRefutation refutation, Data data);
 
-    void RecordRelayDeath(Relay *complainer, Data data, uint32_t reason_for_leaving);
+    void RecordRelayDeath(Relay *dead_relay, Data data, uint32_t reason_for_leaving);
 
     void ProcessDurationWithoutResponseFromRelay(DurationWithoutResponseFromRelay duration, Data data);
 
@@ -123,6 +127,66 @@ public:
     void ProcessGoodbyeMessage(GoodbyeMessage goodbye);
 
     void ProcessDurationAfterGoodbyeMessage(GoodbyeMessage goodbye, Data data);
+
+    bool KeyDistributionMessageHasBeenComplainedAbout(KeyDistributionMessage key_distribution_message, Data data);
+
+    void ProcessGoodbyeComplaint(GoodbyeComplaint complaint, Data data);
+
+    void ProcessDurationAfterGoodbyeComplaint(GoodbyeComplaint goodbye_complaint, Data data);
+
+    void ProcessGoodbyeRefutation(GoodbyeRefutation refutation, Data data);
+
+    void ProcessDurationAfterSecretRecoveryMessage(SecretRecoveryMessage secret_recovery_message, Data data);
+
+    void ProcessSecretRecoveryComplaint(SecretRecoveryComplaint complaint, Data data);
+
+    void ProcessDurationAfterSecretRecoveryComplaint(SecretRecoveryComplaint complaint, Data data);
+
+    void TransferTasks(uint64_t dead_relay_number, uint64_t successor_number);
+
+    void ProcessSecretRecoveryRefutation(SecretRecoveryRefutation refutation, Data data);
+
+    void UnprocessDurationWithoutResponse(DurationWithoutResponse duration, Data data);
+
+    void UnprocessDurationAfterSecretRecoveryComplaint(SecretRecoveryComplaint complaint, Data data);
+
+    void UnprocessObituary(Obituary obituary);
+
+    void UnrecordRelayDeath(Relay *dead_relay, Data data, uint32_t reason);
+
+    void UnprocessSecretRecoveryRefutation(SecretRecoveryRefutation refutation, Data data);
+
+    void UnprocessDurationAfterSecretRecoveryMessage(SecretRecoveryMessage secret_recovery_message, Data data);
+
+    void UnprocessSecretRecoveryComplaint(SecretRecoveryComplaint complaint, Data data);
+
+    void UnprocessDurationWithoutRelayResponseAfterObituary(Obituary obituary, uint64_t relay_number, Data data);
+
+    void UnprocessDurationWithoutResponseFromRelay(DurationWithoutResponseFromRelay duration, Data data);
+
+    void UnprocessRelayExit(RelayExit relay_exit, Data data);
+
+    void ReaddRelay(Obituary obituary, uint64_t successor_relay_number);
+
+    void TransferTasksBackFromSuccessorToRelay(Obituary obituary);
+
+    void UnprocessGoodbyeRefutation(GoodbyeRefutation refutation, Data data);
+
+    void UnprocessDurationAfterGoodbyeComplaint(GoodbyeComplaint goodbye_complaint, Data data);
+
+    void UnprocessGoodbyeComplaint(GoodbyeComplaint complaint, Data data);
+
+    void UnprocessDurationAfterGoodbyeMessage(GoodbyeMessage goodbye, Data data);
+
+    void UnprocessGoodbyeMessage(GoodbyeMessage goodbye);
+
+    void UnprocessKeyDistributionRefutation(KeyDistributionRefutation refutation, Data data);
+
+    void UnprocessDurationAfterKeyDistributionComplaint(KeyDistributionComplaint complaint, Data data);
+
+    void UnprocessDurationAfterKeyDistributionMessage(KeyDistributionMessage key_distribution_message, Data data);
+
+    void UnprocessKeyDistributionComplaint(KeyDistributionComplaint complaint, Data data);
 };
 
 class RelayStateException : public std::runtime_error

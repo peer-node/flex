@@ -2,7 +2,8 @@
 #include <src/base/util_time.h>
 #include "gmock/gmock.h"
 #include "RelayState.h"
-
+#include "SecretRecoveryComplaint.h"
+#include "SecretRecoveryRefutation.h"
 
 using namespace ::testing;
 using namespace std;
@@ -89,6 +90,8 @@ public:
         ARelayState::SetUp();
         uint64_t start = GetTimeMicros();
         static RelayState reference_test_relay_state;
+        static MemoryDataStore reference_test_keydata;
+
         if (reference_test_relay_state.relays.size() == 0)
         {
             for (uint32_t i = 1; i <= 37; i++)
@@ -97,9 +100,13 @@ public:
                 relay_state.ProcessRelayJoinMessage(join_message);
             }
             reference_test_relay_state = relay_state;
+            reference_test_keydata = keydata;
         }
         else
+        {
             relay_state = reference_test_relay_state;
+            keydata = reference_test_keydata;
+        }
     }
 
     virtual void TearDown()
@@ -200,6 +207,7 @@ TEST_F(ARelayStateWith37Relays, DoesntAssignTwoRelaysAsEachOthersKeyQuarterHolde
             ASSERT_FALSE(first_has_second_as_quarter_holder and second_has_first_as_quarter_holder);
         }
 }
+
 
 class ARelayStateWith37RelaysAndAKeyDistributionMessage : public ARelayStateWith37Relays
 {
@@ -302,6 +310,21 @@ TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
     ASSERT_TRUE(VectorContainsEntry(secret_sender->pending_complaints, complaint.GetHash160()));
 }
 
+TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
+       UnrecordsWhoComplainedAndWhoWasComplainedAboutWhenUnprocessingAKeyDistributionComplaint)
+{
+    KeyDistributionComplaint complaint(key_distribution_message, KEY_DISTRIBUTION_COMPLAINT_FIRST_KEY_SIXTEENTHS, 2);
+
+    relay_state.ProcessKeyDistributionComplaint(complaint, *data);
+    relay_state.UnprocessKeyDistributionComplaint(complaint, *data);
+
+    Relay *complainer = complaint.GetComplainer(*data);
+    Relay *secret_sender = complaint.GetSecretSender(*data);
+
+    ASSERT_FALSE(VectorContainsEntry(complainer->pending_complaints_sent, complaint.GetHash160()));
+    ASSERT_FALSE(VectorContainsEntry(secret_sender->pending_complaints, complaint.GetHash160()));
+}
+
 TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage, AcceptsTheMessageAfterADurationWithoutAResponse)
 {
     ASSERT_THAT(relay->key_distribution_message_accepted, Eq(false));
@@ -311,6 +334,29 @@ TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage, AcceptsTheMessageAft
     relay_state.ProcessDurationWithoutResponse(duration_after_key_distribution_message, *data);
 
     ASSERT_THAT(relay->key_distribution_message_accepted, Eq(true));
+}
+
+TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
+       MarksTheMessageAsUnacceptedWhenUnprocessingADurationWithoutAResponse)
+{
+    DurationWithoutResponse duration_after_key_distribution_message;
+    duration_after_key_distribution_message.message_hash = key_distribution_message.GetHash160();
+    relay_state.ProcessDurationWithoutResponse(duration_after_key_distribution_message, *data);
+
+    relay_state.UnprocessDurationWithoutResponse(duration_after_key_distribution_message, *data);
+
+    ASSERT_THAT(relay->key_distribution_message_accepted, Eq(false));
+}
+
+TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
+       ThrowsAnExceptionIfAskedToProcessAComplaintAfterADurationWithoutAResponse)
+{
+    DurationWithoutResponse duration_after_key_distribution_message;
+    duration_after_key_distribution_message.message_hash = key_distribution_message.GetHash160();
+    relay_state.ProcessDurationWithoutResponse(duration_after_key_distribution_message, *data);
+
+    KeyDistributionComplaint complaint(key_distribution_message, KEY_DISTRIBUTION_COMPLAINT_FIRST_KEY_SIXTEENTHS, 2);
+    EXPECT_THROW(relay_state.ProcessKeyDistributionComplaint(complaint, *data), RelayStateException);
 }
 
 TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
@@ -339,7 +385,7 @@ TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
        GeneratesAnObituaryWhichSpecifiesTheDeadRelaysSuccessor)
 {
     Obituary obituary = relay_state.GenerateObituary(relay, OBITUARY_SAID_GOODBYE);
-    ASSERT_THAT(obituary.successor, Eq(relay_state.AssignSuccessorToRelay(relay)));
+    ASSERT_THAT(obituary.successor_number, Eq(relay_state.AssignSuccessorToRelay(relay)));
 }
 
 TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
@@ -348,6 +394,15 @@ TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
     Obituary obituary = relay_state.GenerateObituary(relay, OBITUARY_SAID_GOODBYE);
     relay_state.ProcessObituary(obituary);
     ASSERT_THAT(relay->obituary_hash, Eq(obituary.GetHash160()));
+}
+
+TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
+       RemovesARelaysObituaryHashWhenUnprocessingTheObituary)
+{
+    Obituary obituary = relay_state.GenerateObituary(relay, OBITUARY_SAID_GOODBYE);
+    relay_state.ProcessObituary(obituary);
+    relay_state.UnprocessObituary(obituary);
+    ASSERT_THAT(relay->obituary_hash, Eq(0));
 }
 
 TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
@@ -367,6 +422,19 @@ TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
 {
     Obituary obituary = relay_state.GenerateObituary(relay, OBITUARY_SAID_GOODBYE);
     relay_state.ProcessObituary(obituary);
+    for (auto key_quarter_holder_relay_number : relay->key_quarter_holders)
+    {
+        auto key_quarter_holder = relay_state.GetRelayByNumber(key_quarter_holder_relay_number);
+        ASSERT_FALSE(VectorContainsEntry(key_quarter_holder->tasks, obituary.GetHash160()));
+    }
+}
+
+TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
+       RemovesTheObituaryTasksFromKeyQuarterHoldersWhenUnprocessingTheObituary)
+{
+    Obituary obituary = relay_state.GenerateObituary(relay, OBITUARY_UNREFUTED_COMPLAINT);
+    relay_state.ProcessObituary(obituary);
+    relay_state.UnprocessObituary(obituary);
     for (auto key_quarter_holder_relay_number : relay->key_quarter_holders)
     {
         auto key_quarter_holder = relay_state.GetRelayByNumber(key_quarter_holder_relay_number);
@@ -447,7 +515,32 @@ TEST_F(ARelayStateWhichHasProcessedAComplaintAboutAKeyDistributionMessage,
     ASSERT_THAT(secret_sender->pending_complaints.size(), Eq(0));
 }
 
-bool RelayHasAnObituary(Relay *relay, Data data)
+TEST_F(ARelayStateWhichHasProcessedAComplaintAboutAKeyDistributionMessage,
+       MarksTheComplaintAsNotUpheldWhenUnprocessingADurationWithoutAResponse)
+{
+    DurationWithoutResponse duration;
+    duration.message_hash = complaint.GetHash160();
+    relay_state.ProcessDurationWithoutResponse(duration, *data);
+
+    relay_state.UnprocessDurationWithoutResponse(duration, *data);
+
+    ASSERT_THAT(secret_sender->upheld_complaints.size(), Eq(0));
+
+    ASSERT_THAT(complainer->pending_complaints_sent.size(), Eq(1));
+    ASSERT_THAT(complainer->pending_complaints_sent[0], Eq(complaint.GetHash160()));
+    ASSERT_THAT(secret_sender->pending_complaints.size(), Eq(1));
+    ASSERT_THAT(secret_sender->pending_complaints[0], Eq(complaint.GetHash160()));
+}
+
+TEST_F(ARelayStateWhichHasProcessedAComplaintAboutAKeyDistributionMessage,
+       ThrowsAnExceptionIfAskedToProcessADurationAfterTheKeyDistributionMessageWithoutAResponse)
+{
+    DurationWithoutResponse duration;
+    duration.message_hash = key_distribution_message.GetHash160();
+    EXPECT_THROW(relay_state.ProcessDurationWithoutResponse(duration, *data), RelayStateException);
+}
+
+bool RelayHasAnObituaryWithSpecificReasonForLeaving(Relay *relay, Data data, uint32_t reason)
 {
     if (relay->obituary_hash == 0)
         return false;
@@ -455,7 +548,7 @@ bool RelayHasAnObituary(Relay *relay, Data data)
     if (message_type != "obituary")
         return false;
     Obituary obituary = data.msgdata[relay->obituary_hash]["obituary"];
-    return obituary.relay == *relay;
+    return obituary.relay == *relay and obituary.reason_for_leaving == reason;
 }
 
 TEST_F(ARelayStateWhichHasProcessedAComplaintAboutAKeyDistributionMessage,
@@ -465,7 +558,19 @@ TEST_F(ARelayStateWhichHasProcessedAComplaintAboutAKeyDistributionMessage,
     duration.message_hash = complaint.GetHash160();
     relay_state.ProcessDurationWithoutResponse(duration, *data);
 
-    ASSERT_TRUE(RelayHasAnObituary(secret_sender, *data));
+    ASSERT_TRUE(RelayHasAnObituaryWithSpecificReasonForLeaving(secret_sender, *data, OBITUARY_UNREFUTED_COMPLAINT));
+}
+
+TEST_F(ARelayStateWhichHasProcessedAComplaintAboutAKeyDistributionMessage,
+       RemovesTheObituaryForTheSecretSenderWhenUnprocessingADurationWithoutAResponse)
+{
+    DurationWithoutResponse duration;
+    duration.message_hash = complaint.GetHash160();
+    relay_state.ProcessDurationWithoutResponse(duration, *data);
+
+    relay_state.UnprocessDurationWithoutResponse(duration, *data);
+
+    ASSERT_FALSE(RelayHasAnObituaryWithSpecificReasonForLeaving(secret_sender, *data, OBITUARY_UNREFUTED_COMPLAINT));
 }
 
 TEST_F(ARelayStateWhichHasProcessedAComplaintAboutAKeyDistributionMessage,
@@ -483,13 +588,42 @@ TEST_F(ARelayStateWhichHasProcessedAComplaintAboutAKeyDistributionMessage,
 }
 
 TEST_F(ARelayStateWhichHasProcessedAComplaintAboutAKeyDistributionMessage,
+       MarksTheComplaintAsNotRefutedWhenUnprocessingAKeyDistributionRefutation)
+{
+    KeyDistributionRefutation refutation;
+    refutation.complaint_hash = complaint.GetHash160();
+    relay_state.ProcessKeyDistributionRefutation(refutation, *data);
+
+    relay_state.UnprocessKeyDistributionRefutation(refutation, *data);
+
+    ASSERT_THAT(complainer->refutations_of_complaints_sent.size(), Eq(0));
+
+    ASSERT_THAT(complainer->pending_complaints_sent.size(), Eq(1));
+    ASSERT_THAT(complainer->pending_complaints_sent[0], Eq(complaint.GetHash160()));
+    ASSERT_THAT(secret_sender->pending_complaints.size(), Eq(1));
+    ASSERT_THAT(secret_sender->pending_complaints[0], Eq(complaint.GetHash160()));
+}
+
+TEST_F(ARelayStateWhichHasProcessedAComplaintAboutAKeyDistributionMessage,
        GeneratesAnObituaryForTheComplainerWhenProcessingAKeyDistributionRefutation)
 {
     KeyDistributionRefutation refutation;
     refutation.complaint_hash = complaint.GetHash160();
     relay_state.ProcessKeyDistributionRefutation(refutation, *data);
 
-    ASSERT_TRUE(RelayHasAnObituary(complainer, *data));
+    ASSERT_TRUE(RelayHasAnObituaryWithSpecificReasonForLeaving(complainer, *data, OBITUARY_REFUTED_COMPLAINT));
+}
+
+TEST_F(ARelayStateWhichHasProcessedAComplaintAboutAKeyDistributionMessage,
+       RemovesTheObituaryForTheComplainerWhenUnprocessingAKeyDistributionRefutation)
+{
+    KeyDistributionRefutation refutation;
+    refutation.complaint_hash = complaint.GetHash160();
+    relay_state.ProcessKeyDistributionRefutation(refutation, *data);
+
+    relay_state.UnprocessKeyDistributionRefutation(refutation, *data);
+
+    ASSERT_FALSE(RelayHasAnObituaryWithSpecificReasonForLeaving(complainer, *data, OBITUARY_REFUTED_COMPLAINT));
 }
 
 
@@ -518,6 +652,14 @@ TEST_F(ARelayStateWithAGoodbyeMessage, RecordsTheGoodbyeMessageHashOfTheDeadRela
     ASSERT_THAT(goodbye_message_hash, Eq(goodbye.GetHash160()));
 }
 
+TEST_F(ARelayStateWithAGoodbyeMessage, RemovesTheGoodbyeMessageHashOfTheDeadRelayWhenUnprocessingIt)
+{
+    relay_state.ProcessGoodbyeMessage(goodbye);
+    relay_state.UnprocessGoodbyeMessage(goodbye);
+    uint160 goodbye_message_hash = relay->goodbye_message_hash;
+    ASSERT_THAT(goodbye_message_hash, Eq(0));
+}
+
 
 class ARelayStateWhichHasProcessedAGoodbyeMessage : public ARelayStateWithAGoodbyeMessage
 {
@@ -534,25 +676,146 @@ public:
     }
 };
 
-TEST_F(ARelayStateWhichHasProcessedAGoodbyeMessage, GeneratesAnObituaryInGoodStandingAfterADurationWithoutAResponse)
+TEST_F(ARelayStateWhichHasProcessedAGoodbyeMessage, GeneratesAnObituaryAfterADurationWithoutAResponse)
 {
     DurationWithoutResponse duration;
     duration.message_hash = goodbye.GetHash160();
     relay_state.ProcessDurationWithoutResponse(duration, *data);
-    ASSERT_TRUE(RelayHasAnObituary(relay, *data));
+    ASSERT_TRUE(RelayHasAnObituaryWithSpecificReasonForLeaving(relay, *data, OBITUARY_SAID_GOODBYE));
+}
+
+TEST_F(ARelayStateWhichHasProcessedAGoodbyeMessage, RemovesTheObituaryWhenUnprocessingADurationWithoutAResponse)
+{
+    DurationWithoutResponse duration;
+    duration.message_hash = goodbye.GetHash160();
+    relay_state.ProcessDurationWithoutResponse(duration, *data);
+
+    relay_state.UnprocessDurationWithoutResponse(duration, *data);
+
+    ASSERT_FALSE(RelayHasAnObituaryWithSpecificReasonForLeaving(relay, *data, OBITUARY_SAID_GOODBYE));
+}
+
+GoodbyeComplaint AGoodbyeComplaint(GoodbyeMessage goodbye, Data data)
+{
+    GoodbyeComplaint goodbye_complaint;
+    goodbye_complaint.goodbye_message_hash = goodbye.GetHash160();
+    goodbye_complaint.key_quarter_holder_position = 1;
+    goodbye_complaint.positions_of_bad_encrypted_key_sixteenths.push_back(2);
+    goodbye_complaint.Sign(data);
+
+    return goodbye_complaint;
+}
+
+TEST_F(ARelayStateWhichHasProcessedAGoodbyeMessage, RecordsTheHashOfAGoodbyeComplaint)
+{
+    auto goodbye_complaint = AGoodbyeComplaint(goodbye, *data);
+    ASSERT_TRUE(goodbye_complaint.VerifySignature(*data));
+    relay_state.ProcessGoodbyeComplaint(goodbye_complaint, *data);
+    ASSERT_TRUE(VectorContainsEntry(relay->pending_complaints, goodbye_complaint.GetHash160()));
+    ASSERT_TRUE(VectorContainsEntry(goodbye_complaint.GetComplainer(*data)->pending_complaints_sent,
+                                    goodbye_complaint.GetHash160()));
+}
+
+TEST_F(ARelayStateWhichHasProcessedAGoodbyeMessage, RemovesTheHashOfAGoodbyeComplaintWhenUnprocessingIt)
+{
+    auto goodbye_complaint = AGoodbyeComplaint(goodbye, *data);
+    relay_state.ProcessGoodbyeComplaint(goodbye_complaint, *data);
+
+    relay_state.UnprocessGoodbyeComplaint(goodbye_complaint, *data);
+
+    ASSERT_FALSE(VectorContainsEntry(relay->pending_complaints, goodbye_complaint.GetHash160()));
+    ASSERT_FALSE(VectorContainsEntry(goodbye_complaint.GetComplainer(*data)->pending_complaints_sent,
+                                     goodbye_complaint.GetHash160()));
+}
+
+class ARelayStateWhichHasProcessedAGoodbyeComplaint : public ARelayStateWhichHasProcessedAGoodbyeMessage
+{
+public:
+    GoodbyeComplaint goodbye_complaint;
+
+    virtual void SetUp()
+    {
+        ARelayStateWhichHasProcessedAGoodbyeMessage::SetUp();
+        goodbye_complaint = AGoodbyeComplaint(goodbye, *data);
+        data->StoreMessage(goodbye_complaint);
+        relay_state.ProcessGoodbyeComplaint(goodbye_complaint, *data);
+    }
+
+    virtual void TearDown()
+    {
+        ARelayStateWhichHasProcessedAGoodbyeMessage::TearDown();
+    }
+};
+
+TEST_F(ARelayStateWhichHasProcessedAGoodbyeComplaint, GeneratesAnObituaryForTheDeadRelayAfterADurationWithoutAResponse)
+{
+    DurationWithoutResponse duration;
+    duration.message_hash = goodbye_complaint.GetHash160();
+    relay_state.ProcessDurationWithoutResponse(duration, *data);
+
+    ASSERT_TRUE(RelayHasAnObituaryWithSpecificReasonForLeaving(relay, *data, OBITUARY_UNREFUTED_COMPLAINT));
+}
+
+TEST_F(ARelayStateWhichHasProcessedAGoodbyeComplaint,
+       RemovesTheObituaryForTheDeadRelayWhenUnprocessingADurationWithoutAResponse)
+{
+    DurationWithoutResponse duration;
+    duration.message_hash = goodbye_complaint.GetHash160();
+    relay_state.ProcessDurationWithoutResponse(duration, *data);
+
+    relay_state.UnprocessDurationWithoutResponse(duration, *data);
+
+    ASSERT_FALSE(RelayHasAnObituaryWithSpecificReasonForLeaving(relay, *data, OBITUARY_UNREFUTED_COMPLAINT));
+}
+
+TEST_F(ARelayStateWhichHasProcessedAGoodbyeComplaint,
+       GeneratesObituariesForTheDeadRelayAndTheComplainerWhenProcessingAGoodbyeRefutation)
+{
+    GoodbyeRefutation refutation;
+    refutation.complaint_hash = goodbye_complaint.GetHash160();
+
+    relay_state.ProcessGoodbyeRefutation(refutation, *data);
+
+    ASSERT_TRUE(RelayHasAnObituaryWithSpecificReasonForLeaving(relay, *data, OBITUARY_SAID_GOODBYE));
+    ASSERT_TRUE(RelayHasAnObituaryWithSpecificReasonForLeaving(goodbye_complaint.GetComplainer(*data), *data,
+                                                               OBITUARY_REFUTED_COMPLAINT));
+}
+
+TEST_F(ARelayStateWhichHasProcessedAGoodbyeComplaint,
+       RemovesTheObituariesForTheDeadRelayAndTheComplainerWhenUnprocessingAGoodbyeRefutation)
+{
+    GoodbyeRefutation refutation;
+    refutation.complaint_hash = goodbye_complaint.GetHash160();
+
+    relay_state.ProcessGoodbyeRefutation(refutation, *data);
+    relay_state.UnprocessGoodbyeRefutation(refutation, *data);
+
+    ASSERT_FALSE(RelayHasAnObituaryWithSpecificReasonForLeaving(relay, *data, OBITUARY_SAID_GOODBYE));
+    ASSERT_FALSE(RelayHasAnObituaryWithSpecificReasonForLeaving(goodbye_complaint.GetComplainer(*data), *data,
+                                                               OBITUARY_REFUTED_COMPLAINT));
 }
 
 class ARelayStateWhichHasProcessedAnObituary : public ARelayStateWhichHasProcessedAKeyDistributionMessage
 {
 public:
     Obituary obituary;
+    uint160 task_hash;
 
     virtual void SetUp()
     {
         ARelayStateWhichHasProcessedAKeyDistributionMessage::SetUp();
+
+        AssignATaskToTheRelay();
         obituary = relay_state.GenerateObituary(relay, OBITUARY_NOT_RESPONDING);
         data->StoreMessage(obituary);
         relay_state.ProcessObituary(obituary);
+
+    }
+
+    void AssignATaskToTheRelay()
+    {
+        task_hash = 5;
+        relay->tasks.push_back(task_hash);
     }
 
     virtual void TearDown()
@@ -575,6 +838,35 @@ TEST_F(ARelayStateWhichHasProcessedAnObituary, RemovesTheRelayWhenProcessingARel
     uint64_t relay_number = relay->number;
     relay_state.ProcessRelayExit(relay_exit, *data);
     ASSERT_TRUE(relay_state.GetRelayByNumber(relay_number) == NULL);
+}
+
+TEST_F(ARelayStateWhichHasProcessedAnObituary, ReaddsTheRelayWhenUnprocessingARelayExit)
+{
+    RelayExit relay_exit = relay_state.GenerateRelayExit(relay);
+    uint64_t relay_number = relay->number;
+    relay_state.ProcessRelayExit(relay_exit, *data);
+
+    relay_state.UnprocessRelayExit(relay_exit, *data);
+    ASSERT_FALSE(relay_state.GetRelayByNumber(relay_number) == NULL);
+}
+
+TEST_F(ARelayStateWhichHasProcessedAnObituary, TransfersTasksFromTheDeadRelayToItsSuccessorWhenProcessingARelayExit)
+{
+    RelayExit relay_exit = relay_state.GenerateRelayExit(relay);
+    uint64_t relay_number = relay->number;
+    relay_state.ProcessRelayExit(relay_exit, *data);
+    ASSERT_TRUE(VectorContainsEntry(relay_state.GetRelayByNumber(obituary.successor_number)->tasks, task_hash));
+}
+
+TEST_F(ARelayStateWhichHasProcessedAnObituary, TransfersTheDeadRelaysTasksBackToItWhenUnprocessingARelayExit)
+{
+    RelayExit relay_exit = relay_state.GenerateRelayExit(relay);
+    uint64_t relay_number = relay->number;
+    relay_state.ProcessRelayExit(relay_exit, *data);
+    relay_state.UnprocessRelayExit(relay_exit, *data);
+
+    ASSERT_TRUE(VectorContainsEntry(relay_state.GetRelayByNumber(obituary.relay.number)->tasks, task_hash));
+    ASSERT_FALSE(VectorContainsEntry(relay_state.GetRelayByNumber(obituary.successor_number)->tasks, task_hash));
 }
 
 TEST_F(ARelayStateWhichHasProcessedAnObituary, ThrowsAnExceptionIfTheRelayToRemoveCantBeFound)
@@ -600,7 +892,7 @@ TEST_F(ARelayStateWhichHasProcessedAnObituary,
        RelacesTheRelayWithItsSuccessorInAllQuarterHolderRolesWhenProcessingARelayExit)
 {
     RelayExit relay_exit = relay_state.GenerateRelayExit(relay);
-    uint64_t relay_number = relay->number, successor = obituary.successor;
+    uint64_t relay_number = relay->number, successor = obituary.successor_number;
 
     auto initial_roles_of_exiting_relay = GetQuarterHolderRoles(relay_number, &relay_state);
     ASSERT_THAT(initial_roles_of_exiting_relay.size(), Gt(0));
@@ -626,7 +918,21 @@ TEST_F(ARelayStateWhichHasProcessedAnObituary,
 
     Relay *key_quarter_holder = relay_state.GetRelayByNumber(duration.relay_number);
 
-    ASSERT_TRUE(RelayHasAnObituary(key_quarter_holder, *data));
+    ASSERT_TRUE(RelayHasAnObituaryWithSpecificReasonForLeaving(key_quarter_holder, *data, OBITUARY_NOT_RESPONDING));
+}
+
+TEST_F(ARelayStateWhichHasProcessedAnObituary,
+       RemovesTheNotRespondingObituaryFromTheKeyQuarterHolderWhenUnprocessingADurationWithoutAResponseFromThatRelay)
+{
+    DurationWithoutResponseFromRelay duration;
+    duration.message_hash = obituary.GetHash160();
+    duration.relay_number = relay->key_quarter_holders[1];
+
+    relay_state.ProcessDurationWithoutResponseFromRelay(duration, *data);
+    relay_state.UnprocessDurationWithoutResponseFromRelay(duration, *data);
+
+    Relay *key_quarter_holder = relay_state.GetRelayByNumber(duration.relay_number);
+    ASSERT_FALSE(RelayHasAnObituaryWithSpecificReasonForLeaving(key_quarter_holder, *data, OBITUARY_NOT_RESPONDING));
 }
 
 
@@ -641,6 +947,7 @@ public:
         ARelayStateWhichHasProcessedAnObituary::SetUp();
 
         secret_recovery_message = AValidSecretRecoveryMessage();
+        data->StoreMessage(secret_recovery_message);
         key_quarter_holder = relay_state.GetRelayByNumber(secret_recovery_message.quarter_holder_number);
     }
 
@@ -655,7 +962,7 @@ public:
 
         secret_recovery_message.obituary_hash = obituary.GetHash160();
         secret_recovery_message.quarter_holder_number = relay->key_quarter_holders[1];
-        secret_recovery_message.successor_number = obituary.successor;
+        secret_recovery_message.successor_number = obituary.successor_number;
         secret_recovery_message.dead_relay_number = relay->number;
 
         secret_recovery_message.Sign(*data);
@@ -668,16 +975,6 @@ TEST_F(ARelayStateWithASecretRecoveryMessage, RecordsTheHashWhenProcessingTheSec
     relay_state.ProcessSecretRecoveryMessage(secret_recovery_message);
     ASSERT_THAT(relay->secret_recovery_message_hashes.size(), Eq(1));
     ASSERT_THAT(relay->secret_recovery_message_hashes[0], Eq(secret_recovery_message.GetHash160()));
-}
-
-TEST_F(ARelayStateWithASecretRecoveryMessage,
-       RemovesTheKeyQuarterHoldersObituaryTaskWhenProcessingSecretRecoveryMessage)
-{
-    ASSERT_TRUE(VectorContainsEntry(key_quarter_holder->tasks, obituary.GetHash160()));
-
-    relay_state.ProcessSecretRecoveryMessage(secret_recovery_message);
-
-    ASSERT_FALSE(VectorContainsEntry(key_quarter_holder->tasks, obituary.GetHash160()));
 }
 
 TEST_F(ARelayStateWithASecretRecoveryMessage,
@@ -720,3 +1017,130 @@ TEST_F(ARelayStateWithASecretRecoveryMessage,
     ASSERT_THAT(relay->secret_recovery_message_hashes.size(), Eq(0));
 }
 
+
+class ARelayStateWhichHasProcessedASecretRecoveryMessage : public ARelayStateWithASecretRecoveryMessage
+{
+public:
+    virtual void SetUp()
+    {
+        ARelayStateWithASecretRecoveryMessage::SetUp();
+        relay_state.ProcessSecretRecoveryMessage(secret_recovery_message);
+    }
+
+    virtual void TearDown()
+    {
+        ARelayStateWithASecretRecoveryMessage::TearDown();
+    }
+};
+
+TEST_F(ARelayStateWhichHasProcessedASecretRecoveryMessage, RecordsTheHashOfASecretRecoveryComplaint)
+{
+    SecretRecoveryComplaint complaint;
+    complaint.secret_recovery_message_hash = secret_recovery_message.GetHash160();
+
+    relay_state.ProcessSecretRecoveryComplaint(complaint, *data);
+
+    ASSERT_TRUE(VectorContainsEntry(key_quarter_holder->pending_complaints, complaint.GetHash160()));
+}
+
+TEST_F(ARelayStateWhichHasProcessedASecretRecoveryMessage, RemovesTheHashOfASecretRecoveryComplaintWhenUnprocessingIt)
+{
+    SecretRecoveryComplaint complaint;
+    complaint.secret_recovery_message_hash = secret_recovery_message.GetHash160();
+    relay_state.ProcessSecretRecoveryComplaint(complaint, *data);
+
+    relay_state.UnprocessSecretRecoveryComplaint(complaint, *data);
+    ASSERT_FALSE(VectorContainsEntry(key_quarter_holder->pending_complaints, complaint.GetHash160()));
+}
+
+TEST_F(ARelayStateWhichHasProcessedASecretRecoveryMessage,
+       RemovesTheKeyQuarterHoldersObituaryTaskAfterADurationWithoutAResponse)
+{
+    DurationWithoutResponse duration;
+    duration.message_hash = secret_recovery_message.GetHash160();
+    ASSERT_TRUE(VectorContainsEntry(key_quarter_holder->tasks, obituary.GetHash160()));
+    relay_state.ProcessDurationWithoutResponse(duration, *data);
+    ASSERT_FALSE(VectorContainsEntry(key_quarter_holder->tasks, obituary.GetHash160()));
+}
+
+TEST_F(ARelayStateWhichHasProcessedASecretRecoveryMessage,
+       ReaddsTheKeyQuarterHoldersObituaryTaskWhenUnprocessingADurationWithoutAResponse)
+{
+    DurationWithoutResponse duration;
+    duration.message_hash = secret_recovery_message.GetHash160();
+    relay_state.ProcessDurationWithoutResponse(duration, *data);
+
+    relay_state.UnprocessDurationWithoutResponse(duration, *data);
+    ASSERT_TRUE(VectorContainsEntry(key_quarter_holder->tasks, obituary.GetHash160()));
+}
+
+
+class ARelayStateWhichHasProcessedASecretRecoveryComplaint : public ARelayStateWhichHasProcessedASecretRecoveryMessage
+{
+public:
+    SecretRecoveryComplaint complaint;
+
+    virtual void SetUp()
+    {
+        ARelayStateWhichHasProcessedASecretRecoveryMessage::SetUp();
+
+        complaint.secret_recovery_message_hash = secret_recovery_message.GetHash160();
+        complaint.Sign(*data);
+        ASSERT_TRUE(complaint.VerifySignature(*data));
+
+        data->StoreMessage(complaint);
+
+        relay_state.ProcessSecretRecoveryComplaint(complaint, *data);
+    }
+
+    virtual void TearDown()
+    {
+        ARelayStateWhichHasProcessedASecretRecoveryMessage::TearDown();
+    }
+};
+
+TEST_F(ARelayStateWhichHasProcessedASecretRecoveryComplaint,
+       GeneratesAnObituaryForTheKeyQuarterHolderAfterADurationWithoutAResponse)
+{
+    DurationWithoutResponse duration;
+    duration.message_hash = complaint.GetHash160();
+
+    relay_state.ProcessDurationWithoutResponse(duration, *data);
+    ASSERT_TRUE(RelayHasAnObituaryWithSpecificReasonForLeaving(key_quarter_holder, *data, OBITUARY_UNREFUTED_COMPLAINT));
+}
+
+TEST_F(ARelayStateWhichHasProcessedASecretRecoveryComplaint,
+       RemovesTheObituaryFromTheKeyQuarterHolderWhenUnprocessingADurationWithoutAResponse)
+{
+    DurationWithoutResponse duration;
+    duration.message_hash = complaint.GetHash160();
+    relay_state.ProcessDurationWithoutResponse(duration, *data);
+
+    relay_state.UnprocessDurationWithoutResponse(duration, *data);
+    ASSERT_FALSE(RelayHasAnObituaryWithSpecificReasonForLeaving(key_quarter_holder, *data, OBITUARY_UNREFUTED_COMPLAINT));
+}
+
+TEST_F(ARelayStateWhichHasProcessedASecretRecoveryComplaint,
+       GeneratesAnObituaryForTheComplainerWhenProcessingASecretRecoveryRefutation)
+{
+    SecretRecoveryRefutation refutation;
+    refutation.complaint_hash = complaint.GetHash160();
+    refutation.Sign(*data);
+    ASSERT_TRUE(refutation.VerifySignature(*data));
+
+    relay_state.ProcessSecretRecoveryRefutation(refutation, *data);
+    ASSERT_TRUE(RelayHasAnObituaryWithSpecificReasonForLeaving(complaint.GetComplainer(*data), *data,
+                                                               OBITUARY_REFUTED_COMPLAINT));
+}
+
+TEST_F(ARelayStateWhichHasProcessedASecretRecoveryComplaint,
+       RemovesTheObituaryFromTheComplainerWhenUnprocessingASecretRecoveryRefutation)
+{
+    SecretRecoveryRefutation refutation;
+    refutation.complaint_hash = complaint.GetHash160();
+    relay_state.ProcessSecretRecoveryRefutation(refutation, *data);
+
+    relay_state.UnprocessSecretRecoveryRefutation(refutation, *data);
+    ASSERT_FALSE(RelayHasAnObituaryWithSpecificReasonForLeaving(complaint.GetComplainer(*data), *data,
+                                                                OBITUARY_REFUTED_COMPLAINT));
+}

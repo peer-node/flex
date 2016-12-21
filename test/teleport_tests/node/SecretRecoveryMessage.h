@@ -7,6 +7,7 @@
 #include <test/teleport_tests/teleport_data/MemoryDataStore.h>
 #include "RelayJoinMessage.h"
 #include "Data.h"
+#include "Relay.h"
 
 
 class SecretRecoveryMessage
@@ -40,6 +41,12 @@ public:
     IMPLEMENT_HASH_SIGN_VERIFY();
 
     Point VerificationKey(Data data);
+
+    Relay *GetKeyQuarterHolder(Data data);
+
+    Relay *GetDeadRelay(Data data);
+
+    Relay *GetSuccessor(Data data);
 };
 
 

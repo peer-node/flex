@@ -80,7 +80,7 @@ public:
             CBigNum private_key_sixteenth = keydata[public_key_sixteenth]["privkey"];
             private_key += private_key_sixteenth;
         }
-        keydata[PublicKey()]["privkey"] = private_key;
+        keydata[PublicKey()]["privkey"] = private_key % Secp256k1Point::Modulus();
     }
 
     Point PublicKey()

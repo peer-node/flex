@@ -27,6 +27,16 @@ public:
         msgdata[message.GetHash160()]["type"] = message.Type();
         msgdata[message.GetHash160()][message.Type()] = message;
     }
+
+    MockProperty &GetMessage(uint160 message_hash)
+    {
+        return msgdata[message_hash][MessageType(message_hash)];
+    }
+
+    std::string MessageType(uint160 message_hash)
+    {
+        return msgdata[message_hash]["type"];
+    }
 };
 
 

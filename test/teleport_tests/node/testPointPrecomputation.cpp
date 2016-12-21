@@ -17,44 +17,60 @@ using namespace std;
 #define LOG_CATEGORY "test"
 
 
-TEST(Points, PrecomputeMultiplicationSpeedup)
+class PrecomputedPointMultiplicationData
+{
+public:
+    std::vector<std::vector<Point> > precomputed_multiples;
+
+    PrecomputedPointMultiplicationData(Point point)
+    {
+        precomputed_multiples.resize(64);
+
+        for (uint32_t nybble = 0; nybble < 64; nybble++)
+        {
+            for (uint32_t i = 0; i < 16; i++)
+            {
+                CBigNum x = i;
+                x <<= nybble * 4;
+                Point precomputed_multiple = x * point;
+                precomputed_multiples[nybble].push_back(precomputed_multiple);
+            }
+        }
+    }
+
+    Point EvaluateMultiple(CBigNum number)
+    {
+        auto multiple = Point(precomputed_multiples[0][0].curve, 0);
+
+        for (uint32_t nybble = 0; nybble < 64; nybble++)
+        {
+            CBigNum which_multiple = number % 16;
+            multiple += precomputed_multiples[nybble][which_multiple.getulong()];
+            number /= 16;
+        }
+        return multiple;
+    }
+};
+
+TEST(APrecomputedPointMultiplicationDataInstance, SpeedsUpPointMultiplication)
 {
     CBigNum random;
     random.Randomize(Secp256k1Point::Modulus());
     Point point(SECP256K1, random);
 
-    std::vector<std::vector<Point> > precomputed_multiples;
-    precomputed_multiples.resize(64);
-
-    for (uint32_t nybble = 0; nybble < 64; nybble++)
-    {
-        for (uint32_t i = 0; i < 16; i++)
-        {
-            CBigNum x = i;
-            x <<= nybble * 4;
-            Point precomputed_multiple = x * point;
-            precomputed_multiples[nybble].push_back(precomputed_multiple);
-        }
-    }
+    PrecomputedPointMultiplicationData precomputed_data(point);
 
     CBigNum number;
     number.Randomize(Secp256k1Point::Modulus());
 
+    Point first_product;
     uint64_t start = GetTimeMicros();
-    auto first_product = number * point;
+    first_product = number * point;
     log_ << "normal multiplication in " << GetTimeMicros() - start << " us\n";
 
-
-    // precomputed multiplication
-    auto second_product = Point(SECP256K1, 0);
     start = GetTimeMicros();
-    for (uint32_t nybble = 0; nybble < 64; nybble++)
-    {
-        CBigNum which_multiple = number % 16;
-        second_product += precomputed_multiples[nybble][which_multiple.getulong()];
-        number /= 16;
-    }
+    auto second_product = precomputed_data.EvaluateMultiple(number);
+    log_ << "precomputed multiplication in " << GetTimeMicros() - start << " us\n";
 
     ASSERT_THAT(first_product, Eq(second_product));
-    log_ << "precomputed multiplication in " << GetTimeMicros() - start << " us\n";
 }

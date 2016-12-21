@@ -5,14 +5,8 @@
 #ifndef TELEPORT_SCHEDULE
 #define TELEPORT_SCHEDULE
 
-#define COMPLAINT_WAIT_TIME (12 * 1000 * 1000) // 12 seconds
-
-#include "../../test/teleport_tests/teleport_data/TestData.h"
-
 #include "define.h"
-#include "database/data.h"
 #include <boost/thread.hpp>
-#include <boost/foreach.hpp>
 #include "crypto/uint256.h"
 
 #include "log.h"

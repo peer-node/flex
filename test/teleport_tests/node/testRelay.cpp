@@ -305,7 +305,7 @@ TEST_F(ARelayInARelayStateWhichHasProcessedItsKeyDistributionMessage,
 {
     GoodbyeMessage goodbye = relay->GenerateGoodbyeMessage(*data);
     Obituary obituary = relay_state.GenerateObituary(relay, OBITUARY_SAID_GOODBYE);
-    ASSERT_THAT(goodbye.successor_relay_number, Eq(obituary.successor));
+    ASSERT_THAT(goodbye.successor_relay_number, Eq(obituary.successor_number));
 }
 
 TEST_F(ARelayInARelayStateWhichHasProcessedItsKeyDistributionMessage,

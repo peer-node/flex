@@ -1,6 +1,6 @@
 #include <src/base/util_time.h>
+#include <test/teleport_tests/teleport_data/MemoryDataStore.h>
 #include "gmock/gmock.h"
-#include "../teleport_data/TestData.h"
 #include "teleportnode/schedule.h"
 
 using namespace ::testing;

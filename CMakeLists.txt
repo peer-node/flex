@@ -3,324 +3,6 @@ project(teleport)
 
 set(CMAKE_CXX_FLAGS "-O3 ${CMAKE_CXX_FLAGS} -std=c++11 -lboost_system -DSCRYPT_SALSA64 -DSCRYPT_BLAKE512 -lssl -lboost_thread -pthread")
 
-set(SOURCE_FILES
-    src/base/allocators.cpp
-    src/base/allocators.h
-    src/base/base58.cpp
-    src/base/base58.h
-    src/base/chainparams.cpp
-    src/base/chainparams.h
-    src/base/clientversion.h
-    src/base/core.cpp
-    src/base/core.h
-    src/base/limitedmap.h
-    src/base/mruset.h
-    src/base/noui.cpp
-    src/base/noui.h
-    src/base/protocol.cpp
-    src/base/protocol.h
-    src/base/serialize.h
-    src/base/sync.cpp
-    src/base/sync.h
-    src/base/threadsafety.h
-    src/base/tinyformat.h
-    src/base/ui_interface.h
-    src/base/util.cpp
-    src/base/util.h
-    src/base/version.cpp
-    src/base/version.h
-    src/compat/glibc_compat.cpp
-    src/compat/glibcxx_compat.cpp
-    src/credits/credits.cpp
-    src/credits/credits.h
-    src/credits/creditsign.h
-    src/credits/creditutil.cpp
-    src/credits/creditutil.h
-        src/credits/Credit.cpp
-        src/credits/Credit.h
-        src/credits/CreditInBatch.cpp
-        src/credits/CreditInBatch.h
-        src/crypto/25519/curve25519-donna-32bit.h
-    src/crypto/25519/curve25519-donna-64bit.h
-    src/crypto/25519/curve25519-donna-helpers.h
-    src/crypto/25519/curve25519-donna-sse2.h
-    src/crypto/25519/ed25519-donna-32bit-sse2.h
-    src/crypto/25519/ed25519-donna-32bit-tables.h
-    src/crypto/25519/ed25519-donna-64bit-sse2.h
-    src/crypto/25519/ed25519-donna-64bit-tables.h
-    src/crypto/25519/ed25519-donna-64bit-x86-32bit.h
-    src/crypto/25519/ed25519-donna-64bit-x86.h
-    src/crypto/25519/ed25519-donna-basepoint-table.h
-    src/crypto/25519/ed25519-donna-batchverify.h
-    src/crypto/25519/ed25519-donna-impl-base.h
-    src/crypto/25519/ed25519-donna-impl-sse2.h
-    src/crypto/25519/ed25519-donna-portable-identify.h
-    src/crypto/25519/ed25519-donna-portable.h
-    src/crypto/25519/ed25519-donna.h
-    src/crypto/25519/ed25519-hash-custom.h
-    src/crypto/25519/ed25519-hash.h
-    src/crypto/25519/ed25519-randombytes-custom.h
-    src/crypto/25519/ed25519-randombytes.h
-    src/crypto/25519/ed25519.cpp
-    src/crypto/25519/ed25519.h
-    src/crypto/25519/modm-donna-32bit.h
-    src/crypto/25519/modm-donna-64bit.h
-    src/crypto/25519/regression.h
-    src/crypto/25519points.h
-    src/crypto/bignum.h
-    src/crypto/crypter.cpp
-    src/crypto/crypter.h
-        src/crypto/teleportcrypto.cpp
-        src/crypto/teleportcrypto.h
-    src/crypto/hash.cpp
-    src/crypto/hash.h
-    src/crypto/hashtrees.h
-    src/crypto/key.cpp
-    src/crypto/key.h
-    src/crypto/point.cpp
-    src/crypto/point.h
-    src/crypto/polynomial.cpp
-    src/crypto/polynomial.h
-    src/crypto/secp256k1point.h
-    src/crypto/shorthash.h
-    src/crypto/signature.h
-    src/crypto/uint256.h
-    src/currencies/currencies.cpp
-    src/currencies/currencies.h
-        src/database/datastore.h
-    src/database/keystore.cpp
-    src/database/keystore.h
-    src/database/memdb.h
-    src/deposit/deposit_messages.h
-    src/deposit/deposit_secret.cpp
-    src/deposit/deposit_secret.h
-    src/deposit/deposits.cpp
-    src/deposit/deposits.h
-    src/deposit/disclosure.cpp
-    src/deposit/disclosure_messages.h
-    src/deposit/transfer.cpp
-    src/deposit/transfer_messages.h
-    src/deposit/withdraw.cpp
-    src/deposit/withdrawal_messages.h
-        src/teleportnode/calendar.cpp
-        src/teleportnode/calendar.h
-        src/teleportnode/eventnotifier.cpp
-        src/teleportnode/eventnotifier.h
-        src/teleportnode/flexnode.cpp
-        src/teleportnode/flexnode.h
-        src/teleportnode/init.cpp
-        src/teleportnode/init.h
-        src/teleportnode/main.cpp
-        src/teleportnode/main.h
-        src/teleportnode/message_handler.h
-        src/teleportnode/orphanage.h
-        src/teleportnode/schedule.h
-        src/teleportnode/wallet.cpp
-        src/teleportnode/wallet.h
-        src/initialize/datamessages.cpp
-    src/initialize/datamessages.h
-    src/initialize/dataserver.cpp
-    src/initialize/dataserver.h
-    src/json/json_spirit.h
-    src/json/json_spirit_error_position.h
-    src/json/json_spirit_reader.cpp
-    src/json/json_spirit_reader.h
-    src/json/json_spirit_reader_template.h
-    src/json/json_spirit_stream_reader.h
-    src/json/json_spirit_utils.h
-    src/json/json_spirit_value.cpp
-    src/json/json_spirit_value.h
-    src/json/json_spirit_writer.cpp
-    src/json/json_spirit_writer.h
-    src/json/json_spirit_writer_template.h
-    src/leveldb/db/builder.cc
-    src/leveldb/db/builder.h
-    src/leveldb/db/c.cc
-    src/leveldb/db/db_impl.cc
-    src/leveldb/db/db_impl.h
-    src/leveldb/db/db_iter.cc
-    src/leveldb/db/db_iter.h
-    src/leveldb/db/dbformat.cc
-    src/leveldb/db/dbformat.h
-    src/leveldb/db/filename.cc
-    src/leveldb/db/filename.h
-    src/leveldb/db/log_format.h
-    src/leveldb/db/log_reader.cc
-    src/leveldb/db/log_reader.h
-    src/leveldb/db/log_writer.cc
-    src/leveldb/db/log_writer.h
-    src/leveldb/db/memtable.cc
-    src/leveldb/db/memtable.h
-    src/leveldb/db/repair.cc
-    src/leveldb/db/skiplist.h
-    src/leveldb/db/snapshot.h
-    src/leveldb/db/table_cache.cc
-    src/leveldb/db/table_cache.h
-    src/leveldb/db/version_edit.cc
-    src/leveldb/db/version_edit.h
-    src/leveldb/db/version_set.cc
-    src/leveldb/db/version_set.h
-    src/leveldb/db/write_batch.cc
-    src/leveldb/db/write_batch_internal.h
-    src/leveldb/helpers/memenv/memenv.cc
-    src/leveldb/helpers/memenv/memenv.h
-    src/leveldb/include/leveldb/c.h
-    src/leveldb/include/leveldb/cache.h
-    src/leveldb/include/leveldb/comparator.h
-    src/leveldb/include/leveldb/db.h
-    src/leveldb/include/leveldb/env.h
-    src/leveldb/include/leveldb/filter_policy.h
-    src/leveldb/include/leveldb/iterator.h
-    src/leveldb/include/leveldb/options.h
-    src/leveldb/include/leveldb/slice.h
-    src/leveldb/include/leveldb/status.h
-    src/leveldb/include/leveldb/table.h
-    src/leveldb/include/leveldb/table_builder.h
-    src/leveldb/include/leveldb/write_batch.h
-    src/leveldb/port/win/stdint.h
-    src/leveldb/port/atomic_pointer.h
-    src/leveldb/port/port.h
-    src/leveldb/port/port_posix.cc
-    src/leveldb/port/port_posix.h
-    src/leveldb/port/thread_annotations.h
-    src/leveldb/table/block.cc
-    src/leveldb/table/block.h
-    src/leveldb/table/block_builder.cc
-    src/leveldb/table/block_builder.h
-    src/leveldb/table/filter_block.cc
-    src/leveldb/table/filter_block.h
-    src/leveldb/table/format.cc
-    src/leveldb/table/format.h
-    src/leveldb/table/iterator.cc
-    src/leveldb/table/iterator_wrapper.h
-    src/leveldb/table/merger.cc
-    src/leveldb/table/merger.h
-    src/leveldb/table/table.cc
-    src/leveldb/table/table_builder.cc
-    src/leveldb/table/two_level_iterator.cc
-    src/leveldb/table/two_level_iterator.h
-    src/leveldb/util/arena.cc
-    src/leveldb/util/arena.h
-    src/leveldb/util/bloom.cc
-    src/leveldb/util/cache.cc
-    src/leveldb/util/coding.cc
-    src/leveldb/util/coding.h
-    src/leveldb/util/comparator.cc
-    src/leveldb/util/crc32c.cc
-    src/leveldb/util/crc32c.h
-    src/leveldb/util/env.cc
-    src/leveldb/util/env_posix.cc
-    src/leveldb/util/env_win.cc
-    src/leveldb/util/filter_policy.cc
-    src/leveldb/util/hash.cc
-    src/leveldb/util/hash.h
-    src/leveldb/util/histogram.cc
-    src/leveldb/util/histogram.h
-    src/leveldb/util/logging.cc
-    src/leveldb/util/logging.h
-    src/leveldb/util/mutexlock.h
-    src/leveldb/util/options.cc
-    src/leveldb/util/posix_logger.h
-    src/leveldb/util/random.h
-    src/leveldb/util/status.cc
-    src/mining/pit.cpp
-    src/mining/pit.h
-    src/mining/work.cpp
-    src/mining/work.h
-    src/net/addrman.cpp
-    src/net/addrman.h
-    src/net/net.cpp
-    src/net/net.h
-    src/net/netbase.cpp
-    src/net/netbase.h
-    src/net/resourcemonitor.cpp
-    src/net/resourcemonitor.h
-    src/relays/relay_admission.cpp
-    src/relays/relay_admission.h
-    src/relays/relay_inheritance.cpp
-    src/relays/relay_inheritance.h
-    src/relays/relay_messages.cpp
-    src/relays/relay_messages.h
-    src/relays/relays.cpp
-    src/relays/relays.h
-    src/relays/relaystate.cpp
-    src/relays/relaystate.h
-    src/relays/successionsecret.cpp
-    src/relays/successionsecret.h
-    src/rpc/rpcblockchain.cpp
-    src/rpc/rpcclient.cpp
-    src/rpc/rpcclient.h
-    src/rpc/rpcdump.cpp
-    src/rpc/rpcmining.cpp
-    src/rpc/rpcmisc.cpp
-    src/rpc/rpcnet.cpp
-    src/rpc/rpcobjects.cpp
-    src/rpc/rpcobjects.h
-    src/rpc/rpcprotocol.cpp
-    src/rpc/rpcprotocol.h
-    src/rpc/rpcrawtransaction.cpp
-    src/rpc/rpcserver.cpp
-    src/rpc/rpcserver.h
-    src/rpc/rpcwallet.cpp
-    src/trade/market.cpp
-    src/trade/market.h
-    src/trade/relay.cpp
-    src/trade/relay.h
-    src/trade/thirdparty.cpp
-    src/trade/thirdparty.h
-    src/trade/trade.cpp
-    src/trade/trade.h
-    src/trade/trade_messages.cpp
-    src/trade/trade_messages.h
-    src/trade/trader.cpp
-    src/trade/trader.h
-    src/trade/tradesecret.h
-    src/twist/code/scrypt-conf.h
-    src/twist/code/scrypt-jane-chacha.h
-    src/twist/code/scrypt-jane-hash.h
-    src/twist/code/scrypt-jane-hash_blake256.h
-    src/twist/code/scrypt-jane-hash_blake512.h
-    src/twist/code/scrypt-jane-hash_keccak.h
-    src/twist/code/scrypt-jane-hash_sha256.h
-    src/twist/code/scrypt-jane-hash_sha512.h
-    src/twist/code/scrypt-jane-hash_skein512.h
-    src/twist/code/scrypt-jane-mix_chacha-avx.h
-    src/twist/code/scrypt-jane-mix_chacha-sse2.h
-    src/twist/code/scrypt-jane-mix_chacha-ssse3.h
-    src/twist/code/scrypt-jane-mix_chacha-xop.h
-    src/twist/code/scrypt-jane-mix_chacha.h
-    src/twist/code/scrypt-jane-mix_salsa-avx.h
-    src/twist/code/scrypt-jane-mix_salsa-sse2.h
-    src/twist/code/scrypt-jane-mix_salsa-xop.h
-    src/twist/code/scrypt-jane-mix_salsa.h
-    src/twist/code/scrypt-jane-mix_salsa64-avx.h
-    src/twist/code/scrypt-jane-mix_salsa64-avx2.h
-    src/twist/code/scrypt-jane-mix_salsa64-sse2.h
-    src/twist/code/scrypt-jane-mix_salsa64-ssse3.h
-    src/twist/code/scrypt-jane-mix_salsa64-xop.h
-    src/twist/code/scrypt-jane-mix_salsa64.h
-    src/twist/code/scrypt-jane-pbkdf2.h
-    src/twist/code/scrypt-jane-portable-x86.h
-    src/twist/code/scrypt-jane-portable.h
-    src/twist/code/scrypt-jane-romix-basic.h
-    src/twist/code/scrypt-jane-romix.h
-    src/twist/code/scrypt-jane-salsa.h
-    src/twist/code/scrypt-jane-salsa64.h
-    src/twist/code/scrypt-jane-test-vectors.h
-    src/twist/code/twist-romix.h
-    src/twist/code/twist-salsa64.h
-    src/twist/code/twist-template.h
-    src/twist/alloc.h
-    src/twist/scrypt-jane-twist.h
-    src/twist/twist-jane.h
-    src/twist/twist.h
-    src/twist/twistcpp.h
-    src/compat.h
-    src/define.h
-    src/leveldbwrapper.cpp
-    src/leveldbwrapper.h
-    src/log.h)
-
 add_subdirectory(test)
 add_subdirectory(test/teleport_tests)
 add_subdirectory(test/lib/googlemock)
@@ -334,12 +16,6 @@ include_directories(test/lib/googletest/include
         src/leveldb/helpers/memenv
         src/leveldb
         src)
-
-set(TEST_SOURCE_FILES
-        ${SOURCE_FILES}
-        test/teleport_tests/test_main.cpp
-        test/teleport_tests/crypto/test_point.cpp
-        test/teleport_tests/crypto/test_secret.cpp)
 
 set(NET_FILES
         src/net/addrman.cpp
@@ -724,6 +400,37 @@ set(NEW_CREDITS_FILES
         test/teleport_tests/node/TeleportNetworkNode.cpp
         test/teleport_tests/node/TeleportNetworkNode.h)
 
+set(DATA_HANDLER_FILES
+        test/teleport_tests/node/data_handler/KnownHistoryMessage.cpp
+        test/teleport_tests/node/data_handler/KnownHistoryMessage.h
+        test/teleport_tests/node/data_handler/KnownHistoryDeclaration.cpp
+        test/teleport_tests/node/data_handler/KnownHistoryDeclaration.h
+        test/teleport_tests/node/data_handler/DiurnMessageData.cpp
+        test/teleport_tests/node/data_handler/DiurnMessageData.h
+        test/teleport_tests/node/data_handler/EnclosedMessageData.h
+        test/teleport_tests/node/data_handler/EnclosedMessageData.cpp
+        test/teleport_tests/node/data_handler/TipHandler.cpp
+        test/teleport_tests/node/data_handler/TipHandler.h
+        test/teleport_tests/node/data_handler/CalendarHandler.cpp
+        test/teleport_tests/node/data_handler/CalendarHandler.h
+        test/teleport_tests/node/data_handler/InitialDataHandler.cpp
+        test/teleport_tests/node/data_handler/InitialDataHandler.h
+        test/teleport_tests/node/data_handler/KnownHistoryHandler.cpp
+        test/teleport_tests/node/data_handler/KnownHistoryHandler.h
+        test/teleport_tests/node/data_handler/KnownHistoryRequest.cpp
+        test/teleport_tests/node/data_handler/KnownHistoryRequest.h
+        test/teleport_tests/node/data_handler/DiurnDataRequest.cpp
+        test/teleport_tests/node/data_handler/DiurnDataRequest.h
+        test/teleport_tests/node/data_handler/DiurnDataMessage.cpp
+        test/teleport_tests/node/data_handler/DiurnDataMessage.h
+        test/teleport_tests/node/data_handler/DiurnFailureDetails.cpp
+        test/teleport_tests/node/data_handler/DiurnFailureDetails.h
+        test/teleport_tests/node/data_handler/DiurnFailureMessage.cpp
+        test/teleport_tests/node/data_handler/DiurnFailureMessage.h)
+
+set(CREDIT_HANDLER_FILES
+        )
+
 add_executable(runRPCTests
         test/teleport_tests/test_main.cpp
         test/teleport_tests/rpc/test_rpc.cpp)
@@ -885,6 +592,7 @@ set(NODE_TEST_FILES
 
 add_executable(runNodeTests
         ${NODE_TEST_FILES}
+        ${DATA_HANDLER_FILES}
         test/teleport_tests/test_main.cpp
         test/teleport_tests/main_tests/testCommunicator.cpp
         test/teleport_tests/node/testDataMessageHandler.cpp
@@ -895,32 +603,51 @@ add_executable(runNodeTests
         test/teleport_tests/node/testHttpAuthServer.cpp
         test/teleport_tests/node/testTeleportConfig.cpp
         test/teleport_tests/node/testTeleportRPCServer.cpp
-        test/teleport_tests/node/data_handler/KnownHistoryMessage.cpp
-        test/teleport_tests/node/data_handler/KnownHistoryMessage.h
-        test/teleport_tests/node/data_handler/KnownHistoryDeclaration.cpp
-        test/teleport_tests/node/data_handler/KnownHistoryDeclaration.h
-        test/teleport_tests/node/data_handler/DiurnMessageData.cpp
-        test/teleport_tests/node/data_handler/DiurnMessageData.h
-        test/teleport_tests/node/data_handler/EnclosedMessageData.h
-        test/teleport_tests/node/data_handler/EnclosedMessageData.cpp
-        test/teleport_tests/node/data_handler/TipHandler.cpp
-        test/teleport_tests/node/data_handler/TipHandler.h
-        test/teleport_tests/node/data_handler/CalendarHandler.cpp
-        test/teleport_tests/node/data_handler/CalendarHandler.h
-        test/teleport_tests/node/data_handler/InitialDataHandler.cpp
-        test/teleport_tests/node/data_handler/InitialDataHandler.h
-        test/teleport_tests/node/data_handler/KnownHistoryHandler.cpp
-        test/teleport_tests/node/data_handler/KnownHistoryHandler.h
-        test/teleport_tests/node/data_handler/KnownHistoryRequest.cpp
-        test/teleport_tests/node/data_handler/KnownHistoryRequest.h
-        test/teleport_tests/node/data_handler/DiurnDataRequest.cpp
-        test/teleport_tests/node/data_handler/DiurnDataRequest.h
-        test/teleport_tests/node/data_handler/DiurnDataMessage.cpp
-        test/teleport_tests/node/data_handler/DiurnDataMessage.h test/teleport_tests/node/data_handler/DiurnFailureDetails.cpp test/teleport_tests/node/data_handler/DiurnFailureDetails.h test/teleport_tests/node/data_handler/DiurnFailureMessage.cpp test/teleport_tests/node/data_handler/DiurnFailureMessage.h test/teleport_tests/node/testRelayState.cpp test/teleport_tests/node/RelayState.cpp test/teleport_tests/node/RelayState.h test/teleport_tests/node/Relay.cpp test/teleport_tests/node/Relay.h test/teleport_tests/node/RelayJoinMessage.cpp test/teleport_tests/node/RelayJoinMessage.h test/teleport_tests/node/testRelay.cpp test/teleport_tests/node/testRelayMessageHandler.cpp test/teleport_tests/node/RelayMessageHandler.cpp test/teleport_tests/node/RelayMessageHandler.h test/teleport_tests/node/testRelayJoinMessage.cpp test/teleport_tests/node/KeyDistributionMessage.cpp test/teleport_tests/node/KeyDistributionMessage.h test/teleport_tests/node/SecretRecoveryMessage.cpp test/teleport_tests/node/SecretRecoveryMessage.h test/teleport_tests/node/Data.h test/teleport_tests/node/Obituary.cpp test/teleport_tests/node/Obituary.h test/teleport_tests/node/RelayExit.cpp test/teleport_tests/node/RelayExit.h test/teleport_tests/node/testPointPrecomputation.cpp test/teleport_tests/node/KeyDistributionComplaint.cpp test/teleport_tests/node/KeyDistributionComplaint.h test/teleport_tests/node/DurationWithoutResponse.cpp test/teleport_tests/node/DurationWithoutResponse.h test/teleport_tests/node/KeyDistributionRefutation.cpp test/teleport_tests/node/KeyDistributionRefutation.h test/teleport_tests/node/DurationWithoutResponseFromRelay.cpp test/teleport_tests/node/DurationWithoutResponseFromRelay.h test/teleport_tests/node/GoodbyeMessage.cpp test/teleport_tests/node/GoodbyeMessage.h)
+        test/teleport_tests/node/testRelayState.cpp
+        test/teleport_tests/node/RelayState.cpp
+        test/teleport_tests/node/RelayState.h
+        test/teleport_tests/node/Relay.cpp
+        test/teleport_tests/node/Relay.h
+        test/teleport_tests/node/RelayJoinMessage.cpp
+        test/teleport_tests/node/RelayJoinMessage.h
+        test/teleport_tests/node/testRelay.cpp
+        test/teleport_tests/node/testRelayMessageHandler.cpp
+        test/teleport_tests/node/RelayMessageHandler.cpp
+        test/teleport_tests/node/RelayMessageHandler.h
+        test/teleport_tests/node/testRelayJoinMessage.cpp
+        test/teleport_tests/node/KeyDistributionMessage.cpp
+        test/teleport_tests/node/KeyDistributionMessage.h
+        test/teleport_tests/node/SecretRecoveryMessage.cpp
+        test/teleport_tests/node/SecretRecoveryMessage.h
+        test/teleport_tests/node/Data.h
+        test/teleport_tests/node/Obituary.cpp
+        test/teleport_tests/node/Obituary.h
+        test/teleport_tests/node/RelayExit.cpp
+        test/teleport_tests/node/RelayExit.h
+        test/teleport_tests/node/testPointPrecomputation.cpp
+        test/teleport_tests/node/KeyDistributionComplaint.cpp
+        test/teleport_tests/node/KeyDistributionComplaint.h
+        test/teleport_tests/node/DurationWithoutResponse.cpp
+        test/teleport_tests/node/DurationWithoutResponse.h
+        test/teleport_tests/node/KeyDistributionRefutation.cpp
+        test/teleport_tests/node/KeyDistributionRefutation.h
+        test/teleport_tests/node/DurationWithoutResponseFromRelay.cpp
+        test/teleport_tests/node/DurationWithoutResponseFromRelay.h
+        test/teleport_tests/node/GoodbyeMessage.cpp
+        test/teleport_tests/node/GoodbyeMessage.h
+        test/teleport_tests/node/GoodbyeComplaint.cpp
+        test/teleport_tests/node/GoodbyeComplaint.h
+        test/teleport_tests/node/GoodbyeRefutation.cpp
+        test/teleport_tests/node/GoodbyeRefutation.h
+        test/teleport_tests/node/SecretRecoveryComplaint.cpp
+        test/teleport_tests/node/SecretRecoveryComplaint.h
+        test/teleport_tests/node/SecretRecoveryRefutation.cpp
+        test/teleport_tests/node/SecretRecoveryRefutation.h)
 
-add_executable(flexnetd
+add_executable(teleportd
         test/teleport_tests/teleport_data/TestData.h
         ${NODE_TEST_FILES}
+        ${DATA_HANDLER_FILES}
         test/teleport_tests/node/teleportd.cpp)
 
 target_link_libraries(runRPCTests gmock gmock_main ssl crypto boost_system boost_program_options
@@ -930,7 +657,7 @@ target_link_libraries(runNodeTests gmock gmock_main ssl crypto boost_system boos
         boost_filesystem boost_thread jsoncpp microhttpd jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
         curl curl)
 
-target_link_libraries(flexnetd gmock gmock_main ssl crypto boost_system boost_program_options
+target_link_libraries(teleportd gmock gmock_main ssl crypto boost_system boost_program_options
         boost_filesystem boost_thread jsoncpp microhttpd jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
         curl curl)
 
