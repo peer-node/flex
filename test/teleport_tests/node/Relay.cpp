@@ -20,6 +20,9 @@ RelayJoinMessage Relay::GenerateJoinMessage(MemoryDataStore &keydata, uint160 mi
 
 KeyDistributionMessage Relay::GenerateKeyDistributionMessage(Data data, uint160 encoding_message_hash, RelayState &relay_state)
 {
+    if (key_quarter_holders.size() == 0)
+        relay_state.AssignKeyPartHoldersToRelay(*this, encoding_message_hash);
+
     KeyDistributionMessage key_distribution_message;
     key_distribution_message.encoding_message_hash = encoding_message_hash;
     key_distribution_message.relay_join_hash = join_message_hash;

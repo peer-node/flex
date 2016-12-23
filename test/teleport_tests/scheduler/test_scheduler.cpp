@@ -44,3 +44,33 @@ TEST_F(AScheduler, CanScheduleEvents)
     is_done = schedule_test_data[hash]["done"];
     ASSERT_THAT(is_done, Eq(1));
 }
+
+class ObjectWithMethod
+{
+public:
+    uint160 recorded_hash{0};
+
+    void SomeMethod(uint160 hash)
+    {
+        recorded_hash = hash;
+    }
+};
+
+TEST_F(AScheduler, CanScheduleExecutionOfObjectMethods)
+{
+    ObjectWithMethod object_with_method;
+
+    ScheduledTask task("set_hash", &ObjectWithMethod::SomeMethod, &object_with_method);
+    scheduler.AddTask(task);
+    scheduler.Schedule("set_hash", hash, task_time);
+
+    SetMockTimeMicros(task_time - 1);
+    scheduler.DoTasksScheduledForExecutionBeforeNow();
+
+    ASSERT_THAT(object_with_method.recorded_hash, Eq(0));
+
+    SetMockTimeMicros(task_time);
+    scheduler.DoTasksScheduledForExecutionBeforeNow();
+
+    ASSERT_THAT(object_with_method.recorded_hash, Eq(hash));
+}

@@ -19,6 +19,7 @@ using namespace std;
 //  - The user (asking the user to fix the system clock if the first two disagree)
 //
 static int64_t nMockTime = 0;  // For unit testing
+int64_t nMockTimeMicros = 0;
 
 int64_t GetTime()
 {

@@ -18,7 +18,7 @@ int64_t GetTimeOffset();
 void SetTimeOffset(int64_t offset);
 
 
-static int64_t nMockTimeMicros = 0;
+extern int64_t nMockTimeMicros;
 
 inline void SetMockTimeMicros(int64_t nMockTimeMicros_)
 {

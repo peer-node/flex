@@ -1,13 +1,11 @@
-// Distributed under version 3 of the Gnu Affero GPL software license, 
-// see the accompanying file COPYING for details.
-
-
 #ifndef TELEPORT_SCHEDULE
 #define TELEPORT_SCHEDULE
 
 #include "define.h"
+#include "base/util_time.h"
 #include <boost/thread.hpp>
 #include "crypto/uint256.h"
+#include <functional>
 
 #include "log.h"
 #define LOG_CATEGORY "schedule.h"
@@ -16,14 +14,22 @@ class ScheduledTask
 {
 public:
     string_t task_type;
-    void (*task_function)(uint160);
     MemoryDataStore *scheduledata;
     LocationIterator schedule_scanner;
+    std::function<void(uint160)> task_function;
 
-    ScheduledTask(const char* task_type, void (*task_function)(uint160)):
-        task_type(task_type),
-        task_function(task_function)
+    template <typename FUNCTION>
+    ScheduledTask(const char* task_type, FUNCTION method):
+            task_type(task_type),
+            task_function(method)
     {
+    }
+
+    template <typename METHOD, typename OBJECT>
+    ScheduledTask(const char* task_type, METHOD method, OBJECT object):
+            task_type(task_type)
+    {
+        task_function = std::bind(method, object, std::placeholders::_1);
     }
 
     void Initialize(MemoryDataStore &scheduledata_)
@@ -58,8 +64,9 @@ public:
         uint64_t scheduled_time = 0;
         uint160 task_hash;
         schedule_scanner = scheduledata->LocationIterator(task_type);
+
         schedule_scanner.SeekStart();
-        
+
         while (schedule_scanner.GetNextObjectAndLocation(task_hash, scheduled_time))
         {
             if (scheduled_time > now)
@@ -69,8 +76,7 @@ public:
                  << " scheduled for " << scheduled_time << "\n";
             
             scheduledata->RemoveFromLocation(task_type, scheduled_time);
-            schedule_scanner = scheduledata->LocationIterator(task_type);
-            schedule_scanner.SeekStart();
+
             try
             {
                 DoTask(task_hash);
@@ -87,6 +93,9 @@ public:
                      << " during scheduled execution of " << task_type
                      << " with task " << task_hash << "\n";
             }
+
+            schedule_scanner = scheduledata->LocationIterator(task_type);
+            schedule_scanner.SeekStart();
         }
     }
 };
@@ -96,17 +105,20 @@ class Scheduler
 public:
     MemoryDataStore scheduledata;
     std::vector<ScheduledTask> tasks;
+    boost::thread *running_thread;
     bool running;
 
     Scheduler()
     {
-        boost::thread t(&Scheduler::DoTasks, this);
+        running_thread = new boost::thread(&Scheduler::DoTasks, this);
         running = true;
     }
 
     ~Scheduler()
     {
         running = false;
+        running_thread->interrupt();
+        running_thread->join();
     }
 
     void DoTasks()
@@ -114,8 +126,11 @@ public:
         while (running)
         {
             DoTasksScheduledForExecutionBeforeNow();
-            boost::this_thread::interruption_point();
-            boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+            for (uint32_t i = 0; i < 10; i++)
+            {
+                boost::this_thread::interruption_point();
+                boost::this_thread::sleep(boost::posix_time::milliseconds(10));
+            }
         }
     }
 
@@ -136,6 +151,17 @@ public:
         scheduledata[task_hash].Location(task_type) = when;
         log_ << "scheduled " << task_type << " with task "
              << task_hash << " at " << when << "\n";
+    }
+
+    bool TaskIsScheduledForTime(string_t task_type, uint160 task_hash, int64_t when)
+    {
+        int64_t task_time = scheduledata[task_hash].Location(task_type);
+        return task_time == when;
+    }
+
+    bool TaskIsScheduledForTime(const char* task_type, uint160 task_hash, int64_t when)
+    {
+        return TaskIsScheduledForTime(string_t(task_type), task_hash, when);
     }
 };
 

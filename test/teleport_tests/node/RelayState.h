@@ -21,6 +21,7 @@
 class RelayState
 {
 public:
+    uint160 latest_mined_credit_message_hash{0};
     std::vector<Relay> relays;
     std::map<uint64_t, Relay*> relays_by_number;
     std::map<uint160, Relay*> relays_by_join_hash;
@@ -187,6 +188,8 @@ public:
     void UnprocessDurationAfterKeyDistributionMessage(KeyDistributionMessage key_distribution_message, Data data);
 
     void UnprocessKeyDistributionComplaint(KeyDistributionComplaint complaint, Data data);
+
+    bool MinedCreditMessageHashIsAlreadyBeingUsed(uint160 mined_credit_message_hash);
 };
 
 class RelayStateException : public std::runtime_error

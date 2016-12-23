@@ -44,7 +44,7 @@ public:
 
     JSON(mined_credit_message_hash, public_key_sixteenths, encrypted_private_key_sixteenths, signature);
 
-    DEPENDENCIES();
+    DEPENDENCIES(mined_credit_message_hash);
 
     IMPLEMENT_HASH_SIGN_VERIFY();
 

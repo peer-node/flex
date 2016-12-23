@@ -17,6 +17,7 @@ public:
     MockDataMap::iterator start;
     MockDataMap::iterator end;
     MockDataMap::iterator internal_iterator;
+    MockDataMap *located_serialized_objects;
 
     LocationIterator() { }
 
@@ -24,6 +25,7 @@ public:
     {
         start = dimension.located_serialized_objects.begin();
         end = dimension.located_serialized_objects.end();
+        located_serialized_objects = &dimension.located_serialized_objects;
         internal_iterator = start;
     }
 
@@ -61,10 +63,8 @@ public:
     template <typename LOCATION_NAME>
     void Seek(LOCATION_NAME location)
     {
-        SeekStart();
         vch_t serialized_location = Serialize(location);
-        while (internal_iterator != end and internal_iterator->first < serialized_location)
-            internal_iterator++;
+        internal_iterator = located_serialized_objects->upper_bound(serialized_location);
     }
 };
 

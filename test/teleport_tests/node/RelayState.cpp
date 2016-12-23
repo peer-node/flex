@@ -17,9 +17,16 @@ void RelayState::ProcessRelayJoinMessage(RelayJoinMessage relay_join_message)
 
 void RelayState::ThrowExceptionIfMinedCreditMessageHashWasAlreadyUsed(RelayJoinMessage relay_join_message)
 {
+    if (MinedCreditMessageHashIsAlreadyBeingUsed(relay_join_message.mined_credit_message_hash))
+        throw RelayStateException("mined_credit_message_hash already used");
+}
+
+bool RelayState::MinedCreditMessageHashIsAlreadyBeingUsed(uint160 mined_credit_message_hash)
+{
     for (Relay& relay : relays)
-        if (relay.mined_credit_message_hash == relay_join_message.mined_credit_message_hash)
-            throw RelayStateException("mined_credit_message_hash already used");
+        if (relay.mined_credit_message_hash == mined_credit_message_hash)
+            return true;
+    return false;
 }
 
 Relay RelayState::GenerateRelayFromRelayJoinMessage(RelayJoinMessage relay_join_message)

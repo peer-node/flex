@@ -491,7 +491,7 @@ add_executable(runMiningTests
         test/teleport_tests/node/server/HttpAuthServer.cpp
         test/teleport_tests/node/server/HttpAuthServer.h)
 
-add_executable(miner_cli
+add_executable(minerd
         ${WORK_FILES}
         test/teleport_tests/mining/TeleportMiner.cpp
         test/teleport_tests/mining/TeleportMiner.h
@@ -503,7 +503,7 @@ add_executable(miner_cli
         test/teleport_tests/mining/MiningRPCServer.h
         test/teleport_tests/mining/NetworkSpecificProofOfWork.cpp
         test/teleport_tests/mining/NetworkSpecificProofOfWork.h
-        test/teleport_tests/mining/miner_cli.cpp
+        test/teleport_tests/mining/minerd.cpp
         test/teleport_tests/node/server/HttpAuthServer.cpp
         test/teleport_tests/node/server/HttpAuthServer.h)
 
@@ -665,7 +665,7 @@ target_link_libraries(runMiningTests gmock gmock_main ssl crypto boost_system bo
         boost_filesystem boost_thread jsoncpp microhttpd jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
         curl curl)
 
-target_link_libraries(miner_cli ssl crypto boost_system boost_program_options
+target_link_libraries(minerd ssl crypto boost_system boost_program_options
         boost_filesystem boost_thread jsoncpp microhttpd jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client)
 
 target_link_libraries(runCryptoTests gmock gmock_main ssl crypto boost_system boost_program_options
