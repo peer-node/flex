@@ -1,5 +1,5 @@
-#ifndef TELEPORT_MOCKDATA_H
-#define TELEPORT_MOCKDATA_H
+#ifndef TELEPORT_MEMORYDATA_H
+#define TELEPORT_MEMORYDATA_H
 
 #include "base/serialize.h"
 #include "base/version.h"
@@ -7,7 +7,7 @@
 
 
 
-class MockData
+class MemoryData
 {
 public:
     template <typename N>
@@ -45,4 +45,4 @@ private:
 };
 
 
-#endif //TELEPORT_MOCKDATA_H
+#endif //TELEPORT_MEMORYDATA_H

@@ -34,11 +34,12 @@ public:
         READWRITE(key_sixteenths_encrypted_for_key_quarter_holders);
         READWRITE(key_sixteenths_encrypted_for_first_set_of_key_sixteenth_holders);
         READWRITE(key_sixteenths_encrypted_for_second_set_of_key_sixteenth_holders);
+        READWRITE(signature);
     );
 
     JSON(relay_join_hash, encoding_message_hash, relay_number, key_sixteenths_encrypted_for_key_quarter_holders,
          key_sixteenths_encrypted_for_first_set_of_key_sixteenth_holders,
-         key_sixteenths_encrypted_for_second_set_of_key_sixteenth_holders);
+         key_sixteenths_encrypted_for_second_set_of_key_sixteenth_holders, signature);
 
     DEPENDENCIES(relay_join_hash, encoding_message_hash);
 

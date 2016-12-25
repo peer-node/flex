@@ -2,5 +2,5 @@
 
 void MemoryDataStore::Reset()
 {
-    objects = std::map<vch_t, MockObject>();
+    objects = std::map<vch_t, MemoryObject>();
 }

@@ -1,29 +1,31 @@
-#ifndef TELEPORT_MOCKLOCATION_H
-#define TELEPORT_MOCKLOCATION_H
+#ifndef TELEPORT_MEMORYLOCATION_H
+#define TELEPORT_MEMORYLOCATION_H
 
 #include <src/base/sync.h>
-#include "MockData.h"
-#include "MockDimension.h"
+#include "MemoryData.h"
+#include "MemoryDimension.h"
 
 #include "log.h"
 #define LOG_CATEGORY "MockLocation.h"
 
-class MockLocation : public MockData
+class MemoryLocation : public MemoryData
 {
 public:
-    MockDimension& dimension;
+    MemoryDimension& dimension;
     vch_t serialized_object_name;
     vch_t serialized_location_value;
 
-    MockLocation(vch_t serialized_object_name,
-                 MockDimension& dimension,
+    MemoryLocation(vch_t serialized_object_name,
+                 MemoryDimension& dimension,
                  vch_t serialized_location_value):
             dimension(dimension),
             serialized_object_name(serialized_object_name),
             serialized_location_value(serialized_location_value)
     { }
 
-    MockLocation(const MockLocation& other):
+    MemoryLocation(MemoryDimension &dimension): dimension(dimension) { }
+
+    MemoryLocation(const MemoryLocation& other):
             dimension(other.dimension),
             serialized_object_name(other.serialized_object_name),
             serialized_location_value(other.serialized_location_value)
@@ -38,7 +40,7 @@ public:
     }
 
     template<typename VALUE_TYPE>
-    MockLocation& operator=(VALUE_TYPE value)
+    MemoryLocation& operator=(VALUE_TYPE value)
     {
         serialized_location_value = Serialize(value);
         LOCK(dimension.mutex);
@@ -46,7 +48,7 @@ public:
         return *this;
     }
 
-    MockLocation& operator=(const char* value)
+    MemoryLocation& operator=(const char* value)
     {
         *this = std::string(value);
         return *this;
@@ -54,4 +56,4 @@ public:
 };
 
 
-#endif //TELEPORT_MOCKLOCATION_H
+#endif //TELEPORT_MEMORYLOCATION_H

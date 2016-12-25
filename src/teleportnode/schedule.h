@@ -15,7 +15,7 @@ class ScheduledTask
 public:
     string_t task_type;
     MemoryDataStore *scheduledata;
-    LocationIterator schedule_scanner;
+    MemoryLocationIterator schedule_scanner;
     std::function<void(uint160)> task_function;
 
     template <typename FUNCTION>
@@ -72,7 +72,7 @@ public:
             if (scheduled_time > now)
                 break;
             log_ << "time is now " << now << "\n"
-                 << "doing " << task_type 
+                 << "doing " << task_type
                  << " scheduled for " << scheduled_time << "\n";
             
             scheduledata->RemoveFromLocation(task_type, scheduled_time);

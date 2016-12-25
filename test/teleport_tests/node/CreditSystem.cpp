@@ -22,7 +22,7 @@ using std::string;
 
 vector<uint160> CreditSystem::MostWorkBatches()
 {
-    LocationIterator work_scanner = creditdata.LocationIterator("total_work");
+    MemoryLocationIterator work_scanner = creditdata.LocationIterator("total_work");
     work_scanner.SeekEnd();
     vector<uint160> hashes;
     uint160 total_work(0);
@@ -430,7 +430,7 @@ void CreditSystem::SwitchMainChainToTipWithTheMostWork()
 
 uint160 CreditSystem::CurrentTipOfMainChain()
 {
-    LocationIterator main_chain_scanner = creditdata.LocationIterator("main_chain");
+    MemoryLocationIterator main_chain_scanner = creditdata.LocationIterator("main_chain");
     main_chain_scanner.SeekEnd();
     uint160 work, msg_hash;
     main_chain_scanner.GetPreviousObjectAndLocation(msg_hash, work);
@@ -762,7 +762,7 @@ uint160 CreditSystem::MaximumReportedCalendarWork()
 {
     vector<uint160> calendar_message_hashes;
     uint160 reported_work = 0;
-    LocationIterator work_scanner = creditdata.LocationIterator("reported_calendar_work");
+    MemoryLocationIterator work_scanner = creditdata.LocationIterator("reported_calendar_work");
     work_scanner.SeekEnd();
     work_scanner.GetPreviousObjectAndLocation(calendar_message_hashes, reported_work);
     return reported_work;
@@ -772,7 +772,7 @@ CalendarMessage CreditSystem::CalendarMessageWithMaximumReportedWork()
 {
     vector<uint160> calendar_message_hashes;
     uint160 reported_work = 0;
-    LocationIterator work_scanner = creditdata.LocationIterator("reported_calendar_work");
+    MemoryLocationIterator work_scanner = creditdata.LocationIterator("reported_calendar_work");
     work_scanner.SeekEnd();
     work_scanner.GetPreviousObjectAndLocation(calendar_message_hashes, reported_work);
 
@@ -787,7 +787,7 @@ CalendarMessage CreditSystem::CalendarMessageWithMaximumScrutinizedWork()
 {
     vector<uint160> calendar_message_hashes;
     uint160 reported_work = 0;
-    LocationIterator work_scanner = creditdata.LocationIterator("scrutinized_calendar_work");
+    MemoryLocationIterator work_scanner = creditdata.LocationIterator("scrutinized_calendar_work");
     work_scanner.SeekEnd();
     work_scanner.GetPreviousObjectAndLocation(calendar_message_hashes, reported_work);
 
@@ -909,7 +909,7 @@ Calendar CreditSystem::GetRequestedCalendar(InitialDataMessage &initial_data_mes
 
 void CreditSystem::RemoveMinedCreditMessageAndThoseDownstreamFromRecordOfTotalWork(MinedCreditMessage msg)
 {
-    LocationIterator work_scanner = creditdata.LocationIterator("total_work");
+    MemoryLocationIterator work_scanner = creditdata.LocationIterator("total_work");
     work_scanner.Seek(msg.mined_credit.ReportedWork());
 
     uint160 message_hash = msg.GetHash160();

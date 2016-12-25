@@ -20,6 +20,9 @@ public:
                              uint64_t set_of_secrets,
                              uint64_t position_of_secret);
 
+    KeyDistributionComplaint(uint160 key_distribution_message_hash, uint64_t set_of_secrets,
+                                 uint64_t position_of_secret);
+
     uint160 key_distribution_message_hash{0};
     uint64_t set_of_secrets{0};
     uint64_t position_of_secret{0};

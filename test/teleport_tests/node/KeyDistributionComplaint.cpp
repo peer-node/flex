@@ -42,3 +42,11 @@ KeyDistributionComplaint::KeyDistributionComplaint(KeyDistributionMessage key_di
 {
 
 }
+
+KeyDistributionComplaint::KeyDistributionComplaint(uint160 key_distribution_message_hash,
+                                                   uint64_t set_of_secrets, uint64_t position_of_secret):
+        key_distribution_message_hash(key_distribution_message_hash), set_of_secrets(set_of_secrets),
+        position_of_secret(position_of_secret)
+{
+
+}

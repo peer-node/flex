@@ -50,15 +50,12 @@ CLevelDBWrapper::CLevelDBWrapper(const boost::filesystem::path &path, size_t nCa
         options.env = penv;
     } else {
         if (fWipe) {
-            //LogPrintf("Wiping LevelDB in %s\n", path.string());
             leveldb::DestroyDB(path.string(), options);
         }
         TryCreateDirectory(path);
-        //LogPrintf("Opening LevelDB in %s\n", path.string());
     }
     leveldb::Status status = leveldb::DB::Open(options, path.string(), &pdb);
     HandleError(status);
-    LogPrintf("Opened LevelDB successfully\n");
 }
 
 CLevelDBWrapper::~CLevelDBWrapper() { }

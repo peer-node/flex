@@ -1,18 +1,18 @@
-#ifndef TELEPORT_MOCKDATASTORE_H
-#define TELEPORT_MOCKDATASTORE_H
+#ifndef TELEPORT_MEMORYDATASTORE_H
+#define TELEPORT_MEMORYDATASTORE_H
 
-#include "MockObject.h"
-#include "LocationIterator.h"
-#include "MockDimension.h"
+#include "MemoryObject.h"
+#include "MemoryLocationIterator.h"
+#include "MemoryDimension.h"
 
 #include "log.h"
 #define LOG_CATEGORY "MemoryDataStore.h"
 
-class MemoryDataStore : MockData
+class MemoryDataStore : MemoryData
 {
 public:
-    std::map<vch_t, MockObject> objects;
-    std::map<vch_t, MockDimension> dimensions;
+    std::map<vch_t, MemoryObject> objects;
+    std::map<vch_t, MemoryDimension> dimensions;
     Mutex objects_mutex, dimensions_mutex;
 
     MemoryDataStore() { }
@@ -27,21 +27,22 @@ public:
     {
         objects = other.objects;
         dimensions = other.dimensions;
+        return *this;
     }
 
     template <typename OBJECT_NAME>
-    MockObject& operator[](const OBJECT_NAME& object_name)
+    MemoryObject& operator[](const OBJECT_NAME& object_name)
     {
         vch_t serialized_name = Serialize(object_name);
 
         LOCK(objects_mutex);
         if (not objects.count(serialized_name))
-            objects[serialized_name] = MockObject(serialized_name, &dimensions);
+            objects[serialized_name] = MemoryObject(serialized_name, &dimensions);
 
         return objects[serialized_name];
     }
 
-    MockObject& operator[](const char* object_name)
+    MemoryObject& operator[](const char* object_name)
     {
         return (*this)[std::string(object_name)];
     }
@@ -49,25 +50,41 @@ public:
     template <typename OBJECT_NAME>
     void Delete(const OBJECT_NAME& object_name)
     {
+        vch_t serialized_object_name = Serialize(object_name);
+        DeleteFromObjects(serialized_object_name);
+        DeleteFromLocations(serialized_object_name);
+    }
+
+    void DeleteFromObjects(vch_t& serialized_object_name)
+    {
         LOCK(objects_mutex);
-        objects.erase(Serialize(object_name));
+        objects.erase(serialized_object_name);
+    }
+
+    void DeleteFromLocations(vch_t& serialized_object_name)
+    {
+        LOCK(dimensions_mutex);
+        for (auto &item : dimensions)
+        {
+            item.second.Delete(serialized_object_name);
+        }
     }
 
     void Reset();
 
     template <typename LOCATION_NAME>
-    ::LocationIterator LocationIterator(LOCATION_NAME location_name)
+    ::MemoryLocationIterator LocationIterator(LOCATION_NAME location_name)
     {
         vch_t serialized_location_name = MemoryDataStore::Serialize(location_name);
 
         LOCK(dimensions_mutex);
         if (not dimensions.count(serialized_location_name))
-            dimensions[serialized_location_name] = MockDimension();
+            dimensions[serialized_location_name] = MemoryDimension();
 
-        return ::LocationIterator(dimensions[serialized_location_name]);
+        return ::MemoryLocationIterator(dimensions[serialized_location_name]);
     }
 
-    ::LocationIterator LocationIterator(const char* location_name)
+    ::MemoryLocationIterator LocationIterator(const char* location_name)
     {
         return LocationIterator(std::string(location_name));
     }
@@ -80,7 +97,7 @@ public:
         if (not dimensions.count(serialized_location_name))
             return;
 
-        MockDimension& dimension = dimensions[serialized_location_name];
+        MemoryDimension& dimension = dimensions[serialized_location_name];
         vch_t serialized_location_value = MemoryDataStore::Serialize(location_value);
         if (not dimension.located_serialized_objects.count(serialized_location_value))
             return;
@@ -102,7 +119,7 @@ public:
         if (not dimensions.count(serialized_location_name))
             return;
 
-        MockDimension& dimension = dimensions[serialized_location_name];
+        MemoryDimension& dimension = dimensions[serialized_location_name];
         vch_t serialized_location_value = MemoryDataStore::Serialize(location_value);
         if (not dimension.located_serialized_objects.count(serialized_location_value))
             return;
@@ -126,4 +143,4 @@ public:
 
 
 
-#endif //TELEPORT_MOCKDATASTORE_H
+#endif //TELEPORT_MEMORYDATASTORE_H

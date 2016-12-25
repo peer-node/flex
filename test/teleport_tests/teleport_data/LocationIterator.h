@@ -2,70 +2,65 @@
 #define TELEPORT_LOCATIONITERATOR_H
 
 
-#include <src/crypto/uint256.h>
-#include "MockObject.h"
-#include "MockDimension.h"
+#include <src/database/DiskDataStore.h>
+#include "MemoryLocationIterator.h"
 
-#include "log.h"
-#define LOG_CATEGORY "LocationIterator.h"
-
-typedef std::map<vch_t, vch_t> MockDataMap;
-
-class LocationIterator : public MockData
+class LocationIterator
 {
 public:
-    MockDataMap::iterator start;
-    MockDataMap::iterator end;
-    MockDataMap::iterator internal_iterator;
-    MockDataMap *located_serialized_objects;
+    MemoryLocationIterator memory_location_iterator;
+    DiskLocationIterator disk_location_iterator;
+    bool using_memory{false};
 
     LocationIterator() { }
 
-    LocationIterator(MockDimension& dimension)
+    LocationIterator(MemoryLocationIterator memory_location_iterator):
+            memory_location_iterator(memory_location_iterator)
+    { using_memory = true; }
+
+    LocationIterator(DiskLocationIterator disk_location_iterator):
+            disk_location_iterator(disk_location_iterator)
+    {  using_memory = false; }
+
+    template <typename V> void Seek(V location_value)
     {
-        start = dimension.located_serialized_objects.begin();
-        end = dimension.located_serialized_objects.end();
-        located_serialized_objects = &dimension.located_serialized_objects;
-        internal_iterator = start;
+        if (using_memory)
+            memory_location_iterator.Seek(location_value);
+        else
+            disk_location_iterator.Seek(location_value);
     }
 
-    template <typename OBJECT_NAME, typename LOCATION_NAME>
-    bool GetNextObjectAndLocation(OBJECT_NAME& object, LOCATION_NAME& location)
+    void SeekStart()
     {
-        if (internal_iterator == end)
-            return false;
-        SetObjectAndLocation(object, location);
-        internal_iterator++;
-        return true;
+        if (using_memory)
+            memory_location_iterator.SeekStart();
+        else
+            disk_location_iterator.SeekStart();
     }
 
-    template <typename OBJECT_NAME, typename LOCATION_NAME>
-    bool GetPreviousObjectAndLocation(OBJECT_NAME& object, LOCATION_NAME& location)
+    void SeekEnd()
     {
-        if (internal_iterator == start)
-            return false;
-        internal_iterator--;
-        SetObjectAndLocation(object, location);
-        return true;
+        if (using_memory)
+            memory_location_iterator.SeekEnd();
+        else
+            disk_location_iterator.SeekEnd();
     }
 
-    template <typename OBJECT_NAME, typename LOCATION_NAME>
-    void SetObjectAndLocation(OBJECT_NAME& object, LOCATION_NAME& location)
+    template <typename N, typename V> bool GetNextObjectAndLocation(N& objectname, V& location_value)
     {
-        Deserialize(internal_iterator->first, location);
-        Deserialize(internal_iterator->second, object);
+        if (using_memory)
+            return memory_location_iterator.GetNextObjectAndLocation(objectname, location_value);
+        else
+            return disk_location_iterator.GetNextObjectAndLocation(objectname, location_value);
     };
 
-    void SeekEnd();
-
-    void SeekStart();
-
-    template <typename LOCATION_NAME>
-    void Seek(LOCATION_NAME location)
+    template <typename N, typename V> bool GetPreviousObjectAndLocation(N& objectname, V& location_value)
     {
-        vch_t serialized_location = Serialize(location);
-        internal_iterator = located_serialized_objects->upper_bound(serialized_location);
-    }
+        if (using_memory)
+            return memory_location_iterator.GetPreviousObjectAndLocation(objectname, location_value);
+        else
+            return disk_location_iterator.GetPreviousObjectAndLocation(objectname, location_value);
+    };
 };
 
 

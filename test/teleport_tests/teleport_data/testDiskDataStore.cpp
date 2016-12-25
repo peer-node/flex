@@ -1,169 +1,99 @@
-#include <boost/thread.hpp>
-#include <src/base/util_time.h>
-#include <src/base/util_rand.h>
 #include "gmock/gmock.h"
-#include "crypto/uint256.h"
-#include "MemoryDataStore.h"
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <src/database/DiskDataStore.h>
+#include <boost/filesystem.hpp>
 
 using namespace ::testing;
+using namespace std;
 
-class AMemoryDataStore : public Test
+#include "log.h"
+#define LOG_CATEGORY "test"
+
+
+class ADiskDataStore : public Test
 {
 public:
-    MemoryDataStore datastore;
+    CLevelDBWrapper *wrapper;
+    DiskDataStore datastore;
+    string database_directory_name;
+
+    virtual void SetUp()
+    {
+        database_directory_name = "tmpdir" + PrintToString(GetTimeMicros());
+        wrapper = new CLevelDBWrapper(database_directory_name, 4096 * 4096);
+
+        datastore = DiskDataStore(wrapper, "t");
+        datastore.LocationMutex(0);
+    }
+
+    virtual void TearDown()
+    {
+        delete wrapper;
+        boost::filesystem::remove_all(database_directory_name);
+    }
 };
 
-class AMockObject : public Test
+TEST_F(ADiskDataStore, ReadsAndWrites)
+{
+    uint32_t x = 100, y = 110;
+
+    datastore[x]["x"] = y;
+
+    y = 5;
+
+    y = datastore[x]["x"];
+    ASSERT_THAT(y, Eq(110));
+}
+
+TEST_F(ADiskDataStore, DeletesObjectsAndTheirProperties)
+{
+    uint32_t x = 100, y = 110;
+
+    datastore[x]["x"] = y;
+
+    datastore.Delete(x);
+
+    y = datastore[x]["x"];
+    ASSERT_THAT(y, Eq(0));
+}
+
+TEST_F(ADiskDataStore, DeletesObjectsAndTheirLocations)
+{
+    datastore[0].Location("lattitude") = 4;
+    datastore.Delete(0);
+
+    int x = datastore[0].Location("lattitude");
+    ASSERT_EQ(0, x);
+}
+
+class ADiskDataStorePopulatedByMultipleThreads : public ADiskDataStore
 {
 public:
-    MockObject object;
-};
-
-class AMockProperty : public Test
-{
-public:
-    MockProperty property;
-};
-
-TEST_F(AMemoryDataStore, ReturnsAMockObject)
-{
-    MockObject object;
-    object = datastore[0];
-}
-
-TEST_F(AMockObject, ReturnsAMockProperty)
-{
-    MockProperty property;
-    property = object[0];
-}
-
-TEST_F(AMockProperty, CanBeCastToDifferentTypes)
-{
-    int x;
-    x = property;
-}
-
-TEST_F(AMockProperty, CanStoreInformation)
-{
-    int x = 5;
-    property = x;
-    int y;
-    y = property;
-    ASSERT_EQ(5, y);
-}
-
-TEST(AMockObjectsProperty, CanStoreInformation)
-{
-    MockObject object;
-    object[0] = 5;
-    int y;
-    y = object[0];
-    ASSERT_EQ(5, y);
-}
-
-TEST(AMockObjectsProperty, CanStoreRawStrings)
-{
-    MockObject object;
-    object[0] = "hi there";
-    std::string y = object[0];
-    ASSERT_THAT(y, Eq(std::string("hi there")));
-}
-
-TEST_F(AMockObject, HasALocation)
-{
-    object.Location(7) = 10;
-    int location = object.Location(7);
-    ASSERT_THAT(location, Eq(10));
-}
-
-TEST_F(AMockObject, HasALocationWithARawStringName)
-{
-    object.Location("lattitude") = 5;
-    int location = 0;
-    location = object.Location("lattitude");
-    ASSERT_THAT(location, Eq(5));
-}
-
-TEST_F(AMemoryDataStore, CanBeUsedToAssignProperties)
-{
-    datastore[0][0] = 5;
-}
-
-TEST_F(AMemoryDataStore, CanBeUsedToRetrieveProperties)
-{
-    int x = datastore[0][0];
-}
-
-TEST_F(AMemoryDataStore, RetrievesStoredData)
-{
-    datastore[0][0] = 4;
-    int x = datastore[0][0];
-    ASSERT_EQ(4, x);
-}
-
-TEST_F(AMemoryDataStore, CanAcceptRawStringsAsNames)
-{
-    MockObject object = datastore["hat"];
-}
-
-TEST_F(AMockObject, CanAcceptRawStringsAsNames)
-{
-    MockProperty property = object["size"];
-}
-
-TEST_F(AMemoryDataStore, CanRetrieveDataStoredWithRawStringNames)
-{
-    datastore["hat"]["size"] = 25;
-    int y = datastore["hat"]["size"];
-    ASSERT_EQ(25, y);
-}
-
-TEST_F(AMemoryDataStore, ForgetsDataAfterReset)
-{
-    datastore["hat"]["size"] = 25;
-    datastore.Reset();
-    int y = datastore["hat"]["size"];
-    ASSERT_EQ(0, y);
-}
-
-TEST_F(AMemoryDataStore, ReturnsALocationIterator)
-{
-    LocationIterator scanner;
-    int x = 0;
-    scanner = datastore.LocationIterator(x);
-}
-
-TEST_F(AMemoryDataStore, ReturnsTheObjectAtALocation)
-{
-    datastore["hat"].Location("body") = "head";
-    std::string thing_on_head;
-    datastore.GetObjectAtLocation(thing_on_head, "body", "head");
-    ASSERT_THAT(thing_on_head, Eq("hat"));
-}
-
-class AMemoryDataStorePopulatedByMultipleThreads : public Test
-{
-public:
-    MemoryDataStore datastore;
     uint160 object, value;
 
     virtual void SetUp()
     {
+        ADiskDataStore::SetUp();
         for (uint32_t i = 0; i < 160; i++)
         {
             value = object = ((uint160)1) << i;
-            boost::thread thread(&AMemoryDataStorePopulatedByMultipleThreads::StoreInDataBase, this, object, value);
+            boost::thread thread(&ADiskDataStorePopulatedByMultipleThreads::StoreInDataBase, this, object, value);
         }
-        MilliSleep(5);
+        MilliSleep(50);
     }
 
     virtual void StoreInDataBase(uint160 hash, uint160 value)
     {
         datastore[hash][hash] = value;
     }
+
+    virtual void TearDown()
+    {
+        ADiskDataStore::TearDown();
+    }
 };
 
-TEST_F(AMemoryDataStorePopulatedByMultipleThreads, RetrievesTheDataCorrectly)
+TEST_F(ADiskDataStorePopulatedByMultipleThreads, RetrievesTheDataCorrectly)
 {
     for (uint32_t i = 0; i < 160; i++)
     {
@@ -174,21 +104,21 @@ TEST_F(AMemoryDataStorePopulatedByMultipleThreads, RetrievesTheDataCorrectly)
     }
 }
 
-class AMemoryDataStoreWithAnObjectWhosePropertiesArePopulatedByMultipleThreads :
-        public AMemoryDataStorePopulatedByMultipleThreads
+class ADiskDataStoreWithAnObjectWhosePropertiesArePopulatedByMultipleThreads :
+        public ADiskDataStorePopulatedByMultipleThreads
 {
 public:
-    MemoryDataStore datastore;
     uint160 object, value;
 
     virtual void SetUp()
     {
+        ADiskDataStore::SetUp();
         for (uint32_t i = 0; i < 160; i++)
         {
             object = 1;
             object = object << i;
             value = object;
-            boost::thread thread(&AMemoryDataStoreWithAnObjectWhosePropertiesArePopulatedByMultipleThreads::StoreInDataBase,
+            boost::thread thread(&ADiskDataStoreWithAnObjectWhosePropertiesArePopulatedByMultipleThreads::StoreInDataBase,
                                  this, object, value);
         }
         MilliSleep(5);
@@ -198,9 +128,14 @@ public:
     {
         datastore["some_object"][hash] = value;
     }
+
+    virtual void TearDown()
+    {
+        ADiskDataStore::TearDown();
+    }
 };
 
-TEST_F(AMemoryDataStoreWithAnObjectWhosePropertiesArePopulatedByMultipleThreads, RetrievesTheDataCorrectly)
+TEST_F(ADiskDataStoreWithAnObjectWhosePropertiesArePopulatedByMultipleThreads, RetrievesTheDataCorrectly)
 {
     for (uint32_t i = 0; i < 160; i++)
     {
@@ -211,42 +146,60 @@ TEST_F(AMemoryDataStoreWithAnObjectWhosePropertiesArePopulatedByMultipleThreads,
     }
 }
 
-class ALocationIterator : public Test
+
+class ADiskLocationIterator : public ADiskDataStore
 {
 public:
-    MemoryDataStore datastore;
-    LocationIterator scanner;
+    DiskLocationIterator scanner;
     uint64_t object;
     uint64_t location;
 
     virtual void SetUp()
     {
+        ADiskDataStore::SetUp();
+
         datastore[(uint64_t)200].Location("lattitude") = (uint64_t)300;
         datastore[(uint64_t)100].Location("lattitude") = (uint64_t)200;
         datastore[12345678900].Location("lattitude") = 12345678900;
 
         scanner = datastore.LocationIterator("lattitude");
     }
+
+    virtual void TearDown()
+    {
+        ADiskDataStore::TearDown();
+    }
 };
 
-TEST_F(ALocationIterator, ReturnsObjectsAndLocations)
+TEST_F(ADiskLocationIterator, HasRetrievableLocations)
 {
-    scanner.GetNextObjectAndLocation(object, location);
+    uint64_t location_of_200 = datastore[(uint64_t)200].Location("lattitude");
+    ASSERT_THAT(location_of_200, Eq(300));
 }
 
-TEST_F(AMemoryDataStore, ReturnsAnObjectWhoseDimensionsAreThoseOfTheDataStore)
+TEST_F(ADiskLocationIterator, ReturnsObjectsAndLocations)
 {
-    ASSERT_FALSE(datastore[100].using_internal_dimensions);
+    ASSERT_TRUE(scanner.GetNextObjectAndLocation(object, location));
 }
 
-TEST_F(ALocationIterator, ReturnsTheNextObjectAndLocation)
+TEST_F(ADiskLocationIterator, ReturnsTheNextObjectAndLocation)
 {
     scanner.GetNextObjectAndLocation(object, location);
     ASSERT_THAT(object, Eq(100));
     ASSERT_THAT(location, Eq(200));
 }
 
-TEST_F(ALocationIterator, ReturnsObjectsAndLocationsInTheCorrectOrder)
+TEST_F(ADiskLocationIterator, DoesntReturnDeletedObjectsWhenReturningTheNextObjectAndLocation)
+{
+    datastore.Delete((uint64_t)100);
+    scanner = datastore.LocationIterator("lattitude");   // need a new iterator after changing the data
+
+    scanner.GetNextObjectAndLocation(object, location);
+    ASSERT_THAT(object, Eq(200));
+    ASSERT_THAT(location, Eq(300));
+}
+
+TEST_F(ADiskLocationIterator, ReturnsObjectsAndLocationsInTheCorrectOrder)
 {
     ASSERT_TRUE(scanner.GetNextObjectAndLocation(object, location));
     ASSERT_THAT(object, Eq(100));
@@ -259,7 +212,7 @@ TEST_F(ALocationIterator, ReturnsObjectsAndLocationsInTheCorrectOrder)
     ASSERT_THAT(location, Eq(12345678900));
 }
 
-TEST_F(ALocationIterator, ReturnsFalseWhenEndIsReached)
+TEST_F(ADiskLocationIterator, ReturnsFalseWhenEndIsReached)
 {
     ASSERT_TRUE(scanner.GetNextObjectAndLocation(object, location));
     ASSERT_TRUE(scanner.GetNextObjectAndLocation(object, location));
@@ -267,7 +220,7 @@ TEST_F(ALocationIterator, ReturnsFalseWhenEndIsReached)
     ASSERT_FALSE(scanner.GetNextObjectAndLocation(object, location));
 }
 
-TEST_F(ALocationIterator, ReturnsObjectsAndLocationsInTheCorrectReverseOrder)
+TEST_F(ADiskLocationIterator, ReturnsObjectsAndLocationsInTheCorrectReverseOrder)
 {
     scanner.SeekEnd();
     ASSERT_TRUE(scanner.GetPreviousObjectAndLocation(object, location));
@@ -282,7 +235,7 @@ TEST_F(ALocationIterator, ReturnsObjectsAndLocationsInTheCorrectReverseOrder)
 }
 
 
-TEST_F(ALocationIterator, ReturnsFalseWhenStartIsReached)
+TEST_F(ADiskLocationIterator, ReturnsFalseWhenStartIsReached)
 {
     scanner.SeekEnd();
     ASSERT_TRUE(scanner.GetPreviousObjectAndLocation(object, location));
@@ -292,7 +245,7 @@ TEST_F(ALocationIterator, ReturnsFalseWhenStartIsReached)
 }
 
 
-TEST_F(ALocationIterator, CanBeResetToTheStartWithSeekStart)
+TEST_F(ADiskLocationIterator, CanBeResetToTheStartWithSeekStart)
 {
     ASSERT_TRUE(scanner.GetNextObjectAndLocation(object, location));
     ASSERT_TRUE(scanner.GetNextObjectAndLocation(object, location));
@@ -307,7 +260,7 @@ TEST_F(ALocationIterator, CanBeResetToTheStartWithSeekStart)
     ASSERT_FALSE(scanner.GetNextObjectAndLocation(object, location));
 }
 
-TEST_F(ALocationIterator, CanSeekToASpecificLocation)
+TEST_F(ADiskLocationIterator, CanSeekToASpecificLocation)
 {
     scanner.Seek(12345678899);
     ASSERT_TRUE(scanner.GetNextObjectAndLocation(object, location));
@@ -323,29 +276,18 @@ TEST_F(ALocationIterator, CanSeekToASpecificLocation)
     ASSERT_THAT(location, Eq(200));
 }
 
-TEST_F(AMemoryDataStore, CanRemoveAnObjectFromALocation)
-{
-    datastore[5].Location("lattitude") = 100;
-    int location = datastore[5].Location("lattitude");
 
-    ASSERT_THAT(location, Eq(100));
-
-    datastore.RemoveFromLocation("lattitude", 100);
-    location = datastore[5].Location("lattitude");
-
-    ASSERT_THAT(location, Eq(0));
-}
-
-class ALocationIteratorWithUint160Locations : public Test
+class ADiskLocationIteratorWithUint160Locations : public ADiskDataStore
 {
 public:
-    MemoryDataStore datastore;
-    LocationIterator scanner;
+    DiskLocationIterator scanner;
     uint160 object;
     uint160 location;
 
     virtual void SetUp()
     {
+        ADiskDataStore::SetUp();
+
         for (uint32_t i = 0; i < 160; i++)
         {
             location = object = ((uint160)1) << i;
@@ -354,9 +296,14 @@ public:
 
         scanner = datastore.LocationIterator("lattitude");
     }
+
+    virtual void TearDown()
+    {
+        ADiskDataStore::TearDown();
+    }
 };
 
-TEST_F(ALocationIteratorWithUint160Locations, ReturnsObjectsAndLocationsInTheCorrectOrder)
+TEST_F(ADiskLocationIteratorWithUint160Locations, ReturnsObjectsAndLocationsInTheCorrectOrder)
 {
     for (uint32_t digits = 0; digits < 160; digits++)
     {
@@ -368,27 +315,37 @@ TEST_F(ALocationIteratorWithUint160Locations, ReturnsObjectsAndLocationsInTheCor
 }
 
 
-class ALocationIteratorWithUint160LocationsPopulatedByMultipleThreads : public ALocationIteratorWithUint160Locations
+class ADiskLocationIteratorWithUint160LocationsPopulatedByMultipleThreads : public ADiskDataStore
 {
 public:
+    DiskLocationIterator scanner;
+    uint160 object;
+    uint160 location;
+
     virtual void SetUp()
     {
+        ADiskDataStore::SetUp();
         for (uint32_t i = 0; i < 160; i++)
         {
             location = object = ((uint160)1) << i;
-            boost::thread thread(&ALocationIteratorWithUint160LocationsPopulatedByMultipleThreads::PutHashAtLocation,
+            boost::thread thread(&ADiskLocationIteratorWithUint160LocationsPopulatedByMultipleThreads::PutHashAtLocation,
                                  this, object, location);
         }
-        MilliSleep(5);
+        MilliSleep(50);
     }
 
     void PutHashAtLocation(uint160 object, uint160 location)
     {
         datastore[object].Location("lattitude") = location;
     }
+
+    virtual void TearDown()
+    {
+        ADiskDataStore::TearDown();
+    }
 };
 
-TEST_F(ALocationIteratorWithUint160LocationsPopulatedByMultipleThreads, ReturnsObjectsAndLocationsInTheCorrectOrder)
+TEST_F(ADiskLocationIteratorWithUint160LocationsPopulatedByMultipleThreads, ReturnsObjectsAndLocationsInTheCorrectOrder)
 {
     scanner = datastore.LocationIterator("lattitude");
     for (uint32_t digits = 0; digits < 160; digits++)

@@ -1,5 +1,5 @@
-#ifndef TELEPORT_DATASTORE
-#define TELEPORT_DATASTORE
+#ifndef TELEPORT_DISKDATASTORE
+#define TELEPORT_DISKDATASTORE
 
 #include "leveldbwrapper.h"
 #include <stdint.h>
@@ -16,6 +16,8 @@
 #include <boost/utility/value_init.hpp>
 #include "base/allocators.h"
 #include <openssl/rand.h>
+#include <src/base/sync.h>
+#include <src/base/util_time.h>
 #include "base/util_log.h"
 #include "crypto/uint256.h"
 #include "crypto/hash.h"
@@ -27,19 +29,11 @@
 template <typename T> 
 inline vch_t Bytes(T thing)
 {
-    CDataStream ss(SER_NETWORK, CLIENT_VERSION);
+    CDataStream ss(SER_DISK, CLIENT_VERSION);
     ss << thing;
     return vch_t(ss.begin(), ss.end());
 }
 
-template <typename T> 
-inline T ObjectFromBytes(vch_t bytes)
-{
-    T thing;
-    CDataStream ss(bytes.begin(), bytes.end(), SER_NETWORK, CLIENT_VERSION);
-    ss >> thing;
-    return thing;
-}
 
 
 class CPrefixDBBatch : public CLevelDBBatch
@@ -63,7 +57,7 @@ public:
 class CPrefixDBIterator
 {
 public:
-    string_t strPrefix;
+    string_t strPrefix, strKey, strValue;
     boost::shared_ptr<leveldb::Iterator> it;
 
     CPrefixDBIterator()
@@ -94,18 +88,22 @@ public:
     {
         try
         {
-            std::pair<string_t, string_t> pairKey;
-            string_t strKey = it->key().ToString();
-            string_t strValue = it->value().ToString();
-            CDataStream ss(&strKey[0], &strKey[0] + strKey.size(),
-                           SER_DISK, CLIENT_VERSION);
+            if (not it->Valid()) return false;
+
+            strKey = it->key().ToString();
+            strValue = it->value().ToString();
+            CDataStream ss(&strKey[0], &strKey[0] + strKey.size(), SER_DISK, CLIENT_VERSION);
+
+            std::pair<string_t, K> pairKey;
             ss >> pairKey;
             if (pairKey.first != strPrefix)
                 return false;
+
             key = pairKey.second;
-            ss = CDataStream(&strValue[0], &strValue[0] + strValue.size(), 
-                             SER_DISK, CLIENT_VERSION);
+            ss = CDataStream(&strValue[0], &strValue[0] + strValue.size(), SER_DISK, CLIENT_VERSION);
             ss >> value;
+
+            it->Next();
             return true;
         } 
         catch (...) 
@@ -199,144 +197,135 @@ public:
 };
 
 
-class CDataStore;
+class DiskDataStore;
 
-template <typename K, typename N>
-class CProperty;
+class DiskProperty;
 
-template <typename K, typename N>
-class CLocation;
+class DiskLocation;
 
-template <typename N=string_t>
-class CObject 
+
+class DiskObject
 { 
 public:
-    CDataStore &db;
-    const N& objectname;
+    DiskDataStore &db;
+    vch_t object_name_bytes;
+    CDataStream ss;
     string_t strLocalName;  /* A name that won't go out of scope */
     bool fUsingLocalName;
 
-    CObject(CDataStore &db, const N& objectname)
-    : db(db), objectname(objectname)
-    { 
+    template<typename N>
+    DiskObject(DiskDataStore &db, const N& objectname)
+    : db(db), object_name_bytes(Bytes(objectname)), ss(SER_DISK, CLIENT_VERSION)
+    {
         fUsingLocalName = false;
+        ss << objectname;
     }
 
-    CObject(CDataStore &db, const string_t strName, bool fUseLocalName)
-    : db(db), objectname(strName)
-    { 
-        strLocalName = objectname;
+    DiskObject(DiskDataStore &db, const string_t strName, bool fUseLocalName)
+    : db(db), object_name_bytes(Bytes(strName)), ss(SER_DISK, CLIENT_VERSION)
+    {
+        strLocalName = strName;
         fUsingLocalName = fUseLocalName;
     }
 
-    IMPLEMENT_SERIALIZE
-    (
-        if (fUsingLocalName)
-            READWRITE(strLocalName);
-        else
-            READWRITE(objectname);
-    )
+    unsigned int GetSerializeSize(int nType, int nVersion) const
+    {
+        return ss.size();
+    }
+    template<typename Stream>
+    void Serialize(Stream& s, int nType, int nVersion) const
+    {
+        s += ss;
+    }
+    template<typename Stream>
+    void Unserialize(Stream& s, int nType, int nVersion)
+    {
+
+    }
 
     template <typename K>
-    CProperty<K,N> operator [] (K& key) 
-    {
-        return CProperty<K,N>(*this, key);
-    }
+    DiskProperty operator [] (K& key);
 
-    CProperty<string_t,N> operator [] (const char* pchKey) 
-    {
-        return CProperty<string_t,N>(*this, pchKey);
-    }
+    DiskProperty operator [] (const char* pchKey);
 
     template <typename K>
     bool HasProperty(K& key);
 
     bool HasProperty(const char* key);
 
-    CLocation<string_t,N>  Location(const char* pchKey)
-    {
-        return CLocation<string_t,N>(*this, pchKey);
-    }
+    DiskLocation Location(const char* pchKey);
 
     template <typename K>
-    CLocation<K,N>  Location(const K& key) 
-    {
-        return CLocation<K,N>(*this, key);
-    }
+    DiskLocation Location(const K& key);
 };
 
 
 
 
-template <typename N>
-class CPropertyIterator
+class DiskLocationIterator
 {
 public:
-    CDataStore *pds;
+    DiskDataStore *datastore;
     CPrefixDBIterator it;
-    N objectname;
+    vch_t location_name;
+    uint32_t location_id{0};
 
-    CPropertyIterator(){};
+    DiskLocationIterator(){};
 
-    CPropertyIterator(CDataStore *pdsIn, N objectnameIn);
+    DiskLocationIterator(DiskDataStore *pdsIn, uint32_t location_id);
 
-    template <typename P, typename V> bool 
-    GetNextPropertyAndValue(P& propertyname, V& value);
-};
+    template <typename V> void Seek(V location_value);
 
-template <typename L=string_t>
-class CLocationIterator
-{
-public:
-    CDataStore *pds;
-    CPrefixDBIterator it;
-    L locationname;
+    template <typename V> void Seek(V location_value, bool fReverse);
 
-    CLocationIterator(){};
-
-    CLocationIterator(CDataStore *pdsIn, L locationnameIn);
-
-    template <typename V> void
-    Seek(V locationvalue);
-
-    template <typename V> void
-    Seek(V locationvalue, bool fReverse);
-
-    void 
-    SeekStart()
+    void SeekStart()
     {
         Seek((uint8_t)0);
     }
 
-    void 
-    SeekEnd()
+    void SeekEnd()
     {
         Seek((int64_t)(-1), true);
     }
 
-    template <typename N, typename V> bool
-    GetNextObjectAndLocation(N& objectname, V& locationvalue);
+    template <typename N, typename V> bool GetNextObjectAndLocation(N& objectname, V& location_value);
 
-    template <typename N, typename V> bool
-    GetNextObjectAndLocation(N& objectname, V& locationvalue, bool fReverse);
-    
-    template <typename N, typename V> bool 
-    GetPreviousObjectAndLocation(N& objectname, V& locationvalue);
+    template <typename N, typename V> bool GetNextObjectAndLocation(N& objectname, V& location_value, bool fReverse);
+
+    template <typename N, typename V> bool GetPreviousObjectAndLocation(N& objectname, V& location_value);
 };
 
 typedef std::vector<unsigned char, secure_allocator<unsigned char> > svch_t;
 
-class CDataStore : public CPrefixDB
+
+class DiskDataStore : public CPrefixDB
 {
 private:
     uint32_t nNextNumber;
     bool encrypted;
-    svch_t *passphrase_hash;
+    svch_t *passphrase_hash{NULL};
+    std::map<uint32_t, Mutex*> location_mutexes;
+    Mutex *objects_mutex{NULL};
+
+
 
 public:
-    CDataStore() { }
+    Mutex& LocationMutex(uint32_t i)
+    {
+        if (not location_mutexes.count(i))
+            location_mutexes[i] = new Mutex();
+        return *location_mutexes[i];
+    }
 
-    CDataStore(CLevelDBWrapper *pdb, const char *pchPrefix)
+    void DeleteMutexes()
+    {
+        for (auto item : location_mutexes)
+            delete item.second;
+    }
+
+    DiskDataStore() {  }
+
+    DiskDataStore(CLevelDBWrapper *pdb, const char *pchPrefix)
     : CPrefixDB(pdb, pchPrefix)
     {
         nNextNumber = NextNumber();
@@ -357,10 +346,11 @@ public:
         passphrase_hash = NULL;
     }
 
-     ~CDataStore()
+     ~DiskDataStore()
      {
         if (passphrase_hash != NULL)
             delete passphrase_hash;
+         DeleteMutexes();
      }
 
     uint32_t NextNumber()
@@ -380,6 +370,7 @@ public:
     uint32_t Id(const K& key)
     {
         uint32_t nNumber = 0;
+        LOCK(LocationMutex(0));
         if (!Read(std::make_pair('k', key), nNumber))
         {
             nNumber = NextNumber();
@@ -394,14 +385,18 @@ public:
     template <typename K> bool
     GetKey(uint32_t nNumber, K& key)
     {
+        LOCK(LocationMutex(0));
         return Read(std::make_pair('n', nNumber), key);
     }
 
     template <typename K, typename V, typename N> bool
-    SetProperty(const K& key, const N& propertyname, 
-                const V& value, 
-                bool fSync = false) throw(leveldb_error)
+    SetProperty(const K& key, const N& propertyname, const V& value, bool fSync = false) throw(leveldb_error)
     {
+        uint32_t key_id = Id(key);
+        uint32_t property_id = Id(propertyname);
+
+        LOCK2(LocationMutex(property_id), LocationMutex(key_id));
+
         if (encrypted)
         {
             CDataStream ssValue(SER_DISK, CLIENT_VERSION);
@@ -410,29 +405,24 @@ public:
 
             uint256 salt = GetSalt();
 
-            std::pair<uint256, vch_t> encrypted_value
-                = std::make_pair(salt, EncryptWithSalt(bytes, 
-                                                       *passphrase_hash, salt));
+            std::pair<uint256, vch_t> encrypted_value = std::make_pair(salt,
+                                                                       EncryptWithSalt(bytes, *passphrase_hash, salt));
 
-            return Write(std::make_pair(std::make_pair('p', Id(key)), 
-                                        Id(propertyname)), 
-                         encrypted_value, fSync);
+            return Write(std::make_pair(std::make_pair('p', key_id), property_id), encrypted_value, fSync);
         }
         else
-            return Write(std::make_pair(std::make_pair('p', Id(key)), 
-                               Id(propertyname)), 
-                         value, fSync);
+        {
+            return Write(std::make_pair(std::make_pair('p', key_id), property_id), value, fSync);
+        }
     }
 
     template <typename K, typename V, typename N> bool
-    GetProperty(const K& key, const N& propertyname, 
-                V& value) throw(leveldb_error)
+    GetProperty(const K& key, const N& propertyname, V& value) throw(leveldb_error)
     {
         if (encrypted)
         {
             std::pair<uint256, vch_t> encrypted_value;
-            if (!Read(std::make_pair(std::make_pair('p', Id(key)),
-                                     Id(propertyname)), encrypted_value))
+            if (!Read(std::make_pair(std::make_pair('p', Id(key)), Id(propertyname)), encrypted_value))
                 return false;
 
             uint256 salt = encrypted_value.first;
@@ -444,7 +434,7 @@ public:
             try
             {
                 ss >> value;
-            } 
+            }
             catch (...)
             {
                 return false;
@@ -452,15 +442,15 @@ public:
             return true;
         }
         else
-            return Read(std::make_pair(std::make_pair('p', Id(key)),
-                                       Id(propertyname)), value);
+        {
+            return Read(std::make_pair(std::make_pair('p', Id(key)), Id(propertyname)), value);
+        }
     }
 
     template <typename K, typename N> bool
     HasProperty(const K& key, const N& propertyname) throw(leveldb_error)
     {
-        return Exists(std::make_pair(std::make_pair('p', Id(key)),
-                                Id(propertyname)));
+        return Exists(std::make_pair(std::make_pair('p', Id(key)), Id(propertyname)));
     }
 
     template <typename K> bool
@@ -484,80 +474,87 @@ public:
                      std::make_pair('p', Id(key)), Id(string_t(pchProperty))));
     }
 
-    template <typename K> 
-    CPropertyIterator<K> PropertyIterator(const K& key)
+    template <typename K, typename L, typename V> bool
+    SetLocation(const K& key, const L& location_name, const V& value, bool fSync = false) throw(leveldb_error)
     {
-        return CPropertyIterator<K>(this, key);
+        uint32_t location_id = Id(location_name);
+        uint32_t key_id = Id(key);
+
+        LOCK2(LocationMutex(location_id), LocationMutex(key_id));
+
+        Write(std::make_pair(std::make_pair('p', key_id), location_id), value, fSync);
+        return Write(std::make_pair(std::make_pair('l', location_id), ReverseBytes(value)), key_id, fSync);
     }
 
     template <typename K, typename V, typename L> bool
-    SetLocation(const K& key, const L& locationname, const V& value,
-                bool fSync = false) throw(leveldb_error)
+    GetLocation(const K& key, const L& location_name, V& value) throw(leveldb_error)
     {
-        SetProperty(key, locationname, value);
-        return Write(std::make_pair(std::make_pair('l', Id(locationname)), 
-                                    ReverseBytes(value)),
-                     Id(key), fSync);
-    }
-
-    template <typename K, typename V, typename L> bool
-    GetLocation(const K& key, const L& locationname, 
-                V& value) throw(leveldb_error)
-    {
-        V value_;
-        bool result = GetProperty(key, locationname, value_);
-        value = ReverseBytes(value_);
+        bool result = GetProperty(key, location_name, value);
         return result;
     }
 
     template <typename V, typename L> bool
-    RemoveFromLocation(const L& locationname, const V& value)
+    RemoveFromLocation(const L& location_name, const V& value)
     {
-        return Erase(std::make_pair(std::make_pair('l', Id(locationname)), 
-                                    ReverseBytes(value)));
+        uint32_t location_id = Id(location_name);
+        uint32_t object_id = GetIdOfObjectAtLocation(value, location_name);
+
+        LOCK(LocationMutex(location_id));
+
+        return Erase(std::make_pair(std::make_pair('l', location_id), ReverseBytes(value))) and
+                Erase(std::make_pair(std::make_pair('p', object_id), location_id));
     }
 
     template <typename K, typename V, typename N> bool
-    GetObjectAtLocation(const V& locationvalue,
-                        const N& locationname,
+    GetObjectAtLocation(const V& location_value,
+                        const N& location_name,
                         K& key) throw(leveldb_error)
     {
-        uint32_t keyid;
-        if (!Read(std::make_pair(std::make_pair('l', Id(locationname)), 
-                                   ReverseBytes(locationvalue)), keyid))
+        uint32_t keyid = GetIdOfObjectAtLocation(location_value, location_name);
+        if (keyid == 0)
             return false;
         return GetKey(keyid, key);
     }
 
-    CLocationIterator<string_t> LocationIterator(const char* locationname)
+    template <typename V, typename N>
+    uint32_t GetIdOfObjectAtLocation(const V& location_value,
+                                     const N& location_name) throw(leveldb_error)
     {
-        return CLocationIterator<string_t>(this, string_t(locationname));
+        uint32_t keyid;
+        if (!Read(std::make_pair(std::make_pair('l', Id(location_name)), ReverseBytes(location_value)), keyid))
+            return 0;
+        return keyid;
+    };
+
+    DiskLocationIterator LocationIterator(const char* location_name)
+    {
+        return DiskLocationIterator(this, Id(Bytes(string_t(location_name))));
     }
 
     template <typename L>
-    CLocationIterator<L> LocationIterator(L locationname)
+    DiskLocationIterator LocationIterator(L location_name)
     {
-        return CLocationIterator<L>(this, locationname);
+        return DiskLocationIterator(this, Id(location_name));
     }
 
-    CObject<string_t> Object(const char* pchName)
+    DiskObject Object(const char* pchName)
     {
-        return CObject<string_t>(*this, string_t(pchName), true);
+        return DiskObject(*this, string_t(pchName), true);
     }
 
-    CObject<string_t> operator [] (const char* pchName)
+    DiskObject operator [] (const char* pchName)
     {
         return Object(pchName);
     }
 
     template <typename N>
-    CObject<N> Object(const N& objectname)
+    DiskObject Object(const N& objectname)
     {
-        return CObject<N>(*this, objectname);
+        return DiskObject(*this, objectname);
     }
 
     template <typename N>
-    CObject<N> operator [] (const N& objectname)
+    DiskObject operator [] (const N& objectname)
     {
         return Object(objectname);
     }
@@ -569,40 +566,40 @@ public:
 
     template <typename N>
     void Delete(N objectname)
-    {        
+    {
         uint32_t nObject_id = Id(objectname);
-        CPropertyIterator<N> it_ = PropertyIterator(objectname);
-        boost::shared_ptr<leveldb::Iterator> it = it_.it.it;
-        for (; it->Valid(); it->Next())
+
+        CPrefixDBIterator it = Iterator();
+        it.Seek(std::make_pair(std::make_pair('p', nObject_id), 0));
+
+        std::pair<std::pair<char, uint32_t>, uint32_t> pairKey;
+        char x;
+        while (it.GetNextKeyAndValue(pairKey, x))
         {
-            string_t strKey = it->key().ToString();
-            CDataStream ss(&strKey[0], &strKey[0] + strKey.size(),
-                           SER_DISK, CLIENT_VERSION);
-            std::pair<string_t, std::pair<std::pair<char, uint32_t>, uint32_t> > pairKey;
+            if (pairKey.first != std::make_pair('p', nObject_id))
+            {
+                break;
+            }
+
             try
             {
-                ss >> pairKey;
-                if (pairKey.first != strPrefix ||
-                    pairKey.second.first != std::make_pair('p', nObject_id))
-                    break;
-                uint32_t nProperty_id = pairKey.second.second;
+                uint32_t nProperty_id = pairKey.second;
                 Erase(std::make_pair(std::make_pair('p', nObject_id), nProperty_id));
             } catch(...) { }
-            
+
             // if this property is a location, remove object from it
-            uint32_t nLocation_id = pairKey.second.second;
-            string_t strVal = it->value().ToString();
-            std::reverse(strVal.begin(), strVal.end()); // checkme
+            uint32_t nLocation_id = pairKey.second;
+            string_t strVal = it.strValue;
+            std::reverse(strVal.begin(), strVal.end());
             CFlatData value(&strVal[0], &strVal[0] + strVal.size());
             uint32_t nObject_at_location_id = 0;
 
-            if (Read(std::make_pair(std::make_pair('l', nLocation_id), value), 
-                     nObject_at_location_id) && 
-                nObject_id == nObject_at_location_id)
+            if (Read(std::make_pair(std::make_pair('l', nLocation_id), value), nObject_at_location_id) and
+                    nObject_id == nObject_at_location_id)
             {
                 Erase(std::make_pair(std::make_pair('l', nLocation_id), value));
             }
-        }  
+        }
     }
 
     uint256 HashU256(uint256 n)
@@ -664,82 +661,35 @@ public:
     }
 };
 
-template <typename N>
+
 template <typename K>
-bool CObject<N>::HasProperty(K& key)
+bool DiskObject::HasProperty(K& key)
 {
-    return db.HasProperty(*this, key);
+    return db.HasProperty(Bytes(*this), key);
 }
 
-template <typename N>
-bool CObject<N>::HasProperty(const char* key)
+inline bool DiskObject::HasProperty(const char* key)
 {
-    return db.HasProperty(*this, string_t(key));
+    return db.HasProperty(Bytes(*this), string_t(key));
 }
 
-template <typename N>
-CPropertyIterator<N>::CPropertyIterator(CDataStore *pdsIn, N objectnameIn)
+inline DiskLocationIterator::DiskLocationIterator(DiskDataStore *pdsIn, uint32_t location_id):
+    location_id(location_id)
 {
-    pds = pdsIn;
-    objectname = objectnameIn;
-    it = pds->Iterator();
-    it.Seek(std::make_pair(std::make_pair('p', pds->Id(objectname)), 0));
+    datastore = pdsIn;
+    it = datastore->Iterator();
+    it.Seek(std::make_pair('l', location_id));
 }
 
-template <typename N>
-template <typename P, typename V> bool 
-CPropertyIterator<N>::GetNextPropertyAndValue(P& propertyname, V& value)
-{
-    leveldb::Iterator *pit = it.it;
-    try
-    {
-        pit->Next();
-        if (!pit->Valid())
-            return false;
-        std::pair<string_t, 
-                std::pair<std::pair<char,uint32_t>,uint32_t> > pairKey;
-        string_t strKey = pit->key().ToString();
-        string_t strValue = pit->value().ToString();
-        CDataStream ss(&strKey[0], &strKey[0] + strKey.size(),
-                       SER_DISK, CLIENT_VERSION);
-        ss >> pairKey;
-        if (pairKey.first != it.strPrefix ||
-            pairKey.second.first != std::make_pair('p', pds->Id(objectname)))
-            return false;
-        pds->GetKey(pairKey.second.second, propertyname);
-        ss = CDataStream(&strValue[0], &strValue[0] + strValue.size(),
-                         SER_DISK, CLIENT_VERSION);
-        ss >> value;
-        return true;
-    } 
-    catch (...)
-    { 
-        return false;
-    }
-}
-
-template <typename L>
-CLocationIterator<L>::CLocationIterator(CDataStore *pdsIn, L locationnameIn)
-{
-    pds = pdsIn;
-    locationname = locationnameIn;
-    it = pds->Iterator();
-    it.Seek(std::make_pair('l', pds->Id(locationname)));
-}
-
-template <typename L>
-template <typename N, typename V> bool 
-CLocationIterator<L>::GetNextObjectAndLocation(N& objectname, 
-                                               V& locationvalue,
-                                               bool fReverse)
+template <typename N, typename V> bool
+DiskLocationIterator::GetNextObjectAndLocation(N& objectname, V& location_value, bool fReverse)
 {
     boost::shared_ptr<leveldb::Iterator> pit = it.it;
     try
     {
         if (!pit->Valid())
             return false;
-        std::pair<string_t, 
-                std::pair<std::pair<char,uint32_t>,V> > pairKey;
+        std::pair<string_t, std::pair<std::pair<char,uint32_t>,V> > pairKey;
         string_t strKey = pit->key().ToString();
         string_t strValue = pit->value().ToString();
         if (fReverse)
@@ -750,75 +700,67 @@ CLocationIterator<L>::GetNextObjectAndLocation(N& objectname,
         if (strKey.find('l') == std::string::npos)
             return false;
 
-        CDataStream ss(&strKey[0], &strKey[0] + strKey.size(),
-                       SER_DISK, CLIENT_VERSION);
+        CDataStream ss(&strKey[0], &strKey[0] + strKey.size(), SER_DISK, CLIENT_VERSION);
 
         ss >> pairKey;
 
-        if (pairKey.first != it.strPrefix ||
-            pairKey.second.first != std::make_pair('l', pds->Id(locationname)))
+        if (pairKey.first != it.strPrefix || pairKey.second.first != std::make_pair('l', location_id))
             return false;
 
-        locationvalue = pds->ReverseBytes(pairKey.second.second);
+        location_value = datastore->ReverseBytes(pairKey.second.second);
 
         uint32_t nObjectId;
-        ss = CDataStream(&strValue[0], &strValue[0] + strValue.size(),
-                         SER_DISK, CLIENT_VERSION);
+        ss = CDataStream(&strValue[0], &strValue[0] + strValue.size(), SER_DISK, CLIENT_VERSION);
         ss >> nObjectId;
-        pds->GetKey(nObjectId, objectname);
+        datastore->GetKey(nObjectId, objectname);
         return true;
-    } 
+    }
     catch (...)
-    { 
+    {
         return false;
     }
 }
 
-template <typename L>
-template <typename N, typename V> bool 
-CLocationIterator<L>::GetPreviousObjectAndLocation(N& objectname, 
-                                                   V& locationvalue)
+template <typename N, typename V> bool
+DiskLocationIterator::GetPreviousObjectAndLocation(N& objectname, V& location_value)
 {
-    return GetNextObjectAndLocation(objectname, locationvalue, true);
+    return GetNextObjectAndLocation(objectname, location_value, true);
 }
 
-template <typename L>
-template <typename N, typename V> bool 
-CLocationIterator<L>::GetNextObjectAndLocation(N& objectname, 
-                                               V& locationvalue)
+template <typename N, typename V> bool
+DiskLocationIterator::GetNextObjectAndLocation(N& objectname, V& location_value)
 {
-    return GetNextObjectAndLocation(objectname, locationvalue, false);
+    return GetNextObjectAndLocation(objectname, location_value, false);
 }
 
 
-template <typename L>
 template <typename V> void
-CLocationIterator<L>::Seek(V locationvalue, bool fReverse)
+DiskLocationIterator::Seek(V location_value, bool fReverse)
 {
-    it.Seek(std::make_pair(std::make_pair('l', pds->Id(locationname)), 
-                           pds->ReverseBytes(locationvalue)));
+    it.Seek(std::make_pair(std::make_pair('l', location_id), datastore->ReverseBytes(location_value)));
     if (fReverse && it.it->Valid())
     {
         it.it->Prev();
     }
 }
 
-template <typename L>
 template <typename V> void
-CLocationIterator<L>::Seek(V locationvalue)
+DiskLocationIterator::Seek(V location_value)
 {
-    Seek(locationvalue, false);
+    Seek(location_value, false);
 }
 
-template <typename K, typename N>
-class CProperty
+class DiskProperty
 {
 public:
-    CObject<N> &object;
-    K key;
+    DiskObject *object{NULL};
+    vch_t serialized_property_name;
 
-    CProperty(CObject<N> &objectIn, const K keyIn)
-    : object(objectIn), key(keyIn)
+    DiskProperty() { }
+
+    template<typename K>
+    DiskProperty(DiskObject &objectIn, const K property_name)
+    : object(&objectIn), serialized_property_name(Bytes(property_name))
     { }
 
     template <typename V>
@@ -826,32 +768,45 @@ public:
     {
         std::vector<V> values(1);
         V value = values[0];
-        object.db.GetProperty(object, key, value);
+        object->db.GetProperty(*object, serialized_property_name, value);
         return value;
     }
     
     template <typename V>
-    CProperty operator=(V value) const
+    DiskProperty operator=(V value) const
     {
-        object.db.SetProperty(object, key, value);
+        object->db.SetProperty(*object, serialized_property_name, value);
         return *this;
     }
 
     bool Exists()
     {
-        return object.db.HasProperty(object, key);
+        return object->db.HasProperty(*object, serialized_property_name);
     }
 };
 
-template <typename K, typename N>
-class CLocation
+inline DiskProperty DiskObject::operator [] (const char* pchKey)
+{
+    return DiskProperty(*this, string_t(pchKey));
+}
+
+template <typename K>
+DiskProperty DiskObject::operator [] (K& key)
+{
+    return DiskProperty(*this, key);
+}
+
+class DiskLocation
 {
 public:
-    CObject<N> &object;
-    K key;
+    DiskObject *object;
+    vch_t serialized_location_name;
 
-    CLocation(CObject<N> &objectIn, K keyIn)
-    : object(objectIn), key(keyIn)
+    DiskLocation() { }
+
+    template<typename K>
+    DiskLocation(DiskObject &objectIn, K location_name)
+    : object(&objectIn), serialized_location_name(Bytes(location_name))
     { }
 
     template <typename V>
@@ -859,18 +814,28 @@ public:
     {
         std::vector<V> values(1);
         V value = values[0];
-        object.db.GetLocation(object, key, value);
+        object->db.GetLocation(*object, serialized_location_name, value);
         return value;
     }
     
     template <typename V>
-    CLocation operator=(V value) const
+    DiskLocation operator=(V value) const
     {
-        object.db.SetLocation(object, key, value);
+        object->db.SetLocation(*object, serialized_location_name, value);
         return *this;
     }
 
 };
 
+inline DiskLocation DiskObject::Location(const char* pchKey)
+{
+    return DiskLocation(*this, string_t(pchKey));
+}
 
-#endif
+template <typename K>
+DiskLocation DiskObject::Location(const K& key)
+{
+    return DiskLocation(*this, key);
+}
+
+#endif // TELEPORT_DISKDATASTORE

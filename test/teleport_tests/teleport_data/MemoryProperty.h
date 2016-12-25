@@ -1,24 +1,24 @@
-#ifndef TELEPORT_MOCKPROPERTY_H
-#define TELEPORT_MOCKPROPERTY_H
+#ifndef TELEPORT_MEMORYPROPERTY_H
+#define TELEPORT_MEMORYPROPERTY_H
 
-#include "MockData.h"
+#include "MemoryData.h"
 #include <string>
 #include <src/base/sync.h>
 
-class MockProperty : MockData
+class MemoryProperty : MemoryData
 {
 public:
     vch_t serialized_value;
     Mutex mutex;
 
-    MockProperty() { }
+    MemoryProperty() { }
 
-    MockProperty(const MockProperty& other)
+    MemoryProperty(const MemoryProperty& other)
     {
         serialized_value = other.serialized_value;
     }
 
-    MockProperty& operator=(const MockProperty& other)
+    MemoryProperty& operator=(const MemoryProperty& other)
     {
         serialized_value = other.serialized_value;
         return *this;
@@ -33,18 +33,18 @@ public:
     }
 
     template <typename VALUE>
-    MockProperty& operator=(VALUE value)
+    MemoryProperty& operator=(VALUE value)
     {
         LOCK(mutex);
         serialized_value = Serialize(value);
         return *this;
     }
 
-    MockProperty& operator=(const char* value)
+    MemoryProperty& operator=(const char* value)
     {
         return (*this) = std::string(value);
     }
 };
 
 
-#endif //TELEPORT_MOCKPROPERTY_H
+#endif //TELEPORT_MEMORYPROPERTY_H

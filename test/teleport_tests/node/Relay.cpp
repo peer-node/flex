@@ -29,6 +29,7 @@ KeyDistributionMessage Relay::GenerateKeyDistributionMessage(Data data, uint160 
     key_distribution_message.relay_number = number;
     key_distribution_message.PopulateKeySixteenthsEncryptedForKeyQuarterHolders(data.keydata, *this, relay_state);
     key_distribution_message.PopulateKeySixteenthsEncryptedForKeySixteenthHolders(data.keydata, *this, relay_state);
+    key_distribution_message.Sign(data);
     return key_distribution_message;
 }
 

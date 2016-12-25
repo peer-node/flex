@@ -86,7 +86,7 @@ TipMessage TipHandler::TipWithTheMostWork()
 std::vector<uint160> TipHandler::TipMessageHashesWithTheMostReportedWork()
 {
     std::vector<uint160> tip_message_hashes;
-    LocationIterator work_scanner = creditdata.LocationIterator("reported_work");
+    MemoryLocationIterator work_scanner = creditdata.LocationIterator("reported_work");
     work_scanner.SeekEnd();
     uint160 total_work(0);
     work_scanner.GetPreviousObjectAndLocation(tip_message_hashes, total_work);

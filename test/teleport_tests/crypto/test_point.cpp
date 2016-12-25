@@ -1,5 +1,4 @@
 #include "gmock/gmock.h"
-#include "../teleport_data/TestData.h"
 #include "crypto/point.h"
 
 using namespace ::testing;

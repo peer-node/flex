@@ -10,12 +10,12 @@
 #include <vector>
 #include <openssl/bn.h>
 #include <stdint.h>
-#include <test/teleport_tests/teleport_data/MockProperty.h>
+#include <test/teleport_tests/teleport_data/MemoryProperty.h>
 #include "base/serialize.h"
 #include "define.h"
 #include "crypto/uint256.h"
 #include "base/version.h"
-#include "database/datastore.h"
+#include "database/DiskDataStore.h"
 
 #include "log.h"
 #define LOG_CATEGORY "bignum.h"
@@ -90,7 +90,7 @@ public:
         }
     }
 
-    CBigNum(const MockProperty &property)
+    CBigNum(const MemoryProperty &property)
     {
         *this = property;
     }
@@ -109,15 +109,15 @@ public:
     }
 
     template<typename N, typename K>
-    CBigNum& operator=(const CProperty<K,N> property)
+    CBigNum& operator=(const DiskProperty property)
     {
         return (*this) = (CBigNum &)property;
     }
 
-    CBigNum& operator=(const MockProperty property)
+    CBigNum& operator=(const MemoryProperty property)
     {
         CBigNum value;
-        MockData m;
+        MemoryData m;
         m.Deserialize(property.serialized_value, value);
         return (*this) = value;
     }

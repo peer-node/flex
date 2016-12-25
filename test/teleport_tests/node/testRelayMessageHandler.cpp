@@ -29,6 +29,8 @@ public:
         relay_message_handler->SetCreditSystem(credit_system);
         relay_message_handler->SetCalendar(&calendar);
 
+        relay_message_handler->SetNetwork(peer.network);
+
         data = &relay_message_handler->data;
 
         SetLatestMinedCreditMessageBatchNumberTo(1);
@@ -55,6 +57,13 @@ public:
         relay_message_handler->relay_state.latest_mined_credit_message_hash = latest_msg.GetHash160();
     }
 
+    template <typename T>
+    CDataStream GetDataStream(T message)
+    {
+        CDataStream ss(SER_NETWORK, CLIENT_VERSION);
+        ss << std::string("relay") << message.Type() << message;
+        return ss;
+    }
 };
 
 TEST_F(ARelayMessageHandler, StartsWithNoRelaysInItsState)
@@ -231,6 +240,7 @@ public:
         relay_message_handler->relay_state.latest_mined_credit_message_hash = calendar.LastMinedCreditMessageHash();
         RelayJoinMessage join_message = Relay().GenerateJoinMessage(keydata, calendar.LastMinedCreditMessageHash());
         join_message.Sign(*data);
+        data->StoreMessage(join_message);
         relay_message_handler->HandleRelayJoinMessage(join_message);
     }
 
@@ -261,6 +271,17 @@ TEST_F(ARelayMessageHandlerWhichHasAccepted37Relays, Has37Relays)
     ASSERT_THAT(relay_message_handler->relay_state.relays.size(), Eq(37));
 }
 
+TEST_F(ARelayMessageHandlerWhichHasAccepted37Relays, RejectsAKeyDistributionMessageWithABadSignature)
+{
+    Relay &relay = relay_message_handler->relay_state.relays[30];
+    auto key_distribution_message = relay.GenerateKeyDistributionMessage(*data, 10, relay_message_handler->relay_state);
+    key_distribution_message.signature.signature += 1;
+    relay_message_handler->HandleKeyDistributionMessage(key_distribution_message);
+
+    bool rejected = msgdata[key_distribution_message.GetHash160()]["rejected"];
+    ASSERT_THAT(rejected, Eq(true));
+}
+
 TEST_F(ARelayMessageHandlerWhichHasAccepted37Relays, RejectsAKeyDistributionMessageWithTheWrongNumbersOfSecrets)
 {
     Relay &relay = relay_message_handler->relay_state.relays[30];
@@ -277,11 +298,30 @@ TEST_F(ARelayMessageHandlerWhichHasAccepted37Relays,
        SchedulesATaskToEncodeADurationWithoutResponseAfterReceivingAValidKeyDistributionMessage)
 {
     Relay &relay = relay_message_handler->relay_state.relays[30];
-    auto key_distribution_message = relay.GenerateKeyDistributionMessage(*data, 10, relay_message_handler->relay_state);
+    auto key_distribution_message = relay.GenerateKeyDistributionMessage(*data, relay.mined_credit_message_hash,
+                                                                         relay_message_handler->relay_state);
 
     relay_message_handler->HandleKeyDistributionMessage(key_distribution_message);
 
     ASSERT_TRUE(relay_message_handler->scheduler.TaskIsScheduledForTime("key_distribution",
                                                                         key_distribution_message.GetHash160(),
                                                                         TEST_START_TIME + RESPONSE_WAIT_TIME));
+}
+
+TEST_F(ARelayMessageHandlerWhichHasAccepted37Relays,
+       SendsAKeyDistributionComplaintInResponseToABadEncryptedKeyQuarter)
+{
+    Relay &relay = relay_message_handler->relay_state.relays[30];
+    auto key_distribution_message = relay.GenerateKeyDistributionMessage(*data, relay.mined_credit_message_hash,
+                                                                         relay_message_handler->relay_state);
+
+    key_distribution_message.key_sixteenths_encrypted_for_key_quarter_holders[1] += 1;
+    key_distribution_message.Sign(*data);
+
+    relay_message_handler->HandleMessage(GetDataStream(key_distribution_message), &peer);
+
+    KeyDistributionComplaint complaint(key_distribution_message, KEY_DISTRIBUTION_COMPLAINT_KEY_QUARTERS, 1);
+    complaint.Sign(*data);
+
+    ASSERT_TRUE(peer.HasBeenInformedAbout("relay", "key_distribution_complaint", complaint));
 }

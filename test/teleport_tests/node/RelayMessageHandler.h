@@ -41,6 +41,7 @@ public:
     {
         HANDLESTREAM(RelayJoinMessage);
         HANDLESTREAM(KeyDistributionMessage);
+        log_ << "finished handling\n";
     }
 
     void HandleMessage(uint160 message_hash)
@@ -67,6 +68,17 @@ public:
     bool ValidateKeyDistributionMessage(KeyDistributionMessage key_distribution_message);
 
     void HandleKeyDistributionMessageAfterDuration(uint160 key_distribution_message_hash);
+
+    void SendKeyDistributionComplaintsIfAppropriate(KeyDistributionMessage key_distribution_message);
+
+    void SendKeyDistributionComplaints(Relay *relay, uint64_t set_of_secrets, std::vector<Point> recipients,
+                                       uint160 key_distribution_message_hash, std::vector<CBigNum> encrypted_secrets);
+
+    bool
+    RecoverAndStoreSecret(Point &recipient_public_key, CBigNum &encrypted_secret, Point &point_corresponding_to_secret);
+
+    void SendKeyDistributionComplaint(uint160 key_distribution_message_hash, uint64_t set_of_secrets,
+                                      uint32_t position_of_bad_secret);
 };
 
 

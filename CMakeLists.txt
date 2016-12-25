@@ -62,109 +62,140 @@ set(MESSAGING_FILES
         test/teleport_tests/main_tests/Communicator.cpp
         test/teleport_tests/main_tests/Communicator.h)
 
-set(DATABASE_FILES
-        src/database/datastore.h
-        src/database/memdb.h
-        src/leveldb/db/builder.cc
-        src/leveldb/db/builder.h
+set(LEVELDB_FILES
+        src/leveldb/util/arena.cc
+        src/leveldb/util/options.cc
+        src/leveldb/util/coding.cc
+        src/leveldb/util/hash.h
+        src/leveldb/util/status.cc
+        src/leveldb/util/testharness.h
+        src/leveldb/util/bloom.cc
+        src/leveldb/util/cache.cc
+        src/leveldb/util/histogram.cc
+        src/leveldb/util/testutil.cc
+        src/leveldb/util/testutil.h
+        src/leveldb/util/coding.h
+        src/leveldb/util/filter_policy.cc
+        src/leveldb/util/crc32c.h
+        src/leveldb/util/comparator.cc
+        src/leveldb/util/posix_logger.h
+        src/leveldb/util/crc32c.cc
+        src/leveldb/util/arena.h
+        src/leveldb/util/env_posix.cc
+        src/leveldb/util/mutexlock.h
+        src/leveldb/util/logging.cc
+        src/leveldb/util/hash.cc
+        src/leveldb/util/random.h
+        src/leveldb/util/histogram.h
+        src/leveldb/util/env.cc
+        src/leveldb/util/logging.h
+        src/leveldb/util/testharness.cc
+        src/leveldb/include/leveldb/comparator.h
+        src/leveldb/include/leveldb/c.h
+        src/leveldb/include/leveldb/table.h
+        src/leveldb/include/leveldb/table_builder.h
+        src/leveldb/include/leveldb/dumpfile.h
+        src/leveldb/include/leveldb/env.h
+        src/leveldb/include/leveldb/slice.h
+        src/leveldb/include/leveldb/filter_policy.h
+        src/leveldb/include/leveldb/options.h
+        src/leveldb/include/leveldb/status.h
+        src/leveldb/include/leveldb/write_batch.h
+        src/leveldb/include/leveldb/iterator.h
+        src/leveldb/include/leveldb/db.h
+        src/leveldb/include/leveldb/cache.h
+        src/leveldb/helpers/memenv/memenv.cc
+        src/leveldb/helpers/memenv/memenv.h
+        src/leveldb/db/filename.h
+        src/leveldb/db/db_iter.cc
+        src/leveldb/db/snapshot.h
+        src/leveldb/db/dbformat.cc
+        src/leveldb/db/version_edit.h
+        src/leveldb/db/version_set.cc
+        src/leveldb/db/dbformat.h
+        src/leveldb/db/skiplist.h
+        src/leveldb/db/log_writer.h
+        src/leveldb/db/write_batch_internal.h
+        src/leveldb/db/filename.cc
+        src/leveldb/db/version_edit.cc
+        src/leveldb/db/version_set.h
         src/leveldb/db/c.cc
         src/leveldb/db/db_impl.cc
         src/leveldb/db/db_impl.h
-        src/leveldb/db/db_iter.cc
-        src/leveldb/db/db_iter.h
-        src/leveldb/db/dbformat.cc
-        src/leveldb/db/dbformat.h
-        src/leveldb/db/filename.cc
-        src/leveldb/db/filename.h
-        src/leveldb/db/log_format.h
-        src/leveldb/db/log_reader.cc
-        src/leveldb/db/log_reader.h
+        src/leveldb/db/builder.cc
         src/leveldb/db/log_writer.cc
-        src/leveldb/db/log_writer.h
-        src/leveldb/db/memtable.cc
-        src/leveldb/db/memtable.h
-        src/leveldb/db/repair.cc
-        src/leveldb/db/skiplist.h
-        src/leveldb/db/snapshot.h
+        src/leveldb/db/db_iter.h
         src/leveldb/db/table_cache.cc
-        src/leveldb/db/table_cache.h
-        src/leveldb/db/version_edit.cc
-        src/leveldb/db/version_edit.h
-        src/leveldb/db/version_set.cc
-        src/leveldb/db/version_set.h
+        src/leveldb/db/builder.h
         src/leveldb/db/write_batch.cc
-        src/leveldb/db/write_batch_internal.h
-        src/leveldb/helpers/memenv/memenv.cc
-        src/leveldb/helpers/memenv/memenv.h
-        src/leveldb/include/leveldb/c.h
-        src/leveldb/include/leveldb/cache.h
-        src/leveldb/include/leveldb/comparator.h
-        src/leveldb/include/leveldb/db.h
-        src/leveldb/include/leveldb/env.h
-        src/leveldb/include/leveldb/filter_policy.h
-        src/leveldb/include/leveldb/iterator.h
-        src/leveldb/include/leveldb/options.h
-        src/leveldb/include/leveldb/slice.h
-        src/leveldb/include/leveldb/status.h
-        src/leveldb/include/leveldb/table.h
-        src/leveldb/include/leveldb/table_builder.h
-        src/leveldb/include/leveldb/write_batch.h
-        src/leveldb/port/win/stdint.h
-        src/leveldb/port/atomic_pointer.h
+        src/leveldb/db/log_reader.h
+        src/leveldb/db/log_reader.cc
+        src/leveldb/db/memtable.h
+        src/leveldb/db/memtable.cc
+        src/leveldb/db/table_cache.h
+        src/leveldb/db/repair.cc
+        src/leveldb/db/log_format.h
+        src/leveldb/db/dumpfile.cc
         src/leveldb/port/port.h
-        src/leveldb/port/port_posix.cc
-        src/leveldb/port/port_posix.h
+        src/leveldb/port/win/stdint.h
         src/leveldb/port/thread_annotations.h
-        src/leveldb/table/block.cc
-        src/leveldb/table/block.h
-        src/leveldb/table/block_builder.cc
-        src/leveldb/table/block_builder.h
-        src/leveldb/table/filter_block.cc
+        src/leveldb/port/port_posix.cc
+        src/leveldb/port/port_example.h
+        src/leveldb/port/port_posix.h
+        src/leveldb/port/atomic_pointer.h
         src/leveldb/table/filter_block.h
-        src/leveldb/table/format.cc
-        src/leveldb/table/format.h
-        src/leveldb/table/iterator.cc
-        src/leveldb/table/iterator_wrapper.h
-        src/leveldb/table/merger.cc
-        src/leveldb/table/merger.h
-        src/leveldb/table/table.cc
-        src/leveldb/table/table_builder.cc
+        src/leveldb/table/block_builder.cc
+        src/leveldb/table/block.h
         src/leveldb/table/two_level_iterator.cc
-        src/leveldb/table/two_level_iterator.h
-        src/leveldb/util/arena.cc
-        src/leveldb/util/arena.h
-        src/leveldb/util/bloom.cc
-        src/leveldb/util/cache.cc
-        src/leveldb/util/coding.cc
-        src/leveldb/util/coding.h
-        src/leveldb/util/comparator.cc
-        src/leveldb/util/crc32c.cc
-        src/leveldb/util/crc32c.h
-        src/leveldb/util/env.cc
-        src/leveldb/util/env_posix.cc
-        src/leveldb/util/env_win.cc
-        src/leveldb/util/filter_policy.cc
-        src/leveldb/util/hash.cc
-        src/leveldb/util/hash.h
-        src/leveldb/util/histogram.cc
-        src/leveldb/util/histogram.h
-        src/leveldb/util/logging.cc
-        src/leveldb/util/logging.h
-        src/leveldb/util/mutexlock.h
-        src/leveldb/util/options.cc
-        src/leveldb/util/posix_logger.h
-        src/leveldb/util/random.h
-        src/leveldb/util/status.cc
+        src/leveldb/table/filter_block.cc
+        src/leveldb/table/block.cc
+        src/leveldb/table/merger.cc
+        src/leveldb/table/format.h
+        src/leveldb/table/merger.h
+        src/leveldb/table/iterator.cc
+        src/leveldb/table/table.cc
+        src/leveldb/table/iterator_wrapper.h
+        src/leveldb/table/table_builder.cc
+        src/leveldb/table/format.cc
+        src/leveldb/table/block_builder.h
+        src/leveldb/table/two_level_iterator.h)
+
+set(MEMORY_DATASTORE_FILES
+        test/teleport_tests/teleport_data/MemoryObject.cpp
+        test/teleport_tests/teleport_data/MemoryObject.h
+        test/teleport_tests/teleport_data/MemoryProperty.cpp
+        test/teleport_tests/teleport_data/MemoryProperty.h
+        test/teleport_tests/teleport_data/MemoryData.cpp
+        test/teleport_tests/teleport_data/MemoryData.h
+        test/teleport_tests/teleport_data/MemoryLocationIterator.cpp
+        test/teleport_tests/teleport_data/MemoryLocationIterator.h
+        test/teleport_tests/teleport_data/MemoryDimension.cpp
+        test/teleport_tests/teleport_data/MemoryDimension.h
+        test/teleport_tests/teleport_data/MemoryDataStore.cpp
+        test/teleport_tests/teleport_data/MemoryLocation.cpp
+        test/teleport_tests/teleport_data/MemoryLocation.h
+        )
+
+set(DATASTORE_FILES
+        ${LEVELDB_FILES}
         src/leveldbwrapper.cpp
         src/leveldbwrapper.h
-        test/teleport_tests/teleport_data/MockProperty.cpp
-        test/teleport_tests/teleport_data/MockProperty.h
-        test/teleport_tests/teleport_data/MockData.cpp
-        test/teleport_tests/teleport_data/MockData.h
+        ${MEMORY_DATASTORE_FILES}
+        src/database/DiskDataStore.h
+        test/teleport_tests/teleport_data/DataStore.cpp
+        test/teleport_tests/teleport_data/DataStore.h
+        test/teleport_tests/teleport_data/DataObject.cpp
+        test/teleport_tests/teleport_data/DataObject.h
+        test/teleport_tests/teleport_data/DataProperty.cpp
+        test/teleport_tests/teleport_data/DataProperty.h
+        test/teleport_tests/teleport_data/DataLocation.cpp
+        test/teleport_tests/teleport_data/DataLocation.h
         test/teleport_tests/teleport_data/LocationIterator.cpp
-        test/teleport_tests/teleport_data/LocationIterator.h
-        test/teleport_tests/teleport_data/MockDimension.cpp
-        test/teleport_tests/teleport_data/MockDimension.h)
+        test/teleport_tests/teleport_data/LocationIterator.h)
+
+set(DATABASE_FILES
+        ${DATASTORE_FILES}
+        src/database/memdb.h)
 
 set(BASE_FILES
         src/base/allocators.cpp
@@ -428,9 +459,6 @@ set(DATA_HANDLER_FILES
         test/teleport_tests/node/data_handler/DiurnFailureMessage.cpp
         test/teleport_tests/node/data_handler/DiurnFailureMessage.h)
 
-set(CREDIT_HANDLER_FILES
-        )
-
 add_executable(runRPCTests
         test/teleport_tests/test_main.cpp
         test/teleport_tests/rpc/test_rpc.cpp)
@@ -522,10 +550,9 @@ add_executable(runDataTests
         ${MINCRYPTO_FILES}
         ${DATABASE_FILES}
         test/teleport_tests/test_main.cpp
-        test/teleport_tests/teleport_data/test_data.cpp
-        test/teleport_tests/teleport_data/MemoryDataStore.cpp
-        test/teleport_tests/teleport_data/MockLocation.cpp
-        test/teleport_tests/teleport_data/MockLocation.h)
+        test/teleport_tests/teleport_data/testMemoryDataStore.cpp
+        test/teleport_tests/teleport_data/testDiskDataStore.cpp
+        test/teleport_tests/teleport_data/testDataStore.cpp)
 
 set(NODE_TEST_FILES
         test/teleport_tests/teleport_data/TestData.h

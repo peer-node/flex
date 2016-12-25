@@ -1,28 +1,29 @@
-#ifndef TELEPORT_LOCATION_H
-#define TELEPORT_LOCATION_H
+#ifndef TELEPORT_MEMORYDIMENSION_H
+#define TELEPORT_MEMORYDIMENSION_H
 
 #include <src/base/sync.h>
-#include "MockData.h"
+#include "MemoryData.h"
 
 
 typedef std::map<vch_t, vch_t> MockDataMap;
 
-class MockDimension : public MockData
+class MemoryDimension : public MemoryData
 {
 public:
     MockDataMap located_serialized_objects;
     Mutex mutex;
 
-    MockDimension() { }
+    MemoryDimension() { }
 
-    MockDimension(const MockDimension& other)
+    MemoryDimension(const MemoryDimension& other)
     {
         located_serialized_objects = other.located_serialized_objects;
     }
 
-    MockDimension& operator=(const MockDimension& other)
+    MemoryDimension& operator=(const MemoryDimension& other)
     {
         located_serialized_objects = other.located_serialized_objects;
+        return *this;
     }
 
     bool Find(vch_t serialized_object_name, vch_t& location_value)
@@ -36,7 +37,15 @@ public:
             }
         return false;
     }
+
+    void Delete(vch_t serialized_object_name)
+    {
+        vch_t serialized_location_value;
+        if (not Find(serialized_object_name, serialized_location_value))
+            return;
+        located_serialized_objects.erase(serialized_location_value);
+    }
 };
 
 
-#endif //TELEPORT_LOCATION_H
+#endif //TELEPORT_MEMORYDIMENSION_H

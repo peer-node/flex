@@ -3,6 +3,7 @@
 
 
 #include <test/teleport_tests/teleport_data/MemoryDataStore.h>
+#include <src/vector_tools.h>
 
 class RelayState;
 
@@ -24,11 +25,14 @@ public:
     template <typename T>
     void StoreMessage(T message)
     {
-        msgdata[message.GetHash160()]["type"] = message.Type();
-        msgdata[message.GetHash160()][message.Type()] = message;
+        uint160 message_hash = message.GetHash160();
+        msgdata[message_hash]["type"] = message.Type();
+        msgdata[message_hash][message.Type()] = message;
+        msgdata[message_hash]["received"] = true;
+        StoreHash(message_hash);
     }
 
-    MockProperty &GetMessage(uint160 message_hash)
+    MemoryProperty &GetMessage(uint160 message_hash)
     {
         return msgdata[message_hash][MessageType(message_hash)];
     }
@@ -37,6 +41,16 @@ public:
     {
         return msgdata[message_hash]["type"];
     }
+
+    void StoreHash(uint160 hash)
+    {
+        uint32_t short_hash = *(uint32_t*)&hash;
+        std::vector<uint160> matches = msgdata[short_hash]["matches"];
+        if (!VectorContainsEntry(matches, hash))
+            matches.push_back(hash);
+        msgdata[short_hash]["matches"] = matches;
+    }
+
 };
 
 
