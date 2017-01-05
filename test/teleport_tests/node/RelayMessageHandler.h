@@ -21,6 +21,9 @@ public:
     RelayState relay_state;
     Scheduler scheduler;
 
+    ScheduledTask handle_key_distribution_message_after_duration;
+    ScheduledTask handle_obituary_after_duration;
+
     RelayMessageHandler(Data data):
             MessageHandlerWithOrphanage(data.msgdata), data(data.msgdata, data.creditdata, data.keydata, &relay_state)
     {
@@ -29,8 +32,14 @@ public:
 
     void AddScheduledTasks()
     {
-        scheduler.AddTask(ScheduledTask("key_distribution",
-                                        &RelayMessageHandler::HandleKeyDistributionMessageAfterDuration, this));
+        handle_key_distribution_message_after_duration
+                = ScheduledTask("key_distribution",
+                                &RelayMessageHandler::HandleKeyDistributionMessageAfterDuration, this);
+        scheduler.AddTask(handle_key_distribution_message_after_duration);
+
+        handle_obituary_after_duration = ScheduledTask("obituary",
+                                                       &RelayMessageHandler::HandleObituaryAfterDuration, this);
+        scheduler.AddTask(handle_obituary_after_duration);
     }
 
     void SetCreditSystem(CreditSystem *credit_system);
@@ -41,21 +50,25 @@ public:
     {
         HANDLESTREAM(RelayJoinMessage);
         HANDLESTREAM(KeyDistributionMessage);
-        log_ << "finished handling\n";
+        HANDLESTREAM(KeyDistributionComplaint);
     }
 
     void HandleMessage(uint160 message_hash)
     {
         HANDLEHASH(RelayJoinMessage);
         HANDLEHASH(KeyDistributionMessage);
+        HANDLEHASH(KeyDistributionComplaint);
     }
 
     HANDLECLASS(RelayJoinMessage);
     HANDLECLASS(KeyDistributionMessage);
+    HANDLECLASS(KeyDistributionComplaint);
 
     void HandleRelayJoinMessage(RelayJoinMessage relay_join_message);
 
     void HandleKeyDistributionMessage(KeyDistributionMessage key_distribution_message);
+
+    void HandleKeyDistributionComplaint(KeyDistributionComplaint complaint);
 
     bool MinedCreditMessageHashIsInMainChain(RelayJoinMessage relay_join_message);
 
@@ -69,16 +82,37 @@ public:
 
     void HandleKeyDistributionMessageAfterDuration(uint160 key_distribution_message_hash);
 
-    void SendKeyDistributionComplaintsIfAppropriate(KeyDistributionMessage key_distribution_message);
+    void HandleObituaryAfterDuration(uint160 obituary_hash);
 
-    void SendKeyDistributionComplaints(Relay *relay, uint64_t set_of_secrets, std::vector<Point> recipients,
-                                       uint160 key_distribution_message_hash, std::vector<CBigNum> encrypted_secrets);
-
-    bool
-    RecoverAndStoreSecret(Point &recipient_public_key, CBigNum &encrypted_secret, Point &point_corresponding_to_secret);
+    void StoreKeyDistributionSecretsAndSendComplaints(KeyDistributionMessage key_distribution_message);
 
     void SendKeyDistributionComplaint(uint160 key_distribution_message_hash, uint64_t set_of_secrets,
                                       uint32_t position_of_bad_secret);
+
+    void RecoverSecretsAndSendKeyDistributionComplaints(Relay *relay, uint64_t set_of_secrets,
+                                                        std::vector<uint64_t> recipients,
+                                                        uint160 key_distribution_message_hash,
+                                                        std::vector<CBigNum> encrypted_secrets);
+
+    bool RecoverAndStoreSecret(Relay *recipient, CBigNum &encrypted_secret, Point &point_corresponding_to_secret);
+
+    void RecordSentComplaint(uint160 complaint_hash, uint160 bad_message_hash);
+
+    bool ValidateKeyDistributionComplaint(KeyDistributionComplaint complaint);
+
+    void SendSecretRecoveryMessages(Relay *dead_relay);
+
+    void SendSecretRecoveryMessage(Relay *dead_relay, Relay *quarter_holder);
+
+    void StoreSecretRecoveryMessage(SecretRecoveryMessage secret_recovery_message, uint160 obituary_hash);
+
+    SecretRecoveryMessage GenerateSecretRecoveryMessage(Relay *dead_relay, Relay *quarter_holder);
+
+    void ScheduleTaskToCheckWhichQuarterHoldersHaveResponded(uint160 obituary_hash);
+
+    void HandleRelayDeath(Relay *dead_relay);
+
+    std::vector<uint64_t> GetKeyQuarterHoldersWhoHaventResponded(uint160 obituary_hash);
 };
 
 

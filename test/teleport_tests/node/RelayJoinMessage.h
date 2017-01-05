@@ -9,6 +9,7 @@
 #include <src/crypto/secp256k1point.h>
 #include "../teleport_data/MemoryDataStore.h"
 #include "Data.h"
+#include "RelayPublicKeySet.h"
 
 
 inline Point SumOfPoints(std::vector<Point> points)
@@ -27,6 +28,7 @@ class RelayJoinMessage
 public:
     uint160 mined_credit_message_hash{0};
     std::vector<Point> public_key_sixteenths;
+    RelayPublicKeySet public_key_set;
     std::vector<CBigNum> encrypted_private_key_sixteenths;
     Signature signature;
 
@@ -38,6 +40,7 @@ public:
     (
         READWRITE(mined_credit_message_hash);
         READWRITE(public_key_sixteenths);
+        READWRITE(public_key_set);
         READWRITE(encrypted_private_key_sixteenths);
         READWRITE(signature);
     )
@@ -56,43 +59,33 @@ public:
         return pubkey;
     }
 
-    void GenerateKeySixteenths(MemoryDataStore &keydata)
+    void PopulatePublicKeySet(MemoryDataStore &keydata)
     {
-        while (public_key_sixteenths.size() < 16)
-            GenerateKeySixteenth(keydata);
-        StorePrivateKey(keydata);
+        public_key_set.Populate(keydata);
+        StorePrivateSigningKey(keydata);
     }
 
-    void GenerateKeySixteenth(MemoryDataStore &keydata)
-    {
-        CBigNum private_key_part;
-        private_key_part.Randomize(Secp256k1Point::Modulus());
-        Point public_key_part(SECP256K1, private_key_part);
-        keydata[public_key_part]["privkey"] = private_key_part;
-        public_key_sixteenths.push_back(public_key_part);
-    }
-
-    void StorePrivateKey(MemoryDataStore &keydata)
+    void StorePrivateSigningKey(MemoryDataStore &keydata)
     {
         CBigNum private_key(0);
-        for (auto public_key_sixteenth : public_key_sixteenths)
+        for (auto public_key_sixteenth : public_key_set.PublicKeySixteenths())
         {
             CBigNum private_key_sixteenth = keydata[public_key_sixteenth]["privkey"];
             private_key += private_key_sixteenth;
         }
-        keydata[PublicKey()]["privkey"] = private_key % Secp256k1Point::Modulus();
+        keydata[PublicSigningKey()]["privkey"] = private_key % Secp256k1Point::Modulus();
     }
 
-    Point PublicKey()
+    Point PublicSigningKey()
     {
-        return SumOfPoints(public_key_sixteenths);
+        return SumOfPoints(public_key_set.PublicKeySixteenths());
     }
 
     void PopulatePrivateKeySixteenths(MemoryDataStore &keydata)
     {
-        Point public_key = PublicKey();
+        Point public_key = PublicSigningKey();
         encrypted_private_key_sixteenths.resize(0);
-        for (auto public_key_sixteenth : public_key_sixteenths)
+        for (auto public_key_sixteenth : public_key_set.PublicKeySixteenths())
         {
             CBigNum private_key_sixteenth = keydata[public_key_sixteenth]["privkey"];
             CBigNum shared_secret = Hash(public_key * private_key_sixteenth);

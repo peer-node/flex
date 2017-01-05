@@ -12,25 +12,10 @@
  */
 
     Point::Point():
-        curve(0),
-        s_point(NULL),
+        curve(SECP256K1),
         c_point(NULL),
         e_point(NULL)
-    { }
-
-    Point::Point(uint8_t curve):
-        curve(curve),
-        s_point(NULL),
-        c_point(NULL),
-        e_point(NULL)
-    {
-        if (curve == SECP256K1)
-            s_point = new Secp256k1Point();
-        else if (curve == CURVE25519)
-            c_point = new Curve25519Point();
-        else if (curve == ED25519)
-            e_point = new Ed25519Point();
-    }
+    { s_point = new Secp256k1Point(); }
 
     Point::Point(uint8_t curve, CBigNum n):
         curve(curve),
@@ -190,11 +175,11 @@
 
     bool Point::operator==(const Point& other) const
     {
-        if (curve == SECP256K1)
+        if (curve == SECP256K1 and other.curve == SECP256K1)
             return *s_point == *other.s_point;
-        else if (curve == CURVE25519)
+        else if (curve == CURVE25519 and other.curve == CURVE25519)
             return *c_point == *other.c_point;
-        else if (curve == ED25519)
+        else if (curve == ED25519 and other.curve == ED25519)
             return *e_point == *other.e_point;
         return false;
     }
@@ -206,22 +191,22 @@
 
     Point& Point::operator+=(const Point& other)
     {
-        if (curve == SECP256K1)
+        if (curve == SECP256K1 and other.curve == SECP256K1)
             *s_point += *other.s_point;
-        else if (curve == CURVE25519)
+        else if (curve == CURVE25519 and other.curve == CURVE25519)
             *c_point += *other.c_point;
-        else if (curve == ED25519)
+        else if (curve == ED25519 and other.curve == ED25519)
             *e_point += *other.e_point;
         return (*this);
     }
 
     Point& Point::operator-=(const Point& other)
     {
-        if (curve == SECP256K1)
+        if (curve == SECP256K1 and other.curve == SECP256K1)
             *s_point -= *other.s_point;
-        else if (curve == CURVE25519)
+        else if (curve == CURVE25519 and other.curve == CURVE25519)
             *c_point -= *other.c_point;
-        else if (curve == ED25519)
+        else if (curve == ED25519 and other.curve == CURVE25519)
             *e_point -= *other.e_point;
         return (*this);
     }

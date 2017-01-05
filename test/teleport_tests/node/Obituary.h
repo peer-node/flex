@@ -5,8 +5,7 @@
 
 #define OBITUARY_SAID_GOODBYE 1
 #define OBITUARY_NOT_RESPONDING 2
-#define OBITUARY_UNREFUTED_COMPLAINT 3   // complaint about relay
-#define OBITUARY_REFUTED_COMPLAINT 4     // complaint by relay
+#define OBITUARY_COMPLAINT 3
 
 
 class Obituary

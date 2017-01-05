@@ -48,7 +48,7 @@ public:
     Point VerificationKey(Data data)
     {
         RelayJoinMessage join_message = data.msgdata[relay_join_hash]["relay_join"];
-        return join_message.PublicKey();
+        return join_message.PublicSigningKey();
     }
 
     void PopulateKeySixteenthsEncryptedForKeyQuarterHolders(MemoryDataStore &keydata,
@@ -81,6 +81,8 @@ public:
 
     bool AuditKeySixteenthEncryptedInRelayJoinMessage(RelayJoinMessage &join_message, uint64_t position,
                                                       MemoryDataStore &keydata);
+
+
 };
 
 

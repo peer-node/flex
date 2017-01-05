@@ -9,7 +9,7 @@
 Point GoodbyeComplaint::VerificationKey(Data data)
 {
     Relay *complainer = GetComplainer(data);
-    return complainer->public_key;
+    return complainer->public_signing_key;
 }
 
 Relay *GoodbyeComplaint::GetSecretSender(Data data)

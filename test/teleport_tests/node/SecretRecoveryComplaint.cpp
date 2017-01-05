@@ -6,7 +6,7 @@ Point SecretRecoveryComplaint::VerificationKey(Data data)
     Relay *dead_relay = GetComplainer(data);
     if (dead_relay == NULL)
         return Point(SECP256K1, 0);
-    return dead_relay->public_key;
+    return dead_relay->public_signing_key;
 }
 
 Relay *SecretRecoveryComplaint::GetComplainer(Data data)

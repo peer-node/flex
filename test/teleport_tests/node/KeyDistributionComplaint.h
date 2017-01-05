@@ -18,14 +18,18 @@ public:
 
     KeyDistributionComplaint(KeyDistributionMessage key_distribution_message,
                              uint64_t set_of_secrets,
-                             uint64_t position_of_secret);
+                             uint64_t position_of_secret,
+                             Data data);
 
-    KeyDistributionComplaint(uint160 key_distribution_message_hash, uint64_t set_of_secrets,
-                                 uint64_t position_of_secret);
+    KeyDistributionComplaint(uint160 key_distribution_message_hash,
+                             uint64_t set_of_secrets,
+                             uint64_t position_of_secret,
+                             Data data);
 
     uint160 key_distribution_message_hash{0};
     uint64_t set_of_secrets{0};
     uint64_t position_of_secret{0};
+    CBigNum recipient_private_key{0};
     Signature signature;
 
     static std::string Type() { return "key_distribution_complaint"; }
@@ -35,10 +39,11 @@ public:
         READWRITE(key_distribution_message_hash);
         READWRITE(set_of_secrets);
         READWRITE(position_of_secret);
+        READWRITE(recipient_private_key);
         READWRITE(signature);
     );
 
-    JSON(key_distribution_message_hash, set_of_secrets, position_of_secret, signature);
+    JSON(key_distribution_message_hash, set_of_secrets, position_of_secret, recipient_private_key, signature);
 
     DEPENDENCIES(key_distribution_message_hash);
 
@@ -49,6 +54,20 @@ public:
     Relay *GetComplainer(Data data);
 
     Relay *GetSecretSender(Data data);
+
+    Point GetPointCorrespondingToSecret(Data data);
+
+    KeyDistributionMessage GetKeyDistributionMessage(Data data);
+
+    bool IsValid(Data data);
+
+    CBigNum GetEncryptedSecret(Data data);
+
+    bool EncryptedSecretIsOk(Data data);
+
+    bool GeneratedRowOfPointsIsOk(Data data);
+
+    CBigNum RecoverSecret(Data data);
 };
 
 

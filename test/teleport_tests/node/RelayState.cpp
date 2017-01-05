@@ -39,7 +39,8 @@ Relay RelayState::GenerateRelayFromRelayJoinMessage(RelayJoinMessage relay_join_
 
     new_relay.join_message_hash = relay_join_message.GetHash160();
     new_relay.mined_credit_message_hash = relay_join_message.mined_credit_message_hash;
-    new_relay.public_key = relay_join_message.PublicKey();
+    new_relay.public_signing_key = relay_join_message.PublicSigningKey();
+    new_relay.public_key_set = relay_join_message.public_key_set;
     new_relay.public_key_sixteenths = relay_join_message.public_key_sixteenths;
     return new_relay;
 }
@@ -174,35 +175,27 @@ uint64_t RelayState::NumberOfRelaysThatJoinedBefore(Relay &relay)
     return count;
 }
 
-std::vector<Point> RelayState::GetKeyQuarterHoldersAsListOf16Recipients(uint64_t relay_number)
+std::vector<uint64_t> RelayState::GetKeyQuarterHoldersAsListOf16RelayNumbers(uint64_t relay_number)
 {
     Relay *relay = GetRelayByNumber(relay_number);
     if (relay == NULL) throw RelayStateException("no such relay");
-    std::vector<Point> recipient_public_keys;
+    std::vector<uint64_t> recipient_relay_numbers;
     for (auto quarter_key_holder : relay->key_quarter_holders)
     {
-        Relay *recipient = GetRelayByNumber(quarter_key_holder);
-        if (recipient == NULL) throw RelayStateException("no such relay");
         for (uint64_t i = 0; i < 4; i++)
-            recipient_public_keys.push_back(recipient->public_key);
+            recipient_relay_numbers.push_back(quarter_key_holder);
     }
-    return recipient_public_keys;
+    return recipient_relay_numbers;
 }
 
-std::vector<Point>
-RelayState::GetKeySixteenthHoldersAsListOf16Recipients(uint64_t relay_number, uint64_t first_or_second_set)
+std::vector<uint64_t>
+RelayState::GetKeySixteenthHoldersAsListOf16RelayNumbers(uint64_t relay_number, uint64_t first_or_second_set)
 {
     Relay *relay = GetRelayByNumber(relay_number);
     if (relay == NULL) throw RelayStateException("no such relay");
 
-    std::vector<Point> recipient_public_keys;
-    std::vector<uint64_t> &recipients = (first_or_second_set == 1) ? relay->first_set_of_key_sixteenth_holders
+    return (first_or_second_set == 1) ? relay->first_set_of_key_sixteenth_holders
                                                                    : relay->second_set_of_key_sixteenth_holders;
-
-    for (auto key_sixteenth_holder : recipients)
-        recipient_public_keys.push_back(GetRelayByNumber(key_sixteenth_holder)->public_key);
-
-    return recipient_public_keys;
 }
 
 void RelayState::ProcessKeyDistributionMessage(KeyDistributionMessage key_distribution_message)
@@ -410,29 +403,21 @@ void RelayState::ReaddRelay(Obituary obituary, uint64_t successor_relay_number)
 
 void RelayState::ProcessKeyDistributionComplaint(KeyDistributionComplaint complaint, Data data)
 {
-    Relay *complainer = complaint.GetComplainer(data);
     Relay *secret_sender = complaint.GetSecretSender(data);
-    if (complainer == NULL or secret_sender == NULL) throw RelayStateException("no such relay");
+    if (secret_sender == NULL) throw RelayStateException("no such relay");
 
     if (secret_sender->key_distribution_message_accepted)
         throw RelayStateException("too late to process complaint");
 
-    uint160 complaint_hash = complaint.GetHash160();
-
-    complainer->pending_complaints_sent.push_back(complaint_hash);
-    secret_sender->pending_complaints.push_back(complaint_hash);
+    RecordRelayDeath(secret_sender, data, OBITUARY_COMPLAINT);
 }
 
 void RelayState::UnprocessKeyDistributionComplaint(KeyDistributionComplaint complaint, Data data)
 {
-    Relay *complainer = complaint.GetComplainer(data);
     Relay *secret_sender = complaint.GetSecretSender(data);
-    if (complainer == NULL or secret_sender == NULL) throw RelayStateException("no such relay");
+    if (secret_sender == NULL) throw RelayStateException("no such relay");
 
-    uint160 complaint_hash = complaint.GetHash160();
-
-    EraseEntryFromVector(complaint_hash, complainer->pending_complaints_sent);
-    EraseEntryFromVector(complaint_hash, secret_sender->pending_complaints);
+    UnrecordRelayDeath(secret_sender, data, OBITUARY_COMPLAINT);
 }
 
 void RelayState::ProcessDurationWithoutResponse(DurationWithoutResponse duration, Data data)
@@ -442,20 +427,11 @@ void RelayState::ProcessDurationWithoutResponse(DurationWithoutResponse duration
     if (message_type == "key_distribution")
         ProcessDurationAfterKeyDistributionMessage(data.msgdata[duration.message_hash][message_type], data);
 
-    else if (message_type == "key_distribution_complaint")
-        ProcessDurationAfterKeyDistributionComplaint(data.msgdata[duration.message_hash][message_type], data);
-
     else if (message_type == "goodbye")
         ProcessDurationAfterGoodbyeMessage(data.msgdata[duration.message_hash][message_type], data);
 
-    else if (message_type == "goodbye_complaint")
-        ProcessDurationAfterGoodbyeComplaint(data.msgdata[duration.message_hash][message_type], data);
-
     else if (message_type == "secret_recovery")
         ProcessDurationAfterSecretRecoveryMessage(data.msgdata[duration.message_hash][message_type], data);
-
-    else if (message_type == "secret_recovery_complaint")
-        ProcessDurationAfterSecretRecoveryComplaint(data.msgdata[duration.message_hash][message_type], data);
 }
 
 void RelayState::UnprocessDurationWithoutResponse(DurationWithoutResponse duration, Data data)
@@ -465,28 +441,17 @@ void RelayState::UnprocessDurationWithoutResponse(DurationWithoutResponse durati
     if (message_type == "key_distribution")
         UnprocessDurationAfterKeyDistributionMessage(data.msgdata[duration.message_hash][message_type], data);
 
-    else if (message_type == "key_distribution_complaint")
-        UnprocessDurationAfterKeyDistributionComplaint(data.msgdata[duration.message_hash][message_type], data);
-
     else if (message_type == "goodbye")
         UnprocessDurationAfterGoodbyeMessage(data.msgdata[duration.message_hash][message_type], data);
 
-    else if (message_type == "goodbye_complaint")
-        UnprocessDurationAfterGoodbyeComplaint(data.msgdata[duration.message_hash][message_type], data);
-
     else if (message_type == "secret_recovery")
         UnprocessDurationAfterSecretRecoveryMessage(data.msgdata[duration.message_hash][message_type], data);
-
-    else if (message_type == "secret_recovery_complaint")
-        UnprocessDurationAfterSecretRecoveryComplaint(data.msgdata[duration.message_hash][message_type], data);
 }
 
 void RelayState::ProcessDurationAfterKeyDistributionMessage(KeyDistributionMessage key_distribution_message, Data data)
 {
-    if (KeyDistributionMessageHasBeenComplainedAbout(key_distribution_message, data))
-        throw RelayStateException("attempt to process duration without response when there was a complaint");
     Relay *relay = GetRelayByJoinHash(key_distribution_message.relay_join_hash);
-    if (relay == NULL) throw RelayStateException("no such relay");
+    if (relay == NULL or relay->obituary_hash != 0) throw RelayStateException("non-existent or dead relay");
     relay->key_distribution_message_accepted = true;
 }
 
@@ -497,109 +462,36 @@ void RelayState::UnprocessDurationAfterKeyDistributionMessage(KeyDistributionMes
     relay->key_distribution_message_accepted = false;
 }
 
-bool RelayState::KeyDistributionMessageHasBeenComplainedAbout(KeyDistributionMessage key_distribution_message, Data data)
-{
-    uint160 key_distribution_message_hash = key_distribution_message.GetHash160();
-    Relay *relay = GetRelayByJoinHash(key_distribution_message.relay_join_hash);
-    if (relay == NULL) throw RelayStateException("no such relay");
-
-    std::vector<uint160> all_complaints = ConcatenateVectors(relay->pending_complaints, relay->upheld_complaints);
-
-    for (auto complaint_hash : all_complaints)
-        if (data.MessageType(complaint_hash) == "key_distribution_complaint")
-        {
-            KeyDistributionComplaint complaint = data.msgdata[complaint_hash]["key_distribution_complaint"];
-            if (complaint.key_distribution_message_hash == key_distribution_message_hash)
-                return true;
-        }
-
-    return false;
-}
-
-void RelayState::ProcessDurationAfterKeyDistributionComplaint(KeyDistributionComplaint complaint, Data data)
-{
-    Relay *secret_sender = complaint.GetSecretSender(data);
-    Relay *complainer = complaint.GetComplainer(data);
-    if (secret_sender == NULL or complainer == NULL) throw RelayStateException("no such relay");
-
-    secret_sender->upheld_complaints.push_back(complaint.GetHash160());
-
-    EraseEntryFromVector(complaint.GetHash160(), secret_sender->pending_complaints);
-    EraseEntryFromVector(complaint.GetHash160(), complainer->pending_complaints_sent);
-
-    RecordRelayDeath(secret_sender, data, OBITUARY_UNREFUTED_COMPLAINT);
-}
-
-void RelayState::UnprocessDurationAfterKeyDistributionComplaint(KeyDistributionComplaint complaint, Data data)
-{
-    Relay *secret_sender = complaint.GetSecretSender(data);
-    Relay *complainer = complaint.GetComplainer(data);
-    if (secret_sender == NULL or complainer == NULL) throw RelayStateException("no such relay");
-
-    UnrecordRelayDeath(secret_sender, data, OBITUARY_UNREFUTED_COMPLAINT);
-
-    EraseEntryFromVector(complaint.GetHash160(), secret_sender->upheld_complaints);
-
-    secret_sender->pending_complaints.push_back(complaint.GetHash160());
-    complainer->pending_complaints_sent.push_back(complaint.GetHash160());
-}
-
 void RelayState::ProcessGoodbyeMessage(GoodbyeMessage goodbye)
 {
     Relay *relay = GetRelayByNumber(goodbye.dead_relay_number);
+    if (relay == NULL) throw RelayStateException("no such relay");
     relay->goodbye_message_hash = goodbye.GetHash160();
 }
 
 void RelayState::UnprocessGoodbyeMessage(GoodbyeMessage goodbye)
 {
     Relay *relay = GetRelayByNumber(goodbye.dead_relay_number);
+    if (relay == NULL) throw RelayStateException("no such relay");
     relay->goodbye_message_hash = 0;
 }
 
 void RelayState::ProcessGoodbyeComplaint(GoodbyeComplaint complaint, Data data)
 {
     Relay *dead_relay = complaint.GetSecretSender(data);
-    Relay *complainer = complaint.GetComplainer(data);
 
-    dead_relay->pending_complaints.push_back(complaint.GetHash160());
-    complainer->pending_complaints_sent.push_back(complaint.GetHash160());
+    if (dead_relay == NULL) throw RelayStateException("no such relay");
+
+    RecordRelayDeath(dead_relay, data, OBITUARY_COMPLAINT);
 }
 
 void RelayState::UnprocessGoodbyeComplaint(GoodbyeComplaint complaint, Data data)
 {
     Relay *dead_relay = complaint.GetSecretSender(data);
-    Relay *complainer = complaint.GetComplainer(data);
 
-    if (dead_relay == NULL or complainer == NULL) throw RelayStateException("no such relay");
+    if (dead_relay == NULL) throw RelayStateException("no such relay");
 
-    EraseEntryFromVector(complaint.GetHash160(), dead_relay->pending_complaints);
-    EraseEntryFromVector(complaint.GetHash160(), complainer->pending_complaints_sent);
-}
-
-void RelayState::ProcessGoodbyeRefutation(GoodbyeRefutation refutation, Data data)
-{
-    auto complaint = refutation.GetComplaint(data);
-
-    Relay *dead_relay = complaint.GetSecretSender(data);
-    Relay *complainer = complaint.GetComplainer(data);
-
-    if (dead_relay == NULL or complainer == NULL) throw RelayStateException("no such relay");
-
-    RecordRelayDeath(dead_relay, data, OBITUARY_SAID_GOODBYE);
-    RecordRelayDeath(complainer, data, OBITUARY_REFUTED_COMPLAINT);
-}
-
-void RelayState::UnprocessGoodbyeRefutation(GoodbyeRefutation refutation, Data data)
-{
-    auto complaint = refutation.GetComplaint(data);
-
-    Relay *dead_relay = complaint.GetSecretSender(data);
-    Relay *complainer = complaint.GetComplainer(data);
-
-    if (dead_relay == NULL or complainer == NULL) throw RelayStateException("no such relay");
-
-    UnrecordRelayDeath(complainer, data, OBITUARY_REFUTED_COMPLAINT);
-    UnrecordRelayDeath(dead_relay, data, OBITUARY_SAID_GOODBYE);
+    UnrecordRelayDeath(dead_relay, data, OBITUARY_COMPLAINT);
 }
 
 void RelayState::ProcessDurationAfterGoodbyeMessage(GoodbyeMessage goodbye, Data data)
@@ -614,20 +506,6 @@ void RelayState::UnprocessDurationAfterGoodbyeMessage(GoodbyeMessage goodbye, Da
     Relay *dead_relay = data.relay_state->GetRelayByNumber(goodbye.dead_relay_number);
     if (dead_relay == NULL) throw RelayStateException("no such relay");
     UnrecordRelayDeath(dead_relay, data, OBITUARY_SAID_GOODBYE);
-}
-
-void RelayState::ProcessDurationAfterGoodbyeComplaint(GoodbyeComplaint goodbye_complaint, Data data)
-{
-    Relay *dead_relay = goodbye_complaint.GetSecretSender(data);
-    if (dead_relay == NULL) throw RelayStateException("no such relay");
-    RecordRelayDeath(dead_relay, data, OBITUARY_UNREFUTED_COMPLAINT);
-}
-
-void RelayState::UnprocessDurationAfterGoodbyeComplaint(GoodbyeComplaint goodbye_complaint, Data data)
-{
-    Relay *dead_relay = goodbye_complaint.GetSecretSender(data);
-    if (dead_relay == NULL) throw RelayStateException("no such relay");
-    UnrecordRelayDeath(dead_relay, data, OBITUARY_UNREFUTED_COMPLAINT);
 }
 
 void RelayState::ProcessSecretRecoveryMessage(SecretRecoveryMessage secret_recovery_message)
@@ -672,65 +550,23 @@ void RelayState::UnprocessDurationAfterSecretRecoveryMessage(SecretRecoveryMessa
 void RelayState::ProcessSecretRecoveryComplaint(SecretRecoveryComplaint complaint, Data data)
 {
     Relay *key_quarter_holder = complaint.GetSecretSender(data);
-    key_quarter_holder->pending_complaints.push_back(complaint.GetHash160());
+    RecordRelayDeath(key_quarter_holder, data, OBITUARY_COMPLAINT);
 }
 
 void RelayState::UnprocessSecretRecoveryComplaint(SecretRecoveryComplaint complaint, Data data)
 {
     Relay *key_quarter_holder = complaint.GetSecretSender(data);
-    EraseEntryFromVector(complaint.GetHash160(), key_quarter_holder->pending_complaints);
+    UnrecordRelayDeath(key_quarter_holder, data, OBITUARY_COMPLAINT);
 }
 
 void RelayState::ProcessDurationAfterSecretRecoveryComplaint(SecretRecoveryComplaint complaint, Data data)
 {
     Relay *key_quarter_holder = complaint.GetSecretSender(data);
-    RecordRelayDeath(key_quarter_holder, data, OBITUARY_UNREFUTED_COMPLAINT);
 }
 
 void RelayState::UnprocessDurationAfterSecretRecoveryComplaint(SecretRecoveryComplaint complaint, Data data)
 {
     Relay *key_quarter_holder = complaint.GetSecretSender(data);
-    UnrecordRelayDeath(key_quarter_holder, data, OBITUARY_UNREFUTED_COMPLAINT);
-}
-
-void RelayState::ProcessSecretRecoveryRefutation(SecretRecoveryRefutation refutation, Data data)
-{
-    Relay *complainer = refutation.GetComplaint(data).GetComplainer(data);
-    RecordRelayDeath(complainer, data, OBITUARY_REFUTED_COMPLAINT);
-}
-
-void RelayState::UnprocessSecretRecoveryRefutation(SecretRecoveryRefutation refutation, Data data)
-{
-    Relay *complainer = refutation.GetComplaint(data).GetComplainer(data);
-    UnrecordRelayDeath(complainer, data, OBITUARY_REFUTED_COMPLAINT);
-}
-
-void RelayState::ProcessKeyDistributionRefutation(KeyDistributionRefutation refutation, Data data)
-{
-    Relay *complainer = refutation.GetComplainer(data);
-    Relay *secret_sender = refutation.GetSecretSender(data);
-
-    complainer->refutations_of_complaints_sent.push_back(refutation.GetHash160());
-
-    EraseEntryFromVector(refutation.complaint_hash, secret_sender->pending_complaints);
-    EraseEntryFromVector(refutation.complaint_hash, complainer->pending_complaints_sent);
-
-    RecordRelayDeath(complainer, data, OBITUARY_REFUTED_COMPLAINT);
-}
-
-void RelayState::UnprocessKeyDistributionRefutation(KeyDistributionRefutation refutation, Data data)
-{
-    Relay *complainer = refutation.GetComplainer(data);
-    Relay *secret_sender = refutation.GetSecretSender(data);
-
-    if (complainer == NULL or secret_sender == NULL) throw RelayStateException("no such relay");
-
-    UnrecordRelayDeath(complainer, data, OBITUARY_REFUTED_COMPLAINT);
-
-    EraseEntryFromVector(refutation.GetHash160(), complainer->refutations_of_complaints_sent);
-
-    secret_sender->pending_complaints.push_back(refutation.complaint_hash);
-    complainer->pending_complaints_sent.push_back(refutation.complaint_hash);
 }
 
 void RelayState::RecordRelayDeath(Relay *dead_relay, Data data, uint32_t reason)

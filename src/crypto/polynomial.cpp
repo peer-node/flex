@@ -62,7 +62,7 @@ void BigNumPolynomial::zero()
 void BigNumPolynomial::randomize() 
 {
     for (uint32_t i = 0; i < coefficients.size(); i++)
-        coefficients[i].Randomize(Point(curve).Modulus());
+        coefficients[i].Randomize(Point(curve, 0).Modulus());
 }
 
 uint64_t BigNumPolynomial::size() 
@@ -73,7 +73,7 @@ uint64_t BigNumPolynomial::size()
 
 CBigNum BigNumPolynomial::evaluate(CBigNum x) 
 {
-    CBigNum modulus = Point(curve).Modulus();
+    CBigNum modulus = Point(curve, 0).Modulus();
     CBigNum result;
     CBigNum power_of_x = 1;
     CBigNum power_of_x_;
@@ -104,7 +104,7 @@ uint32_t BigNumPolynomial::multiplyBigNum(CBigNum y)
 {
     for(uint32_t i = 0; i < coefficients.size(); i++) 
     {
-        coefficients[i] = (y * coefficients[i]) % Point(curve).Modulus();
+        coefficients[i] = (y * coefficients[i]) % Point(curve, 0).Modulus();
     }
     return 1;
 }
@@ -112,16 +112,14 @@ uint32_t BigNumPolynomial::multiplyBigNum(CBigNum y)
 uint32_t BigNumPolynomial::addBigNumPolynomial(const BigNumPolynomial& poly) 
 {
     CBigNum coeff_;
-    for(uint32_t i = 0; i < poly.coefficients.size()
-                        && i < coefficients.size(); i++) 
+    for(uint32_t i = 0; i < poly.coefficients.size() && i < coefficients.size(); i++)
     {
         if (i == coefficients.size()) 
         {
             CBigNum coeff = 0;
             coefficients.push_back(coeff);
         }
-        coeff_ = (coefficients[i] + poly.coefficients[i]) 
-                 % Point(curve).Modulus();
+        coeff_ = (coefficients[i] + poly.coefficients[i]) % Point(curve, 0).Modulus();
         coefficients[i] = coeff_;
     }
     return 1;
@@ -157,7 +155,7 @@ BigNumPolynomial LagrangePoly(uint8_t curve,
                               uint32_t j, 
                               std::vector<CBigNum> values)
 {
-    CBigNum modulus = Point(curve).Modulus();
+    CBigNum modulus = Point(curve, 0).Modulus();
     BigNumPolynomial result = BigNumPolynomial(curve, 1);
     result.coefficients[0] = 1;
 
@@ -197,14 +195,14 @@ PointPolynomial::PointPolynomial(uint8_t curve,
 
 Point PointPolynomial::evaluate(CBigNum x) 
 {
-    Point result(SECP256K1);
+    Point result(SECP256K1, 0);
     CBigNum power_of_x = 1;
-    Point term(SECP256K1);
+    Point term(SECP256K1, 0);
 
     for(uint32_t i = 0; i < point_coefficients.size(); i++) {
         term = power_of_x * point_coefficients[i];
         result = result + term;
-        power_of_x = (power_of_x * x) % Point(curve).Modulus();
+        power_of_x = (power_of_x * x) % Point(curve, 0).Modulus();
     }
 
     return result;

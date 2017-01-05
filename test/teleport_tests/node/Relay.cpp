@@ -1,20 +1,18 @@
 #include <src/crypto/secp256k1point.h>
-#include <src/base/util_time.h>
+#include <src/crypto/bignum_hashes.h>
 #include "Relay.h"
 #include "RelayState.h"
 
 #include "log.h"
-#include "GoodbyeMessage.h"
-
 #define LOG_CATEGORY "Relay.cpp"
+
 
 RelayJoinMessage Relay::GenerateJoinMessage(MemoryDataStore &keydata, uint160 mined_credit_message_hash)
 {
     RelayJoinMessage join_message;
     join_message.mined_credit_message_hash = mined_credit_message_hash;
-    join_message.GenerateKeySixteenths(keydata);
+    join_message.PopulatePublicKeySet(keydata);
     join_message.PopulatePrivateKeySixteenths(keydata);
-    join_message.StorePrivateKey(keydata);
     return join_message;
 }
 
@@ -44,7 +42,7 @@ std::vector<CBigNum> Relay::PrivateKeySixteenths(MemoryDataStore &keydata)
 {
     std::vector<CBigNum> private_key_sixteenths;
 
-    for (auto public_key_sixteenth : public_key_sixteenths)
+    for (auto public_key_sixteenth : PublicKeySixteenths())
     {
         CBigNum private_key_sixteenth = keydata[public_key_sixteenth]["privkey"];
         private_key_sixteenths.push_back(private_key_sixteenth);
@@ -69,4 +67,46 @@ GoodbyeMessage Relay::GenerateGoodbyeMessage(Data data)
     goodbye_message.successor_relay_number = data.relay_state->AssignSuccessorToRelay(this);
     goodbye_message.PopulateEncryptedKeySixteenths(data);
     return goodbye_message;
+}
+
+Point Relay::GenerateRecipientPublicKey(Point point_corresponding_to_secret)
+{
+    return public_key_set.GenerateReceivingPublicKey(point_corresponding_to_secret);
+}
+
+CBigNum Relay::GenerateRecipientPrivateKey(Point point_corresponding_to_secret, Data data)
+{
+    return public_key_set.GenerateReceivingPrivateKey(point_corresponding_to_secret, data.keydata);
+}
+
+CBigNum Relay::EncryptSecret(CBigNum secret)
+{
+    Point point_corresponding_to_secret = Point(secret);
+    Point recipient_public_key = GenerateRecipientPublicKey(point_corresponding_to_secret);
+    CBigNum shared_secret = Hash(secret * recipient_public_key);
+
+    return secret ^ shared_secret;
+}
+
+CBigNum Relay::DecryptSecret(CBigNum encrypted_secret, Point point_corresponding_to_secret, Data data)
+{
+    CBigNum recipient_private_key = GenerateRecipientPrivateKey(point_corresponding_to_secret, data);
+    CBigNum shared_secret = Hash(recipient_private_key * point_corresponding_to_secret);
+    CBigNum recovered_secret = encrypted_secret ^ shared_secret;
+
+    return Point(recovered_secret) == point_corresponding_to_secret ? recovered_secret : 0;
+}
+
+std::vector<Point> Relay::PublicKeySixteenths()
+{
+    return public_key_set.PublicKeySixteenths();
+}
+
+uint64_t Relay::SuccessorNumber(Data data)
+{
+    if (obituary_hash == 0)
+        return 0;
+
+    Obituary obituary = data.GetMessage(obituary_hash);
+    return obituary.successor_number;
 }

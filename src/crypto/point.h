@@ -27,8 +27,6 @@ public:
 
     Point();
 
-    Point(uint8_t curve);
-
     Point(uint8_t curve, CBigNum n);
 
     Point(CBigNum n);

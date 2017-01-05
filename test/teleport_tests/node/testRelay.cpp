@@ -2,6 +2,8 @@
 #include "gmock/gmock.h"
 #include "RelayState.h"
 #include "CreditSystem.h"
+#include "RelayPublicKeySet.h"
+
 
 using namespace ::testing;
 using namespace std;
@@ -25,8 +27,8 @@ public:
     {
         credit_system = new CreditSystem(msgdata, creditdata);
         data = new Data(msgdata, creditdata, keydata, &relay_state);
-        msg.mined_credit.keydata = Point(SECP256K1, 5).getvch();
-        keydata[Point(SECP256K1, 5)]["privkey"] = CBigNum(5);
+        msg.mined_credit.keydata = Point(CBigNum(5)).getvch();
+        keydata[Point(CBigNum(5))]["privkey"] = CBigNum(5);
         msg.mined_credit.network_state.batch_number = 1;
         credit_system->StoreMinedCreditMessage(msg);
     }
@@ -46,19 +48,79 @@ TEST_F(ARelay, GeneratesARelayJoinMessageWithAValidSignature)
     ASSERT_THAT(ok, Eq(true));
 }
 
-TEST_F(ARelay, HasItsKeySixteenthsSetWhenTheRelayStateProcessesItsJoinMessage)
+TEST_F(ARelay, HasItsPublicKeySetDeterminedWhenTheRelayStateProcessesItsJoinMessage)
 {
     RelayJoinMessage relay_join_message = relay.GenerateJoinMessage(keydata, msg.GetHash160());
     relay_state.ProcessRelayJoinMessage(relay_join_message);
 
-    ASSERT_THAT(relay_state.relays[0].public_key_sixteenths.size(), Eq(16));
+    ASSERT_THAT(relay_state.relays[0].PublicKeySixteenths().size(), Eq(16));
 
     for (uint64_t i = 0; i < 16; i++)
-        ASSERT_THAT(relay_state.relays[0].public_key_sixteenths[i], Eq(relay_join_message.public_key_sixteenths[i]));
+        ASSERT_THAT(relay_state.relays[0].PublicKeySixteenths()[i],
+                    Eq(relay_join_message.public_key_set.PublicKeySixteenths()[i]));
 }
 
 
+class ARelayWithAPublicKeySet : public ARelay
+{
+public:
+    virtual void SetUp()
+    {
+        ARelay::SetUp();
+        RelayJoinMessage relay_join_message = relay.GenerateJoinMessage(keydata, msg.GetHash160());
+        relay_state.ProcessRelayJoinMessage(relay_join_message);
+        relay = relay_state.relays[0];
+    }
 
+    virtual void TearDown()
+    {
+        ARelay::TearDown();
+    }
+};
+
+CBigNum RandomSecret()
+{
+    CBigNum secret;
+    secret.Randomize(Secp256k1Point::Modulus());
+    return secret;
+}
+
+TEST_F(ARelayWithAPublicKeySet,
+       GeneratesAMatchingRecipientPublicAndPrivateKeyForASecretGivenTheCorrespondingPoint)
+{
+    CBigNum secret = RandomSecret();
+    Point point_corresponding_to_secret(secret);
+
+    Point recipient_public_key = relay.GenerateRecipientPublicKey(point_corresponding_to_secret);
+    CBigNum recipient_private_key = relay.GenerateRecipientPrivateKey(point_corresponding_to_secret, *data);
+
+    ASSERT_THAT(Point(recipient_private_key), Eq(recipient_public_key));
+}
+
+TEST_F(ARelayWithAPublicKeySet, EncryptsASecretWhichCanBeDecryptedUsingTheRecipientPrivateKey)
+{
+    CBigNum secret = RandomSecret();
+    Point point_corresponding_to_secret(secret);
+
+    CBigNum encrypted_secret = relay.EncryptSecret(secret);
+    CBigNum recipient_private_key = relay.GenerateRecipientPrivateKey(point_corresponding_to_secret, *data);
+
+    CBigNum shared_secret = Hash(recipient_private_key * point_corresponding_to_secret);
+    CBigNum decrypted_secret = encrypted_secret ^ shared_secret;
+
+    ASSERT_THAT(decrypted_secret, Eq(secret));
+}
+
+TEST_F(ARelayWithAPublicKeySet, DecryptsASecretWhichWasEncryptedUsingTheRecipientPublicKey)
+{
+    CBigNum secret = RandomSecret();
+    Point point_corresponding_to_secret(secret);
+
+    CBigNum encrypted_secret = relay.EncryptSecret(secret);
+    CBigNum decrypted_secret = relay.DecryptSecret(encrypted_secret, point_corresponding_to_secret, *data);
+
+    ASSERT_THAT(decrypted_secret, Eq(secret));
+}
 
 class ARelayWithKeyPartHoldersAssigned : public ARelay
 {
@@ -81,6 +143,7 @@ public:
         }
         else
         {
+            log_ << "used quick setup\n";
             relay_state = persistent_relay_state;
             keydata = persistent_keydata;
             msgdata = persistent_msgdata;
@@ -127,19 +190,39 @@ public:
 
 TEST_F(ARelayWithKeyPartHoldersAssigned, GeneratesAKeyDistributionMessageWithAValidSignature)
 {
+    uint64_t start = GetTimeMicros();
     KeyDistributionMessage key_distribution_message = relay->GenerateKeyDistributionMessage(*data,
                                                                                             encoding_message_hash,
                                                                                             relay_state);
     key_distribution_message.Sign(*data);
     bool ok = key_distribution_message.VerifySignature(*data);
     ASSERT_THAT(ok, Eq(true));
+    log_ << "completed in " << GetTimeMicros() - start << "\n";
 }
 
 CBigNum EncryptSecretForRelay(CBigNum secret, RelayState &state, uint64_t relay_number)
 {
     Relay *relay = state.GetRelayByNumber(relay_number);
-    CBigNum shared_secret = Hash(relay->public_key * secret);
-    return secret ^ shared_secret;
+
+    return relay->EncryptSecret(secret);
+}
+
+TEST_F(ARelayWithKeyPartHoldersAssigned,
+        GeneratesAKeyDistributionMessageWhosePublicKeySetPassesVerificationByKeyPartHolders)
+{
+    auto key_distribution_message = relay->GenerateKeyDistributionMessage(*data, encoding_message_hash, relay_state);
+
+    bool ok = relay->public_key_set.VerifyGeneratedPoints(keydata);
+    ASSERT_THAT(ok, Eq(true));
+}
+
+TEST_F(ARelayWithKeyPartHoldersAssigned,
+       GeneratesAKeyDistributionMessageWhosePublicKeySetFailsVerificationIfThePrivateKeyPartsAreBad)
+{
+    auto key_distribution_message = relay->GenerateKeyDistributionMessage(*data, encoding_message_hash, relay_state);
+    relay->public_key_set.key_points[1][2] += Point(CBigNum(1));
+    bool ok = relay->public_key_set.VerifyGeneratedPoints(keydata);
+    ASSERT_THAT(ok, Eq(false));
 }
 
 TEST_F(ARelayWithKeyPartHoldersAssigned, GeneratesAKeyDistributionMessageWhichRevealsKeyPartsToQuarterKeyHolders)
@@ -150,10 +233,9 @@ TEST_F(ARelayWithKeyPartHoldersAssigned, GeneratesAKeyDistributionMessageWhichRe
     ASSERT_THAT(key_distribution_message.key_sixteenths_encrypted_for_key_quarter_holders.size(), Eq(16));
     for (uint64_t i = 0; i < 16; i ++)
     {
-        CBigNum private_key_sixteenth = keydata[relay->public_key_sixteenths[i]]["privkey"];
-        CBigNum encrypted_private_key_sixteenth
-                = EncryptSecretForRelay(private_key_sixteenth, relay_state,
-                                        relay->key_quarter_holders[i / 4]);
+        CBigNum private_key_sixteenth = keydata[relay->PublicKeySixteenths()[i]]["privkey"];
+        Relay *recipient = relay_state.GetRelayByNumber(relay->key_quarter_holders[i / 4]);
+        CBigNum encrypted_private_key_sixteenth = recipient->EncryptSecret(private_key_sixteenth);
 
         ASSERT_THAT(key_distribution_message.key_sixteenths_encrypted_for_key_quarter_holders[i],
                     Eq(encrypted_private_key_sixteenth));
@@ -169,7 +251,7 @@ TEST_F(ARelayWithKeyPartHoldersAssigned, GeneratesAKeyDistributionMessageWhichRe
     ASSERT_THAT(key_distribution_message.key_sixteenths_encrypted_for_second_set_of_key_sixteenth_holders.size(), Eq(16));
     for (uint64_t i = 0; i < 16; i ++)
     {
-        CBigNum private_key_sixteenth = keydata[relay->public_key_sixteenths[i]]["privkey"];
+        CBigNum private_key_sixteenth = keydata[relay->PublicKeySixteenths()[i]]["privkey"];
 
         ASSERT_THAT(key_distribution_message.key_sixteenths_encrypted_for_first_set_of_key_sixteenth_holders[i],
                     Eq(EncryptSecretForRelay(private_key_sixteenth, relay_state,
@@ -329,11 +411,10 @@ TEST_F(ARelayInARelayStateWhichHasProcessedItsKeyDistributionMessage,
         ASSERT_THAT(goodbye.encrypted_key_sixteenths[i].size(), Eq(4));
         for (uint32_t j = 0; j < 4; j++)
         {
-            Point public_key_sixteenth = key_sharer->public_key_sixteenths[goodbye.key_quarter_positions[i] * 4 + j];
+            Point public_key_sixteenth = key_sharer->PublicKeySixteenths()[goodbye.key_quarter_positions[i] * 4 + j];
             CBigNum private_key_sixteenth = keydata[public_key_sixteenth]["privkey"];
-            ASSERT_THAT(goodbye.encrypted_key_sixteenths[i][j], Eq(EncryptSecretForRelay(private_key_sixteenth,
-                                                                                         relay_state,
-                                                                                         goodbye.successor_relay_number)));
+            ASSERT_THAT(goodbye.encrypted_key_sixteenths[i][j],
+                        Eq(EncryptSecretForRelay(private_key_sixteenth, relay_state, goodbye.successor_relay_number)));
         }
     }
 }

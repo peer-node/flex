@@ -10,12 +10,9 @@
 #include "RelayExit.h"
 #include "KeyDistributionComplaint.h"
 #include "DurationWithoutResponse.h"
-#include "KeyDistributionRefutation.h"
 #include "DurationWithoutResponseFromRelay.h"
 #include "GoodbyeComplaint.h"
-#include "GoodbyeRefutation.h"
 #include "SecretRecoveryComplaint.h"
-#include "SecretRecoveryRefutation.h"
 
 
 class RelayState
@@ -75,9 +72,10 @@ public:
 
     void RemoveKeyPartHolders(Relay &relay);
 
-    std::vector<Point> GetKeyQuarterHoldersAsListOf16Recipients(uint64_t relay_number);
+    std::vector<uint64_t> GetKeyQuarterHoldersAsListOf16RelayNumbers(uint64_t relay_number);
 
-    std::vector<Point> GetKeySixteenthHoldersAsListOf16Recipients(uint64_t relay_number, uint64_t first_or_second_set);
+    std::vector<uint64_t> GetKeySixteenthHoldersAsListOf16RelayNumbers(uint64_t relay_number,
+                                                                       uint64_t first_or_second_set);
 
     void ProcessKeyDistributionMessage(KeyDistributionMessage message);
 
@@ -115,10 +113,6 @@ public:
 
     void ProcessDurationAfterKeyDistributionMessage(KeyDistributionMessage key_distribution_message, Data data);
 
-    void ProcessDurationAfterKeyDistributionComplaint(KeyDistributionComplaint complaint, Data data);
-
-    void ProcessKeyDistributionRefutation(KeyDistributionRefutation refutation, Data data);
-
     void RecordRelayDeath(Relay *dead_relay, Data data, uint32_t reason_for_leaving);
 
     void ProcessDurationWithoutResponseFromRelay(DurationWithoutResponseFromRelay duration, Data data);
@@ -129,13 +123,7 @@ public:
 
     void ProcessDurationAfterGoodbyeMessage(GoodbyeMessage goodbye, Data data);
 
-    bool KeyDistributionMessageHasBeenComplainedAbout(KeyDistributionMessage key_distribution_message, Data data);
-
     void ProcessGoodbyeComplaint(GoodbyeComplaint complaint, Data data);
-
-    void ProcessDurationAfterGoodbyeComplaint(GoodbyeComplaint goodbye_complaint, Data data);
-
-    void ProcessGoodbyeRefutation(GoodbyeRefutation refutation, Data data);
 
     void ProcessDurationAfterSecretRecoveryMessage(SecretRecoveryMessage secret_recovery_message, Data data);
 
@@ -145,8 +133,6 @@ public:
 
     void TransferTasks(uint64_t dead_relay_number, uint64_t successor_number);
 
-    void ProcessSecretRecoveryRefutation(SecretRecoveryRefutation refutation, Data data);
-
     void UnprocessDurationWithoutResponse(DurationWithoutResponse duration, Data data);
 
     void UnprocessDurationAfterSecretRecoveryComplaint(SecretRecoveryComplaint complaint, Data data);
@@ -154,8 +140,6 @@ public:
     void UnprocessObituary(Obituary obituary);
 
     void UnrecordRelayDeath(Relay *dead_relay, Data data, uint32_t reason);
-
-    void UnprocessSecretRecoveryRefutation(SecretRecoveryRefutation refutation, Data data);
 
     void UnprocessDurationAfterSecretRecoveryMessage(SecretRecoveryMessage secret_recovery_message, Data data);
 
@@ -171,19 +155,11 @@ public:
 
     void TransferTasksBackFromSuccessorToRelay(Obituary obituary);
 
-    void UnprocessGoodbyeRefutation(GoodbyeRefutation refutation, Data data);
-
-    void UnprocessDurationAfterGoodbyeComplaint(GoodbyeComplaint goodbye_complaint, Data data);
-
     void UnprocessGoodbyeComplaint(GoodbyeComplaint complaint, Data data);
 
     void UnprocessDurationAfterGoodbyeMessage(GoodbyeMessage goodbye, Data data);
 
     void UnprocessGoodbyeMessage(GoodbyeMessage goodbye);
-
-    void UnprocessKeyDistributionRefutation(KeyDistributionRefutation refutation, Data data);
-
-    void UnprocessDurationAfterKeyDistributionComplaint(KeyDistributionComplaint complaint, Data data);
 
     void UnprocessDurationAfterKeyDistributionMessage(KeyDistributionMessage key_distribution_message, Data data);
 

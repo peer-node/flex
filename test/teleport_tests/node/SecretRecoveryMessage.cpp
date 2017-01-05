@@ -6,7 +6,7 @@ Point SecretRecoveryMessage::VerificationKey(Data data)
     Relay *relay = GetKeyQuarterHolder(data);
     if (relay == NULL)
         return Point(SECP256K1, 0);
-    return relay->public_key;
+    return relay->public_signing_key;
 }
 
 Relay *SecretRecoveryMessage::GetKeyQuarterHolder(Data data)

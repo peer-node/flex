@@ -15,11 +15,15 @@ void KeyDistributionMessage::PopulateKeySixteenthsEncryptedForKeyQuarterHolders(
                                                                                 RelayState &relay_state)
 {
     std::vector<CBigNum> private_key_sixteenths = relay.PrivateKeySixteenths(keydata);
-    std::vector<Point> recipient_public_keys = relay_state.GetKeyQuarterHoldersAsListOf16Recipients(relay.number);
+    std::vector<uint64_t> recipient_relay_numbers = relay_state.GetKeyQuarterHoldersAsListOf16RelayNumbers(relay.number);
 
     for (uint64_t i = 0; i < private_key_sixteenths.size(); i++)
-        key_sixteenths_encrypted_for_key_quarter_holders.push_back(EncryptSecretForPublicKey(private_key_sixteenths[i],
-                                                                                             recipient_public_keys[i]));
+    {
+        Relay *recipient = relay_state.GetRelayByNumber(recipient_relay_numbers[i]);
+        if (recipient == NULL)
+            throw RelayStateException("referenced relay does not exist");
+        key_sixteenths_encrypted_for_key_quarter_holders.push_back(recipient->EncryptSecret(private_key_sixteenths[i]));
+    }
 }
 
 void KeyDistributionMessage::PopulateKeySixteenthsEncryptedForKeySixteenthHolders(MemoryDataStore &keydata,
@@ -27,32 +31,40 @@ void KeyDistributionMessage::PopulateKeySixteenthsEncryptedForKeySixteenthHolder
                                                                                   RelayState &relay_state)
 {
     auto private_key_sixteenths = relay.PrivateKeySixteenths(keydata);
-    auto first_set_of_recipient_public_keys = relay_state.GetKeySixteenthHoldersAsListOf16Recipients(relay.number, 1);
-    auto second_set_of_recipient_public_keys = relay_state.GetKeySixteenthHoldersAsListOf16Recipients(relay.number, 2);
+    auto first_set_of_recipients = relay_state.GetKeySixteenthHoldersAsListOf16RelayNumbers(relay.number, 1);
+    auto second_set_of_recipients = relay_state.GetKeySixteenthHoldersAsListOf16RelayNumbers(relay.number, 2);
 
     for (uint64_t i = 0; i < private_key_sixteenths.size(); i++)
     {
+        Relay *recipient1 = relay_state.GetRelayByNumber(first_set_of_recipients[i]);
+        Relay *recipient2 = relay_state.GetRelayByNumber(second_set_of_recipients[i]);
+        if (recipient1 == NULL or recipient2 == NULL)
+            throw RelayStateException("referenced relay does not exist");
         key_sixteenths_encrypted_for_first_set_of_key_sixteenth_holders.push_back(
-                EncryptSecretForPublicKey(private_key_sixteenths[i], first_set_of_recipient_public_keys[i]));
+                recipient1->EncryptSecret(private_key_sixteenths[i]));
         key_sixteenths_encrypted_for_second_set_of_key_sixteenth_holders.push_back(
-                EncryptSecretForPublicKey(private_key_sixteenths[i], second_set_of_recipient_public_keys[i]));
+                recipient2->EncryptSecret(private_key_sixteenths[i]));
     }
 }
 
 bool KeyDistributionMessage::KeyQuarterHolderPrivateKeyIsAvailable(uint64_t position, Data data,
                                                                    RelayState &relay_state, Relay &relay)
 {
-    auto recipient_public_keys = relay_state.GetKeyQuarterHoldersAsListOf16Recipients(relay.number);
-    return data.keydata[recipient_public_keys[position]].HasProperty("privkey");
+    auto recipients = relay_state.GetKeyQuarterHoldersAsListOf16RelayNumbers(relay.number);
+    Relay *recipient = relay_state.GetRelayByNumber(recipients[position]);
+    if (recipient == NULL)
+        throw RelayStateException("referenced relay does not exist");
+    return data.keydata[recipient->public_signing_key].HasProperty("privkey");
 }
 
 bool KeyDistributionMessage::KeySixteenthForKeyQuarterHolderIsCorrectlyEncrypted(uint64_t position, Data data,
                                                                                  RelayState &relay_state, Relay &relay)
 {
-    auto recipient_public_keys = relay_state.GetKeyQuarterHoldersAsListOf16Recipients(relay.number);
-    CBigNum private_key_sixteenth = data.keydata[relay.public_key_sixteenths[position]]["privkey"];
-    CBigNum encrypted_private_key_sixteenth = EncryptSecretForPublicKey(private_key_sixteenth,
-                                                                        recipient_public_keys[position]);
+    auto recipients = relay_state.GetKeyQuarterHoldersAsListOf16RelayNumbers(relay.number);
+    Relay *recipient = relay_state.GetRelayByNumber(recipients[position]);
+    Point public_key_sixteenth = relay.PublicKeySixteenths()[position];
+    CBigNum private_key_sixteenth = data.keydata[public_key_sixteenth]["privkey"];
+    CBigNum encrypted_private_key_sixteenth = recipient->EncryptSecret(private_key_sixteenth);
     return key_sixteenths_encrypted_for_key_quarter_holders[position] == encrypted_private_key_sixteenth;
 }
 
@@ -60,8 +72,11 @@ bool KeyDistributionMessage::KeySixteenthHolderPrivateKeyIsAvailable(uint32_t po
                                                                      Data data, RelayState &relay_state,
                                                                      Relay &relay)
 {
-    auto recipient_pubkeys = relay_state.GetKeySixteenthHoldersAsListOf16Recipients(relay.number, first_or_second_set);
-    return data.keydata[recipient_pubkeys[position]].HasProperty("privkey");
+    auto recipients = relay_state.GetKeySixteenthHoldersAsListOf16RelayNumbers(relay.number, first_or_second_set);
+    Relay *recipient = relay_state.GetRelayByNumber(recipients[position]);
+    if (recipient == NULL)
+        throw RelayStateException("no such relay");
+    return data.keydata[recipient->public_signing_key].HasProperty("privkey");
 }
 
 bool KeyDistributionMessage::KeySixteenthForKeySixteenthHolderIsCorrectlyEncrypted(uint64_t position,
@@ -69,29 +84,30 @@ bool KeyDistributionMessage::KeySixteenthForKeySixteenthHolderIsCorrectlyEncrypt
                                                                                    Data data, RelayState &state,
                                                                                    Relay &relay)
 {
-    auto recipient_pubkey = state.GetKeySixteenthHoldersAsListOf16Recipients(relay.number, first_or_second_set)[position];
-    CBigNum recipient_privkey = data.keydata[recipient_pubkey]["privkey"];
-    CBigNum shared_secret = Hash(recipient_privkey * relay.public_key_sixteenths[position]);
+    auto recipients = state.GetKeySixteenthHoldersAsListOf16RelayNumbers(relay.number, first_or_second_set);
+    Relay *recipient = state.GetRelayByNumber(recipients[position]);
+    Point public_key_sixteenth = relay.PublicKeySixteenths()[position];
     CBigNum encrypted_key_sixteenth = first_or_second_set == 1
                                       ? key_sixteenths_encrypted_for_first_set_of_key_sixteenth_holders[position]
                                       : key_sixteenths_encrypted_for_second_set_of_key_sixteenth_holders[position];
-    CBigNum private_key_sixteenth = shared_secret ^ encrypted_key_sixteenth;
-    if (Point(SECP256K1, private_key_sixteenth) != relay.public_key_sixteenths[position])
+
+    CBigNum private_key_sixteenth = recipient->DecryptSecret(encrypted_key_sixteenth, public_key_sixteenth, data);
+    if (private_key_sixteenth == 0)
         return false;
-    data.keydata[relay.public_key_sixteenths[position]]["privkey"] = private_key_sixteenth;
+    data.keydata[relay.PublicKeySixteenths()[position]]["privkey"] = private_key_sixteenth;
     return true;
 }
 
 bool KeyDistributionMessage::TryToRecoverKeySixteenthEncryptedToQuarterKeyHolder(uint32_t position, Data data,
                                                                                  RelayState &state, Relay &relay)
 {
-    auto recipient_pubkey = state.GetKeyQuarterHoldersAsListOf16Recipients(relay.number)[position];
-    CBigNum recipient_privkey = data.keydata[recipient_pubkey]["privkey"];
-    CBigNum shared_secret = Hash(recipient_privkey * relay.public_key_sixteenths[position]);
-    CBigNum private_key_sixteenth = shared_secret ^ key_sixteenths_encrypted_for_key_quarter_holders[position];
-    if (Point(SECP256K1, private_key_sixteenth) != relay.public_key_sixteenths[position])
+    auto recipients = state.GetKeyQuarterHoldersAsListOf16RelayNumbers(relay.number);
+    Relay *recipient = state.GetRelayByNumber(recipients[position]);
+    CBigNum private_key_sixteenth = recipient->DecryptSecret(key_sixteenths_encrypted_for_key_quarter_holders[position],
+                                                             relay.PublicKeySixteenths()[position], data);
+    if (private_key_sixteenth == 0)
         return false;
-    data.keydata[relay.public_key_sixteenths[position]]["privkey"] = private_key_sixteenth;
+    data.keydata[relay.PublicKeySixteenths()[position]]["privkey"] = private_key_sixteenth;
     return true;
 }
 
@@ -100,16 +116,18 @@ bool KeyDistributionMessage::TryToRecoverKeySixteenthEncryptedToKeySixteenthHold
                                                                                    Data data, RelayState &state,
                                                                                    Relay &relay)
 {
-    auto recipient_pubkey = state.GetKeySixteenthHoldersAsListOf16Recipients(relay.number, first_or_second_set)[position];
-    CBigNum recipient_privkey = data.keydata[recipient_pubkey]["privkey"];
-    CBigNum shared_secret = Hash(recipient_privkey * relay.public_key_sixteenths[position]);
+    auto recipients = state.GetKeySixteenthHoldersAsListOf16RelayNumbers(relay.number, first_or_second_set);
+    Relay *recipient = state.GetRelayByNumber(recipients[position]);
     CBigNum encrypted_key_sixteenth = first_or_second_set == 1
                                       ? key_sixteenths_encrypted_for_first_set_of_key_sixteenth_holders[position]
                                       : key_sixteenths_encrypted_for_second_set_of_key_sixteenth_holders[position];
-    CBigNum private_key_sixteenth = shared_secret ^ encrypted_key_sixteenth;
-    if (Point(SECP256K1, private_key_sixteenth) != relay.public_key_sixteenths[position])
+
+    CBigNum private_key_sixteenth = recipient->DecryptSecret(encrypted_key_sixteenth,
+                                                             relay.PublicKeySixteenths()[position], data);
+
+    if (private_key_sixteenth == 0)
         return false;
-    data.keydata[relay.public_key_sixteenths[position]]["privkey"] = private_key_sixteenth;
+    data.keydata[relay.PublicKeySixteenths()[position]]["privkey"] = private_key_sixteenth;
     return true;
 }
 
@@ -117,8 +135,8 @@ bool KeyDistributionMessage::AuditKeySixteenthEncryptedInRelayJoinMessage(RelayJ
                                                                           uint64_t position,
                                                                           MemoryDataStore &keydata)
 {
-    Point public_key = join_message.PublicKey();
-    Point public_key_sixteenth = join_message.public_key_sixteenths[position];
+    Point public_key = join_message.PublicSigningKey();
+    Point public_key_sixteenth = join_message.public_key_set.PublicKeySixteenths()[position];
     CBigNum private_key_sixteenth = keydata[public_key_sixteenth]["privkey"];
     CBigNum shared_secret = Hash(private_key_sixteenth * public_key);
     return private_key_sixteenth == (shared_secret ^ join_message.encrypted_private_key_sixteenths[position]);

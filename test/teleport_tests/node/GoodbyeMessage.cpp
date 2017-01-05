@@ -9,7 +9,7 @@ Point GoodbyeMessage::VerificationKey(Data data)
     Relay *relay = data.relay_state->GetRelayByNumber(dead_relay_number);
     if (relay == NULL)
         return Point(SECP256K1, 0);
-    return relay->public_key;
+    return relay->public_signing_key;
 }
 
 void GoodbyeMessage::PopulateEncryptedKeySixteenths(Data data)
@@ -30,8 +30,7 @@ void GoodbyeMessage::PopulateEncryptedKeySixteenth(Relay *sharer, Relay *success
     encrypted_key_sixteenths.push_back(std::vector<CBigNum>());
     for (uint32_t key_part_position = (uint32_t)position * 4; key_part_position < (position + 1) * 4; key_part_position++)
     {
-        CBigNum private_key_sixteenth = data.keydata[sharer->public_key_sixteenths[key_part_position]]["privkey"];
-        CBigNum shared_secret = Hash(private_key_sixteenth * successor->public_key);
-        encrypted_key_sixteenths.back().push_back(private_key_sixteenth ^ shared_secret);
+        CBigNum private_key_sixteenth = data.keydata[sharer->PublicKeySixteenths()[key_part_position]]["privkey"];
+        encrypted_key_sixteenths.back().push_back(successor->EncryptSecret(private_key_sixteenth));
     }
 }

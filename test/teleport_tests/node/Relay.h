@@ -12,7 +12,7 @@
 class Relay
 {
 public:
-    Point public_key{SECP256K1, 0};
+    Point public_signing_key{SECP256K1, 0};
     uint64_t number{0};
     uint160 join_message_hash{0};
     uint160 mined_credit_message_hash{0};
@@ -22,18 +22,15 @@ public:
     std::vector<uint64_t> first_set_of_key_sixteenth_holders;
     std::vector<uint64_t> second_set_of_key_sixteenth_holders;
     std::vector<Point> public_key_sixteenths;
+    RelayPublicKeySet public_key_set;
     std::vector<uint160> secret_recovery_message_hashes;
     uint160 goodbye_message_hash{0};
     uint160 obituary_hash{0};
-    std::vector<uint160> pending_complaints_sent;
-    std::vector<uint160> pending_complaints;
-    std::vector<uint160> upheld_complaints;
-    std::vector<uint160> refutations_of_complaints_sent;
     std::vector<uint160> tasks;
 
     IMPLEMENT_SERIALIZE
     (
-        READWRITE(public_key);
+        READWRITE(public_signing_key);
         READWRITE(number);
         READWRITE(mined_credit_message_hash);
         READWRITE(join_message_hash);
@@ -42,20 +39,17 @@ public:
         READWRITE(key_quarter_holders);
         READWRITE(first_set_of_key_sixteenth_holders);
         READWRITE(second_set_of_key_sixteenth_holders);
+        READWRITE(public_key_set);
         READWRITE(secret_recovery_message_hashes);
         READWRITE(goodbye_message_hash);
         READWRITE(obituary_hash);
-        READWRITE(pending_complaints);
-        READWRITE(pending_complaints_sent);
-        READWRITE(upheld_complaints);
-        READWRITE(refutations_of_complaints_sent);
         READWRITE(tasks);
     );
 
-    JSON(public_key, number, mined_credit_message_hash, join_message_hash, key_distribution_message_hash,
+    JSON(public_signing_key, number, mined_credit_message_hash, join_message_hash, key_distribution_message_hash,
          key_distribution_message_accepted, key_quarter_holders, first_set_of_key_sixteenth_holders,
-         second_set_of_key_sixteenth_holders, secret_recovery_message_hashes, obituary_hash, goodbye_message_hash,
-         pending_complaints, pending_complaints_sent, upheld_complaints, refutations_of_complaints_sent, tasks);
+         second_set_of_key_sixteenth_holders, public_key_set, secret_recovery_message_hashes, obituary_hash,
+         goodbye_message_hash, tasks);
 
     HASH160();
 
@@ -63,6 +57,8 @@ public:
     {
         return this->join_message_hash == other.join_message_hash;
     }
+
+    std::vector<Point> PublicKeySixteenths();
 
     RelayJoinMessage GenerateJoinMessage(MemoryDataStore &keydata, uint160 mined_credit_message_hash);
 
@@ -77,7 +73,15 @@ public:
 
     GoodbyeMessage GenerateGoodbyeMessage(Data data);
 
+    Point GenerateRecipientPublicKey(Point point_corresponding_to_secret);
 
+    CBigNum GenerateRecipientPrivateKey(Point point_corresponding_to_secret, Data data);
+
+    CBigNum EncryptSecret(CBigNum secret);
+
+    CBigNum DecryptSecret(CBigNum encrypted_secret, Point point_corresponding_to_secret, Data data);
+
+    uint64_t SuccessorNumber(Data data);
 };
 
 

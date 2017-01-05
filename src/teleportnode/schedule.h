@@ -18,6 +18,8 @@ public:
     MemoryLocationIterator schedule_scanner;
     std::function<void(uint160)> task_function;
 
+    ScheduledTask() { }
+
     template <typename FUNCTION>
     ScheduledTask(const char* task_type, FUNCTION method):
             task_type(task_type),
@@ -71,9 +73,6 @@ public:
         {
             if (scheduled_time > now)
                 break;
-            log_ << "time is now " << now << "\n"
-                 << "doing " << task_type
-                 << " scheduled for " << scheduled_time << "\n";
             
             scheduledata->RemoveFromLocation(task_type, scheduled_time);
 
@@ -149,8 +148,6 @@ public:
     void Schedule(string_t task_type, uint160 task_hash, int64_t when)
     {
         scheduledata[task_hash].Location(task_type) = when;
-        log_ << "scheduled " << task_type << " with task "
-             << task_hash << " at " << when << "\n";
     }
 
     bool TaskIsScheduledForTime(string_t task_type, uint160 task_hash, int64_t when)
