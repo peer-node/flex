@@ -79,10 +79,18 @@ CBigNum Relay::GenerateRecipientPrivateKey(Point point_corresponding_to_secret, 
     return public_key_set.GenerateReceivingPrivateKey(point_corresponding_to_secret, data.keydata);
 }
 
+CBigNum Relay::GenerateRecipientPrivateKeyQuarter(Point point_corresponding_to_secret,
+                                                  uint8_t key_quarter_position, Data data)
+{
+    return public_key_set.GenerateReceivingPrivateKeyQuarter(point_corresponding_to_secret,
+                                                             key_quarter_position, data.keydata);
+}
+
 CBigNum Relay::EncryptSecret(CBigNum secret)
 {
     Point point_corresponding_to_secret = Point(secret);
     Point recipient_public_key = GenerateRecipientPublicKey(point_corresponding_to_secret);
+
     CBigNum shared_secret = Hash(secret * recipient_public_key);
 
     return secret ^ shared_secret;
@@ -109,4 +117,15 @@ uint64_t Relay::SuccessorNumber(Data data)
 
     Obituary obituary = data.GetMessage(obituary_hash);
     return obituary.successor_number;
+}
+
+std::vector<uint64_t> Relay::KeyQuarterSharers(RelayState *relay_state)
+{
+    std::vector<uint64_t> sharers;
+
+    for (auto &relay : relay_state->relays)
+        if (VectorContainsEntry(relay.key_quarter_holders, number))
+            sharers.push_back(relay.number);
+
+    return sharers;
 }

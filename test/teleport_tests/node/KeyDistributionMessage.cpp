@@ -22,6 +22,7 @@ void KeyDistributionMessage::PopulateKeySixteenthsEncryptedForKeyQuarterHolders(
         Relay *recipient = relay_state.GetRelayByNumber(recipient_relay_numbers[i]);
         if (recipient == NULL)
             throw RelayStateException("referenced relay does not exist");
+
         key_sixteenths_encrypted_for_key_quarter_holders.push_back(recipient->EncryptSecret(private_key_sixteenths[i]));
     }
 }

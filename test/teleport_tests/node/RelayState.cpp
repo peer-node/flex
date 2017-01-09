@@ -41,7 +41,6 @@ Relay RelayState::GenerateRelayFromRelayJoinMessage(RelayJoinMessage relay_join_
     new_relay.mined_credit_message_hash = relay_join_message.mined_credit_message_hash;
     new_relay.public_signing_key = relay_join_message.PublicSigningKey();
     new_relay.public_key_set = relay_join_message.public_key_set;
-    new_relay.public_key_sixteenths = relay_join_message.public_key_sixteenths;
     return new_relay;
 }
 

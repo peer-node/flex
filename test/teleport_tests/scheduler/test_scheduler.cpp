@@ -36,14 +36,30 @@ TEST_F(AScheduler, CanScheduleEvents)
     scheduler.DoTasksScheduledForExecutionBeforeNow();
 
     int is_done = schedule_test_data[hash]["done"];
-    ASSERT_THAT(is_done, Eq(0));
+    ASSERT_THAT(is_done, Eq(false));
 
     SetMockTimeMicros(task_time);
     scheduler.DoTasksScheduledForExecutionBeforeNow();
 
     is_done = schedule_test_data[hash]["done"];
-    ASSERT_THAT(is_done, Eq(1));
+    ASSERT_THAT(is_done, Eq(true));
 }
+
+TEST_F(AScheduler, CanScheduleTwoEventsAtTheSameTime)
+{
+    scheduler.AddTask(ScheduledTask("set_done", SetDone));
+    scheduler.Schedule("set_done", hash, task_time);
+    scheduler.Schedule("set_done", hash + 1, task_time);
+
+    SetMockTimeMicros(task_time);
+    scheduler.DoTasksScheduledForExecutionBeforeNow();
+
+    bool task1_is_done = schedule_test_data[hash]["done"];
+    bool task2_is_done = schedule_test_data[hash + 1]["done"];
+    ASSERT_THAT(task1_is_done, Eq(true));
+    ASSERT_THAT(task2_is_done, Eq(true));
+}
+
 
 class ObjectWithMethod
 {

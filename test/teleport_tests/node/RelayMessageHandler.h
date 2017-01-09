@@ -21,9 +21,6 @@ public:
     RelayState relay_state;
     Scheduler scheduler;
 
-    ScheduledTask handle_key_distribution_message_after_duration;
-    ScheduledTask handle_obituary_after_duration;
-
     RelayMessageHandler(Data data):
             MessageHandlerWithOrphanage(data.msgdata), data(data.msgdata, data.creditdata, data.keydata, &relay_state)
     {
@@ -32,14 +29,11 @@ public:
 
     void AddScheduledTasks()
     {
-        handle_key_distribution_message_after_duration
-                = ScheduledTask("key_distribution",
-                                &RelayMessageHandler::HandleKeyDistributionMessageAfterDuration, this);
-        scheduler.AddTask(handle_key_distribution_message_after_duration);
+        scheduler.AddTask(ScheduledTask("key_distribution",
+                                        &RelayMessageHandler::HandleKeyDistributionMessageAfterDuration, this));
 
-        handle_obituary_after_duration = ScheduledTask("obituary",
-                                                       &RelayMessageHandler::HandleObituaryAfterDuration, this);
-        scheduler.AddTask(handle_obituary_after_duration);
+        scheduler.AddTask(ScheduledTask("obituary",
+                                        &RelayMessageHandler::HandleObituaryAfterDuration, this));
     }
 
     void SetCreditSystem(CreditSystem *credit_system);
@@ -51,6 +45,7 @@ public:
         HANDLESTREAM(RelayJoinMessage);
         HANDLESTREAM(KeyDistributionMessage);
         HANDLESTREAM(KeyDistributionComplaint);
+        HANDLESTREAM(SecretRecoveryMessage);
     }
 
     void HandleMessage(uint160 message_hash)
@@ -58,17 +53,21 @@ public:
         HANDLEHASH(RelayJoinMessage);
         HANDLEHASH(KeyDistributionMessage);
         HANDLEHASH(KeyDistributionComplaint);
+        HANDLEHASH(SecretRecoveryMessage);
     }
 
     HANDLECLASS(RelayJoinMessage);
     HANDLECLASS(KeyDistributionMessage);
     HANDLECLASS(KeyDistributionComplaint);
+    HANDLECLASS(SecretRecoveryMessage);
 
     void HandleRelayJoinMessage(RelayJoinMessage relay_join_message);
 
     void HandleKeyDistributionMessage(KeyDistributionMessage key_distribution_message);
 
     void HandleKeyDistributionComplaint(KeyDistributionComplaint complaint);
+
+    void HandleSecretRecoveryMessage(SecretRecoveryMessage secret_recovery_message);
 
     bool MinedCreditMessageHashIsInMainChain(RelayJoinMessage relay_join_message);
 
@@ -113,6 +112,28 @@ public:
     void HandleRelayDeath(Relay *dead_relay);
 
     std::vector<uint64_t> GetKeyQuarterHoldersWhoHaventResponded(uint160 obituary_hash);
+
+    void ProcessKeyQuarterHoldersWhoHaventRespondedToObituary(uint160 obituary_hash);
+
+    bool ValidateSecretRecoveryMessage(SecretRecoveryMessage secret_recovery_message);
+
+    void TryToRetrieveSecretsFromSecretRecoveryMessage(SecretRecoveryMessage secret_recovery_message);
+
+    bool RecoverSecretsFromSecretRecoveryMessages(std::vector<uint160> recovery_message_hashes);
+
+    void SendComplaintAboutFailedSecretRecovery(std::vector<uint160> recovery_message_hashes);
+
+    bool RelaysPrivateSigningKeyIsAvailable(uint64_t relay_number);
+
+    bool SomePointsAreAtInfinity(std::vector<std::vector<Point>> points);
+
+    bool RecoverSecretsFromArrayOfSharedSecrets(std::vector<std::vector<Point>> array_of_shared_secrets,
+                                                std::vector<uint160> recovery_message_hashes);
+
+    bool RecoverFourKeySixteenths(uint64_t key_sharer_number, uint64_t dead_relay_number,
+                                  uint8_t key_quarter_position, std::vector<Point> shared_secrets);
+
+    std::vector<CBigNum> GetEncryptedKeySixteenthsSentFromSharerToRelay(Relay *sharer, Relay *relay);
 };
 
 

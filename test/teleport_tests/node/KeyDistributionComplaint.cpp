@@ -42,7 +42,7 @@ Point KeyDistributionComplaint::GetPointCorrespondingToSecret(Data data)
 {
     Relay *secret_sender = GetSecretSender(data);
     if (secret_sender == NULL)
-        throw RelayStateException("no such relay");
+        throw RelayStateException("GetPointCorrespondingToSecret: no such relay");
     return secret_sender->PublicKeySixteenths()[position_of_secret];
 }
 

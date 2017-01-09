@@ -26,9 +26,8 @@ public:
             Point public_key_sixteenth(private_key_sixteenth);
             keydata[public_key_sixteenth]["privkey"] = private_key_sixteenth;
             relay.public_key_sixteenths.push_back(public_key_sixteenth);
-
-            secret_message.Randomize(Secp256k1Point::Modulus());
         }
+        secret_message.Randomize(Secp256k1Point::Modulus());
     }
 };
 
@@ -93,3 +92,47 @@ TEST_F(APopulatedRelayPublicKeySet, ReturnsZeroIfItFailsToDecryptAnEncryptedSecr
     ASSERT_THAT(decrypted_secret, Eq(0));
 }
 
+TEST_F(APopulatedRelayPublicKeySet, GeneratesReceivingPublicKeyQuartersWhichSumToTheReceivingPublicKey)
+{
+    Point point_corresponding_to_secret(secret_message);
+
+    auto receiving_key = public_key_set.GenerateReceivingPublicKey(point_corresponding_to_secret);
+
+    auto quarter1 = public_key_set.GenerateReceivingPublicKeyQuarter(point_corresponding_to_secret, 0);
+    auto quarter2 = public_key_set.GenerateReceivingPublicKeyQuarter(point_corresponding_to_secret, 1);
+    auto quarter3 = public_key_set.GenerateReceivingPublicKeyQuarter(point_corresponding_to_secret, 2);
+    auto quarter4 = public_key_set.GenerateReceivingPublicKeyQuarter(point_corresponding_to_secret, 3);
+
+    Point sum = quarter1 + quarter2 + quarter3 + quarter4;
+
+    ASSERT_THAT(sum, Eq(receiving_key));
+}
+
+TEST_F(APopulatedRelayPublicKeySet, GeneratesReceivingPrivateKeyQuartersWhichSumToTheReceivingPrivateKey)
+{
+    Point point_corresponding_to_secret(secret_message);
+
+    auto receiving_key = public_key_set.GenerateReceivingPrivateKey(point_corresponding_to_secret, keydata);
+
+    auto quarter1 = public_key_set.GenerateReceivingPrivateKeyQuarter(point_corresponding_to_secret, 0, keydata);
+    auto quarter2 = public_key_set.GenerateReceivingPrivateKeyQuarter(point_corresponding_to_secret, 1, keydata);
+    auto quarter3 = public_key_set.GenerateReceivingPrivateKeyQuarter(point_corresponding_to_secret, 2, keydata);
+    auto quarter4 = public_key_set.GenerateReceivingPrivateKeyQuarter(point_corresponding_to_secret, 3, keydata);
+
+    CBigNum sum = (quarter1 + quarter2 + quarter3 + quarter4) % Secp256k1Point::Modulus();
+
+    ASSERT_THAT(sum, Eq(receiving_key));
+}
+
+TEST_F(APopulatedRelayPublicKeySet, GeneratesMatchingReceivingPrivateAndPublicKeyQuarters)
+{
+    Point point_corresponding_to_secret(secret_message);
+
+    for (uint8_t i = 0; i < 4; i++)
+    {
+        auto private_key_quarter = public_key_set.GenerateReceivingPrivateKeyQuarter(point_corresponding_to_secret,
+                                                                                     i, keydata);
+        auto public_key_quarter = public_key_set.GenerateReceivingPublicKeyQuarter(point_corresponding_to_secret, i);
+        ASSERT_THAT(Point(private_key_quarter), Eq(public_key_quarter));
+    }
+}

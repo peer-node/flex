@@ -27,9 +27,8 @@ class RelayJoinMessage
 {
 public:
     uint160 mined_credit_message_hash{0};
-    std::vector<Point> public_key_sixteenths;
     RelayPublicKeySet public_key_set;
-    std::vector<CBigNum> encrypted_private_key_sixteenths;
+    std::vector<CBigNum> encrypted_private_key_sixteenths; // encrypted to this relay's public signing key
     Signature signature;
 
     static std::string Type() { return "relay_join"; }
@@ -39,13 +38,12 @@ public:
     IMPLEMENT_SERIALIZE
     (
         READWRITE(mined_credit_message_hash);
-        READWRITE(public_key_sixteenths);
         READWRITE(public_key_set);
         READWRITE(encrypted_private_key_sixteenths);
         READWRITE(signature);
     )
 
-    JSON(mined_credit_message_hash, public_key_sixteenths, encrypted_private_key_sixteenths, signature);
+    JSON(mined_credit_message_hash, public_key_set, encrypted_private_key_sixteenths, signature);
 
     DEPENDENCIES(mined_credit_message_hash);
 

@@ -4,6 +4,8 @@
 #include "log.h"
 #define LOG_CATEGORY "RelayMessageHandler.cpp"
 
+using std::vector;
+
 void RelayMessageHandler::SetCreditSystem(CreditSystem *credit_system_)
 {
     credit_system = credit_system_;
@@ -65,6 +67,7 @@ void RelayMessageHandler::HandleKeyDistributionMessage(KeyDistributionMessage ke
         return;
     }
     StoreKeyDistributionSecretsAndSendComplaints(key_distribution_message);
+    relay_state.ProcessKeyDistributionMessage(key_distribution_message);
     scheduler.Schedule("key_distribution", key_distribution_message.GetHash160(), GetTimeMicros() + RESPONSE_WAIT_TIME);
 }
 
@@ -80,10 +83,7 @@ bool RelayMessageHandler::ValidateKeyDistributionMessage(KeyDistributionMessage 
     if (key_distribution_message.key_sixteenths_encrypted_for_second_set_of_key_sixteenth_holders.size() != 16)
         return false;
     if (not key_distribution_message.VerifySignature(data))
-    {
-        log_ << "bad signature\n";
         return false;;
-    }
     return true;
 }
 
@@ -111,9 +111,9 @@ void RelayMessageHandler::StoreKeyDistributionSecretsAndSendComplaints(KeyDistri
 }
 
 void RelayMessageHandler::RecoverSecretsAndSendKeyDistributionComplaints(Relay *relay, uint64_t set_of_secrets,
-                                                                         std::vector<uint64_t> recipients,
+                                                                         vector<uint64_t> recipients,
                                                                          uint160 key_distribution_message_hash,
-                                                                         std::vector<CBigNum> encrypted_secrets)
+                                                                         vector<CBigNum> encrypted_secrets)
 {
     auto public_key_sixteenths = relay->PublicKeySixteenths();
     for (uint32_t position = 0; position < recipients.size(); position++)
@@ -127,7 +127,9 @@ void RelayMessageHandler::RecoverSecretsAndSendKeyDistributionComplaints(Relay *
                     and relay->public_key_set.VerifyRowOfGeneratedPoints(position, data.keydata);
 
         if (not ok)
+        {
             SendKeyDistributionComplaint(key_distribution_message_hash, set_of_secrets, position);
+        }
     }
 }
 
@@ -155,7 +157,7 @@ void RelayMessageHandler::SendKeyDistributionComplaint(uint160 key_distribution_
 
 void RelayMessageHandler::RecordSentComplaint(uint160 complaint_hash, uint160 bad_message_hash)
 {
-    std::vector<uint160> complaints = data.msgdata[bad_message_hash]["complaints"];
+    vector<uint160> complaints = data.msgdata[bad_message_hash]["complaints"];
     complaints.push_back(complaint_hash);
     data.msgdata[bad_message_hash]["complaints"] = complaints;
 }
@@ -202,6 +204,7 @@ void RelayMessageHandler::SendSecretRecoveryMessage(Relay *dead_relay, Relay *qu
     auto secret_recovery_message = GenerateSecretRecoveryMessage(dead_relay, quarter_holder);
     StoreSecretRecoveryMessage(secret_recovery_message, dead_relay->obituary_hash);
     Broadcast(secret_recovery_message);
+    Handle(secret_recovery_message, NULL);
 }
 
 SecretRecoveryMessage RelayMessageHandler::GenerateSecretRecoveryMessage(Relay *dead_relay, Relay *quarter_holder)
@@ -212,6 +215,7 @@ SecretRecoveryMessage RelayMessageHandler::GenerateSecretRecoveryMessage(Relay *
     secret_recovery_message.quarter_holder_number = quarter_holder->number;
     secret_recovery_message.obituary_hash = dead_relay->obituary_hash;
     secret_recovery_message.successor_number = dead_relay->SuccessorNumber(data);
+    secret_recovery_message.PopulateSecrets(data);
     secret_recovery_message.Sign(data);
 
     return secret_recovery_message;
@@ -220,12 +224,19 @@ SecretRecoveryMessage RelayMessageHandler::GenerateSecretRecoveryMessage(Relay *
 void RelayMessageHandler::StoreSecretRecoveryMessage(SecretRecoveryMessage secret_recovery_message, uint160 obituary_hash)
 {
     data.StoreMessage(secret_recovery_message);
-    std::vector<uint160> secret_recovery_message_hashes = msgdata[obituary_hash]["secret_recovery_messages"];
-    secret_recovery_message_hashes.push_back(secret_recovery_message.GetHash160());
+    vector<uint160> secret_recovery_message_hashes = msgdata[obituary_hash]["secret_recovery_messages"];
+    uint160 secret_recovery_message_hash = secret_recovery_message.GetHash160();
+    if (not VectorContainsEntry(secret_recovery_message_hashes, secret_recovery_message_hash))
+        secret_recovery_message_hashes.push_back(secret_recovery_message_hash);
     msgdata[obituary_hash]["secret_recovery_messages"] = secret_recovery_message_hashes;
 }
 
 void RelayMessageHandler::HandleObituaryAfterDuration(uint160 obituary_hash)
+{
+    ProcessKeyQuarterHoldersWhoHaventRespondedToObituary(obituary_hash);
+}
+
+void RelayMessageHandler::ProcessKeyQuarterHoldersWhoHaventRespondedToObituary(uint160 obituary_hash)
 {
     auto key_quarter_holders_who_havent_responded = GetKeyQuarterHoldersWhoHaventResponded(obituary_hash);
     for (auto quarter_holder_number : key_quarter_holders_who_havent_responded)
@@ -238,15 +249,150 @@ void RelayMessageHandler::HandleObituaryAfterDuration(uint160 obituary_hash)
     }
 }
 
-std::vector<uint64_t> RelayMessageHandler::GetKeyQuarterHoldersWhoHaventResponded(uint160 obituary_hash)
+vector<uint64_t> RelayMessageHandler::GetKeyQuarterHoldersWhoHaventResponded(uint160 obituary_hash)
 {
     Obituary obituary = data.GetMessage(obituary_hash);
-    std::vector<uint64_t> quarter_holders = obituary.relay.key_quarter_holders;
-    std::vector<uint160> secret_recovery_message_hashes = msgdata[obituary_hash]["secret_recovery_messages"];
+    vector<uint64_t> quarter_holders = obituary.relay.key_quarter_holders;
+    vector<uint160> secret_recovery_message_hashes = msgdata[obituary_hash]["secret_recovery_messages"];
     for (auto secret_recovery_message_hash : secret_recovery_message_hashes)
     {
         SecretRecoveryMessage secret_recovery_message = data.GetMessage(secret_recovery_message_hash);
         EraseEntryFromVector(secret_recovery_message.quarter_holder_number, quarter_holders);
     }
     return quarter_holders;
+}
+
+void RelayMessageHandler::HandleSecretRecoveryMessage(SecretRecoveryMessage secret_recovery_message)
+{
+    if (not ValidateSecretRecoveryMessage(secret_recovery_message))
+    {
+        RejectMessage(secret_recovery_message.GetHash160());
+        return;
+    }
+    StoreSecretRecoveryMessage(secret_recovery_message, secret_recovery_message.obituary_hash);
+    scheduler.Schedule("secret_recovery", secret_recovery_message.GetHash160(), GetTimeMicros() + RESPONSE_WAIT_TIME);
+
+    if (RelaysPrivateSigningKeyIsAvailable(secret_recovery_message.successor_number))
+        TryToRetrieveSecretsFromSecretRecoveryMessage(secret_recovery_message);
+}
+
+bool RelayMessageHandler::ValidateSecretRecoveryMessage(SecretRecoveryMessage secret_recovery_message)
+{
+    return true;
+}
+
+bool RelayMessageHandler::RelaysPrivateSigningKeyIsAvailable(uint64_t relay_number)
+{
+    auto relay = relay_state.GetRelayByNumber(relay_number);
+    if (relay == NULL)
+        return false;
+    return data.keydata[relay->public_signing_key].HasProperty("privkey");
+}
+
+void RelayMessageHandler::TryToRetrieveSecretsFromSecretRecoveryMessage(SecretRecoveryMessage recovery_message)
+{
+    vector<uint160> recovery_message_hashes = msgdata[recovery_message.obituary_hash]["secret_recovery_messages"];
+
+    if (recovery_message_hashes.size() != 4)
+        return;
+
+    if (not RecoverSecretsFromSecretRecoveryMessages(recovery_message_hashes))
+        SendComplaintAboutFailedSecretRecovery(recovery_message_hashes);
+}
+
+void AddArrayOfPointsToSum(vector<vector<Point> > array_of_points, vector<vector<Point> > &sum)
+{
+    if (sum.size() == 0)
+        sum.resize(array_of_points.size());
+    
+    for (int row = 0; row < array_of_points.size(); row++)
+    {
+        for (int column = 0; column < array_of_points[row].size(); column++)
+        {
+            if (sum[row].size() <= column)
+                sum[row].push_back(Point(CBigNum(0)));
+            sum[row][column] += array_of_points[row][column];
+        }
+    }
+}
+
+bool RelayMessageHandler::RecoverSecretsFromSecretRecoveryMessages(vector<uint160> recovery_message_hashes)
+{
+    vector<vector<Point> > array_of_shared_secrets;
+    
+    for (auto recovery_message_hash : recovery_message_hashes)
+    {
+        SecretRecoveryMessage secret_recovery_message = data.GetMessage(recovery_message_hash);
+        auto shared_secret_quarters = secret_recovery_message.RecoverSharedSecretQuartersForRelayKeyParts(data);
+        if (SomePointsAreAtInfinity(shared_secret_quarters))
+            return false;
+        AddArrayOfPointsToSum(shared_secret_quarters, array_of_shared_secrets);
+    }
+    return RecoverSecretsFromArrayOfSharedSecrets(array_of_shared_secrets, recovery_message_hashes);
+}
+
+bool RelayMessageHandler::SomePointsAreAtInfinity(vector<vector<Point> > array_of_points)
+{
+    for (auto &row : array_of_points)
+        for (auto &point : row)
+            if (point.IsAtInfinity())
+                return true;
+    return false;
+}
+
+bool RelayMessageHandler::RecoverSecretsFromArrayOfSharedSecrets(vector<vector<Point> > array_of_shared_secrets,
+                                                                 vector<uint160> recovery_message_hashes)
+{
+    SecretRecoveryMessage recovery_message = data.GetMessage(recovery_message_hashes[0]);
+
+    for (int i = 0; i < recovery_message.key_quarter_sharers.size(); i++)
+        if (not RecoverFourKeySixteenths(recovery_message.key_quarter_sharers[i], recovery_message.dead_relay_number,
+                                         recovery_message.key_quarter_positions[i], array_of_shared_secrets[i]))
+            return false;
+    return true;
+}
+
+bool RelayMessageHandler::RecoverFourKeySixteenths(uint64_t key_sharer_number, uint64_t dead_relay_number,
+                                                   uint8_t key_quarter_position, vector<Point> shared_secrets)
+{
+    auto key_sharer = relay_state.GetRelayByNumber(key_sharer_number);
+    auto dead_relay = relay_state.GetRelayByNumber(dead_relay_number);
+
+    vector<CBigNum> encrypted_key_sixteenths = GetEncryptedKeySixteenthsSentFromSharerToRelay(key_sharer, dead_relay);
+
+    for (int i = 0; i < 4; i++)
+    {
+        uint32_t key_sixteenth_position = 4 * (uint32_t)key_quarter_position + i;
+
+        Point public_key_sixteenth = key_sharer->PublicKeySixteenths()[key_sixteenth_position];
+
+        CBigNum decrypted_key_sixteenth = encrypted_key_sixteenths[i] ^ Hash(shared_secrets[i]);
+
+        if (Point(decrypted_key_sixteenth) != public_key_sixteenth)
+            return false;
+
+        data.keydata[public_key_sixteenth]["privkey"] = decrypted_key_sixteenth;
+    }
+    return true;
+}
+
+vector<CBigNum> RelayMessageHandler::GetEncryptedKeySixteenthsSentFromSharerToRelay(Relay *sharer, Relay *relay)
+{
+    KeyDistributionMessage key_distribution_message = data.GetMessage(sharer->key_distribution_message_hash);
+    auto &encrypted_secrets = key_distribution_message.key_sixteenths_encrypted_for_key_quarter_holders;
+
+    int64_t key_quarter_position = PositionOfEntryInVector(relay->number, sharer->key_quarter_holders);
+
+    vector<CBigNum> encrypted_key_sixteenths;
+    for (int64_t key_sixteenth_position = 4 * key_quarter_position;
+            key_sixteenth_position < 4 + 4 * key_quarter_position; key_sixteenth_position++)
+    {
+        encrypted_key_sixteenths.push_back(encrypted_secrets[key_sixteenth_position]);
+    }
+    return encrypted_key_sixteenths;
+}
+
+void RelayMessageHandler::SendComplaintAboutFailedSecretRecovery(vector<uint160> recovery_message_hashes)
+{
+
 }

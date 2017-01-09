@@ -64,6 +64,8 @@ public:
 
     std::vector<std::vector<uint64_t> > KeyPartHolderGroups();
 
+    std::vector<uint64_t> KeyQuarterSharers(RelayState *relay_state);
+
     KeyDistributionMessage
     GenerateKeyDistributionMessage(Data databases, uint160 encoding_message_hash, RelayState &state);
 
@@ -82,6 +84,9 @@ public:
     CBigNum DecryptSecret(CBigNum encrypted_secret, Point point_corresponding_to_secret, Data data);
 
     uint64_t SuccessorNumber(Data data);
+
+    CBigNum
+    GenerateRecipientPrivateKeyQuarter(Point point_corresponding_to_secret, uint8_t key_quarter_position, Data data);
 };
 
 

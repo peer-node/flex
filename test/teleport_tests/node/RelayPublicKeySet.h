@@ -40,6 +40,11 @@ public:
     CBigNum Decrypt(CBigNum encrypted_secret, MemoryDataStore &keydata, Point point_corresponding_to_secret);
 
     bool VerifyRowOfGeneratedPoints(uint64_t row_number, MemoryDataStore &keydata);
+
+    CBigNum GenerateReceivingPrivateKeyQuarter(Point point_corresponding_to_secret, uint8_t key_quarter_position,
+                                               MemoryDataStore &keydata);
+
+    Point GenerateReceivingPublicKeyQuarter(Point point_corresponding_to_secret, uint8_t key_quarter_position);
 };
 
 

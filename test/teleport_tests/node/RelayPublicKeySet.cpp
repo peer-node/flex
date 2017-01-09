@@ -90,6 +90,25 @@ CBigNum RelayPublicKeySet::GenerateReceivingPrivateKey(Point point_corresponding
     return receiving_key % Secp256k1Point::Modulus();
 }
 
+CBigNum RelayPublicKeySet::GenerateReceivingPrivateKeyQuarter(Point point_corresponding_to_secret,
+                                                              uint8_t key_quarter_position, MemoryDataStore &keydata)
+{
+    CBigNum seed = Hash(point_corresponding_to_secret);
+    CBigNum receiving_key = 0;
+
+    for (uint32_t key_sixteenth_position = 0; key_sixteenth_position < key_points.size(); key_sixteenth_position++)
+        for (auto &point : key_points[key_sixteenth_position])
+        {
+            seed = Hash(seed);
+            if (key_sixteenth_position / 4 == key_quarter_position)
+            {
+                CBigNum secret = keydata[point]["privkey"];
+                receiving_key += (seed % 65536) * secret;
+            }
+        }
+    return receiving_key % Secp256k1Point::Modulus();
+}
+
 Point RelayPublicKeySet::GenerateReceivingPublicKey(Point point_corresponding_to_secret)
 {
     CBigNum seed = Hash(point_corresponding_to_secret);
@@ -100,6 +119,22 @@ Point RelayPublicKeySet::GenerateReceivingPublicKey(Point point_corresponding_to
         {
             seed = Hash(seed);
             receiving_key += (seed % 65536) * point;
+        }
+    return receiving_key;
+}
+
+Point RelayPublicKeySet::GenerateReceivingPublicKeyQuarter(Point point_corresponding_to_secret,
+                                                           uint8_t key_quarter_position)
+{
+    CBigNum seed = Hash(point_corresponding_to_secret);
+    Point receiving_key(0);
+
+    for (uint32_t key_sixteenth_position = 0; key_sixteenth_position < key_points.size(); key_sixteenth_position++)
+        for (auto &point : key_points[key_sixteenth_position])
+        {
+            seed = Hash(seed);
+            if (key_sixteenth_position / 4 == key_quarter_position)
+                receiving_key += (seed % 65536) * point;
         }
     return receiving_key;
 }

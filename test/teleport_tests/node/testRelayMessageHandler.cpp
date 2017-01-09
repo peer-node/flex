@@ -1,7 +1,7 @@
+#include <src/base/util_hex.h>
 #include "gmock/gmock.h"
 #include "TestPeer.h"
 #include "RelayMessageHandler.h"
-
 
 using namespace ::testing;
 using namespace std;
@@ -107,6 +107,8 @@ RelayJoinMessage ARelayMessageHandler::ARelayJoinMessageWithAValidSignature()
     credit_system->AddToMainChain(msg);
     RelayJoinMessage relay_join_message;
     relay_join_message.mined_credit_message_hash = msg.GetHash160();
+    relay_join_message.PopulatePublicKeySet(keydata);
+    relay_join_message.PopulatePrivateKeySixteenths(keydata);
     relay_join_message.Sign(*data);
     return relay_join_message;
 }
@@ -145,7 +147,7 @@ TEST_F(ARelayMessageHandler, RejectsARelayJoinMessageWhoseMinedCreditMessageHash
 
     auto second_join = ARelayJoinMessageWithAValidSignature();
 
-    for (Point &public_key_part : second_join.public_key_sixteenths)
+    for (Point &public_key_part : second_join.public_key_set.key_points[0])
         public_key_part += Point(SECP256K1, 1);
 
     second_join.Sign(*data);
@@ -283,31 +285,75 @@ public:
     {
         ARelayMessageHandlerWhichHasAccepted37Relays::SetUp();
 
+        relay = &relay_message_handler->relay_state.relays[30];
+
+        SetUpUsingReferenceData();
+
+        SetMockTimeMicros(TEST_START_TIME);
+    }
+
+    void SetUpUsingReferenceData()
+    {
         static KeyDistributionMessage reference_key_distribution_message;
         static RelayState reference_relay_state;
-        static MemoryDataStore reference_keydata;
-
-        relay = &relay_message_handler->relay_state.relays[30];
+        static MemoryDataStore reference_keydata, reference_msgdata, reference_creditdata;
 
         if (reference_key_distribution_message.relay_number == 0)
         {
             key_distribution_message = relay->GenerateKeyDistributionMessage(*data, relay->mined_credit_message_hash,
                                                                              relay_message_handler->relay_state);
             data->StoreMessage(key_distribution_message);
+
+            EnsureChosenRelayIsAKeyQuarterHolder();
+
             reference_key_distribution_message = key_distribution_message;
             reference_relay_state = relay_message_handler->relay_state;
             reference_keydata = keydata;
+            reference_msgdata = msgdata;
+            reference_creditdata = creditdata;
         }
         else
         {
             key_distribution_message = reference_key_distribution_message;
             keydata = reference_keydata;
+            msgdata = reference_msgdata;
+            creditdata = reference_creditdata;
             relay_message_handler->relay_state = reference_relay_state;
         }
-
-
-        SetMockTimeMicros(TEST_START_TIME);
+        relay = &relay_message_handler->relay_state.relays[30];
     }
+
+    void EnsureChosenRelayIsAKeyQuarterHolder()
+    {
+        while (not ChosenRelayIsAKeyQuarterHolder())
+        {
+            AddARelay();
+            relay = &relay_message_handler->relay_state.relays[30];
+            AssignQuarterHoldersToRemainingRelays();
+        }
+    }
+
+    bool ChosenRelayIsAKeyQuarterHolder()
+    {
+        return NumberOfARelayWhoSharedAQuarterKeyWithChosenRelay() != 0;
+    }
+
+    uint64_t NumberOfARelayWhoSharedAQuarterKeyWithChosenRelay()
+    {
+        for (auto &existing_relay : relay_message_handler->relay_state.relays)
+            if (VectorContainsEntry(existing_relay.key_quarter_holders, relay->number))
+                return existing_relay.number;
+        return 0;
+    }
+
+    void AssignQuarterHoldersToRemainingRelays()
+    {
+        uint160 hash = 1;
+        for (auto &existing_relay : relay_message_handler->relay_state.relays)
+            if (existing_relay.key_quarter_holders.size() == 0)
+                relay_message_handler->relay_state.AssignKeyPartHoldersToRelay(existing_relay, hash++);
+    }
+
 
     virtual void TearDown()
     {
@@ -403,7 +449,27 @@ public:
     virtual void SetUp()
     {
         ARelayMessageHandlerWithAKeyDistributionMessage::SetUp();
-        relay_message_handler->HandleMessage(GetDataStream(key_distribution_message), &peer);
+
+        static RelayState reference_relay_state;
+        static MemoryDataStore reference_keydata, reference_msgdata, reference_creditdata;
+
+        if (reference_relay_state.relays.size() == 0)
+        {
+            relay_message_handler->HandleMessage(GetDataStream(key_distribution_message), &peer);
+
+            reference_relay_state = relay_message_handler->relay_state;
+            reference_keydata = keydata;
+            reference_msgdata = msgdata;
+            reference_creditdata = creditdata;
+        }
+        else
+        {
+            keydata = reference_keydata;
+            msgdata = reference_msgdata;
+            creditdata = reference_creditdata;
+            relay_message_handler->relay_state = reference_relay_state;
+        }
+
     }
 
     virtual void TearDown()
@@ -483,11 +549,61 @@ public:
     virtual void SetUp()
     {
         ARelayMessageHandlerWithAKeyDistributionMessage::SetUp();
-        relay->public_key_set.key_points[1][1] += Point(CBigNum(1));
+        static KeyDistributionComplaint reference_complaint;
+        static RelayState reference_relay_state;
+        static MemoryDataStore reference_keydata, reference_msgdata, reference_creditdata;
+
+        if (reference_relay_state.relays.size() == 0)
+        {
+            DoSetUp();
+
+            reference_relay_state = relay_message_handler->relay_state;
+            reference_keydata = keydata;
+            reference_msgdata = msgdata;
+            reference_creditdata = creditdata;
+            reference_complaint = complaint;
+        }
+        else
+        {
+            keydata = reference_keydata;
+            msgdata = reference_msgdata;
+            creditdata = reference_creditdata;
+            relay_message_handler->relay_state = reference_relay_state;
+            complaint = reference_complaint;
+        }
+    }
+
+    void DoSetUp()
+    {
+        EnsureThereIsSomethingToComplainAboutAndThatTheChosenRelayIsHoldingSecrets();
+
         relay_message_handler->HandleMessage(GetDataStream(key_distribution_message), &peer);
         complaint = KeyDistributionComplaint(key_distribution_message.GetHash160(), 0, 1, *data);
         complaint.Sign(*data);
         data->StoreMessage(complaint);
+    }
+
+    void EnsureThereIsSomethingToComplainAboutAndThatTheChosenRelayIsHoldingSecrets()
+    {
+        ChangeTheChosenRelaysPublicKeySetAndKeepTheNewKeys();
+        SendAKeyDistributionMessageWhichGivesAQuarterKeyToTheChosenRelay();
+    }
+
+    void ChangeTheChosenRelaysPublicKeySetAndKeepTheNewKeys()
+    {
+        CBigNum privkey = keydata[relay->public_key_set.key_points[1][1]]["privkey"];
+        relay->public_key_set.key_points[1][1] += Point(CBigNum(1));
+        keydata[relay->public_key_set.key_points[1][1]]["privkey"] = privkey + 1;
+    }
+
+    void SendAKeyDistributionMessageWhichGivesAQuarterKeyToTheChosenRelay()
+    {
+        uint64_t key_sharer_number = NumberOfARelayWhoSharedAQuarterKeyWithChosenRelay();
+        auto key_sharer = relay_message_handler->relay_state.GetRelayByNumber(key_sharer_number);
+        auto message = key_sharer->GenerateKeyDistributionMessage(*data, key_sharer->mined_credit_message_hash,
+                                                                  relay_message_handler->relay_state);
+        data->StoreMessage(message);
+        relay_message_handler->HandleKeyDistributionMessage(message);
     }
 
     virtual void TearDown()
@@ -524,6 +640,7 @@ public:
     virtual void SetUp()
     {
         ARelayMessageHandlerWithAValidComplaintAboutABadPointFromTheRelaysPublicKeySet::SetUp();
+
         relay_message_handler->HandleMessage(GetDataStream(complaint), &peer);
     }
     
@@ -561,7 +678,7 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaint,
 {
     SetMockTimeMicros(TEST_START_TIME + RESPONSE_WAIT_TIME);
     msgdata[relay->obituary_hash]["secret_recovery_messages"] = std::vector<uint160>();
-    relay_message_handler->handle_obituary_after_duration.DoTasksScheduledForExecutionBeforeNow();
+    relay_message_handler->scheduler.DoTasksScheduledForExecutionBeforeNow();
 
     for (auto quarter_holder_number : relay->key_quarter_holders)
     {
@@ -574,7 +691,7 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaint,
        DoesntGeneratesObituariesForKeyQuarterHoldersWhoHaveRespondedToTheObituaryWhenCompletingTheScheduledTask)
 {
     SetMockTimeMicros(TEST_START_TIME + RESPONSE_WAIT_TIME);
-    relay_message_handler->handle_obituary_after_duration.DoTasksScheduledForExecutionBeforeNow();
+    relay_message_handler->scheduler.DoTasksScheduledForExecutionBeforeNow();
 
     for (auto quarter_holder_number : relay->key_quarter_holders)
     {
@@ -583,3 +700,106 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaint,
     }
 }
 
+TEST_F(ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaint,
+       HandlesTheSecretRecoveryMessagesWhichItGeneratesInResponseToTheObituary)
+{
+    std::vector<uint160> secret_recovery_message_hashes = msgdata[relay->obituary_hash]["secret_recovery_messages"];
+    for (auto secret_recovery_message_hash : secret_recovery_message_hashes)
+    {
+        bool handled = msgdata[secret_recovery_message_hash]["handled"];
+        ASSERT_THAT(handled, Eq(true));
+    }
+}
+
+TEST_F(ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaint,
+       SchedulesTasksToCheckForComplaintsWhenHandlingASecretRecoveryMessage)
+{
+    std::vector<uint160> secret_recovery_message_hashes = msgdata[relay->obituary_hash]["secret_recovery_messages"];
+    for (auto secret_recovery_message_hash : secret_recovery_message_hashes)
+    {
+        ASSERT_TRUE(relay_message_handler->scheduler.TaskIsScheduledForTime("secret_recovery",
+                                                                            secret_recovery_message_hash,
+                                                                            TEST_START_TIME + RESPONSE_WAIT_TIME));
+    }
+}
+
+
+class ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaintAndThreeSecretRecoveryMessages :
+        public ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaint
+{
+public:
+    uint160 last_secret_recovery_message_hash;
+
+    virtual void SetUp()
+    {
+        ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaint::SetUp();
+
+        UnprocessLastSecretRecoveryMessage();
+        ForgetKeyQuartersHeldByDeadRelay();
+    }
+
+
+    void UnprocessLastSecretRecoveryMessage()
+    {
+        std::vector<uint160> secret_recovery_message_hashes = msgdata[relay->obituary_hash]["secret_recovery_messages"];
+        last_secret_recovery_message_hash = secret_recovery_message_hashes.back();
+        secret_recovery_message_hashes.pop_back();
+        msgdata[relay->obituary_hash]["secret_recovery_messages"] = secret_recovery_message_hashes;
+        msgdata[last_secret_recovery_message_hash]["handled"] = false;
+    }
+
+    void ForgetKeyQuartersHeldByDeadRelay()
+    {
+        for (auto &existing_relay : relay_message_handler->relay_state.relays)
+            if (VectorContainsEntry(existing_relay.key_quarter_holders, relay->number))
+                ForgetKeyQuartersOfGivenRelayHeldByDeadRelay(existing_relay);
+    }
+
+    void ForgetKeyQuartersOfGivenRelayHeldByDeadRelay(Relay &given_relay)
+    {
+        auto key_quarter_position = PositionOfEntryInVector(relay->number, given_relay.key_quarter_holders);
+
+        for (auto key_sixteenth_position = key_quarter_position * 4;
+             key_sixteenth_position < 4 + key_quarter_position * 4;
+             key_sixteenth_position++)
+        {
+            keydata.Delete(given_relay.PublicKeySixteenths()[key_sixteenth_position]);
+        }
+    }
+
+    bool KeyQuartersHeldByDeadRelayAreKnown()
+    {
+        bool known = true;
+        for (auto &existing_relay : relay_message_handler->relay_state.relays)
+            if (VectorContainsEntry(existing_relay.key_quarter_holders, relay->number))
+                if (not KeyQuartersOfGivenRelayHeldByDeadRelayAreKnown(existing_relay))
+                    known = false;
+        return known;
+    }
+
+    bool KeyQuartersOfGivenRelayHeldByDeadRelayAreKnown(Relay &given_relay)
+    {
+        auto key_quarter_position = PositionOfEntryInVector(relay->number, given_relay.key_quarter_holders);
+        for (auto key_sixteenth_position = key_quarter_position * 4; key_sixteenth_position < key_quarter_position * 5;
+                                                                     key_sixteenth_position++)
+            if (not keydata[given_relay.PublicKeySixteenths()[key_sixteenth_position]].HasProperty("privkey"))
+                return false;
+        return true;
+    }
+
+    virtual void TearDown()
+    {
+        ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaint::TearDown();
+    }
+};
+
+TEST_F(ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaintAndThreeSecretRecoveryMessages,
+       ReconstructsKeyPartsHeldByTheDeadRelayIfTheSuccessorsPrivateSigningKeyIsAvailableWhenProcessingTheFourth)
+{
+    ASSERT_FALSE(KeyQuartersHeldByDeadRelayAreKnown());
+
+    SecretRecoveryMessage last_secret_recovery_message = data->GetMessage(last_secret_recovery_message_hash);
+    relay_message_handler->Handle(last_secret_recovery_message, NULL);
+
+    ASSERT_TRUE(KeyQuartersHeldByDeadRelayAreKnown());
+}

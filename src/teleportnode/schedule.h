@@ -5,6 +5,7 @@
 #include "base/util_time.h"
 #include <boost/thread.hpp>
 #include "crypto/uint256.h"
+#include "vector_tools.h"
 #include <functional>
 
 #include "log.h"
@@ -49,10 +50,10 @@ public:
     void ClearTasks()
     {
         uint64_t scheduled_time = 0;
-        uint160 task_hash;
+        std::vector<uint160> task_hashes;
         schedule_scanner.SeekEnd();
         
-        while (schedule_scanner.GetPreviousObjectAndLocation(task_hash, scheduled_time))
+        while (schedule_scanner.GetPreviousObjectAndLocation(task_hashes, scheduled_time))
         {
             scheduledata->RemoveFromLocation(task_type, scheduled_time);
             schedule_scanner = scheduledata->LocationIterator(task_type);
@@ -64,33 +65,36 @@ public:
     {
         uint64_t now = GetTimeMicros();
         uint64_t scheduled_time = 0;
-        uint160 task_hash;
+        std::vector<uint160> task_hashes;
         schedule_scanner = scheduledata->LocationIterator(task_type);
 
         schedule_scanner.SeekStart();
 
-        while (schedule_scanner.GetNextObjectAndLocation(task_hash, scheduled_time))
+        while (schedule_scanner.GetNextObjectAndLocation(task_hashes, scheduled_time))
         {
             if (scheduled_time > now)
                 break;
             
             scheduledata->RemoveFromLocation(task_type, scheduled_time);
 
-            try
+            for (auto task_hash : task_hashes)
             {
-                DoTask(task_hash);
-            }
-            catch (const std::runtime_error& e)
-            {
-                log_ << "encountered runtime error: " << e.what()
-                     << " during scheduled execution of " << task_type
-                     << " with task " << task_hash << "\n";
-            }
-            catch (...)
-            {
-                log_ << "encountered unknown error "
-                     << " during scheduled execution of " << task_type
-                     << " with task " << task_hash << "\n";
+                try
+                {
+                    DoTask(task_hash);
+                }
+                catch (const std::runtime_error &e)
+                {
+                    log_ << "encountered runtime error: " << e.what()
+                         << " during scheduled execution of " << task_type
+                         << " with task " << task_hash << "\n";
+                }
+                catch (...)
+                {
+                    log_ << "encountered unknown error "
+                         << " during scheduled execution of " << task_type
+                         << " with task " << task_hash << "\n";
+                }
             }
 
             schedule_scanner = scheduledata->LocationIterator(task_type);
@@ -147,18 +151,26 @@ public:
 
     void Schedule(string_t task_type, uint160 task_hash, int64_t when)
     {
-        scheduledata[task_hash].Location(task_type) = when;
+        auto scheduled_tasks = TasksScheduledForTime(task_type, when);
+        scheduled_tasks.push_back(task_hash);
+        scheduledata[scheduled_tasks].Location(task_type) = when;
     }
 
     bool TaskIsScheduledForTime(string_t task_type, uint160 task_hash, int64_t when)
     {
-        int64_t task_time = scheduledata[task_hash].Location(task_type);
-        return task_time == when;
+        return VectorContainsEntry(TasksScheduledForTime(task_type, when), task_hash);
     }
 
     bool TaskIsScheduledForTime(const char* task_type, uint160 task_hash, int64_t when)
     {
         return TaskIsScheduledForTime(string_t(task_type), task_hash, when);
+    }
+
+    std::vector<uint160> TasksScheduledForTime(string_t task_type, int64_t when)
+    {
+        std::vector<uint160> tasks_at_location;
+        scheduledata.GetObjectAtLocation(tasks_at_location, task_type, when);
+        return tasks_at_location;
     }
 };
 

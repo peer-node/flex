@@ -11,9 +11,15 @@ bool VectorContainsEntry(std::vector<T> vector_, T entry)
 }
 
 template <typename T>
+int64_t PositionOfEntryInVector(T entry, std::vector<T> vector_)
+{
+    return std::distance(vector_.begin(), std::find(vector_.begin(), vector_.end(), entry));
+}
+
+template <typename T>
 void EraseEntryFromVector(T entry, std::vector<T>& vector_)
 {
-    int64_t position = std::distance(vector_.begin(), std::find(vector_.begin(), vector_.end(), entry));
+    int64_t position = PositionOfEntryInVector(entry, vector_);
     if (position < vector_.size())
         vector_.erase(vector_.begin() + position);
 }
