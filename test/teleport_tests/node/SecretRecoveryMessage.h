@@ -23,8 +23,6 @@ public:
     std::vector<uint8_t> key_quarter_positions;
     Signature signature;
 
-    SecretRecoveryMessage() { }
-
     static std::string Type() { return "secret_recovery"; }
 
     IMPLEMENT_SERIALIZE
@@ -59,17 +57,14 @@ public:
 
     void PopulateSecrets(Data data);
 
-    void PopulateKeyQuarterSharersAndPositions(Data data);
-
     void PopulateEncryptedSharedSecretQuarter(Relay &relay, Data data);
 
     void AddEncryptedSharedSecretQuarterForFourKeySixteenths(Relay &relay, uint8_t position, Data data);
 
     void PopulateEncryptedSharedSecretQuarterForKeySixteenth(
-            Relay &key_sharer, uint8_t key_quarter_position, Data &data,
-            std::vector<CBigNum> &encrypted_shared_secret_quarters_for_relay_key_parts,
+            Relay &key_sharer, std::vector<CBigNum> &encrypted_shared_secret_quarters_for_relay_key_parts,
             std::vector<Point> &points_corresponding_to_shared_secret_quarters,
-            Relay *successor, int32_t key_sixteenth_position);
+            Relay *successor, int32_t key_sixteenth_position, Data &data);
 
     std::vector<std::vector<Point> > RecoverSharedSecretQuartersForRelayKeyParts(Data data);
 
@@ -78,7 +73,29 @@ public:
 
     Point RecoverSharedSecretQuarter(CBigNum encrypted_shared_secret_quarter,
                                      Point point_corresponding_to_shared_secret_quarter, Data data);
+
+    static std::vector<std::vector<Point> > GetSharedSecrets(std::vector<uint160> recovery_message_hashes, Data data);
+
+    static bool RecoverSecretsFromArrayOfSharedSecrets(std::vector<std::vector<Point> > array_of_shared_secrets,
+                                                       std::vector<uint160> recovery_message_hashes,
+                                                       uint32_t &failure_sharer_position,
+                                                       uint32_t &failure_key_part_position, Data data);
+
+    static bool RecoverFourKeySixteenths(uint64_t key_sharer_number, uint64_t dead_relay_number,
+                                         uint8_t key_quarter_position, std::vector<Point> shared_secrets,
+                                         uint32_t &failure_key_part_position, Data data);
+
+    static std::vector<CBigNum> GetEncryptedKeySixteenthsSentFromSharerToRelay(Relay *sharer, Relay *relay, Data data);
+
+    static bool RecoverSecretsFromSecretRecoveryMessages(std::vector<uint160> recovery_message_hashes,
+                                                         uint32_t &failure_sharer_position,
+                                                         uint32_t &failure_key_part_position, Data data);
 };
 
+std::string PadWithZero(std::string in);
+
+CBigNum StorePointInBigNum(Point point);
+
+Point RetrievePointFromBigNum(CBigNum n);
 
 #endif //TELEPORT_SECRETRECOVERYMESSAGE_H

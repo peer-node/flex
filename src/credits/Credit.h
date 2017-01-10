@@ -13,10 +13,10 @@
 class Credit
 {
 public:
-    uint64_t amount{0};
+    uint64_t amount{ONE_CREDIT};
     vch_t keydata;
 
-    Credit(): amount(0) { }
+    Credit() { }
 
     Credit(vch_t keydata, uint64_t amount);
 

@@ -24,7 +24,7 @@ public:
 
     static std::string Type() { return "key_distribution"; }
 
-    KeyDistributionMessage() { }
+    //KeyDistributionMessage() { }
 
     IMPLEMENT_SERIALIZE
     (
@@ -58,31 +58,25 @@ public:
     void PopulateKeySixteenthsEncryptedForKeySixteenthHolders(MemoryDataStore &keydata, Relay &relay,
                                                                         RelayState &state);
 
-    bool KeySixteenthHolderPrivateKeyIsAvailable(uint32_t position, Data first_or_second_set, RelayState data, Relay relay);
-
     bool KeyQuarterHolderPrivateKeyIsAvailable(uint64_t position, Data data, RelayState &relay_state, Relay &relay);
 
     bool KeySixteenthHolderPrivateKeyIsAvailable(uint32_t position, uint32_t first_or_second_set, Data data,
                                                  RelayState &relay_state, Relay &relay);
 
-    bool
-    TryToRecoverKeySixteenthEncryptedToQuarterKeyHolder(uint32_t position, Data data, RelayState &state, Relay &relay);
+    bool TryToRecoverKeySixteenthEncryptedToQuarterKeyHolder(uint32_t position, Data data, RelayState &state,
+                                                             Relay &relay);
 
     bool KeySixteenthForKeyQuarterHolderIsCorrectlyEncrypted(uint64_t position, Data data, RelayState &relay_state,
                                                              Relay &relay);
 
-    bool
-    TryToRecoverKeySixteenthEncryptedToKeySixteenthHolder(uint32_t position, uint32_t first_or_second_set, Data data,
-                                                          RelayState &state, Relay &relay);
+    bool TryToRecoverKeySixteenthEncryptedToKeySixteenthHolder(uint32_t position, uint32_t first_or_second_set,
+                                                               Data data, RelayState &state, Relay &relay);
 
-    bool
-    KeySixteenthForKeySixteenthHolderIsCorrectlyEncrypted(uint64_t position, uint32_t first_or_second_set, Data data,
-                                                          RelayState &relay_state, Relay &relay);
+    bool KeySixteenthForKeySixteenthHolderIsCorrectlyEncrypted(uint64_t position, uint32_t first_or_second_set,
+                                                               Data data, RelayState &relay_state, Relay &relay);
 
     bool AuditKeySixteenthEncryptedInRelayJoinMessage(RelayJoinMessage &join_message, uint64_t position,
                                                       MemoryDataStore &keydata);
-
-
 };
 
 

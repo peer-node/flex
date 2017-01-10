@@ -33,8 +33,6 @@ public:
 
     static std::string Type() { return "relay_join"; }
 
-    RelayJoinMessage() { }
-
     IMPLEMENT_SERIALIZE
     (
         READWRITE(mined_credit_message_hash);

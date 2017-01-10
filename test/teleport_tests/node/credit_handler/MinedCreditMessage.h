@@ -13,8 +13,6 @@ public:
     ShortHashList<uint160> hash_list;
     NetworkSpecificProofOfWork proof_of_work;
 
-    MinedCreditMessage() { mined_credit.amount = ONE_CREDIT; }
-
     static std::string Type() { return "msg"; }
 
     IMPLEMENT_SERIALIZE

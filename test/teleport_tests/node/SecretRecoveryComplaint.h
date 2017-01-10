@@ -7,11 +7,14 @@
 #include "Relay.h"
 #include "SecretRecoveryMessage.h"
 
+
 class SecretRecoveryComplaint
 {
 public:
     uint160 secret_recovery_message_hash{0};
-    std::vector<uint32_t> positions_of_bad_encrypted_secrets;
+    uint32_t position_of_key_sharer;
+    uint32_t position_of_bad_encrypted_secret;
+    CBigNum private_receiving_key{0};
     Signature signature;
 
     static std::string Type() { return "secret_recovery_complaint"; }
@@ -19,15 +22,21 @@ public:
     IMPLEMENT_SERIALIZE
     (
         READWRITE(secret_recovery_message_hash);
-        READWRITE(positions_of_bad_encrypted_secrets);
+        READWRITE(position_of_key_sharer);
+        READWRITE(position_of_bad_encrypted_secret);
+        READWRITE(private_receiving_key);
         READWRITE(signature);
     );
 
-    JSON(secret_recovery_message_hash, positions_of_bad_encrypted_secrets, signature);
+    JSON(secret_recovery_message_hash, position_of_key_sharer, position_of_bad_encrypted_secret,
+         private_receiving_key, signature);
 
     DEPENDENCIES(secret_recovery_message_hash);
 
     IMPLEMENT_HASH_SIGN_VERIFY();
+
+    void Populate(SecretRecoveryMessage recovery_message, uint32_t key_sharer_position, uint32_t key_part_position,
+                  Data data);
 
     Point VerificationKey(Data data);
 

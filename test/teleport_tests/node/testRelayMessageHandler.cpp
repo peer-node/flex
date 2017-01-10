@@ -803,3 +803,90 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaintAndThr
 
     ASSERT_TRUE(KeyQuartersHeldByDeadRelayAreKnown());
 }
+
+TEST_F(ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaintAndThreeSecretRecoveryMessages,
+        SendsASecretRecoveryComplaintIfASecretRecoveryMessageContainsASecretWhichFailsDecryption)
+{
+    SecretRecoveryMessage last_secret_recovery_message = data->GetMessage(last_secret_recovery_message_hash);
+    last_secret_recovery_message.quartets_of_encrypted_shared_secret_quarters[0][1] += 1;
+
+    relay_message_handler->Handle(last_secret_recovery_message, NULL);
+
+    std::vector<uint160> complaints = msgdata[last_secret_recovery_message.GetHash160()]["complaints"];
+    ASSERT_THAT(complaints.size(), Eq(1));
+
+    SecretRecoveryComplaint complaint = data->GetMessage(complaints[0]);
+    ASSERT_THAT(complaint.position_of_key_sharer, Eq(0));
+    ASSERT_THAT(complaint.position_of_bad_encrypted_secret, Eq(1));
+    ASSERT_TRUE(peer.HasBeenInformedAbout("relay", complaint));
+}
+
+TEST_F(ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaintAndThreeSecretRecoveryMessages,
+       GeneratesAnObituaryForTheBadKeyQuarterHolderInResponseToAValidSecretRecoveryComplaint)
+{
+    SecretRecoveryMessage last_secret_recovery_message = data->GetMessage(last_secret_recovery_message_hash);
+    last_secret_recovery_message.quartets_of_encrypted_shared_secret_quarters[0][1] += 1;
+
+    relay_message_handler->Handle(last_secret_recovery_message, NULL);
+    auto key_quarter_holder = last_secret_recovery_message.GetKeyQuarterHolder(*data);
+    ASSERT_THAT(key_quarter_holder->obituary_hash, Ne(0));
+}
+
+class ARelayMessageHandlerWhichHasProcessedFourSecretRecoveryMessagesOneOfWhichHasABadSharedSecretQuarter :
+        public ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaintAndThreeSecretRecoveryMessages
+{
+public:
+    SecretRecoveryMessage bad_recovery_message;
+
+    virtual void SetUp()
+    {
+        ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaintAndThreeSecretRecoveryMessages::SetUp();
+
+        bad_recovery_message = GenerateRecoveryMessageWithBadSharedSecretQuarter();
+        data->StoreMessage(bad_recovery_message);
+
+        relay_message_handler->Handle(bad_recovery_message, &peer);
+    }
+
+    SecretRecoveryMessage GenerateRecoveryMessageWithBadSharedSecretQuarter()
+    {
+        SecretRecoveryMessage recovery_message = data->GetMessage(last_secret_recovery_message_hash);
+
+        auto successor = recovery_message.GetSuccessor(*data);
+
+        Point bad_shared_secret_quarter(CBigNum(12345));
+        PopulateRecoveryMessageWithABadSharedSecretQuarter(recovery_message, successor, bad_shared_secret_quarter);
+
+        return recovery_message;
+    }
+
+    void PopulateRecoveryMessageWithABadSharedSecretQuarter(SecretRecoveryMessage &recovery_message,
+                                                            Relay *successor, Point bad_shared_secret_quarter)
+    {
+        CBigNum encoded_bad_shared_secret_quarter = StorePointInBigNum(bad_shared_secret_quarter);
+        CBigNum encrypted_bad_shared_secret_quarter = successor->EncryptSecret(encoded_bad_shared_secret_quarter);
+        Point corresponding_point(encoded_bad_shared_secret_quarter);
+
+        recovery_message.quartets_of_encrypted_shared_secret_quarters[0][2] = encrypted_bad_shared_secret_quarter;
+        recovery_message.quartets_of_points_corresponding_to_shared_secret_quarters[0][2] = corresponding_point;
+    }
+
+    virtual void TearDown()
+    {
+        ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaintAndThreeSecretRecoveryMessages::TearDown();
+    }
+};
+
+TEST_F(ARelayMessageHandlerWhichHasProcessedFourSecretRecoveryMessagesOneOfWhichHasABadSharedSecretQuarter,
+       SendsASecretRecoveryFailureMessageIfTheSuccessorsPrivateSigningKeyIsAvailable)
+{
+    std::vector<uint160> failure_message_hashes = msgdata[bad_recovery_message.obituary_hash]["failure_messages"];
+
+    ASSERT_THAT(failure_message_hashes.size(), Eq(1));
+
+    SecretRecoveryFailureMessage failure_message = data->GetMessage(failure_message_hashes[0]);
+
+    ASSERT_THAT(failure_message.key_sharer_position, Eq(0));
+    ASSERT_THAT(failure_message.shared_secret_quarter_position, Eq(2));
+    ASSERT_TRUE(peer.HasBeenInformedAbout("relay", failure_message));
+}

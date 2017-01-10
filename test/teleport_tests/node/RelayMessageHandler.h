@@ -9,6 +9,7 @@
 #include "MessageHandlerWithOrphanage.h"
 #include "RelayJoinMessage.h"
 #include "KeyDistributionMessage.h"
+#include "SecretRecoveryFailureMessage.h"
 
 #define RESPONSE_WAIT_TIME 8000000 // microseconds
 
@@ -46,6 +47,8 @@ public:
         HANDLESTREAM(KeyDistributionMessage);
         HANDLESTREAM(KeyDistributionComplaint);
         HANDLESTREAM(SecretRecoveryMessage);
+        HANDLESTREAM(SecretRecoveryComplaint);
+        HANDLESTREAM(SecretRecoveryFailureMessage);
     }
 
     void HandleMessage(uint160 message_hash)
@@ -54,12 +57,16 @@ public:
         HANDLEHASH(KeyDistributionMessage);
         HANDLEHASH(KeyDistributionComplaint);
         HANDLEHASH(SecretRecoveryMessage);
+        HANDLEHASH(SecretRecoveryComplaint);
+        HANDLEHASH(SecretRecoveryFailureMessage);
     }
 
     HANDLECLASS(RelayJoinMessage);
     HANDLECLASS(KeyDistributionMessage);
     HANDLECLASS(KeyDistributionComplaint);
     HANDLECLASS(SecretRecoveryMessage);
+    HANDLECLASS(SecretRecoveryComplaint);
+    HANDLECLASS(SecretRecoveryFailureMessage);
 
     void HandleRelayJoinMessage(RelayJoinMessage relay_join_message);
 
@@ -68,6 +75,10 @@ public:
     void HandleKeyDistributionComplaint(KeyDistributionComplaint complaint);
 
     void HandleSecretRecoveryMessage(SecretRecoveryMessage secret_recovery_message);
+
+    void HandleSecretRecoveryComplaint(SecretRecoveryComplaint complaint);
+
+    void HandleSecretRecoveryFailureMessage(SecretRecoveryFailureMessage failure_message);
 
     bool MinedCreditMessageHashIsInMainChain(RelayJoinMessage relay_join_message);
 
@@ -119,21 +130,24 @@ public:
 
     void TryToRetrieveSecretsFromSecretRecoveryMessage(SecretRecoveryMessage secret_recovery_message);
 
-    bool RecoverSecretsFromSecretRecoveryMessages(std::vector<uint160> recovery_message_hashes);
+    bool TryToRecoverSecretsFromSecretRecoveryMessages(std::vector<uint160> recovery_message_hashes);
 
-    void SendComplaintAboutFailedSecretRecovery(std::vector<uint160> recovery_message_hashes);
+    void SendSecretRecoveryFailureMessage(std::vector<uint160> recovery_message_hashes);
 
     bool RelaysPrivateSigningKeyIsAvailable(uint64_t relay_number);
 
-    bool SomePointsAreAtInfinity(std::vector<std::vector<Point>> points);
+    void StoreSecretRecoveryFailureMessage(SecretRecoveryFailureMessage failure_message);
 
-    bool RecoverSecretsFromArrayOfSharedSecrets(std::vector<std::vector<Point>> array_of_shared_secrets,
-                                                std::vector<uint160> recovery_message_hashes);
+    void ComplainIfThereAreBadEncryptedSecretsInSecretRecoveryMessage(SecretRecoveryMessage secret_recovery_message);
 
-    bool RecoverFourKeySixteenths(uint64_t key_sharer_number, uint64_t dead_relay_number,
-                                  uint8_t key_quarter_position, std::vector<Point> shared_secrets);
+    void SendSecretRecoveryComplaint(SecretRecoveryMessage recovery_message, uint32_t key_sharer_position,
+                                     uint32_t key_part_position);
 
-    std::vector<CBigNum> GetEncryptedKeySixteenthsSentFromSharerToRelay(Relay *sharer, Relay *relay);
+    SecretRecoveryComplaint
+    GenerateSecretRecoveryComplaint(SecretRecoveryMessage recovery_message, uint32_t key_sharer_position,
+                                    uint32_t key_part_position);
+
+    void StoreSecretRecoveryComplaint(SecretRecoveryComplaint complaint);
 };
 
 

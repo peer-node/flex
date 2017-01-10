@@ -664,7 +664,7 @@ add_executable(runNodeTests
         test/teleport_tests/node/GoodbyeComplaint.h
         test/teleport_tests/node/SecretRecoveryComplaint.cpp
         test/teleport_tests/node/SecretRecoveryComplaint.h
-        test/teleport_tests/node/testRelayPublicKeySet.cpp test/teleport_tests/node/RelayPublicKeySet.cpp test/teleport_tests/node/RelayPublicKeySet.h)
+        test/teleport_tests/node/testRelayPublicKeySet.cpp test/teleport_tests/node/RelayPublicKeySet.cpp test/teleport_tests/node/RelayPublicKeySet.h test/teleport_tests/node/SecretRecoveryFailureMessage.cpp test/teleport_tests/node/SecretRecoveryFailureMessage.h)
 
 add_executable(teleportd
         test/teleport_tests/teleport_data/TestData.h
