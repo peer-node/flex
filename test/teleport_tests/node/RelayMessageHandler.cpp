@@ -1,8 +1,8 @@
 #include "RelayMessageHandler.h"
 #include "Relay.h"
+#include "RecoveryFailureAuditMessage.h"
 
 #include "log.h"
-#include "SecretRecoveryFailureMessage.h"
 
 #define LOG_CATEGORY "RelayMessageHandler.cpp"
 
@@ -178,7 +178,7 @@ void RelayMessageHandler::HandleKeyDistributionComplaint(KeyDistributionComplain
 void RelayMessageHandler::HandleRelayDeath(Relay *dead_relay)
 {
     SendSecretRecoveryMessages(dead_relay);
-    ScheduleTaskToCheckWhichQuarterHoldersHaveResponded(dead_relay->obituary_hash);
+    ScheduleTaskToCheckWhichQuarterHoldersHaveResponded(dead_relay->hashes.obituary_hash);
 }
 
 bool RelayMessageHandler::ValidateKeyDistributionComplaint(KeyDistributionComplaint complaint)
@@ -193,7 +193,7 @@ void RelayMessageHandler::ScheduleTaskToCheckWhichQuarterHoldersHaveResponded(ui
 
 void RelayMessageHandler::SendSecretRecoveryMessages(Relay *dead_relay)
 {
-    for (auto quarter_holder_number : dead_relay->key_quarter_holders)
+    for (auto quarter_holder_number : dead_relay->holders.key_quarter_holders)
     {
         auto quarter_holder = relay_state.GetRelayByNumber(quarter_holder_number);
         if (data.keydata[quarter_holder->public_signing_key].HasProperty("privkey"))
@@ -204,7 +204,7 @@ void RelayMessageHandler::SendSecretRecoveryMessages(Relay *dead_relay)
 void RelayMessageHandler::SendSecretRecoveryMessage(Relay *dead_relay, Relay *quarter_holder)
 {
     auto secret_recovery_message = GenerateSecretRecoveryMessage(dead_relay, quarter_holder);
-    StoreSecretRecoveryMessage(secret_recovery_message, dead_relay->obituary_hash);
+    StoreSecretRecoveryMessage(secret_recovery_message, dead_relay->hashes.obituary_hash);
     Broadcast(secret_recovery_message);
     Handle(secret_recovery_message, NULL);
 }
@@ -215,7 +215,7 @@ SecretRecoveryMessage RelayMessageHandler::GenerateSecretRecoveryMessage(Relay *
 
     secret_recovery_message.dead_relay_number = dead_relay->number;
     secret_recovery_message.quarter_holder_number = quarter_holder->number;
-    secret_recovery_message.obituary_hash = dead_relay->obituary_hash;
+    secret_recovery_message.obituary_hash = dead_relay->hashes.obituary_hash;
     secret_recovery_message.successor_number = dead_relay->SuccessorNumber(data);
     secret_recovery_message.PopulateSecrets(data);
     secret_recovery_message.Sign(data);
@@ -254,7 +254,7 @@ void RelayMessageHandler::ProcessKeyQuarterHoldersWhoHaventRespondedToObituary(u
 vector<uint64_t> RelayMessageHandler::GetKeyQuarterHoldersWhoHaventResponded(uint160 obituary_hash)
 {
     Obituary obituary = data.GetMessage(obituary_hash);
-    vector<uint64_t> quarter_holders = obituary.relay.key_quarter_holders;
+    vector<uint64_t> quarter_holders = obituary.relay.holders.key_quarter_holders;
     vector<uint160> secret_recovery_message_hashes = msgdata[obituary_hash]["secret_recovery_messages"];
     for (auto secret_recovery_message_hash : secret_recovery_message_hashes)
     {
@@ -368,6 +368,26 @@ void RelayMessageHandler::SendSecretRecoveryFailureMessage(vector<uint160> recov
 void RelayMessageHandler::HandleSecretRecoveryFailureMessage(SecretRecoveryFailureMessage failure_message)
 {
     StoreSecretRecoveryFailureMessage(failure_message);
+    SendAuditMessagesInResponseToFailureMessage(failure_message);
+}
+
+void RelayMessageHandler::SendAuditMessagesInResponseToFailureMessage(SecretRecoveryFailureMessage failure_message)
+{
+    for (auto recovery_message_hash : failure_message.recovery_message_hashes)
+    {
+        SecretRecoveryMessage recovery_message = data.GetMessage(recovery_message_hash);
+        SendAuditMessageFromQuarterHolderInResponseToFailureMessage(failure_message, recovery_message);
+    }
+}
+
+void RelayMessageHandler::SendAuditMessageFromQuarterHolderInResponseToFailureMessage(
+        SecretRecoveryFailureMessage failure_message, SecretRecoveryMessage recovery_message)
+{
+    RecoveryFailureAuditMessage audit_message;
+    audit_message.Populate(failure_message, recovery_message, data);
+    audit_message.Sign(data);
+    Handle(audit_message, NULL);
+    Broadcast(audit_message);
 }
 
 void RelayMessageHandler::StoreSecretRecoveryFailureMessage(SecretRecoveryFailureMessage failure_message)
@@ -396,4 +416,20 @@ void RelayMessageHandler::StoreSecretRecoveryComplaint(SecretRecoveryComplaint c
     if (not VectorContainsEntry(complaint_hashes, complaint_hash))
         complaint_hashes.push_back(complaint_hash);
     data.msgdata[complaint.secret_recovery_message_hash]["complaints"] = complaint_hashes;
+}
+
+void RelayMessageHandler::HandleRecoveryFailureAuditMessage(RecoveryFailureAuditMessage audit_message)
+{
+    StoreRecoveryFailureAuditMessage(audit_message);
+    relay_state.ProcessRecoveryFailureAuditMessage(audit_message, data);
+}
+
+void RelayMessageHandler::StoreRecoveryFailureAuditMessage(RecoveryFailureAuditMessage audit_message)
+{
+    data.StoreMessage(audit_message);
+    uint160 audit_message_hash = audit_message.GetHash160();
+    vector<uint160> audit_message_hashes = data.msgdata[audit_message.failure_message_hash]["audit_messages"];
+    if (not VectorContainsEntry(audit_message_hashes, audit_message_hash))
+        audit_message_hashes.push_back(audit_message_hash);
+    data.msgdata[audit_message.failure_message_hash]["audit_messages"] = audit_message_hashes;
 }

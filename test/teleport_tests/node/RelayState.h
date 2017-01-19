@@ -13,6 +13,7 @@
 #include "DurationWithoutResponseFromRelay.h"
 #include "GoodbyeComplaint.h"
 #include "SecretRecoveryComplaint.h"
+#include "RecoveryFailureAuditMessage.h"
 
 
 class RelayState
@@ -29,6 +30,11 @@ public:
         relays = other.relays;
         maps_are_up_to_date = false;
         return *this;
+    }
+
+    bool operator==(const RelayState &other) const
+    {
+        return relays == other.relays;
     }
 
     IMPLEMENT_SERIALIZE
@@ -81,13 +87,7 @@ public:
 
     void ThrowExceptionIfMinedCreditMessageHashWasAlreadyUsed(RelayJoinMessage relay_join_message);
 
-    void UnprocessRelayJoinMessage(RelayJoinMessage relay_join_message);
-
-    void UnprocessKeyDistributionMessage(KeyDistributionMessage key_distribution_message);
-
     void ProcessSecretRecoveryMessage(SecretRecoveryMessage secret_recovery_message);
-
-    void UnprocessSecretRecoveryMessage(SecretRecoveryMessage secret_recovery_message);
 
     uint64_t AssignSuccessorToRelay(Relay *relay);
 
@@ -133,39 +133,13 @@ public:
 
     void TransferTasks(uint64_t dead_relay_number, uint64_t successor_number);
 
-    void UnprocessDurationWithoutResponse(DurationWithoutResponse duration, Data data);
-
-    void UnprocessDurationAfterSecretRecoveryComplaint(SecretRecoveryComplaint complaint, Data data);
-
-    void UnprocessObituary(Obituary obituary);
-
-    void UnrecordRelayDeath(Relay *dead_relay, Data data, uint32_t reason);
-
-    void UnprocessDurationAfterSecretRecoveryMessage(SecretRecoveryMessage secret_recovery_message, Data data);
-
-    void UnprocessSecretRecoveryComplaint(SecretRecoveryComplaint complaint, Data data);
-
-    void UnprocessDurationWithoutRelayResponseAfterObituary(Obituary obituary, uint64_t relay_number, Data data);
-
-    void UnprocessDurationWithoutResponseFromRelay(DurationWithoutResponseFromRelay duration, Data data);
-
-    void UnprocessRelayExit(RelayExit relay_exit, Data data);
-
     void ReaddRelay(Obituary obituary, uint64_t successor_relay_number);
 
     void TransferTasksBackFromSuccessorToRelay(Obituary obituary);
 
-    void UnprocessGoodbyeComplaint(GoodbyeComplaint complaint, Data data);
-
-    void UnprocessDurationAfterGoodbyeMessage(GoodbyeMessage goodbye, Data data);
-
-    void UnprocessGoodbyeMessage(GoodbyeMessage goodbye);
-
-    void UnprocessDurationAfterKeyDistributionMessage(KeyDistributionMessage key_distribution_message, Data data);
-
-    void UnprocessKeyDistributionComplaint(KeyDistributionComplaint complaint, Data data);
-
     bool MinedCreditMessageHashIsAlreadyBeingUsed(uint160 mined_credit_message_hash);
+
+    void ProcessRecoveryFailureAuditMessage(RecoveryFailureAuditMessage audit_message, Data data);
 };
 
 class RelayStateException : public std::runtime_error

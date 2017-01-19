@@ -10,6 +10,7 @@
 #include "RelayJoinMessage.h"
 #include "KeyDistributionMessage.h"
 #include "SecretRecoveryFailureMessage.h"
+#include "RecoveryFailureAuditMessage.h"
 
 #define RESPONSE_WAIT_TIME 8000000 // microseconds
 
@@ -49,6 +50,7 @@ public:
         HANDLESTREAM(SecretRecoveryMessage);
         HANDLESTREAM(SecretRecoveryComplaint);
         HANDLESTREAM(SecretRecoveryFailureMessage);
+        HANDLESTREAM(RecoveryFailureAuditMessage);
     }
 
     void HandleMessage(uint160 message_hash)
@@ -59,6 +61,7 @@ public:
         HANDLEHASH(SecretRecoveryMessage);
         HANDLEHASH(SecretRecoveryComplaint);
         HANDLEHASH(SecretRecoveryFailureMessage);
+        HANDLEHASH(RecoveryFailureAuditMessage);
     }
 
     HANDLECLASS(RelayJoinMessage);
@@ -67,6 +70,7 @@ public:
     HANDLECLASS(SecretRecoveryMessage);
     HANDLECLASS(SecretRecoveryComplaint);
     HANDLECLASS(SecretRecoveryFailureMessage);
+    HANDLECLASS(RecoveryFailureAuditMessage);
 
     void HandleRelayJoinMessage(RelayJoinMessage relay_join_message);
 
@@ -79,6 +83,8 @@ public:
     void HandleSecretRecoveryComplaint(SecretRecoveryComplaint complaint);
 
     void HandleSecretRecoveryFailureMessage(SecretRecoveryFailureMessage failure_message);
+
+    void HandleRecoveryFailureAuditMessage(RecoveryFailureAuditMessage audit_message);
 
     bool MinedCreditMessageHashIsInMainChain(RelayJoinMessage relay_join_message);
 
@@ -148,6 +154,13 @@ public:
                                     uint32_t key_part_position);
 
     void StoreSecretRecoveryComplaint(SecretRecoveryComplaint complaint);
+
+    void SendAuditMessagesInResponseToFailureMessage(SecretRecoveryFailureMessage failure_message);
+
+    void SendAuditMessageFromQuarterHolderInResponseToFailureMessage(SecretRecoveryFailureMessage failure_message,
+                                                                     SecretRecoveryMessage recovery_message);
+
+    void StoreRecoveryFailureAuditMessage(RecoveryFailureAuditMessage audit_message);
 };
 
 

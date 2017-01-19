@@ -11,13 +11,13 @@ Relay *KeyDistributionComplaint::GetComplainer(Data data)
         return NULL;
 
     if (set_of_secrets == KEY_DISTRIBUTION_COMPLAINT_KEY_QUARTERS)
-        return data.relay_state->GetRelayByNumber(sender->key_quarter_holders[position_of_secret / 4]);
+        return data.relay_state->GetRelayByNumber(sender->holders.key_quarter_holders[position_of_secret / 4]);
     else if (set_of_secrets == KEY_DISTRIBUTION_COMPLAINT_FIRST_KEY_SIXTEENTHS)
         return data.relay_state->GetRelayByNumber(
-                sender->first_set_of_key_sixteenth_holders[position_of_secret]);
+                sender->holders.first_set_of_key_sixteenth_holders[position_of_secret]);
     else if (set_of_secrets == KEY_DISTRIBUTION_COMPLAINT_SECOND_KEY_SIXTEENTHS)
         return data.relay_state->GetRelayByNumber(
-                sender->second_set_of_key_sixteenth_holders[position_of_secret]);
+                sender->holders.second_set_of_key_sixteenth_holders[position_of_secret]);
 
     return NULL;
 }

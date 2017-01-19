@@ -3,6 +3,7 @@
 #include "RelayState.h"
 
 #include "log.h"
+
 #define LOG_CATEGORY "SecretRecoveryMessage.cpp"
 
 using std::vector;
@@ -34,15 +35,15 @@ void SecretRecoveryMessage::PopulateSecrets(Data data)
 {
     for (auto &relay : data.relay_state->relays)
     {
-        if (VectorContainsEntry(relay.key_quarter_holders, dead_relay_number) and
-                relay.key_distribution_message_hash != 0)
+        if (VectorContainsEntry(relay.holders.key_quarter_holders, dead_relay_number) and
+                relay.hashes.key_distribution_message_hash != 0)
             PopulateEncryptedSharedSecretQuarter(relay, data);
     }
 }
 
 void SecretRecoveryMessage::PopulateEncryptedSharedSecretQuarter(Relay &relay, Data data)
 {
-    uint8_t position = (uint8_t)PositionOfEntryInVector(dead_relay_number, relay.key_quarter_holders);
+    uint8_t position = (uint8_t)PositionOfEntryInVector(dead_relay_number, relay.holders.key_quarter_holders);
     key_quarter_sharers.push_back(relay.number);
     key_quarter_positions.push_back(position);
 
@@ -106,7 +107,7 @@ void SecretRecoveryMessage::PopulateEncryptedSharedSecretQuarterForKeySixteenth(
     auto dead_relay = GetDeadRelay(data);
 
     uint8_t quarter_holder_position = (uint8_t)PositionOfEntryInVector(quarter_holder_number,
-                                                                       dead_relay->key_quarter_holders);
+                                                                       dead_relay->holders.key_quarter_holders);
 
     CBigNum recipient_key_quarter = dead_relay->GenerateRecipientPrivateKeyQuarter(public_key_sixteenth,
                                                                                    quarter_holder_position,
@@ -271,10 +272,10 @@ bool SecretRecoveryMessage::RecoverFourKeySixteenths(uint64_t key_sharer_number,
 vector<CBigNum> SecretRecoveryMessage::GetEncryptedKeySixteenthsSentFromSharerToRelay(Relay *sharer, Relay *relay,
                                                                                       Data data)
 {
-    KeyDistributionMessage key_distribution_message = data.GetMessage(sharer->key_distribution_message_hash);
+    KeyDistributionMessage key_distribution_message = data.GetMessage(sharer->hashes.key_distribution_message_hash);
     auto &encrypted_secrets = key_distribution_message.key_sixteenths_encrypted_for_key_quarter_holders;
 
-    int64_t key_quarter_position = PositionOfEntryInVector(relay->number, sharer->key_quarter_holders);
+    int64_t key_quarter_position = PositionOfEntryInVector(relay->number, sharer->holders.key_quarter_holders);
 
     vector<CBigNum> encrypted_key_sixteenths;
     for (int64_t key_sixteenth_position = 4 * key_quarter_position;

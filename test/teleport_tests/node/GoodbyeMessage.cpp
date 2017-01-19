@@ -18,8 +18,8 @@ void GoodbyeMessage::PopulateEncryptedKeySixteenths(Data data)
     Relay *successor = data.relay_state->GetRelayByNumber(successor_relay_number);
 
     for (Relay &sharer : data.relay_state->relays)
-        for (uint8_t position = 0; position < sharer.key_quarter_holders.size(); position++)
-            if (sharer.key_quarter_holders[position] == dead_relay_number)
+        for (uint8_t position = 0; position < sharer.holders.key_quarter_holders.size(); position++)
+            if (sharer.holders.key_quarter_holders[position] == dead_relay_number)
                 PopulateEncryptedKeySixteenth(&sharer, successor, position, data);
 }
 

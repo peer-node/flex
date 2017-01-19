@@ -19,6 +19,12 @@ public:
 
     JSON(key_points);
 
+    HASH160();
+
+    void Store(MemoryObject &object);
+
+    void Retrieve(uint160 holder_data_hash, MemoryObject &object);
+
     std::vector<Point> PublicKeySixteenths();
 
     void Populate(MemoryDataStore &keydata);

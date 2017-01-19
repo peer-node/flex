@@ -25,7 +25,6 @@ public:
             private_key_sixteenth.Randomize(Secp256k1Point::Modulus());
             Point public_key_sixteenth(private_key_sixteenth);
             keydata[public_key_sixteenth]["privkey"] = private_key_sixteenth;
-            relay.public_key_sixteenths.push_back(public_key_sixteenth);
         }
         secret_message.Randomize(Secp256k1Point::Modulus());
     }

@@ -2,6 +2,7 @@
 #include <src/crypto/bignum_hashes.h>
 #include "Relay.h"
 #include "RelayState.h"
+#include "RelayKeyHolderData.h"
 
 #include "log.h"
 #define LOG_CATEGORY "Relay.cpp"
@@ -18,12 +19,12 @@ RelayJoinMessage Relay::GenerateJoinMessage(MemoryDataStore &keydata, uint160 mi
 
 KeyDistributionMessage Relay::GenerateKeyDistributionMessage(Data data, uint160 encoding_message_hash, RelayState &relay_state)
 {
-    if (key_quarter_holders.size() == 0)
+    if (holders.key_quarter_holders.size() == 0)
         relay_state.AssignKeyPartHoldersToRelay(*this, encoding_message_hash);
 
     KeyDistributionMessage key_distribution_message;
     key_distribution_message.encoding_message_hash = encoding_message_hash;
-    key_distribution_message.relay_join_hash = join_message_hash;
+    key_distribution_message.relay_join_hash = hashes.join_message_hash;
     key_distribution_message.relay_number = number;
     key_distribution_message.PopulateKeySixteenthsEncryptedForKeyQuarterHolders(data.keydata, *this, relay_state);
     key_distribution_message.PopulateKeySixteenthsEncryptedForKeySixteenthHolders(data.keydata, *this, relay_state);
@@ -33,9 +34,9 @@ KeyDistributionMessage Relay::GenerateKeyDistributionMessage(Data data, uint160 
 
 std::vector<std::vector<uint64_t> > Relay::KeyPartHolderGroups()
 {
-    return std::vector<std::vector<uint64_t> >{key_quarter_holders,
-                                               first_set_of_key_sixteenth_holders,
-                                               second_set_of_key_sixteenth_holders};
+    return std::vector<std::vector<uint64_t> >{holders.key_quarter_holders,
+                                               holders.first_set_of_key_sixteenth_holders,
+                                               holders.second_set_of_key_sixteenth_holders};
 }
 
 std::vector<CBigNum> Relay::PrivateKeySixteenths(MemoryDataStore &keydata)
@@ -53,10 +54,11 @@ std::vector<CBigNum> Relay::PrivateKeySixteenths(MemoryDataStore &keydata)
 uint160 Relay::GetSeedForDeterminingSuccessor()
 {
     Relay temp_relay = *this;
-    temp_relay.secret_recovery_message_hashes.resize(0);
+    temp_relay.hashes.secret_recovery_message_hashes.resize(0);
     temp_relay.tasks.resize(0);
-    temp_relay.obituary_hash = 0;
-    temp_relay.goodbye_message_hash = 0;
+    temp_relay.hashes.obituary_hash = 0;
+    temp_relay.hashes.goodbye_message_hash = 0;
+    MemoryObject object;
     return temp_relay.GetHash160();
 }
 
@@ -72,6 +74,12 @@ GoodbyeMessage Relay::GenerateGoodbyeMessage(Data data)
 Point Relay::GenerateRecipientPublicKey(Point point_corresponding_to_secret)
 {
     return public_key_set.GenerateReceivingPublicKey(point_corresponding_to_secret);
+}
+
+Point Relay::GenerateRecipientPublicKeyQuarter(Point point_corresponding_to_secret,
+                                               uint8_t key_quarter_position)
+{
+    return public_key_set.GenerateReceivingPublicKeyQuarter(point_corresponding_to_secret, key_quarter_position);
 }
 
 CBigNum Relay::GenerateRecipientPrivateKey(Point point_corresponding_to_secret, Data data)
@@ -112,10 +120,10 @@ std::vector<Point> Relay::PublicKeySixteenths()
 
 uint64_t Relay::SuccessorNumber(Data data)
 {
-    if (obituary_hash == 0)
+    if (hashes.obituary_hash == 0)
         return 0;
 
-    Obituary obituary = data.GetMessage(obituary_hash);
+    Obituary obituary = data.GetMessage(hashes.obituary_hash);
     return obituary.successor_number;
 }
 
@@ -124,7 +132,7 @@ std::vector<uint64_t> Relay::KeyQuarterSharers(RelayState *relay_state)
     std::vector<uint64_t> sharers;
 
     for (auto &relay : relay_state->relays)
-        if (VectorContainsEntry(relay.key_quarter_holders, number))
+        if (VectorContainsEntry(relay.holders.key_quarter_holders, number))
             sharers.push_back(relay.number);
 
     return sharers;
