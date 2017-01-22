@@ -21,6 +21,7 @@ public:
     CreditSystem *credit_system;
     Calendar *calendar;
     RelayState relay_state;
+    std::set<uint64_t> dead_relays;
     Scheduler scheduler;
 
     RelayMessageHandler(Data data):
@@ -36,6 +37,12 @@ public:
 
         scheduler.AddTask(ScheduledTask("obituary",
                                         &RelayMessageHandler::HandleObituaryAfterDuration, this));
+
+        scheduler.AddTask(ScheduledTask("secret_recovery_failure",
+                                        &RelayMessageHandler::HandleSecretRecoveryFailureMessageAfterDuration, this));
+
+        scheduler.AddTask(ScheduledTask("goodbye",
+                                        &RelayMessageHandler::HandleGoodbyeMessageAfterDuration, this));
     }
 
     void SetCreditSystem(CreditSystem *credit_system);
@@ -51,6 +58,7 @@ public:
         HANDLESTREAM(SecretRecoveryComplaint);
         HANDLESTREAM(SecretRecoveryFailureMessage);
         HANDLESTREAM(RecoveryFailureAuditMessage);
+        HANDLESTREAM(GoodbyeMessage);
     }
 
     void HandleMessage(uint160 message_hash)
@@ -62,6 +70,7 @@ public:
         HANDLEHASH(SecretRecoveryComplaint);
         HANDLEHASH(SecretRecoveryFailureMessage);
         HANDLEHASH(RecoveryFailureAuditMessage);
+        HANDLEHASH(GoodbyeMessage);
     }
 
     HANDLECLASS(RelayJoinMessage);
@@ -71,10 +80,13 @@ public:
     HANDLECLASS(SecretRecoveryComplaint);
     HANDLECLASS(SecretRecoveryFailureMessage);
     HANDLECLASS(RecoveryFailureAuditMessage);
+    HANDLECLASS(GoodbyeMessage);
 
     void HandleRelayJoinMessage(RelayJoinMessage relay_join_message);
 
     void HandleKeyDistributionMessage(KeyDistributionMessage key_distribution_message);
+
+    void HandleKeyDistributionMessageAfterDuration(uint160 key_distribution_message_hash);
 
     void HandleKeyDistributionComplaint(KeyDistributionComplaint complaint);
 
@@ -84,7 +96,15 @@ public:
 
     void HandleSecretRecoveryFailureMessage(SecretRecoveryFailureMessage failure_message);
 
+    void HandleSecretRecoveryFailureMessageAfterDuration(uint160 failure_message_hash);
+
     void HandleRecoveryFailureAuditMessage(RecoveryFailureAuditMessage audit_message);
+
+    void HandleGoodbyeMessage(GoodbyeMessage goodbye_message);
+
+    void HandleGoodbyeMessageAfterDuration(uint160 goodbye_message_hash);
+
+    void HandleObituaryAfterDuration(uint160 obituary_hash);
 
     bool MinedCreditMessageHashIsInMainChain(RelayJoinMessage relay_join_message);
 
@@ -95,10 +115,6 @@ public:
     bool MinedCreditMessageIsNewerOrMoreThanThreeBatchesOlderThanLatest(uint160 mined_credit_message_hash);
 
     bool ValidateKeyDistributionMessage(KeyDistributionMessage key_distribution_message);
-
-    void HandleKeyDistributionMessageAfterDuration(uint160 key_distribution_message_hash);
-
-    void HandleObituaryAfterDuration(uint160 obituary_hash);
 
     void StoreKeyDistributionSecretsAndSendComplaints(KeyDistributionMessage key_distribution_message);
 
@@ -124,7 +140,7 @@ public:
 
     SecretRecoveryMessage GenerateSecretRecoveryMessage(Relay *dead_relay, Relay *quarter_holder);
 
-    void ScheduleTaskToCheckWhichQuarterHoldersHaveResponded(uint160 obituary_hash);
+    void ScheduleTaskToCheckWhichQuarterHoldersHaveRespondedToObituary(uint160 obituary_hash);
 
     void HandleRelayDeath(Relay *dead_relay);
 
@@ -161,6 +177,16 @@ public:
                                                                      SecretRecoveryMessage recovery_message);
 
     void StoreRecoveryFailureAuditMessage(RecoveryFailureAuditMessage audit_message);
+
+    std::vector<uint64_t> RelaysNotRespondingToRecoveryFailureMessage(uint160 failure_message_hash);
+
+    void HandleNewlyDeadRelays();
+
+    void TryToExtractSecretsFromGoodbyeMessage(GoodbyeMessage goodbye_message);
+
+    bool ExtractSecretsFromGoodbyeMessage(GoodbyeMessage goodbye_message);
+
+    void SendGoodbyeComplaint(GoodbyeMessage goodbye_message);
 };
 
 

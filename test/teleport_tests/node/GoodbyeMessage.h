@@ -31,7 +31,8 @@ public:
         READWRITE(signature);
     );
 
-    JSON(dead_relay_number, successor_relay_number, key_quarter_sharers, key_quarter_positions, encrypted_key_sixteenths, signature);
+    JSON(dead_relay_number, successor_relay_number, key_quarter_sharers, key_quarter_positions,
+         encrypted_key_sixteenths, signature);
 
     DEPENDENCIES();
 
@@ -41,7 +42,14 @@ public:
 
     void PopulateEncryptedKeySixteenths(Data data);
 
-    void PopulateEncryptedKeySixteenth(Relay *sharer, Relay *successor, uint8_t position, Data data);
+    void PopulateFourEncryptedKeySixteenths(Relay *sharer, Relay *successor, uint8_t position, Data data);
+
+    Relay *GetSuccessor(Data data);
+
+    bool ExtractSecrets(Data data);
+
+    bool DecryptFourKeySixteenths(Relay *sharer, Relay *successor, uint8_t quarter_holder_position,
+                                  uint32_t key_sharer_position, Data data);
 };
 
 

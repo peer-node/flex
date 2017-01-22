@@ -3,10 +3,10 @@
 #include "RecoveryFailureAuditMessage.h"
 
 #include "log.h"
-
 #define LOG_CATEGORY "RelayMessageHandler.cpp"
 
 using std::vector;
+
 
 void RelayMessageHandler::SetCreditSystem(CreditSystem *credit_system_)
 {
@@ -172,13 +172,21 @@ void RelayMessageHandler::HandleKeyDistributionComplaint(KeyDistributionComplain
         return;
     }
     relay_state.ProcessKeyDistributionComplaint(complaint, data);
-    HandleRelayDeath(complaint.GetSecretSender(data));
+    HandleNewlyDeadRelays();
+}
+
+void RelayMessageHandler::HandleNewlyDeadRelays()
+{
+    for (auto &relay : relay_state.relays)
+        if (relay.hashes.obituary_hash != 0 and dead_relays.count(relay.number) == 0)
+            HandleRelayDeath(&relay);
 }
 
 void RelayMessageHandler::HandleRelayDeath(Relay *dead_relay)
 {
+    dead_relays.insert(dead_relay->number);
     SendSecretRecoveryMessages(dead_relay);
-    ScheduleTaskToCheckWhichQuarterHoldersHaveResponded(dead_relay->hashes.obituary_hash);
+    ScheduleTaskToCheckWhichQuarterHoldersHaveRespondedToObituary(dead_relay->hashes.obituary_hash);
 }
 
 bool RelayMessageHandler::ValidateKeyDistributionComplaint(KeyDistributionComplaint complaint)
@@ -186,7 +194,7 @@ bool RelayMessageHandler::ValidateKeyDistributionComplaint(KeyDistributionCompla
     return complaint.IsValid(data) and complaint.VerifySignature(data);
 }
 
-void RelayMessageHandler::ScheduleTaskToCheckWhichQuarterHoldersHaveResponded(uint160 obituary_hash)
+void RelayMessageHandler::ScheduleTaskToCheckWhichQuarterHoldersHaveRespondedToObituary(uint160 obituary_hash)
 {
     scheduler.Schedule("obituary", obituary_hash, GetTimeMicros() + RESPONSE_WAIT_TIME);
 }
@@ -249,6 +257,7 @@ void RelayMessageHandler::ProcessKeyQuarterHoldersWhoHaventRespondedToObituary(u
         data.StoreMessage(duration);
         relay_state.ProcessDurationWithoutResponseFromRelay(duration, data);
     }
+    HandleNewlyDeadRelays();
 }
 
 vector<uint64_t> RelayMessageHandler::GetKeyQuarterHoldersWhoHaventResponded(uint160 obituary_hash)
@@ -369,6 +378,7 @@ void RelayMessageHandler::HandleSecretRecoveryFailureMessage(SecretRecoveryFailu
 {
     StoreSecretRecoveryFailureMessage(failure_message);
     SendAuditMessagesInResponseToFailureMessage(failure_message);
+    scheduler.Schedule("secret_recovery_failure", failure_message.GetHash160(), GetTimeMicros() + RESPONSE_WAIT_TIME);
 }
 
 void RelayMessageHandler::SendAuditMessagesInResponseToFailureMessage(SecretRecoveryFailureMessage failure_message)
@@ -376,7 +386,9 @@ void RelayMessageHandler::SendAuditMessagesInResponseToFailureMessage(SecretReco
     for (auto recovery_message_hash : failure_message.recovery_message_hashes)
     {
         SecretRecoveryMessage recovery_message = data.GetMessage(recovery_message_hash);
-        SendAuditMessageFromQuarterHolderInResponseToFailureMessage(failure_message, recovery_message);
+        auto quarter_holder = relay_state.GetRelayByNumber(recovery_message.quarter_holder_number);
+        if (data.keydata[quarter_holder->public_signing_key].HasProperty("privkey"))
+            SendAuditMessageFromQuarterHolderInResponseToFailureMessage(failure_message, recovery_message);
     }
 }
 
@@ -432,4 +444,64 @@ void RelayMessageHandler::StoreRecoveryFailureAuditMessage(RecoveryFailureAuditM
     if (not VectorContainsEntry(audit_message_hashes, audit_message_hash))
         audit_message_hashes.push_back(audit_message_hash);
     data.msgdata[audit_message.failure_message_hash]["audit_messages"] = audit_message_hashes;
+}
+
+void RelayMessageHandler::HandleSecretRecoveryFailureMessageAfterDuration(uint160 failure_message_hash)
+{
+    auto non_responding_quarter_holders = RelaysNotRespondingToRecoveryFailureMessage(failure_message_hash);
+    for (auto quarter_holder_number : non_responding_quarter_holders)
+    {
+        DurationWithoutResponseFromRelay duration;
+        duration.relay_number = quarter_holder_number;
+        duration.message_hash = failure_message_hash;
+        relay_state.ProcessDurationWithoutResponseFromRelay(duration, data);
+    }
+    HandleNewlyDeadRelays();
+}
+
+vector<uint64_t> RelayMessageHandler::RelaysNotRespondingToRecoveryFailureMessage(uint160 failure_message_hash)
+{
+    SecretRecoveryFailureMessage failure_message = data.GetMessage(failure_message_hash);
+    auto dead_relay = failure_message.GetDeadRelay(data);
+    vector<uint64_t> remaining_quarter_holders = dead_relay->holders.key_quarter_holders;
+
+    vector<uint160> audit_message_hashes = data.msgdata[failure_message_hash]["audit_messages"];
+    for (auto audit_message_hash : audit_message_hashes)
+    {
+        RecoveryFailureAuditMessage audit_message = data.GetMessage(audit_message_hash);
+        EraseEntryFromVector(audit_message.quarter_holder_number, remaining_quarter_holders);
+    }
+    return remaining_quarter_holders;
+}
+
+void RelayMessageHandler::HandleGoodbyeMessage(GoodbyeMessage goodbye_message)
+{
+    auto successor = goodbye_message.GetSuccessor(data);
+    if (data.keydata[successor->public_signing_key].HasProperty("privkey"))
+        TryToExtractSecretsFromGoodbyeMessage(goodbye_message);
+    relay_state.ProcessGoodbyeMessage(goodbye_message);
+    scheduler.Schedule("goodbye", goodbye_message.GetHash160(), GetTimeMicros() + RESPONSE_WAIT_TIME);
+}
+
+void RelayMessageHandler::TryToExtractSecretsFromGoodbyeMessage(GoodbyeMessage goodbye_message)
+{
+    if (not (ExtractSecretsFromGoodbyeMessage(goodbye_message)))
+        SendGoodbyeComplaint(goodbye_message);
+}
+
+bool RelayMessageHandler::ExtractSecretsFromGoodbyeMessage(GoodbyeMessage goodbye_message)
+{
+    return goodbye_message.ExtractSecrets(data);
+}
+
+void RelayMessageHandler::SendGoodbyeComplaint(GoodbyeMessage goodbye_message)
+{
+
+}
+
+void RelayMessageHandler::HandleGoodbyeMessageAfterDuration(uint160 goodbye_message_hash)
+{
+    DurationWithoutResponse duration;
+    duration.message_hash = goodbye_message_hash;
+    relay_state.ProcessDurationWithoutResponse(duration, data);
 }

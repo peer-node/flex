@@ -18,6 +18,7 @@ public:
     MemoryDataStore msgdata, creditdata, keydata;
     CreditSystem *credit_system;
     RelayMessageHandler *relay_message_handler;
+    RelayState *relay_state;
     Calendar calendar;
     TestPeer peer;
     Data *data;
@@ -37,6 +38,8 @@ public:
 
         relay_message_handler->AddScheduledTasks();
         relay_message_handler->scheduler.running = false;
+
+        relay_state = &relay_message_handler->relay_state;
     }
 
     virtual void TearDown()
@@ -346,6 +349,11 @@ public:
         return 0;
     }
 
+    Relay *GetRelayWhoSharedAQuarterKeyWithChosenRelay()
+    {
+        return relay_state->GetRelayByNumber(NumberOfARelayWhoSharedAQuarterKeyWithChosenRelay());
+    }
+
     void AssignQuarterHoldersToRemainingRelays()
     {
         uint160 hash = 1;
@@ -353,7 +361,6 @@ public:
             if (existing_relay.holders.key_quarter_holders.size() == 0)
                 relay_message_handler->relay_state.AssignKeyPartHoldersToRelay(existing_relay, hash++);
     }
-
 
     virtual void TearDown()
     {
@@ -446,6 +453,8 @@ class ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage :
         public ARelayMessageHandlerWithAKeyDistributionMessage
 {
 public:
+    Relay *key_sharer;
+
     virtual void SetUp()
     {
         ARelayMessageHandlerWithAKeyDistributionMessage::SetUp();
@@ -469,12 +478,25 @@ public:
             creditdata = reference_creditdata;
             relay_message_handler->relay_state = reference_relay_state;
         }
-
+        key_sharer = GetRelayWhoSharedAQuarterKeyWithChosenRelay();
     }
 
     virtual void TearDown()
     {
         ARelayMessageHandlerWithAKeyDistributionMessage::TearDown();
+    }
+
+    void DeletePrivateKeySixteenthsSharedWithGivenRelay()
+    {
+        uint32_t quarter_holder_position = PositionOfGivenRelayAsAQuarterHolder();
+        for (uint32_t sixteenth_position = 4 * quarter_holder_position;
+             sixteenth_position < 4 + 4 * quarter_holder_position; sixteenth_position++)
+            keydata.Delete(key_sharer->PublicKeySixteenths()[sixteenth_position]);
+    }
+
+    uint32_t PositionOfGivenRelayAsAQuarterHolder()
+    {
+        return (uint32_t) PositionOfEntryInVector(relay->number, key_sharer->holders.key_quarter_holders);
     }
 };
 
@@ -501,6 +523,64 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage, RejectsAKey
 
     bool rejected = msgdata[complaint.GetHash160()]["rejected"];
     ASSERT_THAT(rejected, Eq(true));
+}
+
+TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage,
+       SchedulesACheckForGoodbyeComplaintsWhenProcessingAGoodByeMessage)
+{
+    GoodbyeMessage goodbye_message = relay->GenerateGoodbyeMessage(*data);
+    relay_message_handler->Handle(goodbye_message, &peer);
+    ASSERT_THAT(relay->hashes.goodbye_message_hash, Ne(0));
+
+    ASSERT_TRUE(relay_message_handler->scheduler.TaskIsScheduledForTime("goodbye",
+                                                                        relay->hashes.goodbye_message_hash,
+                                                                        TEST_START_TIME + RESPONSE_WAIT_TIME));
+}
+
+TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage,
+       RecoversKeyQuartersHeldByTheExitingRelayWhenProcessingAGoodbyeMessage)
+{
+    GoodbyeMessage goodbye_message = relay->GenerateGoodbyeMessage(*data);
+    DeletePrivateKeySixteenthsSharedWithGivenRelay();
+    relay_message_handler->Handle(goodbye_message, &peer);
+
+    uint32_t quarter_holder_position = PositionOfGivenRelayAsAQuarterHolder();
+
+    for (uint32_t sixteenth_position = 4 * quarter_holder_position;
+         sixteenth_position < 4 + 4 * quarter_holder_position; sixteenth_position++)
+    {
+        auto public_key_sixteenth = key_sharer->PublicKeySixteenths()[sixteenth_position];
+        ASSERT_TRUE(keydata[public_key_sixteenth].HasProperty("privkey"));
+    }
+}
+
+
+class ARelayMessageHandlerWhichHasProcessedAValidGoodbyeMessage :
+        public ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage
+{
+public:
+    virtual void SetUp()
+    {
+        ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage::SetUp();
+        GoodbyeMessage goodbye_message = relay->GenerateGoodbyeMessage(*data);
+        data->StoreMessage(goodbye_message);
+        relay_message_handler->Handle(goodbye_message, &peer);
+    }
+
+    virtual void TearDown()
+    {
+        ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage::TearDown();
+    }
+};
+
+TEST_F(ARelayMessageHandlerWhichHasProcessedAValidGoodbyeMessage,
+       GeneratesAnObituarySpecifyingThatTheRelaySaidGoodbyeIfNoComplaintsAreReceived)
+{
+    SetMockTimeMicros(GetTimeMicros() + RESPONSE_WAIT_TIME);
+    relay_message_handler->scheduler.DoTasksScheduledForExecutionBeforeNow();
+    ASSERT_THAT(relay->hashes.obituary_hash, Ne(0));
+    Obituary obituary = data->GetMessage(relay->hashes.obituary_hash);
+    ASSERT_THAT(obituary.reason_for_leaving, Eq(OBITUARY_SAID_GOODBYE));
 }
 
 
@@ -838,11 +918,20 @@ class ARelayMessageHandlerWhichHasProcessedFourSecretRecoveryMessagesOneOfWhichH
 {
 public:
     SecretRecoveryMessage bad_recovery_message;
+    bool suppress_key_quarter_holder_responses{false};
 
     virtual void SetUp()
     {
         ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaintAndThreeSecretRecoveryMessages::SetUp();
 
+        if (suppress_key_quarter_holder_responses)
+        {
+            for (auto quarter_holder_number : relay->holders.key_quarter_holders)
+            {
+                auto quarter_holder = relay_state->GetRelayByNumber(quarter_holder_number);
+                keydata.Delete(quarter_holder->public_signing_key);
+            }
+        }
         bad_recovery_message = GenerateRecoveryMessageWithBadSharedSecretQuarter();
         data->StoreMessage(bad_recovery_message);
 
@@ -976,8 +1065,71 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedASecretRecoveryFailureMessage,
     }
 }
 
+class ARelayMessageHandlerWhichHasProcessedASecretRecoveryFailureMessageAndNoAuditMessages :
+        public ARelayMessageHandlerWhichHasProcessedFourSecretRecoveryMessagesOneOfWhichHasABadSharedSecretQuarter
+{
+public:
+    uint160 failure_message_hash;
+    SecretRecoveryFailureMessage failure_message;
 
-class ARelayMessageHandlerWhichHasProcessedFourRecoveryFailureAuditMessages :
+    virtual void SetUp()
+    {
+        suppress_key_quarter_holder_responses = true;
+        ARelayMessageHandlerWhichHasProcessedFourSecretRecoveryMessagesOneOfWhichHasABadSharedSecretQuarter::SetUp();
+        vector<uint160> failure_message_hashes = msgdata[bad_recovery_message.obituary_hash]["failure_messages"];
+        failure_message_hash = failure_message_hashes[0];
+        failure_message = data->GetMessage(failure_message_hash);
+    }
+
+    Relay *GetKeySharer()
+    {
+        uint64_t key_sharer_number = NumberOfARelayWhoSharedAQuarterKeyWithChosenRelay();
+        return relay_message_handler->relay_state.GetRelayByNumber(key_sharer_number);
+    }
+
+    virtual void TearDown()
+    {
+        ARelayMessageHandlerWhichHasProcessedFourSecretRecoveryMessagesOneOfWhichHasABadSharedSecretQuarter::TearDown();
+    }
+};
+
+TEST_F(ARelayMessageHandlerWhichHasProcessedASecretRecoveryFailureMessageAndNoAuditMessages,
+       HasProcessedNoAuditMessages)
+{
+    vector<uint160> audit_message_hashes = msgdata[failure_message_hash]["audit_messages"];
+    ASSERT_THAT(audit_message_hashes.size(), Eq(0));
+}
+
+TEST_F(ARelayMessageHandlerWhichHasProcessedASecretRecoveryFailureMessageAndNoAuditMessages,
+       WritesObituariesForTheKeyQuarterHoldersWhoDontResponsInTime)
+{
+    SetMockTimeMicros(TEST_START_TIME + RESPONSE_WAIT_TIME);
+    relay_message_handler->scheduler.DoTasksScheduledForExecutionBeforeNow();
+
+    for (auto quarter_holder_number : relay->holders.key_quarter_holders)
+    {
+        auto quarter_holder = relay_state->GetRelayByNumber(quarter_holder_number);
+        ASSERT_THAT(quarter_holder->hashes.obituary_hash, Ne(0));
+    }
+}
+
+TEST_F(ARelayMessageHandlerWhichHasProcessedASecretRecoveryFailureMessageAndNoAuditMessages,
+       SchedulesATaskToCheckWhichQuarterHoldersHaveRespondedToTheObituaries)
+{
+    SetMockTimeMicros(TEST_START_TIME + RESPONSE_WAIT_TIME);
+    relay_message_handler->scheduler.DoTasksScheduledForExecutionBeforeNow();
+
+    for (auto quarter_holder_number : relay->holders.key_quarter_holders)
+    {
+        auto quarter_holder = relay_state->GetRelayByNumber(quarter_holder_number);
+        ASSERT_TRUE(relay_message_handler->scheduler.TaskIsScheduledForTime("obituary",
+                                                                            quarter_holder->hashes.obituary_hash,
+                                                                            TEST_START_TIME + 2 * RESPONSE_WAIT_TIME));
+    }
+}
+
+
+class ARelayMessageHandlerWhichHasProcessedFourValidRecoveryFailureAuditMessages :
         public ARelayMessageHandlerWhichHasProcessedASecretRecoveryFailureMessage
 {
     virtual void SetUp()
@@ -991,7 +1143,7 @@ class ARelayMessageHandlerWhichHasProcessedFourRecoveryFailureAuditMessages :
     }
 };
 
-TEST_F(ARelayMessageHandlerWhichHasProcessedFourRecoveryFailureAuditMessages,
+TEST_F(ARelayMessageHandlerWhichHasProcessedFourValidRecoveryFailureAuditMessages,
        GeneratesAnObituaryForTheQuarterHolderWhoSentABadSecretRecoveryMessage)
 {
     vector<uint160> audit_message_hashes = msgdata[failure_message_hash]["audit_messages"];
@@ -1044,3 +1196,4 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedABadSecretRecoveryFailureMessage,
     auto successor = relay_message_handler->relay_state.GetRelayByNumber(relay->SuccessorNumber(*data));
     ASSERT_THAT(successor->hashes.obituary_hash, Ne(0));
 }
+

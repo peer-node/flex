@@ -463,9 +463,23 @@ void RelayState::ProcessDurationWithoutResponseFromRelay(DurationWithoutResponse
         Obituary obituary = data.msgdata[duration.message_hash][message_type];
         ProcessDurationWithoutRelayResponseAfterObituary(obituary, duration.relay_number, data);
     }
+
+    else if (message_type == "secret_recovery_failure")
+    {
+        SecretRecoveryFailureMessage failure_message = data.msgdata[duration.message_hash][message_type];
+        ProcessDurationWithoutRelayResponseAfterSecretRecoveryFailureMessage(failure_message,
+                                                                             duration.relay_number, data);
+    }
 }
 
 void RelayState::ProcessDurationWithoutRelayResponseAfterObituary(Obituary obituary, uint64_t relay_number, Data data)
+{
+    Relay *key_quarter_holder = GetRelayByNumber(relay_number);
+    RecordRelayDeath(key_quarter_holder, data, OBITUARY_NOT_RESPONDING);
+}
+
+void RelayState::ProcessDurationWithoutRelayResponseAfterSecretRecoveryFailureMessage(
+        SecretRecoveryFailureMessage failure_message, uint64_t relay_number, Data data)
 {
     Relay *key_quarter_holder = GetRelayByNumber(relay_number);
     RecordRelayDeath(key_quarter_holder, data, OBITUARY_NOT_RESPONDING);

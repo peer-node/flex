@@ -4,25 +4,29 @@
 #include "log.h"
 #define LOG_CATEGORY "RelayDataStore.cpp"
 
+
 void RelayMemoryCache::StoreRelay(Relay &relay, uint160 &relay_hash)
 {
     Relay *stored_relay = new Relay();
     *stored_relay = relay;
     relays[relay_hash] = stored_relay;
     if (relay_hash_positions.count(relay_hash) == 0)
+        AddRelayHash(relay_hash);
+}
+
+void RelayMemoryCache::AddRelayHash(uint160 &relay_hash)
+{
+    if (vacant_hash_positions.size() == 0)
     {
-        if (vacant_hash_positions.size() == 0)
-        {
-            relay_hash_positions[relay_hash] = (uint32_t) relay_hashes.size();
-            relay_hashes.push_back(relay_hash);
-        }
-        else
-        {
-            uint32_t position = vacant_hash_positions[0];
-            relay_hashes[position] = relay_hash;
-            relay_hash_positions[relay_hash] = position;
-            EraseEntryFromVector(position, vacant_hash_positions);
-        }
+        relay_hash_positions[relay_hash] = (uint32_t) relay_hashes.size();
+        relay_hashes.push_back(relay_hash);
+    }
+    else
+    {
+        uint32_t position = vacant_hash_positions[0];
+        relay_hashes[position] = relay_hash;
+        relay_hash_positions[relay_hash] = position;
+        EraseEntryFromVector(position, vacant_hash_positions);
     }
 }
 
@@ -41,6 +45,7 @@ void RelayMemoryCache::Store(RelayState &state)
 {
     uint160 relay_state_hash = state.GetHash160();
 
+    LOCK(mutex);
     if (relay_lists.count(relay_state_hash)) return;
 
     std::vector<uint32_t> relay_list;
@@ -104,6 +109,7 @@ RelayState RelayMemoryCache::RetrieveRelayState(uint160 &relay_state_hash)
     auto &relay_list = relay_lists[relay_state_hash];
     RelayState state;
 
+    LOCK(mutex);
     for (auto &relay_hash_position : relay_list)
     {
         uint160 &relay_hash = relay_hashes[relay_hash_position];

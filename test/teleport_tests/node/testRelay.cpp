@@ -142,7 +142,6 @@ public:
         }
         else
         {
-            log_ << "used quick setup\n";
             relay_state = persistent_relay_state;
             keydata = persistent_keydata;
             msgdata = persistent_msgdata;

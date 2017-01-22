@@ -140,6 +140,9 @@ public:
     bool MinedCreditMessageHashIsAlreadyBeingUsed(uint160 mined_credit_message_hash);
 
     void ProcessRecoveryFailureAuditMessage(RecoveryFailureAuditMessage audit_message, Data data);
+
+    void ProcessDurationWithoutRelayResponseAfterSecretRecoveryFailureMessage(SecretRecoveryFailureMessage failure_message,
+                                                                              uint64_t relay_number, Data data);
 };
 
 class RelayStateException : public std::runtime_error

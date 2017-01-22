@@ -6,6 +6,7 @@
 #include <src/crypto/point.h>
 #include <src/crypto/signature.h>
 #include "Data.h"
+#include "Relay.h"
 
 
 class SecretRecoveryFailureMessage
@@ -47,6 +48,8 @@ public:
     void Populate(std::vector<uint160> recovery_message_hashes, Data data);
 
     void PopulateDetailsOfFailedSharedSecret(Data data);
+
+    Relay *GetDeadRelay(Data data);
 };
 
 

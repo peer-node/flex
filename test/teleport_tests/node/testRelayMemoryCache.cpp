@@ -83,7 +83,7 @@ TEST_F(ARelayMemoryCache, StoresNoMoreThanTheMaximumNumberOfRelayStates)
     ASSERT_THAT(cache.relay_lists.size(), Eq(100));
 }
 
-TEST_F(ARelayMemoryCache, StoresNoMoreThanTheMinimumNumberOfRelaysWhenStoringRelayStates)
+TEST_F(ARelayMemoryCache, StoresNoMoreThanTheMinimumNumberOfRelaysNecessaryWhenStoringRelayStates)
 {
     cache.maximum_number_of_relay_states = 100;
 
@@ -98,23 +98,6 @@ TEST_F(ARelayMemoryCache, StoresNoMoreThanTheMinimumNumberOfRelaysWhenStoringRel
         cache.Store(state);
     }
     // the 51 relays from 0 to 50 should be forgotten
-    ASSERT_THAT(cache.relays.size(), Eq(149));
-}
-
-TEST_F(ARelayMemoryCache, StoresDataCorrectlyWhenWrittenToByMultipleThreads)
-{
-    cache.maximum_number_of_relay_states = 100;
-
-    RelayState state;
-    for (uint64_t i = 0; i < 200; i++)
-    {
-        Relay relay;
-        relay.number = i;
-        state.relays.push_back(relay);
-        if (i >= 50)
-            EraseEntryFromVector(state.relays[0], state.relays);
-        cache.Store(state);
-    }
     ASSERT_THAT(cache.relays.size(), Eq(149));
 }
 

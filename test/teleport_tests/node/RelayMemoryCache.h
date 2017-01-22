@@ -21,6 +21,8 @@ public:
     std::deque<uint160> relay_state_hashes;
     uint32_t maximum_number_of_relay_states{MAX_RELAY_STATES};
 
+    Mutex mutex;
+
     ~RelayMemoryCache()
     {
         for (auto hash_and_relay : relays)
@@ -49,6 +51,8 @@ public:
     void DecrementRelayHashCounts(uint160 &relay_state_hash);
 
     void RemoveRelay(uint160 &relay_hash, uint32_t &relay_position);
+
+    void AddRelayHash(uint160 &relay_hash);
 };
 
 

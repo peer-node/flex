@@ -36,3 +36,9 @@ void SecretRecoveryFailureMessage::PopulateDetailsOfFailedSharedSecret(Data data
     auto array_of_shared_secrets = SecretRecoveryMessage::GetSharedSecrets(recovery_message_hashes, data);
     sum_of_decrypted_shared_secret_quarters = array_of_shared_secrets[failure_sharer_position][failure_key_part_position];
 }
+
+Relay *SecretRecoveryFailureMessage::GetDeadRelay(Data data)
+{
+    Obituary obituary = data.GetMessage(obituary_hash);
+    return data.relay_state->GetRelayByNumber(obituary.relay.number);
+}
