@@ -266,7 +266,7 @@ std::vector<uint64_t> RelayState::RelayNumbersOfRelaysWhoseKeyQuartersAreHeldByG
 Obituary RelayState::GenerateObituary(Relay *relay, uint32_t reason_for_leaving)
 {
     Obituary obituary;
-    obituary.relay = *relay;
+    obituary.dead_relay_number = relay->number;
     obituary.reason_for_leaving = reason_for_leaving;
     obituary.relay_state_hash = GetHash160();
     obituary.in_good_standing =
@@ -278,12 +278,12 @@ Obituary RelayState::GenerateObituary(Relay *relay, uint32_t reason_for_leaving)
 bool RelayState::RelayIsOldEnoughToLeaveInGoodStanding(Relay *relay)
 {
     uint64_t latest_relay_number = relays.back().number;
-    return latest_relay_number > relay->number + 1000;
+    return latest_relay_number > relay->number + 1440;
 }
 
 void RelayState::ProcessObituary(Obituary obituary)
 {
-    Relay *relay = GetRelayByNumber(obituary.relay.number);
+    Relay *relay = GetRelayByNumber(obituary.dead_relay_number);
     if (relay == NULL) throw RelayStateException("no such relay");
     relay->hashes.obituary_hash = obituary.GetHash160();
 
@@ -308,34 +308,19 @@ void RelayState::ProcessRelayExit(RelayExit relay_exit, Data data)
     Obituary obituary = data.msgdata[relay_exit.obituary_hash]["obituary"];
     if (not data.msgdata[relay_exit.obituary_hash].HasProperty("obituary"))
         throw RelayStateException("no record of obituary specified in relay exit");
-    if (GetRelayByNumber(obituary.relay.number) == NULL)
+    if (GetRelayByNumber(obituary.dead_relay_number) == NULL)
         throw RelayStateException("no relay with specified number to remove");
-    TransferTasks(obituary.relay.number, obituary.successor_number);
-    RemoveRelay(obituary.relay.number, obituary.successor_number);
+    TransferTasksToSuccessor(obituary.dead_relay_number, obituary.successor_number);
+    RemoveRelay(obituary.dead_relay_number, obituary.successor_number);
 }
 
-void RelayState::TransferTasks(uint64_t dead_relay_number, uint64_t successor_number)
+void RelayState::TransferTasksToSuccessor(uint64_t dead_relay_number, uint64_t successor_number)
 {
     Relay *successor = GetRelayByNumber(successor_number);
     Relay *dead_relay = GetRelayByNumber(dead_relay_number);
     if (dead_relay == NULL or successor == NULL) throw RelayStateException("no such relay");
 
     successor->tasks = ConcatenateVectors(successor->tasks, dead_relay->tasks);
-}
-
-void RelayState::TransferTasksBackFromSuccessorToRelay(Obituary obituary)
-{
-    Relay *successor = GetRelayByNumber(obituary.successor_number);
-    Relay *dead_relay = GetRelayByNumber(obituary.relay.number);
-    if (dead_relay == NULL or successor == NULL) throw RelayStateException("no such relay");
-
-    for (auto task_hash : obituary.relay.tasks)
-    {
-        if (VectorContainsEntry(successor->tasks, task_hash))
-            EraseEntryFromVector(task_hash, successor->tasks);
-        if (not VectorContainsEntry(dead_relay->tasks, task_hash))
-            dead_relay->tasks.push_back(task_hash);
-    }
 }
 
 void RelayState::RemoveRelay(uint64_t exiting_relay_number, uint64_t successor_relay_number)
@@ -348,17 +333,6 @@ void RelayState::RemoveRelay(uint64_t exiting_relay_number, uint64_t successor_r
             if (relays[i].holders.key_quarter_holders[j] == exiting_relay_number)
                 relays[i].holders.key_quarter_holders[j] = successor_relay_number;
     }
-    maps_are_up_to_date = false;
-}
-
-void RelayState::ReaddRelay(Obituary obituary, uint64_t successor_relay_number)
-{
-    for (uint32_t i = 0; i < relays.size(); i++)
-        if (relays[i].number > obituary.relay.number)
-        {
-            relays.insert(relays.begin() + i, obituary.relay);
-            break;
-        }
     maps_are_up_to_date = false;
 }
 

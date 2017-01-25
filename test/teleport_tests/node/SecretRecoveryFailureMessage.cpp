@@ -40,5 +40,25 @@ void SecretRecoveryFailureMessage::PopulateDetailsOfFailedSharedSecret(Data data
 Relay *SecretRecoveryFailureMessage::GetDeadRelay(Data data)
 {
     Obituary obituary = data.GetMessage(obituary_hash);
-    return data.relay_state->GetRelayByNumber(obituary.relay.number);
+    return data.relay_state->GetRelayByNumber(obituary.dead_relay_number);
+}
+
+bool SecretRecoveryFailureMessage::ValidateSizes()
+{
+    return recovery_message_hashes.size() == 4;
+}
+
+bool SecretRecoveryFailureMessage::IsValid(Data data)
+{
+    if (not ValidateSizes())
+        return false;
+
+    SecretRecoveryMessage recovery_message = data.GetMessage(recovery_message_hashes[0]);
+    if (key_sharer_position >= recovery_message.key_quarter_sharers.size())
+        return false;
+
+    if (shared_secret_quarter_position >= 4)
+        return false;;
+
+    return true;
 }

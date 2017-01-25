@@ -269,7 +269,7 @@ bool RelayHasAnObituaryWithSpecificReasonForLeaving(Relay *relay, Data data, uin
     if (message_type != "obituary")
         return false;
     Obituary obituary = data.msgdata[relay->hashes.obituary_hash]["obituary"];
-    return obituary.relay == *relay and obituary.reason_for_leaving == reason;
+    return obituary.dead_relay_number == relay->number and obituary.reason_for_leaving == reason;
 }
 
 TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,

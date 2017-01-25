@@ -12,8 +12,8 @@ class SecretRecoveryComplaint
 {
 public:
     uint160 secret_recovery_message_hash{0};
-    uint32_t position_of_key_sharer;
-    uint32_t position_of_bad_encrypted_secret;
+    uint32_t position_of_key_sharer{0};
+    uint32_t position_of_bad_encrypted_secret{0};
     CBigNum private_receiving_key{0};
     Signature signature;
 
@@ -45,6 +45,8 @@ public:
     Relay *GetSecretSender(Data data);
 
     SecretRecoveryMessage GetSecretRecoveryMessage(Data data);
+
+    bool IsValid(Data data);
 };
 
 

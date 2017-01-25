@@ -89,6 +89,11 @@ public:
             encrypted_private_key_sixteenths.push_back(encrypted_private_key_sixteenth);
         }
     }
+
+    bool ValidateSizes()
+    {
+        return public_key_set.ValidateSizes() and encrypted_private_key_sixteenths.size() == 16;
+    }
 };
 
 

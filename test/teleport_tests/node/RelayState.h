@@ -131,7 +131,7 @@ public:
 
     void ProcessDurationAfterSecretRecoveryComplaint(SecretRecoveryComplaint complaint, Data data);
 
-    void TransferTasks(uint64_t dead_relay_number, uint64_t successor_number);
+    void TransferTasksToSuccessor(uint64_t dead_relay_number, uint64_t successor_number);
 
     void ReaddRelay(Obituary obituary, uint64_t successor_relay_number);
 

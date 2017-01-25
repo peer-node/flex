@@ -87,7 +87,12 @@ KeyDistributionComplaint::KeyDistributionComplaint(uint160 key_distribution_mess
 
 bool KeyDistributionComplaint::IsValid(Data data)
 {
-    return not (EncryptedSecretIsOk(data) and GeneratedRowOfPointsIsOk(data));
+    return ReferencedSecretExists(data) and not (EncryptedSecretIsOk(data) and GeneratedRowOfPointsIsOk(data));
+}
+
+bool KeyDistributionComplaint::ReferencedSecretExists(Data data)
+{
+    return position_of_secret < 16 and set_of_secrets <= KEY_DISTRIBUTION_COMPLAINT_SECOND_KEY_SIXTEENTHS;
 }
 
 bool KeyDistributionComplaint::EncryptedSecretIsOk(Data data)

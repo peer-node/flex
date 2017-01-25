@@ -68,6 +68,7 @@ GoodbyeMessage Relay::GenerateGoodbyeMessage(Data data)
     goodbye_message.dead_relay_number = number;
     goodbye_message.successor_relay_number = data.relay_state->AssignSuccessorToRelay(this);
     goodbye_message.PopulateEncryptedKeySixteenths(data);
+    goodbye_message.Sign(data);
     return goodbye_message;
 }
 

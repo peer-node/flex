@@ -71,6 +71,8 @@ public:
     Relay *GetDeadRelay(Data data);
 
     Relay *GetKeySharer(Data data);
+
+    bool IsValid(Data data);
 };
 
 

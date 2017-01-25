@@ -155,3 +155,13 @@ Point RecoveryFailureAuditMessage::GetSharedSecretQuarter(Data data)
 
     return private_receiving_key_quarter * public_key_sixteenth;
 }
+
+bool RecoveryFailureAuditMessage::IsValid(Data data)
+{
+    auto dead_relay = GetDeadRelay(data);
+
+    if (dead_relay == NULL or not VectorContainsEntry(dead_relay->holders.key_quarter_holders, quarter_holder_number))
+        return false;;
+
+    return true;
+}

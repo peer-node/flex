@@ -8,6 +8,7 @@
 #include "RelayJoinMessage.h"
 #include "Data.h"
 #include "Relay.h"
+#include "Obituary.h"
 
 
 class SecretRecoveryMessage
@@ -90,6 +91,18 @@ public:
     static bool RecoverSecretsFromSecretRecoveryMessages(std::vector<uint160> recovery_message_hashes,
                                                          uint32_t &failure_sharer_position,
                                                          uint32_t &failure_key_part_position, Data data);
+
+    bool ValidateSizes();
+
+    bool IsValid(Data data);
+
+    bool DeadRelayAndSuccessorNumberMatchObituary(Obituary &obituary, Data data);
+
+    bool ReferencedQuarterHoldersAreValid(Relay *dead_relay, Data data);
+
+    bool KeyQuarterPositionsAreAllLessThanFour();
+
+    bool AllTheDeadRelaysKeySharersAreIncluded(Relay *dead_relay, Data data);
 };
 
 std::string PadWithZero(std::string in);

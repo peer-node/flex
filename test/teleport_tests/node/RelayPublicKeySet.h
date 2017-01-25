@@ -51,6 +51,8 @@ public:
                                                MemoryDataStore &keydata);
 
     Point GenerateReceivingPublicKeyQuarter(Point point_corresponding_to_secret, uint8_t key_quarter_position);
+
+    bool ValidateSizes();
 };
 
 

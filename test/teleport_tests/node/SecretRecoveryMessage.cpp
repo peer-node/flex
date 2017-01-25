@@ -283,3 +283,71 @@ vector<CBigNum> SecretRecoveryMessage::GetEncryptedKeySixteenthsSentFromSharerTo
         encrypted_key_sixteenths.push_back(encrypted_secrets[key_sixteenth_position]);
     return encrypted_key_sixteenths;
 }
+
+bool SecretRecoveryMessage::ValidateSizes()
+{
+    uint64_t number_of_key_sharers = key_quarter_sharers.size();
+
+    if (key_quarter_positions.size() != number_of_key_sharers or
+            quartets_of_encrypted_shared_secret_quarters.size() != number_of_key_sharers or
+            quartets_of_points_corresponding_to_shared_secret_quarters.size() != number_of_key_sharers)
+        return false;
+    for (auto &quartet : quartets_of_encrypted_shared_secret_quarters)
+        if (quartet.size() != 4)
+            return false;
+    for (auto &quartet : quartets_of_points_corresponding_to_shared_secret_quarters)
+        if (quartet.size() != 4)
+            return false;
+
+    return true;
+}
+
+bool SecretRecoveryMessage::IsValid(Data data)
+{
+    if (not ValidateSizes())
+        return false;
+
+    Obituary obituary = data.GetMessage(obituary_hash);
+    auto dead_relay = data.relay_state->GetRelayByNumber(obituary.dead_relay_number);
+
+    return DeadRelayAndSuccessorNumberMatchObituary(obituary, data) and
+           ReferencedQuarterHoldersAreValid(dead_relay, data) and
+           AllTheDeadRelaysKeySharersAreIncluded(dead_relay, data) and
+           KeyQuarterPositionsAreAllLessThanFour();
+}
+
+bool SecretRecoveryMessage::DeadRelayAndSuccessorNumberMatchObituary(Obituary &obituary, Data data)
+{
+    return obituary.dead_relay_number == dead_relay_number and obituary.successor_number == successor_number;
+}
+
+bool SecretRecoveryMessage::KeyQuarterPositionsAreAllLessThanFour()
+{
+    for (auto &position : key_quarter_positions)
+        if (position >= 4)
+            return false;
+    return true;
+}
+
+bool SecretRecoveryMessage::AllTheDeadRelaysKeySharersAreIncluded(Relay *dead_relay, Data data)
+{
+    uint32_t number_of_sharers = 0;
+    for (auto &relay : data.relay_state->relays)
+        if (VectorContainsEntry(relay.holders.key_quarter_holders, dead_relay->number))
+            number_of_sharers++;
+    return number_of_sharers == key_quarter_sharers.size();
+}
+
+bool SecretRecoveryMessage::ReferencedQuarterHoldersAreValid(Relay *dead_relay, Data data)
+{
+    if (not VectorContainsEntry(dead_relay->holders.key_quarter_holders, quarter_holder_number))
+        return false;
+
+    for (auto &sharer_number : key_quarter_sharers)
+    {
+        auto sharer = data.relay_state->GetRelayByNumber(sharer_number);
+        if (sharer == NULL or not VectorContainsEntry(sharer->holders.key_quarter_holders, dead_relay->number))
+            return false;
+    }
+    return true;
+}

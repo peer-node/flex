@@ -48,8 +48,17 @@ public:
 
     bool ExtractSecrets(Data data);
 
-    bool DecryptFourKeySixteenths(Relay *sharer, Relay *successor, uint8_t quarter_holder_position,
-                                  uint32_t key_sharer_position, Data data);
+    bool
+    DecryptFourKeySixteenths(Relay *sharer, Relay *successor, uint8_t quarter_holder_position,
+                             uint32_t key_sharer_position, uint32_t &encrypted_key_sixteenth_position, Data data);
+
+    bool ExtractSecrets(Data data, uint32_t &key_sharer_position, uint32_t &encrypted_key_sixteenth_position);
+
+    bool ValidateSizes();
+
+    bool IsValid(Data data);
+
+    bool CheckKeyQuarterSharersAndPositions(Data data);
 };
 
 

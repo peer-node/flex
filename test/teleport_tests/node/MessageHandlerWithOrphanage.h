@@ -161,6 +161,16 @@ public:
     }
 
     template<typename T>
+    bool HasRejectedDependencies(T message)
+    {
+        auto dependencies = message.Dependencies();
+        for (auto &dependency : dependencies)
+            if (msgdata[dependency]["rejected"])
+                return true;
+        return false;
+    }
+
+    template<typename T>
     void SendMessageToPeer(T message, CNode* peer)
     {
         msgdata[message.GetHash160()][message.Type()] = message;
@@ -201,6 +211,11 @@ public:
         ClassName object = Get ## ClassName ## FromStream(ss);                      \
         RegisterIncomingMessage(object, peer);                                      \
         uint160 hash = object.GetHash160();                                         \
+        if (HasRejectedDependencies(object))                                        \
+        {                                                                           \
+            msgdata[hash]["rejected"] = true;                                       \
+            return;                                                                 \
+        }                                                                           \
         if (not IsOrphan(hash))                                                     \
             Handle(object, peer);                                                   \
         else                                                                        \

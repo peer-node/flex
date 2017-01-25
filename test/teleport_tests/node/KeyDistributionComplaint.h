@@ -14,6 +14,12 @@
 class KeyDistributionComplaint
 {
 public:
+    uint160 key_distribution_message_hash{0};
+    uint64_t set_of_secrets{0};
+    uint64_t position_of_secret{0};
+    CBigNum recipient_private_key{0};
+    Signature signature;
+
     KeyDistributionComplaint() { }
 
     KeyDistributionComplaint(KeyDistributionMessage key_distribution_message,
@@ -25,12 +31,6 @@ public:
                              uint64_t set_of_secrets,
                              uint64_t position_of_secret,
                              Data data);
-
-    uint160 key_distribution_message_hash{0};
-    uint64_t set_of_secrets{0};
-    uint64_t position_of_secret{0};
-    CBigNum recipient_private_key{0};
-    Signature signature;
 
     static std::string Type() { return "key_distribution_complaint"; }
 
@@ -68,6 +68,8 @@ public:
     bool GeneratedRowOfPointsIsOk(Data data);
 
     CBigNum RecoverSecret(Data data);
+
+    bool ReferencedSecretExists(Data data);
 };
 
 

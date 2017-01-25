@@ -142,3 +142,22 @@ bool KeyDistributionMessage::AuditKeySixteenthEncryptedInRelayJoinMessage(RelayJ
     CBigNum shared_secret = Hash(private_key_sixteenth * public_key);
     return private_key_sixteenth == (shared_secret ^ join_message.encrypted_private_key_sixteenths[position]);
 }
+
+bool KeyDistributionMessage::ValidateSizes()
+{
+    if (key_sixteenths_encrypted_for_key_quarter_holders.size() != 16)
+        return false;
+    if (key_sixteenths_encrypted_for_first_set_of_key_sixteenth_holders.size() != 16)
+        return false;
+    if (key_sixteenths_encrypted_for_second_set_of_key_sixteenth_holders.size() != 16)
+        return false;;
+    return true;
+}
+
+bool KeyDistributionMessage::VerifyRelayNumber(Data data)
+{
+    auto relay = data.relay_state->GetRelayByNumber(relay_number);
+    if (relay == NULL)
+        return false;
+    return relay->hashes.join_message_hash == relay_join_hash;
+}

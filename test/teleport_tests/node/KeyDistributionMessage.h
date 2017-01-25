@@ -24,8 +24,6 @@ public:
 
     static std::string Type() { return "key_distribution"; }
 
-    //KeyDistributionMessage() { }
-
     IMPLEMENT_SERIALIZE
     (
         READWRITE(relay_join_hash);
@@ -77,6 +75,10 @@ public:
 
     bool AuditKeySixteenthEncryptedInRelayJoinMessage(RelayJoinMessage &join_message, uint64_t position,
                                                       MemoryDataStore &keydata);
+
+    bool ValidateSizes();
+
+    bool VerifyRelayNumber(Data data);
 };
 
 

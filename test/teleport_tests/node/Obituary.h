@@ -11,7 +11,7 @@
 class Obituary
 {
 public:
-    Relay relay;
+    uint64_t dead_relay_number;
     uint160 relay_state_hash;
     std::vector<std::pair<uint64_t, uint8_t> > key_quarters_held;
     uint64_t successor_number;
@@ -22,7 +22,7 @@ public:
 
     IMPLEMENT_SERIALIZE
     (
-        READWRITE(relay);
+        READWRITE(dead_relay_number);
         READWRITE(relay_state_hash);
         READWRITE(key_quarters_held);
         READWRITE(successor_number);
@@ -30,7 +30,8 @@ public:
         READWRITE(in_good_standing);
     );
 
-    JSON(relay, relay_state_hash, key_quarters_held, successor_number, reason_for_leaving, in_good_standing);
+    JSON(dead_relay_number, relay_state_hash, key_quarters_held, successor_number,
+         reason_for_leaving, in_good_standing);
 
     DEPENDENCIES();
 

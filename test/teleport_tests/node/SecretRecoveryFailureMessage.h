@@ -50,6 +50,10 @@ public:
     void PopulateDetailsOfFailedSharedSecret(Data data);
 
     Relay *GetDeadRelay(Data data);
+
+    bool ValidateSizes();
+
+    bool IsValid(Data data);
 };
 
 

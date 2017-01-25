@@ -22,7 +22,8 @@ public:
 
     TestMessageWithDependencies() { test_message_number = (number_of_test_messages++); }
 
-    IMPLEMENT_SERIALIZE(
+    IMPLEMENT_SERIALIZE
+    (
         READWRITE(test_message_number);
         READWRITE(dependencies);
     )
@@ -216,6 +217,16 @@ TEST_F(ATestMessageHandler, HandlesAnIncomingMessageAfterMissingDependenciesHave
     message_handler->HandleMessage(TestDataStream(message1), peer);
     handled = msgdata[message2_hash]["handled_by_test_message_handler"];
     ASSERT_THAT(handled, Eq(true));
+}
+
+TEST_F(ATestMessageHandler, DoesntHandleAnIncomingMessageDataStreamWithADependencyWhichHasBeenRejected)
+{
+    message_handler->HandleMessage(TestDataStream(message2), peer);
+    msgdata[message1_hash]["rejected"] = true;
+    message_handler->HandleMessage(TestDataStream(message1), peer);
+
+    bool handled = msgdata[message2_hash]["handled_by_test_message_handler"];
+    ASSERT_THAT(handled, Eq(false));
 }
 
 TEST_F(ATestMessageHandler, FetchesMissingDependenciesFromThePeer)

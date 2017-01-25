@@ -168,3 +168,13 @@ void RelayPublicKeySet::Retrieve(uint160 data_hash, MemoryObject &object)
 {
     *this = object[data_hash];
 }
+
+bool RelayPublicKeySet::ValidateSizes()
+{
+    if (key_points.size() != 16)
+        return false;
+    for (auto &row : key_points)
+        if (row.size() != 4)
+            return false;
+    return true;
+}

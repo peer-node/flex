@@ -41,3 +41,13 @@ void SecretRecoveryComplaint::Populate(SecretRecoveryMessage recovery_message, u
     auto corresponding_point = points[key_sharer_position][key_part_position];
     private_receiving_key = complainer->GenerateRecipientPrivateKey(corresponding_point, data);
 }
+
+bool SecretRecoveryComplaint::IsValid(Data data)
+{
+    auto recovery_message = GetSecretRecoveryMessage(data);
+    if (position_of_key_sharer >= recovery_message.key_quarter_sharers.size())
+        return false;
+    if (position_of_bad_encrypted_secret >= 4)
+        return false;;
+    return true;
+}

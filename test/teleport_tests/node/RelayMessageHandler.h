@@ -23,6 +23,7 @@ public:
     RelayState relay_state;
     std::set<uint64_t> dead_relays;
     Scheduler scheduler;
+    bool send_audit_messages{true};
 
     RelayMessageHandler(Data data):
             MessageHandlerWithOrphanage(data.msgdata), data(data.msgdata, data.creditdata, data.keydata, &relay_state)
@@ -59,6 +60,7 @@ public:
         HANDLESTREAM(SecretRecoveryFailureMessage);
         HANDLESTREAM(RecoveryFailureAuditMessage);
         HANDLESTREAM(GoodbyeMessage);
+        HANDLESTREAM(GoodbyeComplaint);
     }
 
     void HandleMessage(uint160 message_hash)
@@ -71,6 +73,7 @@ public:
         HANDLEHASH(SecretRecoveryFailureMessage);
         HANDLEHASH(RecoveryFailureAuditMessage);
         HANDLEHASH(GoodbyeMessage);
+        HANDLEHASH(GoodbyeComplaint);
     }
 
     HANDLECLASS(RelayJoinMessage);
@@ -81,6 +84,7 @@ public:
     HANDLECLASS(SecretRecoveryFailureMessage);
     HANDLECLASS(RecoveryFailureAuditMessage);
     HANDLECLASS(GoodbyeMessage);
+    HANDLECLASS(GoodbyeComplaint);
 
     void HandleRelayJoinMessage(RelayJoinMessage relay_join_message);
 
@@ -103,6 +107,8 @@ public:
     void HandleGoodbyeMessage(GoodbyeMessage goodbye_message);
 
     void HandleGoodbyeMessageAfterDuration(uint160 goodbye_message_hash);
+
+    void HandleGoodbyeComplaint(GoodbyeComplaint complaint);
 
     void HandleObituaryAfterDuration(uint160 obituary_hash);
 
@@ -144,7 +150,7 @@ public:
 
     void HandleRelayDeath(Relay *dead_relay);
 
-    std::vector<uint64_t> GetKeyQuarterHoldersWhoHaventResponded(uint160 obituary_hash);
+    std::vector<uint64_t> GetKeyQuarterHoldersWhoHaventRespondedToObituary(uint160 obituary_hash);
 
     void ProcessKeyQuarterHoldersWhoHaventRespondedToObituary(uint160 obituary_hash);
 
@@ -187,6 +193,20 @@ public:
     bool ExtractSecretsFromGoodbyeMessage(GoodbyeMessage goodbye_message);
 
     void SendGoodbyeComplaint(GoodbyeMessage goodbye_message);
+
+    void StoreGoodbyeComplaint(GoodbyeComplaint &complaint);
+
+    void RecordResponseToMessage(uint160 response_hash, uint160 message_hash, std::string response_type);
+
+    bool ValidateSecretRecoveryFailureMessage(SecretRecoveryFailureMessage &failure_message);
+
+    bool ValidateGoodbyeMessage(GoodbyeMessage &goodbye_message);
+
+    bool ValidateSecretRecoveryComplaint(SecretRecoveryComplaint &complaint);
+
+    bool ValidateRecoveryFailureAuditMessage(RecoveryFailureAuditMessage &audit_message);
+
+    bool ValidateGoodbyeComplaint(GoodbyeComplaint &complaint);
 };
 
 
