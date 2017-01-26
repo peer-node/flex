@@ -15,7 +15,7 @@ class RecoveryFailureAuditMessage
 public:
     uint160 failure_message_hash;
     uint64_t quarter_holder_number;
-    CBigNum private_receiving_key_quarter;
+    uint256 private_receiving_key_quarter;
     Signature signature;
 
     static std::string Type() { return "recovery_failure_audit"; }
@@ -60,7 +60,7 @@ public:
 
     Point GetSharedSecretQuarter(Data data);
 
-    CBigNum GetEncryptedSharedSecretQuarterFromSecretRecoveryMessage(Data data);
+    uint256 GetEncryptedSharedSecretQuarterFromSecretRecoveryMessage(Data data);
 
     SecretRecoveryFailureMessage GetSecretRecoveryFailureMessage(Data data);
 

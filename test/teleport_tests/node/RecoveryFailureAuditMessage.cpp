@@ -20,7 +20,7 @@ void RecoveryFailureAuditMessage::Populate(SecretRecoveryFailureMessage failure_
 {
     failure_message_hash = failure_message.GetHash160();
     quarter_holder_number = recovery_message.quarter_holder_number;
-    private_receiving_key_quarter = GetReceivingKeyQuarter(failure_message, recovery_message, data);
+    private_receiving_key_quarter = GetReceivingKeyQuarter(failure_message, recovery_message, data).getuint256();
 }
 
 CBigNum RecoveryFailureAuditMessage::GetReceivingKeyQuarter(SecretRecoveryFailureMessage failure_message,
@@ -100,7 +100,7 @@ bool RecoveryFailureAuditMessage::VerifyPrivateReceivingKeyQuarterMatchesPublicR
                                                            dead_relay->holders.key_quarter_holders);
     auto public_receiving_key_quarter = dead_relay->GenerateRecipientPublicKeyQuarter(public_key_sixteenth,
                                                                                       (uint8_t) quarter_holder_position);
-    return Point(private_receiving_key_quarter) == public_receiving_key_quarter;
+    return Point(CBigNum(private_receiving_key_quarter)) == public_receiving_key_quarter;
 }
 
 SecretRecoveryMessage RecoveryFailureAuditMessage::GetSecretRecoveryMessage(Data data)
@@ -130,11 +130,11 @@ bool RecoveryFailureAuditMessage::VerifyEncryptedSharedSecretQuarterInSecretReco
     auto recipient = data.relay_state->GetRelayByNumber(recovery_message.successor_number);
 
     auto shared_secret_quarter = GetSharedSecretQuarter(data);
-    CBigNum newly_encrypted_shared_secret_quarter = recipient->EncryptSecret(StorePointInBigNum(shared_secret_quarter));
+    auto newly_encrypted_shared_secret_quarter = recipient->EncryptSecretPoint(shared_secret_quarter);
     return newly_encrypted_shared_secret_quarter == encrypted_shared_secret_quarter;
 }
 
-CBigNum RecoveryFailureAuditMessage::GetEncryptedSharedSecretQuarterFromSecretRecoveryMessage(Data data)
+uint256 RecoveryFailureAuditMessage::GetEncryptedSharedSecretQuarterFromSecretRecoveryMessage(Data data)
 {
     auto recovery_message = GetSecretRecoveryMessage(data);
     auto failure_message = GetSecretRecoveryFailureMessage(data);

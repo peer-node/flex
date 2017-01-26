@@ -122,7 +122,7 @@ void RelayMessageHandler::StoreKeyDistributionSecretsAndSendComplaints(KeyDistri
 void RelayMessageHandler::RecoverSecretsAndSendKeyDistributionComplaints(Relay *relay, uint64_t set_of_secrets,
                                                                          vector<uint64_t> recipients,
                                                                          uint160 key_distribution_message_hash,
-                                                                         vector<CBigNum> encrypted_secrets)
+                                                                         vector<uint256> encrypted_secrets)
 {
     auto public_key_sixteenths = relay->PublicKeySixteenths();
     for (uint32_t position = 0; position < recipients.size(); position++)
@@ -142,7 +142,7 @@ void RelayMessageHandler::RecoverSecretsAndSendKeyDistributionComplaints(Relay *
     }
 }
 
-bool RelayMessageHandler::RecoverAndStoreSecret(Relay *recipient, CBigNum &encrypted_secret,
+bool RelayMessageHandler::RecoverAndStoreSecret(Relay *recipient, uint256 &encrypted_secret,
                                                 Point &point_corresponding_to_secret)
 {
     CBigNum decrypted_secret = recipient->DecryptSecret(encrypted_secret, point_corresponding_to_secret, data);

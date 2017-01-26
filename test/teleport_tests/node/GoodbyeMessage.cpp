@@ -31,7 +31,7 @@ void GoodbyeMessage::PopulateFourEncryptedKeySixteenths(Relay *sharer, Relay *su
 {
     key_quarter_sharers.push_back(sharer->number);
     key_quarter_positions.push_back(position);
-    encrypted_key_sixteenths.push_back(std::vector<CBigNum>());
+    encrypted_key_sixteenths.push_back(std::vector<uint256>());
     for (uint32_t key_part_position = (uint32_t)position * 4; key_part_position < (position + 1) * 4; key_part_position++)
     {
         CBigNum private_key_sixteenth = data.keydata[sharer->PublicKeySixteenths()[key_part_position]]["privkey"];

@@ -17,7 +17,7 @@ public:
     uint160 key_distribution_message_hash{0};
     uint64_t set_of_secrets{0};
     uint64_t position_of_secret{0};
-    CBigNum recipient_private_key{0};
+    uint256 recipient_private_key{0};
     Signature signature;
 
     KeyDistributionComplaint() { }
@@ -61,7 +61,7 @@ public:
 
     bool IsValid(Data data);
 
-    CBigNum GetEncryptedSecret(Data data);
+    uint256 GetEncryptedSecret(Data data);
 
     bool EncryptedSecretIsOk(Data data);
 
@@ -70,6 +70,8 @@ public:
     CBigNum RecoverSecret(Data data);
 
     bool ReferencedSecretExists(Data data);
+
+    bool RecipientPrivateKeyIsOk(Data data);
 };
 
 

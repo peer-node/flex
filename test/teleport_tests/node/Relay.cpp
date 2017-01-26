@@ -1,12 +1,15 @@
 #include <src/crypto/secp256k1point.h>
 #include <src/crypto/bignum_hashes.h>
+#include <src/base/util_hex.h>
 #include "Relay.h"
 #include "RelayState.h"
 #include "RelayKeyHolderData.h"
 
+
 #include "log.h"
 #define LOG_CATEGORY "Relay.cpp"
 
+using std::vector;
 
 RelayJoinMessage Relay::GenerateJoinMessage(MemoryDataStore &keydata, uint160 mined_credit_message_hash)
 {
@@ -95,23 +98,80 @@ CBigNum Relay::GenerateRecipientPrivateKeyQuarter(Point point_corresponding_to_s
                                                              key_quarter_position, data.keydata);
 }
 
-CBigNum Relay::EncryptSecret(CBigNum secret)
+uint256 Relay::EncryptSecret(CBigNum secret)
 {
     Point point_corresponding_to_secret = Point(secret);
     Point recipient_public_key = GenerateRecipientPublicKey(point_corresponding_to_secret);
 
     CBigNum shared_secret = Hash(secret * recipient_public_key);
 
-    return secret ^ shared_secret;
+    return (secret ^ shared_secret).getuint256();
 }
 
-CBigNum Relay::DecryptSecret(CBigNum encrypted_secret, Point point_corresponding_to_secret, Data data)
+CBigNum Relay::DecryptSecret(uint256 encrypted_secret, Point point_corresponding_to_secret, Data data)
 {
     CBigNum recipient_private_key = GenerateRecipientPrivateKey(point_corresponding_to_secret, data);
     CBigNum shared_secret = Hash(recipient_private_key * point_corresponding_to_secret);
-    CBigNum recovered_secret = encrypted_secret ^ shared_secret;
+    CBigNum recovered_secret = CBigNum(encrypted_secret) ^ shared_secret;
 
     return Point(recovered_secret) == point_corresponding_to_secret ? recovered_secret : 0;
+}
+
+std::string PadWithZero(std::string in)
+{
+    if (in.size() % 2 == 1)
+        in = "0" + in;
+    return in;
+}
+
+CBigNum StorePointInBigNum(Point point)
+{
+    CBigNum n;
+    n.SetHex(HexStr(point.getvch()));
+    return n;
+}
+
+Point RetrievePointFromBigNum(CBigNum n)
+{
+    if (n == 0)
+        return Point(n);
+    Point point;
+    point.setvch(ParseHex(PadWithZero(n.GetHex())));
+    return point;
+}
+
+uint256 Relay::EncryptSecretPoint(Point secret_point)
+{
+    CBigNum encoded_point = StorePointInBigNum(secret_point);
+    Point point_corresponding_to_secret = Point(encoded_point);
+    Point recipient_public_key = GenerateRecipientPublicKey(point_corresponding_to_secret);
+
+    CBigNum shared_secret = Hash(encoded_point * recipient_public_key);
+
+    return (encoded_point ^ shared_secret).getuint256();
+}
+
+Point DecryptPointUsingHexPrefixes(CBigNum decrypted_secret, Point point_corresponding_to_secret)
+{
+    std::string secret_hex = decrypted_secret.GetHex();
+    vector<std::string> prefixes{"0102", "0103", "0105"};
+    Point recovered_point;
+    for (auto prefix : prefixes)
+    {
+        recovered_point.setvch(ParseHex(prefix + PadWithZero(secret_hex)));
+        if (Point(StorePointInBigNum(recovered_point)) == point_corresponding_to_secret)
+            return recovered_point;
+    }
+    return Point(CBigNum(0));
+}
+
+Point Relay::DecryptSecretPoint(uint256 encrypted_secret, Point point_corresponding_to_secret, Data data)
+{
+    CBigNum recipient_private_key = GenerateRecipientPrivateKey(point_corresponding_to_secret, data);
+    CBigNum shared_secret = Hash(recipient_private_key * point_corresponding_to_secret);
+    CBigNum recovered_secret = CBigNum(encrypted_secret) ^ shared_secret;
+
+    return DecryptPointUsingHexPrefixes(recovered_secret, point_corresponding_to_secret);
 }
 
 std::vector<Point> Relay::PublicKeySixteenths()

@@ -280,6 +280,11 @@
         return false;
     }
 
+Point &Point::operator*=(const uint256 &n)
+{
+    return *this *= CBigNum(n);
+}
+
 
 /*
  *  Point
@@ -310,6 +315,16 @@ Point operator*(const Point& a, const CBigNum& n)
 Point operator*(const CBigNum& n, const Point& a)
 {
     return a * n;
+}
+
+Point operator*(const Point& a, const uint256& n)
+{
+    return a * CBigNum(n);
+}
+
+Point operator*(const uint256& n, const Point& a)
+{
+    return a * CBigNum(n);
 }
 
 

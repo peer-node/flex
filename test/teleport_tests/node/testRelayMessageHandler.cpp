@@ -534,6 +534,18 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage, RejectsAKey
     ASSERT_THAT(rejected, Eq(true));
 }
 
+TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage,
+       RejectsAKeyDistributionComplaintWithAnIncorrectRecipientPrivateKey)
+{
+    KeyDistributionComplaint complaint(key_distribution_message.GetHash160(), 1, 1, *data);
+    complaint.recipient_private_key += 1;
+    complaint.Sign(*data);
+    relay_message_handler->HandleMessage(GetDataStream(complaint), &peer);
+
+    bool rejected = msgdata[complaint.GetHash160()]["rejected"];
+    ASSERT_THAT(rejected, Eq(true));
+}
+
 TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage, RejectsAKeyDistributionComplaintAboutAGoodSecret)
 {
     KeyDistributionComplaint complaint(key_distribution_message.GetHash160(), 1, 1, *data);
@@ -679,6 +691,34 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAValidGoodbyeMessage,
     GoodbyeComplaint complaint;
     complaint.goodbye_message_hash = goodbye_message.GetHash160();
     complaint.position_of_bad_encrypted_key_sixteenth = 5;
+    complaint.Sign(*data);
+    relay_message_handler->Handle(complaint, &peer);
+    bool rejected = msgdata[complaint.GetHash160()]["rejected"];
+    ASSERT_THAT(rejected, Eq(true));
+}
+
+TEST_F(ARelayMessageHandlerWhichHasProcessedAValidGoodbyeMessage,
+       RejectsAGoodbyeComplaintWithAnIncorrectPrivateReceivingKey)
+{
+    GoodbyeComplaint complaint;
+    complaint.Populate(goodbye_message, *data);
+    complaint.key_sharer_position = 0;
+    complaint.position_of_bad_encrypted_key_sixteenth = 0;
+    complaint.recipient_private_key = 100;
+    complaint.Sign(*data);
+    relay_message_handler->Handle(complaint, &peer);
+    bool rejected = msgdata[complaint.GetHash160()]["rejected"];
+    ASSERT_THAT(rejected, Eq(true));
+}
+
+TEST_F(ARelayMessageHandlerWhichHasProcessedAValidGoodbyeMessage,
+       RejectsAGoodbyeComplaintAboutAGoodSecret)
+{
+    GoodbyeComplaint complaint;
+    complaint.Populate(goodbye_message, *data);
+    complaint.key_sharer_position = 0;
+    complaint.position_of_bad_encrypted_key_sixteenth = 0;
+    complaint.PopulateRecipientPrivateKey(*data);
     complaint.Sign(*data);
     relay_message_handler->Handle(complaint, &peer);
     bool rejected = msgdata[complaint.GetHash160()]["rejected"];
@@ -1069,6 +1109,26 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedFourSecretRecoveryMessages,
     ASSERT_THAT(rejected, Eq(true));
 }
 
+TEST_F(ARelayMessageHandlerWhichHasProcessedFourSecretRecoveryMessages,
+       RejectsASecretRecoveryComplaintAboutAGoodSecret)
+{
+    complaint.Sign(*data);
+    relay_message_handler->Handle(complaint, NULL);
+    bool rejected = msgdata[complaint.GetHash160()]["rejected"];
+    ASSERT_THAT(rejected, Eq(true));
+}
+
+TEST_F(ARelayMessageHandlerWhichHasProcessedFourSecretRecoveryMessages,
+       RejectsASecretRecoveryComplaintWithTheWrongPrivateReceivingKey)
+{
+    complaint.private_receiving_key += 1;
+    complaint.Sign(*data);
+    relay_message_handler->Handle(complaint, NULL);
+    bool rejected = msgdata[complaint.GetHash160()]["rejected"];
+    ASSERT_THAT(rejected, Eq(true));
+}
+
+
 class ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaintAndThreeSecretRecoveryMessages :
         public ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaint
 {
@@ -1277,7 +1337,7 @@ public:
                                                             Relay *successor, Point bad_shared_secret_quarter)
     {
         CBigNum encoded_bad_shared_secret_quarter = StorePointInBigNum(bad_shared_secret_quarter);
-        CBigNum encrypted_bad_shared_secret_quarter = successor->EncryptSecret(encoded_bad_shared_secret_quarter);
+        uint256 encrypted_bad_shared_secret_quarter = successor->EncryptSecret(encoded_bad_shared_secret_quarter);
         Point corresponding_point(encoded_bad_shared_secret_quarter);
 
         recovery_message.quartets_of_encrypted_shared_secret_quarters[0][2] = encrypted_bad_shared_secret_quarter;
@@ -1356,7 +1416,7 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedASecretRecoveryFailureMessage,
                                                         relay->holders.key_quarter_holders);
     auto receiving_key_quarter = relay->GenerateRecipientPrivateKeyQuarter(public_key_sixteenth,
                                                                            (uint8_t) key_quarter_position, *data);
-    ASSERT_THAT(audit_message.private_receiving_key_quarter, Eq(receiving_key_quarter));
+    ASSERT_THAT(audit_message.private_receiving_key_quarter, Eq(receiving_key_quarter.getuint256()));
 }
 
 TEST_F(ARelayMessageHandlerWhichHasProcessedASecretRecoveryFailureMessage,

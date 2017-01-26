@@ -15,7 +15,7 @@ public:
     uint64_t successor_relay_number{0};
     std::vector<uint64_t> key_quarter_sharers;
     std::vector<uint8_t> key_quarter_positions;
-    std::vector<std::vector<CBigNum> > encrypted_key_sixteenths;
+    std::vector<std::vector<uint256> > encrypted_key_sixteenths;
 
     Signature signature;
 

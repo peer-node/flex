@@ -46,7 +46,7 @@ Point KeyDistributionComplaint::GetPointCorrespondingToSecret(Data data)
     return secret_sender->PublicKeySixteenths()[position_of_secret];
 }
 
-CBigNum KeyDistributionComplaint::GetEncryptedSecret(Data data)
+uint256 KeyDistributionComplaint::GetEncryptedSecret(Data data)
 {
     auto message = GetKeyDistributionMessage(data);
 
@@ -72,7 +72,8 @@ KeyDistributionComplaint::KeyDistributionComplaint(KeyDistributionMessage key_di
     position_of_secret(position_of_secret)
 {
     Relay *recipient = GetComplainer(data);
-    recipient_private_key = recipient->GenerateRecipientPrivateKey(GetPointCorrespondingToSecret(data), data);
+    Point corresponding_point = GetPointCorrespondingToSecret(data);
+    recipient_private_key = recipient->GenerateRecipientPrivateKey(corresponding_point, data).getuint256();
 }
 
 KeyDistributionComplaint::KeyDistributionComplaint(uint160 key_distribution_message_hash,
@@ -82,17 +83,26 @@ KeyDistributionComplaint::KeyDistributionComplaint(uint160 key_distribution_mess
         position_of_secret(position_of_secret)
 {
     Relay *recipient = GetComplainer(data);
-    recipient_private_key = recipient->GenerateRecipientPrivateKey(GetPointCorrespondingToSecret(data), data);
+    Point corresponding_point = GetPointCorrespondingToSecret(data);
+    recipient_private_key = recipient->GenerateRecipientPrivateKey(corresponding_point, data).getuint256();
 }
 
 bool KeyDistributionComplaint::IsValid(Data data)
 {
-    return ReferencedSecretExists(data) and not (EncryptedSecretIsOk(data) and GeneratedRowOfPointsIsOk(data));
+    return ReferencedSecretExists(data) and RecipientPrivateKeyIsOk(data)
+                                        and not (EncryptedSecretIsOk(data) and GeneratedRowOfPointsIsOk(data));
 }
 
 bool KeyDistributionComplaint::ReferencedSecretExists(Data data)
 {
     return position_of_secret < 16 and set_of_secrets <= KEY_DISTRIBUTION_COMPLAINT_SECOND_KEY_SIXTEENTHS;
+}
+
+bool KeyDistributionComplaint::RecipientPrivateKeyIsOk(Data data)
+{
+    auto recipient = GetComplainer(data);
+    auto point_corresponding_to_secret = GetPointCorrespondingToSecret(data);
+    return Point(CBigNum(recipient_private_key)) == recipient->GenerateRecipientPublicKey(point_corresponding_to_secret);
 }
 
 bool KeyDistributionComplaint::EncryptedSecretIsOk(Data data)
@@ -104,7 +114,7 @@ bool KeyDistributionComplaint::EncryptedSecretIsOk(Data data)
 CBigNum KeyDistributionComplaint::RecoverSecret(Data data)
 {
     CBigNum shared_secret = Hash(recipient_private_key * GetPointCorrespondingToSecret(data));
-    return shared_secret ^ GetEncryptedSecret(data);
+    return shared_secret ^ CBigNum(GetEncryptedSecret(data));
 }
 
 bool KeyDistributionComplaint::GeneratedRowOfPointsIsOk(Data data)

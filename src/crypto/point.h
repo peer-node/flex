@@ -68,6 +68,8 @@ public:
 
     Point& operator*=(const CBigNum &n);
 
+    Point& operator*=(const uint256 &n);
+
     CBigNum Modulus() const;
 
     vch_t getvch() const;
@@ -103,6 +105,11 @@ Point operator-(const Point& a, const Point& b);
 Point operator*(const Point& a, const CBigNum& n);
 
 Point operator*(const CBigNum& n, const Point& a);
+
+Point operator*(const Point& a, const uint256& n);
+
+Point operator*(const uint256& n, const Point& a);
+
 
 
 #endif

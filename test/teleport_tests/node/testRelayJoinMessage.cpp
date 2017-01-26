@@ -46,7 +46,7 @@ TEST_F(ARelayJoinMessage, PopulatesPrivateKeySixteenthsEncryptedToThePublicKey)
     for (uint32_t i = 0; i < relay_join_message.encrypted_private_key_sixteenths.size(); i ++)
     {
         CBigNum shared_secret = Hash(private_key * relay_join_message.public_key_set.PublicKeySixteenths()[i]);
-        CBigNum private_key_sixteenth = shared_secret ^ relay_join_message.encrypted_private_key_sixteenths[i];
+        CBigNum private_key_sixteenth = shared_secret ^ CBigNum(relay_join_message.encrypted_private_key_sixteenths[i]);
         ASSERT_THAT(Point(private_key_sixteenth), Eq(relay_join_message.public_key_set.PublicKeySixteenths()[i]));
     }
 }
@@ -59,7 +59,7 @@ TEST_F(ARelayJoinMessage, ValidatesTheSizesOfTheEnclosedData)
     bool ok = relay_join_message.ValidateSizes();
     ASSERT_THAT(ok, Eq(true));
 
-    relay_join_message.encrypted_private_key_sixteenths.push_back(CBigNum(0));
+    relay_join_message.encrypted_private_key_sixteenths.push_back(uint256(0));
     ASSERT_THAT(relay_join_message.ValidateSizes(), Eq(false));
 
     relay_join_message.encrypted_private_key_sixteenths.pop_back();

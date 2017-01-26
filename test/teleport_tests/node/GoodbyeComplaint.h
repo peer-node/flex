@@ -16,7 +16,7 @@ public:
     uint160 goodbye_message_hash{0};
     uint32_t key_sharer_position{0};
     uint32_t position_of_bad_encrypted_key_sixteenth{0};
-    CBigNum recipient_private_key{0};
+    uint256 recipient_private_key{0};
     Signature signature;
 
     static std::string Type() { return "goodbye_complaint"; }
@@ -54,6 +54,14 @@ public:
     Relay *GetKeySharer(Data data);
 
     bool IsValid(Data data);
+
+    bool PrivateReceivingKeyIsIncorrect(Data data);
+
+    Point GetPointCorrespondingToSecret(Data data);
+
+    bool EncryptedSecretIsOk(Data data);
+
+    uint256 GetEncryptedSecret(Data data);
 };
 
 

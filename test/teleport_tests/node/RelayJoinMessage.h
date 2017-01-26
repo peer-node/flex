@@ -28,7 +28,7 @@ class RelayJoinMessage
 public:
     uint160 mined_credit_message_hash{0};
     RelayPublicKeySet public_key_set;
-    std::vector<CBigNum> encrypted_private_key_sixteenths; // encrypted to this relay's public signing key
+    std::vector<uint256> encrypted_private_key_sixteenths; // encrypted to this relay's public signing key
     Signature signature;
 
     static std::string Type() { return "relay_join"; }
@@ -86,7 +86,7 @@ public:
             CBigNum private_key_sixteenth = keydata[public_key_sixteenth]["privkey"];
             CBigNum shared_secret = Hash(public_key * private_key_sixteenth);
             CBigNum encrypted_private_key_sixteenth = shared_secret ^ private_key_sixteenth;
-            encrypted_private_key_sixteenths.push_back(encrypted_private_key_sixteenth);
+            encrypted_private_key_sixteenths.push_back(encrypted_private_key_sixteenth.getuint256());
         }
     }
 

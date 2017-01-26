@@ -130,9 +130,9 @@ public:
     void RecoverSecretsAndSendKeyDistributionComplaints(Relay *relay, uint64_t set_of_secrets,
                                                         std::vector<uint64_t> recipients,
                                                         uint160 key_distribution_message_hash,
-                                                        std::vector<CBigNum> encrypted_secrets);
+                                                        std::vector<uint256> encrypted_secrets);
 
-    bool RecoverAndStoreSecret(Relay *recipient, CBigNum &encrypted_secret, Point &point_corresponding_to_secret);
+    bool RecoverAndStoreSecret(Relay *recipient, uint256 &encrypted_secret, Point &point_corresponding_to_secret);
 
     void RecordSentComplaint(uint160 complaint_hash, uint160 bad_message_hash);
 

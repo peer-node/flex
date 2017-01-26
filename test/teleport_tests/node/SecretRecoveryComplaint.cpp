@@ -1,6 +1,10 @@
 #include "SecretRecoveryComplaint.h"
 #include "RelayState.h"
 
+#include "log.h"
+#define LOG_CATEGORY "SecretRecoveryComplaint.cpp"
+
+
 Point SecretRecoveryComplaint::VerificationKey(Data data)
 {
     Relay *successor = GetComplainer(data);
@@ -39,7 +43,7 @@ void SecretRecoveryComplaint::Populate(SecretRecoveryMessage recovery_message, u
 
     auto &points = recovery_message.quartets_of_points_corresponding_to_shared_secret_quarters;
     auto corresponding_point = points[key_sharer_position][key_part_position];
-    private_receiving_key = complainer->GenerateRecipientPrivateKey(corresponding_point, data);
+    private_receiving_key = complainer->GenerateRecipientPrivateKey(corresponding_point, data).getuint256();
 }
 
 bool SecretRecoveryComplaint::IsValid(Data data)
@@ -48,6 +52,50 @@ bool SecretRecoveryComplaint::IsValid(Data data)
     if (position_of_key_sharer >= recovery_message.key_quarter_sharers.size())
         return false;
     if (position_of_bad_encrypted_secret >= 4)
+        return false;
+    if (not PrivateReceivingKeyIsCorrect(data))
+        return false;
+    if (EncryptedSecretIsOk(data))
         return false;;
     return true;
+}
+
+bool SecretRecoveryComplaint::PrivateReceivingKeyIsCorrect(Data data)
+{
+    Point point_corresponding_to_secret = GetPointCorrespondingToSecret(data);
+
+    auto complainer = GetComplainer(data);
+    if (complainer == NULL)
+        return false;
+
+    Point public_receiving_key = complainer->GenerateRecipientPublicKey(point_corresponding_to_secret);
+    return Point(CBigNum(private_receiving_key)) == public_receiving_key;
+}
+
+bool SecretRecoveryComplaint::EncryptedSecretIsOk(Data data)
+{
+    auto recovered_secret = RecoverSecret(data);
+    Point point_corresponding_to_secret = GetPointCorrespondingToSecret(data);
+    Point shared_secret_quarter = DecryptPointUsingHexPrefixes(recovered_secret, point_corresponding_to_secret);
+    return GetPointCorrespondingToSecret(data) == Point(StorePointInBigNum(shared_secret_quarter));
+}
+
+CBigNum SecretRecoveryComplaint::RecoverSecret(Data data)
+{
+    CBigNum shared_secret = Hash(private_receiving_key * GetPointCorrespondingToSecret(data));
+    return shared_secret ^ CBigNum(GetEncryptedSecret(data));
+}
+
+uint256 SecretRecoveryComplaint::GetEncryptedSecret(Data data)
+{
+    auto recovery_message = GetSecretRecoveryMessage(data);
+    auto &quartets = recovery_message.quartets_of_encrypted_shared_secret_quarters;
+    return quartets[position_of_key_sharer][position_of_bad_encrypted_secret];
+}
+
+Point SecretRecoveryComplaint::GetPointCorrespondingToSecret(Data data)
+{
+    auto recovery_message = GetSecretRecoveryMessage(data);
+    auto &points = recovery_message.quartets_of_points_corresponding_to_shared_secret_quarters;
+    return points[position_of_key_sharer][position_of_bad_encrypted_secret];
 }

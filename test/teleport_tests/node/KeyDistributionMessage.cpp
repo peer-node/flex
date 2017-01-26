@@ -65,7 +65,7 @@ bool KeyDistributionMessage::KeySixteenthForKeyQuarterHolderIsCorrectlyEncrypted
     Relay *recipient = relay_state.GetRelayByNumber(recipients[position]);
     Point public_key_sixteenth = relay.PublicKeySixteenths()[position];
     CBigNum private_key_sixteenth = data.keydata[public_key_sixteenth]["privkey"];
-    CBigNum encrypted_private_key_sixteenth = recipient->EncryptSecret(private_key_sixteenth);
+    uint256 encrypted_private_key_sixteenth = recipient->EncryptSecret(private_key_sixteenth);
     return key_sixteenths_encrypted_for_key_quarter_holders[position] == encrypted_private_key_sixteenth;
 }
 
@@ -88,7 +88,7 @@ bool KeyDistributionMessage::KeySixteenthForKeySixteenthHolderIsCorrectlyEncrypt
     auto recipients = state.GetKeySixteenthHoldersAsListOf16RelayNumbers(relay.number, first_or_second_set);
     Relay *recipient = state.GetRelayByNumber(recipients[position]);
     Point public_key_sixteenth = relay.PublicKeySixteenths()[position];
-    CBigNum encrypted_key_sixteenth = first_or_second_set == 1
+    uint256 encrypted_key_sixteenth = first_or_second_set == 1
                                       ? key_sixteenths_encrypted_for_first_set_of_key_sixteenth_holders[position]
                                       : key_sixteenths_encrypted_for_second_set_of_key_sixteenth_holders[position];
 
@@ -119,7 +119,7 @@ bool KeyDistributionMessage::TryToRecoverKeySixteenthEncryptedToKeySixteenthHold
 {
     auto recipients = state.GetKeySixteenthHoldersAsListOf16RelayNumbers(relay.number, first_or_second_set);
     Relay *recipient = state.GetRelayByNumber(recipients[position]);
-    CBigNum encrypted_key_sixteenth = first_or_second_set == 1
+    uint256 encrypted_key_sixteenth = first_or_second_set == 1
                                       ? key_sixteenths_encrypted_for_first_set_of_key_sixteenth_holders[position]
                                       : key_sixteenths_encrypted_for_second_set_of_key_sixteenth_holders[position];
 
@@ -140,7 +140,7 @@ bool KeyDistributionMessage::AuditKeySixteenthEncryptedInRelayJoinMessage(RelayJ
     Point public_key_sixteenth = join_message.public_key_set.PublicKeySixteenths()[position];
     CBigNum private_key_sixteenth = keydata[public_key_sixteenth]["privkey"];
     CBigNum shared_secret = Hash(private_key_sixteenth * public_key);
-    return private_key_sixteenth == (shared_secret ^ join_message.encrypted_private_key_sixteenths[position]);
+    return private_key_sixteenth == (shared_secret ^ CBigNum(join_message.encrypted_private_key_sixteenths[position]));
 }
 
 bool KeyDistributionMessage::ValidateSizes()

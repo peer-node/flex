@@ -14,7 +14,7 @@ public:
     uint160 secret_recovery_message_hash{0};
     uint32_t position_of_key_sharer{0};
     uint32_t position_of_bad_encrypted_secret{0};
-    CBigNum private_receiving_key{0};
+    uint256 private_receiving_key{0};
     Signature signature;
 
     static std::string Type() { return "secret_recovery_complaint"; }
@@ -47,6 +47,18 @@ public:
     SecretRecoveryMessage GetSecretRecoveryMessage(Data data);
 
     bool IsValid(Data data);
+
+    bool ReferencedSecretIsOk(Data data);
+
+    bool EncryptedSecretIsOk(Data data);
+
+    CBigNum RecoverSecret(Data data);
+
+    uint256 GetEncryptedSecret(Data data);
+
+    Point GetPointCorrespondingToSecret(Data data);
+
+    bool PrivateReceivingKeyIsCorrect(Data data);
 };
 
 

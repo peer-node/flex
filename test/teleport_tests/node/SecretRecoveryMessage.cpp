@@ -50,34 +50,11 @@ void SecretRecoveryMessage::PopulateEncryptedSharedSecretQuarter(Relay &relay, D
     AddEncryptedSharedSecretQuarterForFourKeySixteenths(relay, position, data);
 }
 
-std::string PadWithZero(std::string in)
-{
-    if (in.size() % 2 == 1)
-        in = "0" + in;
-    return in;
-}
-
-CBigNum StorePointInBigNum(Point point)
-{
-    CBigNum n;
-    n.SetHex(HexStr(point.getvch()));
-    return n;
-}
-
-Point RetrievePointFromBigNum(CBigNum n)
-{
-    if (n == 0)
-        return Point(n);
-    Point point;
-    point.setvch(ParseHex(PadWithZero(n.GetHex())));
-    return point;
-}
-
 void SecretRecoveryMessage::AddEncryptedSharedSecretQuarterForFourKeySixteenths(Relay &key_sharer,
                                                                                 uint8_t key_quarter_position, Data data)
 {
-    std::vector<CBigNum> encrypted_shared_secret_quarters;
-    std::vector<Point> points_corresponding_to_shared_secret_quarters;
+    vector<uint256> encrypted_shared_secret_quarters;
+    vector<Point> points_corresponding_to_shared_secret_quarters;
 
     auto successor = GetSuccessor(data);
 
@@ -96,8 +73,8 @@ void SecretRecoveryMessage::AddEncryptedSharedSecretQuarterForFourKeySixteenths(
 
 void SecretRecoveryMessage::PopulateEncryptedSharedSecretQuarterForKeySixteenth(
         Relay &key_sharer,
-        std::vector<CBigNum> &encrypted_shared_secret_quarters_for_relay_key_parts,
-        std::vector<Point> &points_corresponding_to_shared_secret_quarters,
+        vector<uint256> &encrypted_shared_secret_quarters_for_relay_key_parts,
+        vector<Point> &points_corresponding_to_shared_secret_quarters,
         Relay *successor,
         int32_t key_sixteenth_position,
         Data &data)
@@ -113,16 +90,16 @@ void SecretRecoveryMessage::PopulateEncryptedSharedSecretQuarterForKeySixteenth(
                                                                                    quarter_holder_position,
                                                                                    data);
     Point shared_secret_quarter = recipient_key_quarter * public_key_sixteenth;
-    CBigNum encoded_shared_secret_quarter = StorePointInBigNum(shared_secret_quarter);
-    CBigNum encrypted_shared_secret_quarter = successor->EncryptSecret(encoded_shared_secret_quarter);
 
-    points_corresponding_to_shared_secret_quarters.push_back(Point(encoded_shared_secret_quarter));
+    uint256 encrypted_shared_secret_quarter = successor->EncryptSecretPoint(shared_secret_quarter);
+
+    points_corresponding_to_shared_secret_quarters.push_back(Point(StorePointInBigNum(shared_secret_quarter)));
     encrypted_shared_secret_quarters_for_relay_key_parts.push_back(encrypted_shared_secret_quarter);
 }
 
-std::vector<std::vector<Point> > SecretRecoveryMessage::RecoverSharedSecretQuartersForRelayKeyParts(Data data)
+vector<vector<Point> > SecretRecoveryMessage::RecoverSharedSecretQuartersForRelayKeyParts(Data data)
 {
-    std::vector<std::vector<Point> > shared_secret_quarters;
+    vector<vector<Point> > shared_secret_quarters;
 
     for (uint32_t i = 0; i < quartets_of_encrypted_shared_secret_quarters.size(); i++)
     {
@@ -137,15 +114,14 @@ std::vector<std::vector<Point> > SecretRecoveryMessage::RecoverSharedSecretQuart
 
         shared_secret_quarters.push_back(RecoverQuartetOfSharedSecretQuarters(quartet, quartet_points, data));
     }
-
     return shared_secret_quarters;
 }
 
-std::vector<Point> SecretRecoveryMessage::RecoverQuartetOfSharedSecretQuarters(
-        std::vector<CBigNum> encrypted_shared_secret_quarters,
-        std::vector<Point> points_corresponding_to_shared_secret_quarters, Data data)
+vector<Point> SecretRecoveryMessage::RecoverQuartetOfSharedSecretQuarters(
+        vector<uint256> encrypted_shared_secret_quarters,
+        vector<Point> points_corresponding_to_shared_secret_quarters, Data data)
 {
-    std::vector<Point> shared_secret_quarters;
+    vector<Point> shared_secret_quarters;
 
     for (uint32_t i = 0; i < 4; i++)
     {
@@ -158,14 +134,12 @@ std::vector<Point> SecretRecoveryMessage::RecoverQuartetOfSharedSecretQuarters(
     return shared_secret_quarters;
 }
 
-Point SecretRecoveryMessage::RecoverSharedSecretQuarter(CBigNum encrypted_shared_secret_quarter,
+Point SecretRecoveryMessage::RecoverSharedSecretQuarter(uint256 encrypted_shared_secret_quarter,
                                                         Point point_corresponding_to_shared_secret_quarter, Data data)
 {
     auto successor = GetSuccessor(data);
-    CBigNum encoded_shared_secret_quarter = successor->DecryptSecret(encrypted_shared_secret_quarter,
-                                                                     point_corresponding_to_shared_secret_quarter,
-                                                                     data);
-    return RetrievePointFromBigNum(encoded_shared_secret_quarter);
+    return successor->DecryptSecretPoint(encrypted_shared_secret_quarter,
+                                         point_corresponding_to_shared_secret_quarter, data);
 }
 
 bool SomePointsAreAtInfinity(vector<vector<Point> > array_of_points)
@@ -214,7 +188,9 @@ vector<vector<Point> > SecretRecoveryMessage::GetSharedSecrets(vector<uint160> r
         auto shared_secret_quarters = secret_recovery_message.RecoverSharedSecretQuartersForRelayKeyParts(data);
 
         if (SomePointsAreAtInfinity(shared_secret_quarters))
+        {
             return array_of_shared_secrets;
+        }
 
         AddArrayOfPointsToSum(shared_secret_quarters, array_of_shared_secrets);
     }
@@ -249,7 +225,7 @@ bool SecretRecoveryMessage::RecoverFourKeySixteenths(uint64_t key_sharer_number,
     auto key_sharer = data.relay_state->GetRelayByNumber(key_sharer_number);
     auto dead_relay = data.relay_state->GetRelayByNumber(dead_relay_number);
 
-    vector<CBigNum> encrypted_key_sixteenths = GetEncryptedKeySixteenthsSentFromSharerToRelay(key_sharer,
+    vector<uint256> encrypted_key_sixteenths = GetEncryptedKeySixteenthsSentFromSharerToRelay(key_sharer,
                                                                                               dead_relay, data);
 
     for (uint32_t i = 0; i < 4; i++)
@@ -257,7 +233,7 @@ bool SecretRecoveryMessage::RecoverFourKeySixteenths(uint64_t key_sharer_number,
         uint32_t key_sixteenth_position = 4 * (uint32_t)key_quarter_position + i;
 
         Point public_key_sixteenth = key_sharer->PublicKeySixteenths()[key_sixteenth_position];
-        CBigNum decrypted_key_sixteenth = encrypted_key_sixteenths[i] ^ Hash(shared_secrets[i]);
+        CBigNum decrypted_key_sixteenth = CBigNum(encrypted_key_sixteenths[i]) ^ Hash(shared_secrets[i]);
 
         if (Point(decrypted_key_sixteenth) != public_key_sixteenth)
         {
@@ -269,7 +245,7 @@ bool SecretRecoveryMessage::RecoverFourKeySixteenths(uint64_t key_sharer_number,
     return true;
 }
 
-vector<CBigNum> SecretRecoveryMessage::GetEncryptedKeySixteenthsSentFromSharerToRelay(Relay *sharer, Relay *relay,
+vector<uint256> SecretRecoveryMessage::GetEncryptedKeySixteenthsSentFromSharerToRelay(Relay *sharer, Relay *relay,
                                                                                       Data data)
 {
     KeyDistributionMessage key_distribution_message = data.GetMessage(sharer->hashes.key_distribution_message_hash);
@@ -277,7 +253,7 @@ vector<CBigNum> SecretRecoveryMessage::GetEncryptedKeySixteenthsSentFromSharerTo
 
     int64_t key_quarter_position = PositionOfEntryInVector(relay->number, sharer->holders.key_quarter_holders);
 
-    vector<CBigNum> encrypted_key_sixteenths;
+    vector<uint256> encrypted_key_sixteenths;
     for (int64_t key_sixteenth_position = 4 * key_quarter_position;
             key_sixteenth_position < 4 + 4 * key_quarter_position; key_sixteenth_position++)
         encrypted_key_sixteenths.push_back(encrypted_secrets[key_sixteenth_position]);

@@ -101,11 +101,11 @@ TEST_F(ARelayWithAPublicKeySet, EncryptsASecretWhichCanBeDecryptedUsingTheRecipi
     CBigNum secret = RandomSecret();
     Point point_corresponding_to_secret(secret);
 
-    CBigNum encrypted_secret = relay.EncryptSecret(secret);
+    uint256 encrypted_secret = relay.EncryptSecret(secret);
     CBigNum recipient_private_key = relay.GenerateRecipientPrivateKey(point_corresponding_to_secret, *data);
 
     CBigNum shared_secret = Hash(recipient_private_key * point_corresponding_to_secret);
-    CBigNum decrypted_secret = encrypted_secret ^ shared_secret;
+    CBigNum decrypted_secret = CBigNum(encrypted_secret) ^ shared_secret;
 
     ASSERT_THAT(decrypted_secret, Eq(secret));
 }
@@ -115,7 +115,7 @@ TEST_F(ARelayWithAPublicKeySet, DecryptsASecretWhichWasEncryptedUsingTheRecipien
     CBigNum secret = RandomSecret();
     Point point_corresponding_to_secret(secret);
 
-    CBigNum encrypted_secret = relay.EncryptSecret(secret);
+    uint256 encrypted_secret = relay.EncryptSecret(secret);
     CBigNum decrypted_secret = relay.DecryptSecret(encrypted_secret, point_corresponding_to_secret, *data);
 
     ASSERT_THAT(decrypted_secret, Eq(secret));
@@ -196,7 +196,7 @@ TEST_F(ARelayWithKeyPartHoldersAssigned, GeneratesAKeyDistributionMessageWithAVa
     ASSERT_THAT(ok, Eq(true));
 }
 
-CBigNum EncryptSecretForRelay(CBigNum secret, RelayState &state, uint64_t relay_number)
+uint256 EncryptSecretForRelay(CBigNum secret, RelayState &state, uint64_t relay_number)
 {
     Relay *relay = state.GetRelayByNumber(relay_number);
 
@@ -231,7 +231,7 @@ TEST_F(ARelayWithKeyPartHoldersAssigned, GeneratesAKeyDistributionMessageWhichRe
     {
         CBigNum private_key_sixteenth = keydata[relay->PublicKeySixteenths()[i]]["privkey"];
         Relay *recipient = relay_state.GetRelayByNumber(relay->holders.key_quarter_holders[i / 4]);
-        CBigNum encrypted_private_key_sixteenth = recipient->EncryptSecret(private_key_sixteenth);
+        uint256 encrypted_private_key_sixteenth = recipient->EncryptSecret(private_key_sixteenth);
 
         ASSERT_THAT(key_distribution_message.key_sixteenths_encrypted_for_key_quarter_holders[i],
                     Eq(encrypted_private_key_sixteenth));

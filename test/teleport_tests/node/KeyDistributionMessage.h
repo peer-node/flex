@@ -17,9 +17,9 @@ public:
     uint160 relay_join_hash;
     uint160 encoding_message_hash;
     uint64_t relay_number;
-    std::vector<CBigNum> key_sixteenths_encrypted_for_key_quarter_holders;
-    std::vector<CBigNum> key_sixteenths_encrypted_for_first_set_of_key_sixteenth_holders;
-    std::vector<CBigNum> key_sixteenths_encrypted_for_second_set_of_key_sixteenth_holders;
+    std::vector<uint256> key_sixteenths_encrypted_for_key_quarter_holders;
+    std::vector<uint256> key_sixteenths_encrypted_for_first_set_of_key_sixteenth_holders;
+    std::vector<uint256> key_sixteenths_encrypted_for_second_set_of_key_sixteenth_holders;
     Signature signature;
 
     static std::string Type() { return "key_distribution"; }

@@ -71,9 +71,9 @@ public:
 
     CBigNum GenerateRecipientPrivateKey(Point point_corresponding_to_secret, Data data);
 
-    CBigNum EncryptSecret(CBigNum secret);
+    uint256 EncryptSecret(CBigNum secret);
 
-    CBigNum DecryptSecret(CBigNum encrypted_secret, Point point_corresponding_to_secret, Data data);
+    CBigNum DecryptSecret(uint256 encrypted_secret, Point point_corresponding_to_secret, Data data);
 
     uint64_t SuccessorNumber(Data data);
 
@@ -82,7 +82,11 @@ public:
 
     Point GenerateRecipientPublicKeyQuarter(Point point_corresponding_to_secret, uint8_t key_quarter_position);
 
+    uint256 EncryptSecretPoint(Point secret_point);
+
+    Point DecryptSecretPoint(uint256 encrypted_secret, Point point_corresponding_to_secret, Data data);
 };
 
+Point DecryptPointUsingHexPrefixes(CBigNum decrypted_secret, Point point_corresponding_to_secret);
 
 #endif //TELEPORT_RELAY_H
