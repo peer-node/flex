@@ -37,7 +37,7 @@ MinedCreditMessage TeleportNetworkNode::Tip()
 
 MinedCreditMessage TeleportNetworkNode::GenerateMinedCreditMessageWithoutProofOfWork()
 {
-    MinedCreditMessage msg = credit_message_handler->GenerateMinedCreditMessageWithoutProofOfWork();
+    MinedCreditMessage msg = builder.GenerateMinedCreditMessageWithoutProofOfWork();
     creditdata[msg.mined_credit.GetHash()]["generated_msg"] = msg;
     return msg;
 }

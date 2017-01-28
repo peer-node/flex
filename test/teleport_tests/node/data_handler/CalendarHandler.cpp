@@ -147,7 +147,7 @@ void CalendarHandler::MarkCalendarsAsInvalidAndSwitchToNewCalendar(CalendarFailu
     credit_system->MarkCalendAndSucceedingCalendsAsInvalid(message);
     credit_system->RemoveReportedTotalWorkOfMinedCreditsSucceedingInvalidCalend(message);
     if (data_message_handler->teleport_network_node != NULL)
-        data_message_handler->teleport_network_node->credit_message_handler->SwitchToNewTipIfAppropriate();
+        data_message_handler->teleport_network_node->tip_controller.SwitchToNewTipIfAppropriate();
 }
 
 CalendarFailureDetails CalendarHandler::GetCalendarFailureDetails(Calendar& calendar_)

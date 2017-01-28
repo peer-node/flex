@@ -12,6 +12,8 @@
 #include "BadBatchMessage.h"
 #include "test/teleport_tests/node/wallet/Wallet.h"
 #include "ListExpansionMessage.h"
+#include "TipController.h"
+#include "MinedCreditMessageBuilder.h"
 
 class TeleportNetworkNode;
 
@@ -19,17 +21,20 @@ class CreditMessageHandler : public MessageHandlerWithOrphanage
 {
 public:
     MemoryDataStore &creditdata, &keydata;
-    CreditSystem *credit_system;
-    Calendar *calendar;
+    CreditSystem *credit_system{NULL};
+    Calendar *calendar{NULL};
     Mutex calendar_mutex;
-    BitChain *spent_chain;
+    BitChain *spent_chain{NULL};
     Wallet *wallet{NULL};
     TeleportNetworkNode *teleport_network_node{NULL};
     TeleportConfig config;
     MinedCreditMessageValidator mined_credit_message_validator;
     TransactionValidator transaction_validator;
-    std::vector<uint160> accepted_messages;
-    bool do_spot_checks{true};
+
+    TipController *tip_controller{NULL};
+    MinedCreditMessageBuilder *builder{NULL};
+
+    bool do_spot_checks{true}, using_internal_tip_controller{true}, using_internal_builder{true};
 
     CreditMessageHandler(MemoryDataStore &msgdata_,
                          MemoryDataStore &creditdata_,
@@ -38,15 +43,30 @@ public:
             creditdata(creditdata_), keydata(keydata_)
     {
         channel = std::string("credit");
+        tip_controller = new TipController(msgdata, creditdata, keydata);
+        builder = new MinedCreditMessageBuilder(msgdata, creditdata, keydata);
+        tip_controller->SetMinedCreditMessageBuilder(builder);
     }
 
-    void SetConfig(TeleportConfig& config_) { config = config_; }
+    ~CreditMessageHandler()
+    {
+        if (using_internal_tip_controller and tip_controller != NULL)
+            delete tip_controller;
+        if (using_internal_builder and builder != NULL)
+            delete builder;
+    }
+
+    void SetTipController(TipController *tip_controller_);
+
+    void SetMinedCreditMessageBuilder(MinedCreditMessageBuilder *builder_);
+
+    void SetConfig(TeleportConfig& config_);
 
     void SetCalendar(Calendar& calendar_);
 
-    void SetSpentChain(BitChain& spent_chain_) { spent_chain = &spent_chain_; }
+    void SetSpentChain(BitChain& spent_chain_);
 
-    void SetWallet(Wallet& wallet_) { wallet = &wallet_; }
+    void SetWallet(Wallet& wallet_);
 
     void SetNetworkNode(TeleportNetworkNode *teleport_network_node_);
 
@@ -86,8 +106,6 @@ public:
 
     void SetCreditSystem(CreditSystem *credit_system_);
 
-    void AddToTip(MinedCreditMessage &msg);
-
     bool CheckInputsAreUnspentAccordingToSpentChain(SignedTransaction tx);
 
     bool CheckInputsAreUnspentByAcceptedTransactions(SignedTransaction tx);
@@ -102,30 +120,7 @@ public:
 
     void HandleValidMinedCreditMessage(MinedCreditMessage &msg);
 
-    void RemoveFromMainChainAndSwitchToNewTip(uint160 credit_hash);
-
-    void SwitchToNewTipIfAppropriate();
-
-    void SwitchToTip(uint160 credit_hash);
-
-    void SwitchToTipViaFork(uint160 credit_hash_of_new_tip);
-
-    void UpdateAcceptedMessagesAfterNewTip(MinedCreditMessage &msg);
-
     MinedCreditMessage Tip();
-
-    void UpdateAcceptedMessagesAfterFork(uint160 old_tip, uint160 new_tip);
-
-    void UpdateAcceptedMessagesAfterFork(std::vector<uint160> messages_on_old_branch,
-                                         std::vector<uint160> messages_on_new_branch);
-
-    std::set<uint64_t> PositionsSpentByAcceptedTransactions();
-
-    void ValidateAcceptedMessagesAfterFork();
-
-    bool TransactionHasNoSpentInputs(SignedTransaction tx, std::set<uint160> &spent_positions);
-
-    MinedCreditMessage GenerateMinedCreditMessageWithoutProofOfWork();
 
     bool MinedCreditMessagePassesVerification(MinedCreditMessage &msg);
 

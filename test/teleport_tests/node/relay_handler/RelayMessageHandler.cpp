@@ -157,7 +157,8 @@ bool RelayMessageHandler::RecoverAndStoreSecret(Relay *recipient, uint256 &encry
 void RelayMessageHandler::SendKeyDistributionComplaint(uint160 key_distribution_message_hash, uint64_t set_of_secrets,
                                                        uint32_t position_of_bad_secret)
 {
-    KeyDistributionComplaint complaint(key_distribution_message_hash, set_of_secrets, position_of_bad_secret, data);
+    KeyDistributionComplaint complaint;
+    complaint.Populate(key_distribution_message_hash, set_of_secrets, position_of_bad_secret, data);
     complaint.Sign(data);
     data.StoreMessage(complaint);
     Broadcast(complaint);
@@ -576,4 +577,30 @@ void RelayMessageHandler::RecordResponseToMessage(uint160 response_hash, uint160
         response_hashes.push_back(response_hash);
 
     msgdata[message_hash][response_type] = response_hashes;
+}
+
+bool RelayMessageHandler::ValidateMessage(uint160 &message_hash)
+{
+    std::string message_type = data.MessageType(message_hash);
+
+#define VALIDATE(classname)                                                     \
+    if (message_type == classname::Type())                                      \
+    {                                                                           \
+        classname message = data.GetMessage(message_hash);                      \
+        return Validate ## classname(message);                                  \
+    }
+
+    VALIDATE(RelayJoinMessage);
+    VALIDATE(KeyDistributionMessage);
+    VALIDATE(KeyDistributionComplaint);
+    VALIDATE(SecretRecoveryMessage);
+    VALIDATE(SecretRecoveryComplaint);
+    VALIDATE(SecretRecoveryFailureMessage);
+    VALIDATE(RecoveryFailureAuditMessage);
+    VALIDATE(GoodbyeMessage);
+    VALIDATE(GoodbyeComplaint);
+
+#undef VALIDATE
+
+    return true;
 }

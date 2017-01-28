@@ -5,8 +5,8 @@
 #include <test/teleport_tests/teleport_data/MemoryDataStore.h>
 #include <src/teleportnode/schedule.h>
 #include "RelayState.h"
-#include "CreditSystem.h"
-#include "MessageHandlerWithOrphanage.h"
+#include "test/teleport_tests/node/CreditSystem.h"
+#include "test/teleport_tests/node/MessageHandlerWithOrphanage.h"
 #include "RelayJoinMessage.h"
 #include "KeyDistributionMessage.h"
 #include "SecretRecoveryFailureMessage.h"
@@ -18,8 +18,8 @@ class RelayMessageHandler : public MessageHandlerWithOrphanage
 {
 public:
     Data data;
-    CreditSystem *credit_system;
-    Calendar *calendar;
+    CreditSystem *credit_system{NULL};
+    Calendar *calendar{NULL};
     RelayState relay_state;
     std::set<uint64_t> dead_relays;
     Scheduler scheduler;
@@ -207,6 +207,8 @@ public:
     bool ValidateRecoveryFailureAuditMessage(RecoveryFailureAuditMessage &audit_message);
 
     bool ValidateGoodbyeComplaint(GoodbyeComplaint &complaint);
+
+    bool ValidateMessage(uint160 &message_hash);
 };
 
 

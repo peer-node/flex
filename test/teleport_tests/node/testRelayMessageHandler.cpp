@@ -1,7 +1,7 @@
 #include <src/base/util_hex.h>
 #include "gmock/gmock.h"
 #include "TestPeer.h"
-#include "RelayMessageHandler.h"
+#include "test/teleport_tests/node/relay_handler/RelayMessageHandler.h"
 
 using namespace ::testing;
 using namespace std;
@@ -525,7 +525,8 @@ public:
 
 TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage, RejectsAKeyDistributionComplaintWithABadSignature)
 {
-    KeyDistributionComplaint complaint(key_distribution_message.GetHash160(), 1, 1, *data);
+    KeyDistributionComplaint complaint;
+    complaint.Populate(key_distribution_message.GetHash160(), 1, 1, *data);
     complaint.Sign(*data);
     complaint.signature.signature += 1;
     relay_message_handler->HandleMessage(GetDataStream(complaint), &peer);
@@ -537,7 +538,8 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage, RejectsAKey
 TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage,
        RejectsAKeyDistributionComplaintWithAnIncorrectRecipientPrivateKey)
 {
-    KeyDistributionComplaint complaint(key_distribution_message.GetHash160(), 1, 1, *data);
+    KeyDistributionComplaint complaint;
+    complaint.Populate(key_distribution_message.GetHash160(), 1, 1, *data);
     complaint.recipient_private_key += 1;
     complaint.Sign(*data);
     relay_message_handler->HandleMessage(GetDataStream(complaint), &peer);
@@ -548,7 +550,8 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage,
 
 TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage, RejectsAKeyDistributionComplaintAboutAGoodSecret)
 {
-    KeyDistributionComplaint complaint(key_distribution_message.GetHash160(), 1, 1, *data);
+    KeyDistributionComplaint complaint;
+    complaint.Populate(key_distribution_message.GetHash160(), 1, 1, *data);
     complaint.Sign(*data);
 
     bool complaint_is_valid = complaint.IsValid(*data);
@@ -823,8 +826,8 @@ public:
 TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessageWithABadSecret,
        RejectsAKeyDistributionComplaintWhichRefersToANonExistentSecret)
 {
-    KeyDistributionComplaint complaint(key_distribution_message.GetHash160(), KEY_DISTRIBUTION_COMPLAINT_KEY_QUARTERS,
-                                       1, *data);
+    KeyDistributionComplaint complaint;
+    complaint.Populate(key_distribution_message.GetHash160(), KEY_DISTRIBUTION_COMPLAINT_KEY_QUARTERS, 1, *data);
     complaint.position_of_secret = 51;
     complaint.Sign(*data);
 
@@ -837,8 +840,8 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessageWithABadSecre
 TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessageWithABadSecret,
        AcceptsAKeyDistributionComplaintAboutTheBadSecret)
 {
-    KeyDistributionComplaint complaint(key_distribution_message.GetHash160(), KEY_DISTRIBUTION_COMPLAINT_KEY_QUARTERS,
-                                       1, *data);
+    KeyDistributionComplaint complaint;
+    complaint.Populate(key_distribution_message.GetHash160(), KEY_DISTRIBUTION_COMPLAINT_KEY_QUARTERS, 1, *data);
     complaint.Sign(*data);
 
     bool complaint_is_valid = complaint.IsValid(*data);
@@ -889,7 +892,7 @@ public:
         EnsureThereIsSomethingToComplainAboutAndThatTheChosenRelayIsHoldingSecrets();
 
         relay_message_handler->HandleMessage(GetDataStream(key_distribution_message), &peer);
-        complaint = KeyDistributionComplaint(key_distribution_message.GetHash160(), 0, 1, *data);
+        complaint.Populate(key_distribution_message.GetHash160(), 0, 1, *data);
         complaint.Sign(*data);
         data->StoreMessage(complaint);
     }

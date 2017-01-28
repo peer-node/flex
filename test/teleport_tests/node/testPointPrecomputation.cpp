@@ -1,13 +1,13 @@
 #include <src/vector_tools.h>
 #include <src/base/util_time.h>
 #include "gmock/gmock.h"
-#include "RelayState.h"
-#include "Relay.h"
-#include "RelayJoinMessage.h"
-#include "SecretRecoveryMessage.h"
-#include "Obituary.h"
+#include "test/teleport_tests/node/relay_handler/RelayState.h"
+#include "test/teleport_tests/node/relay_handler/Relay.h"
+#include "test/teleport_tests/node/relay_handler/RelayJoinMessage.h"
+#include "test/teleport_tests/node/relay_handler/SecretRecoveryMessage.h"
+#include "test/teleport_tests/node/relay_handler/Obituary.h"
 #include "Data.h"
-#include "RelayExit.h"
+#include "test/teleport_tests/node/relay_handler/RelayExit.h"
 
 
 using namespace ::testing;

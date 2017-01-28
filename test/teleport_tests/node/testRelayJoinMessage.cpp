@@ -1,7 +1,7 @@
 #include "gmock/gmock.h"
-#include "RelayState.h"
-#include "Relay.h"
-#include "RelayJoinMessage.h"
+#include "test/teleport_tests/node/relay_handler/RelayState.h"
+#include "test/teleport_tests/node/relay_handler/Relay.h"
+#include "test/teleport_tests/node/relay_handler/RelayJoinMessage.h"
 #include "crypto/bignum_hashes.h"
 
 using namespace ::testing;

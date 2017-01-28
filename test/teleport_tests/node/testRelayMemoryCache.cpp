@@ -1,8 +1,8 @@
 #include <src/vector_tools.h>
 #include <src/base/util_time.h>
 #include "gmock/gmock.h"
-#include "RelayState.h"
-#include "RelayMemoryCache.h"
+#include "test/teleport_tests/node/relay_handler/RelayState.h"
+#include "test/teleport_tests/node/relay_handler/RelayMemoryCache.h"
 
 using namespace ::testing;
 using namespace std;

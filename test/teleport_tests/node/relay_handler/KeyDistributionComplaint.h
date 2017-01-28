@@ -3,7 +3,7 @@
 
 #include <src/crypto/uint256.h>
 #include <src/crypto/signature.h>
-#include "Data.h"
+#include "test/teleport_tests/node/Data.h"
 #include "KeyDistributionMessage.h"
 
 #define KEY_DISTRIBUTION_COMPLAINT_KEY_QUARTERS 0
@@ -20,17 +20,7 @@ public:
     uint256 recipient_private_key{0};
     Signature signature;
 
-    KeyDistributionComplaint() { }
-
-    KeyDistributionComplaint(KeyDistributionMessage key_distribution_message,
-                             uint64_t set_of_secrets,
-                             uint64_t position_of_secret,
-                             Data data);
-
-    KeyDistributionComplaint(uint160 key_distribution_message_hash,
-                             uint64_t set_of_secrets,
-                             uint64_t position_of_secret,
-                             Data data);
+    void Populate(uint160 key_distribution_message_hash, uint64_t set_of_secrets, uint64_t position_of_secret, Data data);
 
     static std::string Type() { return "key_distribution_complaint"; }
 

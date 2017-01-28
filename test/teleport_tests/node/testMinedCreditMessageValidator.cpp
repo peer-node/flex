@@ -1,7 +1,12 @@
 #include <src/base/util_time.h>
+#include <test/teleport_tests/node/relay_handler/RelayState.h>
 #include "gmock/gmock.h"
 #include "CreditSystem.h"
 #include "test/teleport_tests/node/credit_handler/MinedCreditMessageValidator.h"
+
+
+#include "log.h"
+#define LOG_CATEGORY "test"
 
 using namespace ::testing;
 using namespace std;
@@ -10,14 +15,17 @@ using namespace std;
 class AMinedCreditMessageValidator : public Test
 {
 public:
-    MemoryDataStore msgdata, creditdata;
+    MemoryDataStore msgdata, creditdata, keydata;
     MinedCreditMessageValidator validator;
     CreditSystem *credit_system;
+    Data *data;
 
     virtual void SetUp()
     {
         credit_system = new CreditSystem(msgdata, creditdata);
+        data = new Data(msgdata, creditdata, keydata);
         validator.SetCreditSystem(credit_system);
+        validator.SetData(data);
     }
 
     virtual void TearDown()
@@ -38,6 +46,7 @@ public:
         MinedCreditMessage msg;
         SignedTransaction tx;
         tx.rawtx.outputs.push_back(Credit(Point(SECP256K1, 2).getvch(), 1));
+        keydata[Point(SECP256K1, 2)]["privkey"] = CBigNum(2);
         credit_system->StoreTransaction(tx);
         msg.hash_list.full_hashes.push_back(tx.GetHash160());
         msg.hash_list.GenerateShortHashes();
@@ -46,6 +55,60 @@ public:
         msg.mined_credit.network_state.batch_number = 1;
         msg.mined_credit.network_state.batch_root = batch.Root();
         msg.mined_credit.network_state.difficulty = credit_system->initial_difficulty;
+        msg.mined_credit.keydata = Point(SECP256K1, 2).getvch();
+        return msg;
+    }
+
+    MinedCreditMessage MinedCreditMessageWithARelayJoinMessage()
+    {
+        auto first_msg = MinedCreditMessageWithABatch();
+        credit_system->StoreMinedCreditMessage(first_msg);
+        credit_system->AddToMainChain(first_msg);
+        MinedCreditMessage second_msg;
+        second_msg.mined_credit.network_state = credit_system->SucceedingNetworkState(first_msg);
+        RelayState relay_state;
+        msgdata[first_msg.GetHash160()]["msg"] = first_msg;
+        auto join = JoinMessageReferencingMinedCreditMessage(first_msg.GetHash160());
+        second_msg.hash_list.full_hashes.push_back(join.GetHash160());
+        second_msg.hash_list.GenerateShortHashes();
+        relay_state.ProcessRelayJoinMessage(join);
+        second_msg.mined_credit.network_state.relay_state_hash = relay_state.GetHash160();
+        return second_msg;
+    }
+
+    RelayJoinMessage JoinMessageReferencingMinedCreditMessage(uint160 msg_hash)
+    {
+        RelayJoinMessage join = Relay().GenerateJoinMessage(keydata, msg_hash);
+        join.Sign(*data);
+        data->StoreMessage(join);
+        return join;
+    }
+
+    MinedCreditMessage MinedCreditMessageWithAValidAndAnInvalidRelayJoinMessage()
+    {
+        auto first_msg = MinedCreditMessageWithABatch();
+        credit_system->StoreMinedCreditMessage(first_msg);
+        credit_system->AddToMainChain(first_msg);
+        msgdata[first_msg.GetHash160()]["msg"] = first_msg;
+
+        return MinedCreditMessageContainingTwoJoinMessagesWithTheSameMinedCreditMessageHash(first_msg);
+    }
+
+    MinedCreditMessage MinedCreditMessageContainingTwoJoinMessagesWithTheSameMinedCreditMessageHash(
+            MinedCreditMessage previous_msg)
+    {
+        MinedCreditMessage msg;
+        msg.mined_credit.network_state = credit_system->SucceedingNetworkState(previous_msg);
+        auto join1 = JoinMessageReferencingMinedCreditMessage(previous_msg.GetHash160());
+        auto join2 = JoinMessageReferencingMinedCreditMessage(previous_msg.GetHash160());
+        msg.hash_list.full_hashes.push_back(join1.GetHash160());
+        msg.hash_list.full_hashes.push_back(join2.GetHash160());
+        msg.hash_list.GenerateShortHashes();
+
+        RelayState relay_state;
+        relay_state.ProcessRelayJoinMessage(join1);
+        msg.mined_credit.network_state.relay_state_hash = relay_state.GetHash160();
+
         return msg;
     }
 };
@@ -274,5 +337,22 @@ TEST_F(AMinedCreditMessageValidator, ChecksTheDiurnalBlockRoot)
     ASSERT_THAT(ok, Eq(true));
     next_msg.mined_credit.network_state.diurnal_block_root = 2;
     ok = validator.CheckDiurnalBlockRoot(next_msg);
+    ASSERT_THAT(ok, Eq(false));
+}
+
+TEST_F(AMinedCreditMessageValidator, AcceptsTheRelayStateHashWhenTheMinedCreditMessageContainsAValidJoinMessage)
+{
+    auto msg = MinedCreditMessageWithARelayJoinMessage();
+    credit_system->StoreMinedCreditMessage(msg);
+    bool ok = validator.CheckRelayStateHash(msg);
+    ASSERT_THAT(ok, Eq(true));
+}
+
+TEST_F(AMinedCreditMessageValidator, RejectsTheRelayStateHashWhenTheMinedCreditMessageContainsAnInvalidJoinMessage)
+{
+    auto msg = MinedCreditMessageWithAValidAndAnInvalidRelayJoinMessage();
+    credit_system->StoreMinedCreditMessage(msg);
+
+    bool ok = validator.CheckRelayStateHash(msg);
     ASSERT_THAT(ok, Eq(false));
 }

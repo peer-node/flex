@@ -7,7 +7,7 @@
 #include <src/define.h>
 #include <src/crypto/point.h>
 #include <src/crypto/signature.h>
-#include "Data.h"
+#include "test/teleport_tests/node/Data.h"
 #include "Relay.h"
 
 class GoodbyeComplaint

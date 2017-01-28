@@ -65,23 +65,12 @@ KeyDistributionMessage KeyDistributionComplaint::GetKeyDistributionMessage(Data 
     return data.msgdata[key_distribution_message_hash]["key_distribution"];
 }
 
-KeyDistributionComplaint::KeyDistributionComplaint(KeyDistributionMessage key_distribution_message,
-                                                   uint64_t set_of_secrets, uint64_t position_of_secret, Data data):
-    key_distribution_message_hash(key_distribution_message.GetHash160()),
-    set_of_secrets(set_of_secrets),
-    position_of_secret(position_of_secret)
+void KeyDistributionComplaint::Populate(uint160 key_distribution_message_hash_,
+                                        uint64_t set_of_secrets_, uint64_t position_of_secret_, Data data)
 {
-    Relay *recipient = GetComplainer(data);
-    Point corresponding_point = GetPointCorrespondingToSecret(data);
-    recipient_private_key = recipient->GenerateRecipientPrivateKey(corresponding_point, data).getuint256();
-}
-
-KeyDistributionComplaint::KeyDistributionComplaint(uint160 key_distribution_message_hash,
-                                                   uint64_t set_of_secrets, uint64_t position_of_secret, Data data):
-        key_distribution_message_hash(key_distribution_message_hash),
-        set_of_secrets(set_of_secrets),
-        position_of_secret(position_of_secret)
-{
+    key_distribution_message_hash = key_distribution_message_hash_;
+    set_of_secrets = set_of_secrets_;
+    position_of_secret = position_of_secret_;
     Relay *recipient = GetComplainer(data);
     Point corresponding_point = GetPointCorrespondingToSecret(data);
     recipient_private_key = recipient->GenerateRecipientPrivateKey(corresponding_point, data).getuint256();

@@ -1,6 +1,6 @@
 #include <test/teleport_tests/teleport_data/MemoryDataStore.h>
 #include "gmock/gmock.h"
-#include "RelayState.h"
+#include "test/teleport_tests/node/relay_handler/RelayState.h"
 #include "CreditSystem.h"
 
 

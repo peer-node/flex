@@ -5,7 +5,7 @@
 #include <src/crypto/uint256.h>
 #include <src/crypto/point.h>
 #include <src/crypto/signature.h>
-#include "Data.h"
+#include "test/teleport_tests/node/Data.h"
 #include "SecretRecoveryFailureMessage.h"
 #include "SecretRecoveryMessage.h"
 

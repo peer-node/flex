@@ -1,6 +1,6 @@
 #include "gmock/gmock.h"
-#include "RelayPublicKeySet.h"
-#include "Relay.h"
+#include "test/teleport_tests/node/relay_handler/RelayPublicKeySet.h"
+#include "test/teleport_tests/node/relay_handler/Relay.h"
 
 using namespace ::testing;
 using namespace std;

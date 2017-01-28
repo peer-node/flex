@@ -7,8 +7,8 @@
 #include <src/crypto/signature.h>
 #include <test/teleport_tests/node/credit_handler/MinedCreditMessage.h>
 #include <src/crypto/secp256k1point.h>
-#include "../teleport_data/MemoryDataStore.h"
-#include "Data.h"
+#include "test/teleport_tests/teleport_data/MemoryDataStore.h"
+#include "test/teleport_tests/node/Data.h"
 #include "RelayPublicKeySet.h"
 
 

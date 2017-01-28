@@ -126,7 +126,7 @@ public:
 
     void AddABatchToTheTip()
     {
-        auto msg = teleport_network_node.credit_message_handler->GenerateMinedCreditMessageWithoutProofOfWork();
+        auto msg = teleport_network_node.builder.GenerateMinedCreditMessageWithoutProofOfWork();
         MarkProofAsValid(msg);
         teleport_network_node.HandleMessage(string("credit"), GetDataStream("credit", msg), NULL);
     }
@@ -361,7 +361,7 @@ public:
 
     virtual void AddABatchToTheTip(TeleportNetworkNode *teleport_network_node)
     {
-        auto msg = teleport_network_node->credit_message_handler->GenerateMinedCreditMessageWithoutProofOfWork();
+        auto msg = teleport_network_node->builder.GenerateMinedCreditMessageWithoutProofOfWork();
         CompleteProofOfWork(msg);
         teleport_network_node->HandleMessage(string("credit"), GetDataStream("credit", msg), NULL);
     }

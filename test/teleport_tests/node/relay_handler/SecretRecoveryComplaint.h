@@ -3,7 +3,7 @@
 
 
 #include <src/crypto/signature.h>
-#include "Data.h"
+#include "test/teleport_tests/node/Data.h"
 #include "Relay.h"
 #include "SecretRecoveryMessage.h"
 

@@ -25,6 +25,7 @@ public:
     uint32_t batch_size{0};
     uint160 message_list_hash{0};
     uint160 spent_chain_hash{0};
+    uint160 relay_state_hash{0};
     uint160 previous_total_work{0};
     uint160 difficulty{0};
     uint160 diurnal_difficulty{0};
@@ -44,6 +45,7 @@ public:
         READWRITE(batch_size);
         READWRITE(message_list_hash);
         READWRITE(spent_chain_hash);
+        READWRITE(relay_state_hash);
         READWRITE(previous_total_work);
         READWRITE(difficulty);
         READWRITE(previous_diurn_root);
@@ -53,8 +55,8 @@ public:
     )
 
     JSON(network_id, previous_mined_credit_message_hash, previous_calend_hash, batch_number, batch_root,
-         batch_offset, batch_size, message_list_hash, spent_chain_hash, previous_total_work, difficulty,
-         previous_diurn_root, diurnal_block_root, diurnal_difficulty, timestamp);
+         batch_offset, batch_size, message_list_hash, spent_chain_hash, relay_state_hash, previous_total_work,
+         difficulty, previous_diurn_root, diurnal_block_root, diurnal_difficulty, timestamp);
 
     bool operator==(const EncodedNetworkState& other) const
     {

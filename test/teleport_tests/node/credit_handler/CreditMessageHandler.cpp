@@ -2,17 +2,70 @@
 #include <src/crypto/secp256k1point.h>
 #include "CreditMessageHandler.h"
 #include "test/teleport_tests/node/data_handler/DataMessageHandler.h"
-
-#include "ListExpansionRequestMessage.h"
-
-#include "log.h"
 #include "test/teleport_tests/node/TeleportNetworkNode.h"
 
+
+#include "log.h"
 #define LOG_CATEGORY "CreditMessageHandler.cpp"
 
 using std::vector;
 using std::string;
 using std::set;
+
+void CreditMessageHandler::SetTipController(TipController *tip_controller_)
+{
+    tip_controller = tip_controller_;
+    using_internal_tip_controller = false;
+}
+
+void CreditMessageHandler::SetMinedCreditMessageBuilder(MinedCreditMessageBuilder *builder_)
+{
+    builder = builder_;
+    using_internal_builder = false;
+    if (tip_controller != NULL)
+        tip_controller->SetMinedCreditMessageBuilder(builder);
+}
+
+void CreditMessageHandler::SetCreditSystem(CreditSystem *credit_system_)
+{
+    credit_system = credit_system_;
+    mined_credit_message_validator.SetCreditSystem(credit_system);
+    transaction_validator.SetCreditSystem(credit_system);
+    tip_controller->SetCreditSystem(credit_system);
+    builder->SetCreditSystem(credit_system);
+}
+
+void CreditMessageHandler::SetCalendar(Calendar& calendar_)
+{
+    calendar = &calendar_;
+    tip_controller->SetCalendar(calendar);
+    builder->SetCalendar(calendar);
+}
+
+void CreditMessageHandler::SetConfig(TeleportConfig& config_)
+{
+    config = config_;
+    builder->SetConfig(config);
+}
+
+void CreditMessageHandler::SetSpentChain(BitChain& spent_chain_)
+{
+    spent_chain = &spent_chain_;
+    tip_controller->SetSpentChain(spent_chain);
+    builder->SetSpentChain(spent_chain);
+}
+
+void CreditMessageHandler::SetWallet(Wallet &wallet_)
+{
+    wallet = &wallet_;
+    tip_controller->SetWallet(wallet);
+    builder->SetWallet(wallet);
+}
+
+void CreditMessageHandler::SetNetworkNode(TeleportNetworkNode *teleport_network_node_)
+{
+    teleport_network_node = teleport_network_node_;
+}
 
 void CreditMessageHandler::HandleMinedCreditMessage(MinedCreditMessage msg)
 {
@@ -71,7 +124,7 @@ void CreditMessageHandler::QueueMinedCreditMessageBehindPrevious(MinedCreditMess
 {
     uint160 msg_hash = msg.GetHash160();
     uint160 previous_msg_hash = msg.mined_credit.network_state.previous_mined_credit_message_hash;
-    std::vector<uint160> queued_messages = creditdata[previous_msg_hash]["queued"];
+    vector<uint160> queued_messages = creditdata[previous_msg_hash]["queued"];
     if (not VectorContainsEntry(queued_messages, msg_hash))
         queued_messages.push_back(msg_hash);
     creditdata[previous_msg_hash]["queued"] = queued_messages;
@@ -80,7 +133,7 @@ void CreditMessageHandler::QueueMinedCreditMessageBehindPrevious(MinedCreditMess
 void CreditMessageHandler::HandleQueuedMinedCreditMessages(MinedCreditMessage& msg)
 {
     uint160 msg_hash = msg.GetHash160();
-    std::vector<uint160> queued_messages = creditdata[msg_hash]["queued"];
+    vector<uint160> queued_messages = creditdata[msg_hash]["queued"];
     auto final_queued_messages = queued_messages;
     for (auto queued_msg_hash : queued_messages)
     {
@@ -138,132 +191,13 @@ bool CreditMessageHandler::MinedCreditMessagePassesVerification(MinedCreditMessa
 void CreditMessageHandler::HandleValidMinedCreditMessage(MinedCreditMessage& msg)
 {
     credit_system->AcceptMinedCreditMessageAsValidByRecordingTotalWorkAndParent(msg);
-    SwitchToNewTipIfAppropriate();
+    tip_controller->SwitchToNewTipIfAppropriate();
     credit_system->MarkMinedCreditMessageAsHandled(msg.GetHash160());
 }
 
 MinedCreditMessage CreditMessageHandler::Tip()
 {
-    return msgdata[calendar->LastMinedCreditMessageHash()]["msg"];
-}
-
-void CreditMessageHandler::SwitchToNewTipIfAppropriate()
-{
-    vector<uint160> batches_with_the_most_work = credit_system->MostWorkBatches();
-
-    uint160 current_tip = calendar->LastMinedCreditMessageHash();
-    if (VectorContainsEntry(batches_with_the_most_work, current_tip))
-    {
-        return;
-    }
-
-    if (batches_with_the_most_work.size() == 0)
-    {
-        return;
-    }
-
-    uint160 new_tip = batches_with_the_most_work[0];
-    SwitchToTip(new_tip);
-}
-
-void CreditMessageHandler::SwitchToTip(uint160 msg_hash_of_new_tip)
-{
-    MinedCreditMessage msg_at_new_tip = msgdata[msg_hash_of_new_tip]["msg"];
-    uint160 current_tip = calendar->LastMinedCreditMessageHash();
-
-    if (msg_at_new_tip.mined_credit.network_state.previous_mined_credit_message_hash == current_tip)
-    {
-        AddToTip(msg_at_new_tip);
-    }
-    else
-    {
-        SwitchToTipViaFork(msg_hash_of_new_tip);
-    }
-}
-
-void CreditMessageHandler::SwitchToTipViaFork(uint160 new_tip)
-{
-    uint160 old_tip = calendar->LastMinedCreditMessageHash();
-    uint160 current_tip = calendar->LastMinedCreditMessageHash();
-    *spent_chain = credit_system->GetSpentChainOnOtherProngOfFork(*spent_chain, current_tip, new_tip);
-    credit_system->SwitchMainChainToOtherBranchOfFork(current_tip, new_tip);
-    *calendar = Calendar(new_tip, credit_system);
-    UpdateAcceptedMessagesAfterFork(old_tip, new_tip);
-    if (wallet != NULL)
-        wallet->SwitchAcrossFork(old_tip, new_tip, credit_system);
-}
-
-void CreditMessageHandler::UpdateAcceptedMessagesAfterFork(uint160 old_tip, uint160 new_tip)
-{
-    vector<uint160> messages_on_old_branch, messages_on_new_branch;
-    credit_system->GetMessagesOnOldAndNewBranchesOfFork(old_tip, new_tip, messages_on_old_branch, messages_on_new_branch);
-    UpdateAcceptedMessagesAfterFork(messages_on_old_branch, messages_on_new_branch);
-}
-
-void GetMessagesLostAndAdded(vector<uint160>& messages_lost_from_old_branch,
-                             vector<uint160>& new_messages_on_new_branch,
-                             vector<uint160> messages_on_old_branch,
-                             vector<uint160> messages_on_new_branch)
-{
-    for (auto hash : messages_on_old_branch)
-        if (not VectorContainsEntry(messages_on_new_branch, hash))
-            messages_lost_from_old_branch.push_back(hash);
-    for (auto hash : messages_on_new_branch)
-        if (not VectorContainsEntry(messages_on_old_branch, hash))
-            new_messages_on_new_branch.push_back(hash);
-}
-
-void CreditMessageHandler::UpdateAcceptedMessagesAfterFork(vector<uint160> messages_on_old_branch,
-                                                           vector<uint160> messages_on_new_branch)
-{
-    vector<uint160> messages_lost_from_old_branch, new_messages_on_new_branch;
-    GetMessagesLostAndAdded(messages_lost_from_old_branch, new_messages_on_new_branch,
-                            messages_on_old_branch, messages_on_new_branch);
-
-    for (auto hash : new_messages_on_new_branch)
-        if (VectorContainsEntry(accepted_messages, hash))
-            EraseEntryFromVector(hash, accepted_messages);
-
-    for (auto hash : messages_lost_from_old_branch)
-        if (not VectorContainsEntry(accepted_messages, hash))
-            accepted_messages.push_back(hash);
-
-    ValidateAcceptedMessagesAfterFork();
-}
-
-bool CreditMessageHandler::TransactionHasNoSpentInputs(SignedTransaction tx, set<uint160>& spent_positions)
-{
-    for (auto position : tx.InputPositions())
-        if (spent_chain->Get(position) or spent_positions.count(position))
-            return false;
-    return true;
-}
-
-void CreditMessageHandler::ValidateAcceptedMessagesAfterFork()
-{
-    vector<uint160> incoming_messages = accepted_messages;
-    set<uint160> spent_positions;
-
-    accepted_messages.resize(0);
-
-    for (auto hash : incoming_messages)
-    {
-        bool should_keep = true;
-        string message_type = credit_system->MessageType(hash);
-        if (message_type == "msg")
-            should_keep = false;
-        if (message_type == "tx")
-        {
-            SignedTransaction tx = msgdata[hash]["tx"];
-            if (TransactionHasNoSpentInputs(tx, spent_positions))
-                for (auto input : tx.rawtx.inputs)
-                    spent_positions.insert(input.position);
-            else
-                should_keep = false;
-        }
-        if (should_keep)
-            accepted_messages.push_back(hash);
-    }
+    return calendar->LastMinedCreditMessage();
 }
 
 void CreditMessageHandler::FetchFailedListExpansion(MinedCreditMessage msg)
@@ -354,37 +288,6 @@ bool CreditMessageHandler::ValidateListExpansionMessage(ListExpansionMessage lis
     return msg.hash_list.RecoverFullHashes(hashdata);
 }
 
-void CreditMessageHandler::SetCreditSystem(CreditSystem *credit_system_)
-{
-    credit_system = credit_system_;
-    mined_credit_message_validator.SetCreditSystem(credit_system_);
-    transaction_validator.SetCreditSystem(credit_system_);
-}
-
-void CreditMessageHandler::AddToTip(MinedCreditMessage &msg)
-{
-    credit_system->StoreMinedCreditMessage(msg);
-    credit_system->AddToMainChain(msg);
-    *spent_chain = credit_system->GetSpentChainOnOtherProngOfFork(*spent_chain,
-                                                                  calendar->LastMinedCreditMessageHash(),
-                                                                  msg.GetHash160());
-    calendar->AddToTip(msg, credit_system);
-    if (wallet != NULL)
-        wallet->AddBatchToTip(msg, credit_system);
-    UpdateAcceptedMessagesAfterNewTip(msg);
-}
-
-void CreditMessageHandler::UpdateAcceptedMessagesAfterNewTip(MinedCreditMessage &msg)
-{
-    msg.hash_list.RecoverFullHashes(msgdata);
-    for (auto enclosed_hash : msg.hash_list.full_hashes)
-    {
-        if (VectorContainsEntry(accepted_messages, enclosed_hash))
-            EraseEntryFromVector(enclosed_hash, accepted_messages);
-    }
-    accepted_messages.push_back(msg.GetHash160());
-}
-
 bool CreditMessageHandler::CheckInputsAreUnspentAccordingToSpentChain(SignedTransaction tx)
 {
     for (auto input : tx.rawtx.inputs)
@@ -393,22 +296,9 @@ bool CreditMessageHandler::CheckInputsAreUnspentAccordingToSpentChain(SignedTran
     return true;
 }
 
-std::set<uint64_t> CreditMessageHandler::PositionsSpentByAcceptedTransactions()
-{
-    std::set<uint64_t> spent_positions;
-    for (auto hash : accepted_messages)
-        if (credit_system->MessageType(hash) == "tx")
-        {
-            SignedTransaction accepted_tx = msgdata[hash]["tx"];
-            for (auto input : accepted_tx.rawtx.inputs)
-                spent_positions.insert(input.position);
-        }
-    return spent_positions;
-}
-
 bool CreditMessageHandler::CheckInputsAreUnspentByAcceptedTransactions(SignedTransaction tx)
 {
-    std::set<uint64_t> spent_positions = PositionsSpentByAcceptedTransactions();
+    std::set<uint64_t> spent_positions = builder->PositionsSpentByAcceptedTransactions();
 
     for (auto input : tx.rawtx.inputs)
     {
@@ -430,7 +320,7 @@ void CreditMessageHandler::HandleSignedTransaction(SignedTransaction tx)
 {
     uint160 tx_hash = tx.GetHash160();
 
-    if (VectorContainsEntry(accepted_messages, tx_hash))
+    if (VectorContainsEntry(builder->accepted_messages, tx_hash))
     {
         return;
     }
@@ -462,7 +352,7 @@ void CreditMessageHandler::HandleSignedTransaction(SignedTransaction tx)
 void CreditMessageHandler::AcceptTransaction(SignedTransaction tx)
 {
     credit_system->StoreTransaction(tx);
-    accepted_messages.push_back(tx.GetHash160());
+    builder->accepted_messages.push_back(tx.GetHash160());
 
     Broadcast(tx);
 }
@@ -504,58 +394,5 @@ void CreditMessageHandler::HandleBadBatchMessage(BadBatchMessage bad_batch_messa
     creditdata[msg_hash]["spot_check_failure"] = bad_batch_message.check;
 
     if (credit_system->IsInMainChain(msg_hash))
-        RemoveFromMainChainAndSwitchToNewTip(msg_hash);
-}
-
-void CreditMessageHandler::RemoveFromMainChainAndSwitchToNewTip(uint160 msg_hash)
-{
-    credit_system->RemoveBatchAndChildrenFromMainChainAndDeleteRecordOfTotalWork(msg_hash);
-    SwitchToNewTipIfAppropriate();
-}
-
-Point GetNewPublicKey(MemoryDataStore& keydata)
-{
-    CBigNum private_key;
-    private_key.Randomize(Secp256k1Point::Modulus());
-    Point public_key(SECP256K1, private_key);
-    keydata[public_key]["privkey"] = private_key;
-    return public_key;
-}
-
-MinedCreditMessage CreditMessageHandler::GenerateMinedCreditMessageWithoutProofOfWork()
-{
-    MinedCreditMessage msg, current_tip = Tip();
-
-    msg.mined_credit.network_state = credit_system->SucceedingNetworkState(current_tip);
-    msg.mined_credit.keydata = GetNewPublicKey(keydata).getvch();
-
-    if (msg.mined_credit.network_state.batch_number > 1)
-        msg.hash_list.full_hashes.push_back(msg.mined_credit.network_state.previous_mined_credit_message_hash);
-    else
-        msg.mined_credit.network_state.network_id = config.Uint64("network_id");
-
-    for (auto hash : accepted_messages)
-        if (credit_system->MessageType(hash) == "tx")
-            msg.hash_list.full_hashes.push_back(hash);
-    msg.hash_list.GenerateShortHashes();
-
-    credit_system->SetBatchRootAndSizeAndMessageListHashAndSpentChainHash(msg);
-    return msg;
-}
-
-void CreditMessageHandler::SetNetworkNode(TeleportNetworkNode *teleport_network_node_)
-{
-    teleport_network_node = teleport_network_node_;
-}
-
-void CreditMessageHandler::SetCalendar(Calendar& calendar_)
-{
-    calendar = &calendar_;
-//    for (auto calend : calendar->calends)
-//    {
-//        credit_system->AddToMainChain(calend);
-//        credit_system->AcceptMinedCreditMessageAsValidByRecordingTotalWorkAndParent(calend);
-//    }
-//    for (auto mined_credit_message : calendar->current_diurn.credits_in_diurn)
-//        credit_system->AddToMainChain(mined_credit_message);
+        tip_controller->RemoveFromMainChainAndSwitchToNewTip(msg_hash);
 }

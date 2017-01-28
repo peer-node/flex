@@ -57,7 +57,7 @@ TEST_F(ATeleportNetworkNode, StartsWithAnEmptyWallet)
 
 TEST_F(ATeleportNetworkNode, HandlesMinedCreditMessages)
 {
-    MinedCreditMessage msg = teleport_network_node.credit_message_handler->GenerateMinedCreditMessageWithoutProofOfWork();
+    MinedCreditMessage msg = teleport_network_node.builder.GenerateMinedCreditMessageWithoutProofOfWork();
     MarkProofAsValid(msg);
     teleport_network_node.HandleMessage(string("credit"), GetDataStream("credit", msg), (CNode*)&peer);
     ASSERT_THAT(teleport_network_node.Tip(), Eq(msg));
@@ -65,10 +65,10 @@ TEST_F(ATeleportNetworkNode, HandlesMinedCreditMessages)
 
 TEST_F(ATeleportNetworkNode, IncreasesTheBalanceWhenItHandlesMinedCreditMessages)
 {
-    MinedCreditMessage msg = teleport_network_node.credit_message_handler->GenerateMinedCreditMessageWithoutProofOfWork();
+    MinedCreditMessage msg = teleport_network_node.builder.GenerateMinedCreditMessageWithoutProofOfWork();
     MarkProofAsValid(msg);
     teleport_network_node.HandleMessage(string("credit"), GetDataStream("credit", msg), (CNode*)&peer);
-    msg = teleport_network_node.credit_message_handler->GenerateMinedCreditMessageWithoutProofOfWork();
+    msg = teleport_network_node.builder.GenerateMinedCreditMessageWithoutProofOfWork();
     MarkProofAsValid(msg);
     teleport_network_node.HandleMessage(string("credit"), GetDataStream("credit", msg), (CNode*)&peer);
     ASSERT_THAT(teleport_network_node.Balance(), Eq(ONE_CREDIT));
@@ -82,13 +82,14 @@ TEST_F(ATeleportNetworkNode, RemembersMinedCreditMessagesWithoutProofsOfWorkThat
     ASSERT_THAT(remembered_msg, Eq(msg));
 }
 
+
 class ATeleportNetworkNodeWithABalance : public ATeleportNetworkNode
 {
 public:
 
     void AddABatchToTheTip()
     {
-        auto msg = teleport_network_node.credit_message_handler->GenerateMinedCreditMessageWithoutProofOfWork();
+        auto msg = teleport_network_node.builder.GenerateMinedCreditMessageWithoutProofOfWork();
         MarkProofAsValid(msg);
         teleport_network_node.HandleMessage(string("credit"), GetDataStream("credit", msg), (CNode*)&peer);
     }
@@ -137,6 +138,7 @@ TEST_F(ATeleportNetworkNode, SendsDataMessagesToTheDataMessageHandler)
     ASSERT_THAT(rejected, Eq(true));
 }
 
+
 class TwoTeleportNetworkNodesConnectedViaPeers : public TestWithDataStreams
 {
 public:
@@ -176,7 +178,7 @@ public:
 
     virtual void AddABatchToTheTip(TeleportNetworkNode *teleport_network_node)
     {
-        auto msg = teleport_network_node->credit_message_handler->GenerateMinedCreditMessageWithoutProofOfWork();
+        auto msg = teleport_network_node->builder.GenerateMinedCreditMessageWithoutProofOfWork();
         // only this node will accept the proof of work
         teleport_network_node->credit_message_handler->creditdata[msg.GetHash160()]["quickcheck_ok"] = true;
         teleport_network_node->HandleMessage(string("credit"), GetDataStream("credit", msg), NULL);
@@ -230,6 +232,7 @@ TEST_F(TwoTeleportNetworkNodesWithSomeBatchesConnectedViaPeers, SendTipsInRespon
     ASSERT_TRUE(peer2.HasReceived("data", "tip", TipMessage(tip_request, &node1.calendar)));
 }
 
+
 class TwoTeleportNetworkNodesWithValidProofsOfWorkConnectedViaPeers : public TwoTeleportNetworkNodesWithSomeBatchesConnectedViaPeers
 {
 public:
@@ -253,7 +256,7 @@ public:
 
     virtual void AddABatchToTheTip(TeleportNetworkNode *teleport_network_node)
     {
-        auto msg = teleport_network_node->credit_message_handler->GenerateMinedCreditMessageWithoutProofOfWork();
+        auto msg = teleport_network_node->builder.GenerateMinedCreditMessageWithoutProofOfWork();
         CompleteProofOfWork(msg);
         teleport_network_node->HandleMessage(string("credit"), GetDataStream("credit", msg), NULL);
     }
@@ -339,6 +342,7 @@ TEST_F(TwoTeleportNetworkNodesConnectedAfterBatchesAreAdded, SynchronizeThroughA
 
     ASSERT_THAT(node1.calendar.LastMinedCreditMessageHash(), Eq(node2.calendar.LastMinedCreditMessageHash()));
 }
+
 
 class TwoTeleportNetworkNodesConnectedAfterBatchesWithTransactionsAreAdded : public TwoTeleportNetworkNodesWithValidProofsOfWorkConnectedViaPeers
 {
@@ -474,7 +478,7 @@ public:
 
     virtual void AddABatchToTheTip(TeleportNetworkNode *teleport_network_node)
     {
-        auto msg = teleport_network_node->credit_message_handler->GenerateMinedCreditMessageWithoutProofOfWork();
+        auto msg = teleport_network_node->builder.GenerateMinedCreditMessageWithoutProofOfWork();
         CompleteProofOfWork(msg);
         teleport_network_node->HandleMessage(string("credit"), GetDataStream("credit", msg), NULL);
     }
@@ -532,6 +536,7 @@ TEST_F(TwoTeleportNetworkNodesConnectedViaCommunicators, SendAndReceiveMessages)
     ASSERT_THAT(node1.calendar.LastMinedCreditMessageHash(), Eq(node2.calendar.LastMinedCreditMessageHash()));
 }
 
+
 class TwoTeleportNetworkNodesConnectedViaCommunicatorsAfterOneHasBuiltACalendarWithAFailure :
         public TwoTeleportNetworkNodesWithCommunicators
 {
@@ -565,7 +570,7 @@ public:
         node.credit_system->AcceptMinedCreditMessageAsValidByRecordingTotalWorkAndParent(calend);
         node.creditdata[calend.GetHash160()]["passed_verification"] = true;
         node.creditdata[calend.GetHash160()]["is_calend"] = true;
-        node.credit_message_handler->AddToTip(calend);
+        node.tip_controller.AddToTip(calend);
         bad_batch_number = calend.mined_credit.network_state.batch_number;
 
         while (node.calendar.calends.size() < 5)

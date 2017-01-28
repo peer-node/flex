@@ -68,7 +68,7 @@ public:
 
     void AddABatch()
     {
-        MinedCreditMessage msg = credit_message_handler->GenerateMinedCreditMessageWithoutProofOfWork();
+        MinedCreditMessage msg = credit_message_handler->builder->GenerateMinedCreditMessageWithoutProofOfWork();
         CompleteProofOfWork(msg);
         credit_system->StoreMinedCreditMessage(msg);
         calendar->AddToTip(msg, credit_system);
@@ -264,12 +264,12 @@ public:
 
     void AddABatchToCalendar(Calendar *calendar_)
     {
-        credit_message_handler->calendar = calendar_;
-        MinedCreditMessage msg = credit_message_handler->GenerateMinedCreditMessageWithoutProofOfWork();
+        credit_message_handler->builder->calendar = calendar_;
+        MinedCreditMessage msg = credit_message_handler->builder->GenerateMinedCreditMessageWithoutProofOfWork();
         CompleteProofOfWork(msg);
         credit_system->StoreMinedCreditMessage(msg);
         calendar_->AddToTip(msg, credit_system);
-        credit_message_handler->calendar = calendar;
+        credit_message_handler->builder->calendar = calendar;
     }
 
     CalendarMessage CalendarMessageWithABadCalendar();

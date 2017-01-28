@@ -335,7 +335,7 @@ void KnownHistoryHandler::HandleDiurnFailureMessage(DiurnFailureMessage diurn_fa
     credit_system->RemoveMinedCreditMessagesDownstreamOfDiurnFailure(diurn_failure_message);
     if (data_message_handler->teleport_network_node != NULL and
             data_message_handler->teleport_network_node->credit_message_handler != NULL)
-        data_message_handler->teleport_network_node->credit_message_handler->SwitchToNewTipIfAppropriate();
+        data_message_handler->teleport_network_node->tip_controller.SwitchToNewTipIfAppropriate();
 }
 
 bool KnownHistoryHandler::ValidateDiurnFailureMessage(DiurnFailureMessage diurn_failure_message)

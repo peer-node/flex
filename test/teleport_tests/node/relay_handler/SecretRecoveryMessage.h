@@ -6,7 +6,7 @@
 #include <src/crypto/signature.h>
 #include <test/teleport_tests/teleport_data/MemoryDataStore.h>
 #include "RelayJoinMessage.h"
-#include "Data.h"
+#include "test/teleport_tests/node/Data.h"
 #include "Relay.h"
 #include "Obituary.h"
 

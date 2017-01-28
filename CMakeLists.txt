@@ -429,7 +429,7 @@ set(NEW_CREDITS_FILES
         test/teleport_tests/node/testShortHashList.cpp
         test/teleport_tests/node/testTeleportNetworkNode.cpp
         test/teleport_tests/node/TeleportNetworkNode.cpp
-        test/teleport_tests/node/TeleportNetworkNode.h)
+        test/teleport_tests/node/TeleportNetworkNode.h test/teleport_tests/node/credit_handler/TipController.cpp test/teleport_tests/node/credit_handler/TipController.h test/teleport_tests/node/credit_handler/MinedCreditMessageBuilder.cpp test/teleport_tests/node/credit_handler/MinedCreditMessageBuilder.h)
 
 set(DATA_HANDLER_FILES
         test/teleport_tests/node/data_handler/KnownHistoryMessage.cpp
@@ -631,48 +631,48 @@ add_executable(runNodeTests
         test/teleport_tests/node/testTeleportConfig.cpp
         test/teleport_tests/node/testTeleportRPCServer.cpp
         test/teleport_tests/node/testRelayState.cpp
-        test/teleport_tests/node/RelayState.cpp
-        test/teleport_tests/node/RelayState.h
-        test/teleport_tests/node/Relay.cpp
-        test/teleport_tests/node/Relay.h
-        test/teleport_tests/node/RelayJoinMessage.cpp
-        test/teleport_tests/node/RelayJoinMessage.h
+        test/teleport_tests/node/relay_handler/RelayState.cpp
+        test/teleport_tests/node/relay_handler/RelayState.h
+        test/teleport_tests/node/relay_handler/Relay.cpp
+        test/teleport_tests/node/relay_handler/Relay.h
+        test/teleport_tests/node/relay_handler/RelayJoinMessage.cpp
+        test/teleport_tests/node/relay_handler/RelayJoinMessage.h
         test/teleport_tests/node/testRelay.cpp
         test/teleport_tests/node/testRelayMessageHandler.cpp
-        test/teleport_tests/node/RelayMessageHandler.cpp
-        test/teleport_tests/node/RelayMessageHandler.h
+        test/teleport_tests/node/relay_handler/RelayMessageHandler.cpp
+        test/teleport_tests/node/relay_handler/RelayMessageHandler.h
         test/teleport_tests/node/testRelayJoinMessage.cpp
-        test/teleport_tests/node/KeyDistributionMessage.cpp
-        test/teleport_tests/node/KeyDistributionMessage.h
-        test/teleport_tests/node/SecretRecoveryMessage.cpp
-        test/teleport_tests/node/SecretRecoveryMessage.h
+        test/teleport_tests/node/relay_handler/KeyDistributionMessage.cpp
+        test/teleport_tests/node/relay_handler/KeyDistributionMessage.h
+        test/teleport_tests/node/relay_handler/SecretRecoveryMessage.cpp
+        test/teleport_tests/node/relay_handler/SecretRecoveryMessage.h
         test/teleport_tests/node/Data.h
-        test/teleport_tests/node/Obituary.cpp
-        test/teleport_tests/node/Obituary.h
-        test/teleport_tests/node/RelayExit.cpp
-        test/teleport_tests/node/RelayExit.h
+        test/teleport_tests/node/relay_handler/Obituary.cpp
+        test/teleport_tests/node/relay_handler/Obituary.h
+        test/teleport_tests/node/relay_handler/RelayExit.cpp
+        test/teleport_tests/node/relay_handler/RelayExit.h
         test/teleport_tests/node/testPointPrecomputation.cpp
-        test/teleport_tests/node/KeyDistributionComplaint.cpp
-        test/teleport_tests/node/KeyDistributionComplaint.h
-        test/teleport_tests/node/DurationWithoutResponse.cpp
-        test/teleport_tests/node/DurationWithoutResponse.h
-        test/teleport_tests/node/DurationWithoutResponseFromRelay.cpp
-        test/teleport_tests/node/DurationWithoutResponseFromRelay.h
-        test/teleport_tests/node/GoodbyeMessage.cpp
-        test/teleport_tests/node/GoodbyeMessage.h
-        test/teleport_tests/node/GoodbyeComplaint.cpp
-        test/teleport_tests/node/GoodbyeComplaint.h
-        test/teleport_tests/node/SecretRecoveryComplaint.cpp
-        test/teleport_tests/node/SecretRecoveryComplaint.h
+        test/teleport_tests/node/relay_handler/KeyDistributionComplaint.cpp
+        test/teleport_tests/node/relay_handler/KeyDistributionComplaint.h
+        test/teleport_tests/node/relay_handler/DurationWithoutResponse.cpp
+        test/teleport_tests/node/relay_handler/DurationWithoutResponse.h
+        test/teleport_tests/node/relay_handler/DurationWithoutResponseFromRelay.cpp
+        test/teleport_tests/node/relay_handler/DurationWithoutResponseFromRelay.h
+        test/teleport_tests/node/relay_handler/GoodbyeMessage.cpp
+        test/teleport_tests/node/relay_handler/GoodbyeMessage.h
+        test/teleport_tests/node/relay_handler/GoodbyeComplaint.cpp
+        test/teleport_tests/node/relay_handler/GoodbyeComplaint.h
+        test/teleport_tests/node/relay_handler/SecretRecoveryComplaint.cpp
+        test/teleport_tests/node/relay_handler/SecretRecoveryComplaint.h
         test/teleport_tests/node/testRelayPublicKeySet.cpp
-        test/teleport_tests/node/RelayPublicKeySet.cpp
-        test/teleport_tests/node/RelayPublicKeySet.h
-        test/teleport_tests/node/SecretRecoveryFailureMessage.cpp
-        test/teleport_tests/node/SecretRecoveryFailureMessage.h
-        test/teleport_tests/node/RecoveryFailureAuditMessage.cpp
-        test/teleport_tests/node/RecoveryFailureAuditMessage.h
-        test/teleport_tests/node/RelayKeyHolderData.cpp
-        test/teleport_tests/node/RelayKeyHolderData.h test/teleport_tests/node/RelayMessageHashData.cpp test/teleport_tests/node/RelayMessageHashData.h test/teleport_tests/node/testRelayMemoryCache.cpp test/teleport_tests/node/RelayMemoryCache.cpp test/teleport_tests/node/RelayMemoryCache.h)
+        test/teleport_tests/node/relay_handler/RelayPublicKeySet.cpp
+        test/teleport_tests/node/relay_handler/RelayPublicKeySet.h
+        test/teleport_tests/node/relay_handler/SecretRecoveryFailureMessage.cpp
+        test/teleport_tests/node/relay_handler/SecretRecoveryFailureMessage.h
+        test/teleport_tests/node/relay_handler/RecoveryFailureAuditMessage.cpp
+        test/teleport_tests/node/relay_handler/RecoveryFailureAuditMessage.h
+        test/teleport_tests/node/relay_handler/RelayKeyHolderData.cpp
+        test/teleport_tests/node/relay_handler/RelayKeyHolderData.h test/teleport_tests/node/relay_handler/RelayMessageHashData.cpp test/teleport_tests/node/relay_handler/RelayMessageHashData.h test/teleport_tests/node/testRelayMemoryCache.cpp test/teleport_tests/node/relay_handler/RelayMemoryCache.cpp test/teleport_tests/node/relay_handler/RelayMemoryCache.h test/teleport_tests/node/Data.cpp)
 
 add_executable(teleportd
         test/teleport_tests/teleport_data/TestData.h

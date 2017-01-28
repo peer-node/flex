@@ -21,12 +21,18 @@ public:
     BitChain spent_chain;
     Communicator *communicator{NULL};
     TeleportConfig *config;
+    TipController tip_controller;
+    MinedCreditMessageBuilder builder;
 
-    TeleportNetworkNode()
+    TeleportNetworkNode():
+            tip_controller(msgdata, creditdata, keydata),
+            builder(msgdata, creditdata, keydata)
     {
         credit_system = new CreditSystem(msgdata, creditdata);
         wallet = new Wallet(keydata);
         credit_message_handler = new CreditMessageHandler(msgdata, creditdata, keydata);
+        credit_message_handler->SetTipController(&tip_controller);
+        credit_message_handler->SetMinedCreditMessageBuilder(&builder);
         credit_message_handler->SetCreditSystem(credit_system);
         credit_message_handler->SetCalendar(calendar);
         credit_message_handler->SetSpentChain(spent_chain);

@@ -1,8 +1,8 @@
 #include <src/vector_tools.h>
 #include <src/base/util_time.h>
 #include "gmock/gmock.h"
-#include "RelayState.h"
-#include "SecretRecoveryComplaint.h"
+#include "test/teleport_tests/node/relay_handler/RelayState.h"
+#include "test/teleport_tests/node/relay_handler/SecretRecoveryComplaint.h"
 
 using namespace ::testing;
 using namespace std;
@@ -277,7 +277,8 @@ TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
 {
     uint64_t set_of_secrets = KEY_DISTRIBUTION_COMPLAINT_FIRST_KEY_SIXTEENTHS;
     uint64_t position = 2;
-    KeyDistributionComplaint complaint(key_distribution_message, set_of_secrets, position, *data);
+    KeyDistributionComplaint complaint;
+    complaint.Populate(key_distribution_message.GetHash160(), set_of_secrets, position, *data);
 
     relay_state.ProcessKeyDistributionComplaint(complaint, *data);
 
@@ -305,8 +306,9 @@ TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
     duration_after_key_distribution_message.message_hash = key_distribution_message.GetHash160();
     relay_state.ProcessDurationWithoutResponse(duration_after_key_distribution_message, *data);
 
-    KeyDistributionComplaint complaint(key_distribution_message, KEY_DISTRIBUTION_COMPLAINT_FIRST_KEY_SIXTEENTHS,
-                                       2, *data);
+    KeyDistributionComplaint complaint;
+    complaint.Populate(key_distribution_message.GetHash160(),
+                       KEY_DISTRIBUTION_COMPLAINT_FIRST_KEY_SIXTEENTHS, 2, *data);
     EXPECT_THROW(relay_state.ProcessKeyDistributionComplaint(complaint, *data), RelayStateException);
 }
 
@@ -415,7 +417,7 @@ public:
         ARelayStateWhichHasProcessedAKeyDistributionMessage::SetUp();
         uint64_t set_of_secrets = KEY_DISTRIBUTION_COMPLAINT_FIRST_KEY_SIXTEENTHS;
         uint64_t position = 2;
-        complaint = KeyDistributionComplaint(key_distribution_message, set_of_secrets, position, *data);
+        complaint.Populate(key_distribution_message.GetHash160(), set_of_secrets, position, *data);
         data->StoreMessage(complaint);
 
         relay_state_before_complaint = relay_state;

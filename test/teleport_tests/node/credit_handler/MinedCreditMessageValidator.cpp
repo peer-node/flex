@@ -1,4 +1,6 @@
 #include <src/base/util_time.h>
+#include <test/teleport_tests/node/relay_handler/RelayState.h>
+#include <test/teleport_tests/node/relay_handler/RelayMessageHandler.h>
 #include "MinedCreditMessageValidator.h"
 
 #include "log.h"
@@ -212,5 +214,27 @@ bool MinedCreditMessageValidator::CheckPreviousCalendHash(MinedCreditMessage msg
 
     return msg.mined_credit.network_state.previous_calend_hash ==
             previous_msg.mined_credit.network_state.previous_calend_hash;
+}
+
+bool MinedCreditMessageValidator::CheckRelayStateHash(MinedCreditMessage &msg)
+{
+    uint160 previous_msg_hash = msg.mined_credit.network_state.previous_mined_credit_message_hash;
+    MinedCreditMessage previous_msg = credit_system->msgdata[previous_msg_hash]["msg"];
+
+    RelayMessageHandler handler(*data);
+    handler.relay_state = data->GetRelayState(previous_msg.mined_credit.network_state.relay_state_hash);
+    handler.SetCreditSystem(credit_system);
+    handler.relay_state.latest_mined_credit_message_hash = previous_msg_hash;
+
+    if (not msg.hash_list.RecoverFullHashes(data->msgdata))
+        return false;
+
+    for (auto &message_hash : msg.hash_list.full_hashes)
+    {
+        if (not handler.ValidateMessage(message_hash))
+            return false;
+        handler.HandleMessage(message_hash);
+    }
+    return handler.relay_state.GetHash160() == msg.mined_credit.network_state.relay_state_hash;
 }
 

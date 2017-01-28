@@ -2,8 +2,8 @@
 #include <src/crypto/bignum_hashes.h>
 #include <src/base/util_hex.h>
 #include "Relay.h"
-#include "RelayState.h"
-#include "RelayKeyHolderData.h"
+#include "test/teleport_tests/node/relay_handler/RelayState.h"
+#include "test/teleport_tests/node/relay_handler/RelayKeyHolderData.h"
 
 
 #include "log.h"

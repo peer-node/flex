@@ -4,14 +4,22 @@
 
 #include "test/teleport_tests/node/CreditSystem.h"
 
+class Data;
+
 class MinedCreditMessageValidator
 {
 public:
     CreditSystem *credit_system;
+    Data *data;
 
     void SetCreditSystem(CreditSystem *credit_system_)
     {
         credit_system = credit_system_;
+    }
+
+    void SetData(Data *data_)
+    {
+        data = data_;
     }
 
     bool HasMissingData(MinedCreditMessage& msg);
@@ -27,6 +35,8 @@ public:
     bool CheckMessageListHash(MinedCreditMessage &msg);
 
     bool CheckSpentChainHash(MinedCreditMessage &msg);
+
+    bool CheckRelayStateHash(MinedCreditMessage &msg);
 
     bool CheckTimeStampSucceedsPreviousTimestamp(MinedCreditMessage &msg);
 

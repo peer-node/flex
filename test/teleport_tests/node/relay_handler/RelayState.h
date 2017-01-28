@@ -133,10 +133,6 @@ public:
 
     void TransferTasksToSuccessor(uint64_t dead_relay_number, uint64_t successor_number);
 
-    void ReaddRelay(Obituary obituary, uint64_t successor_relay_number);
-
-    void TransferTasksBackFromSuccessorToRelay(Obituary obituary);
-
     bool MinedCreditMessageHashIsAlreadyBeingUsed(uint160 mined_credit_message_hash);
 
     void ProcessRecoveryFailureAuditMessage(RecoveryFailureAuditMessage audit_message, Data data);

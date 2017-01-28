@@ -6,6 +6,7 @@
 #include <src/vector_tools.h>
 
 class RelayState;
+class RelayMemoryCache;
 
 
 class Data
@@ -13,6 +14,8 @@ class Data
 public:
     MemoryDataStore &msgdata, &creditdata, &keydata;
     RelayState *relay_state{NULL};
+    RelayMemoryCache *cache{NULL};
+
 
     Data(MemoryDataStore &msgdata, MemoryDataStore &creditdata, MemoryDataStore &keydata):
             msgdata(msgdata), creditdata(creditdata), keydata(keydata)
@@ -21,6 +24,10 @@ public:
     Data(MemoryDataStore &msgdata, MemoryDataStore &creditdata, MemoryDataStore &keydata, RelayState *relay_state):
             msgdata(msgdata), creditdata(creditdata), keydata(keydata), relay_state(relay_state)
     { }
+
+    ~Data();
+
+    void CreateCache();
 
     template <typename T>
     void StoreMessage(T message)
@@ -51,8 +58,8 @@ public:
         msgdata[short_hash]["matches"] = matches;
     }
 
+    RelayState GetRelayState(uint160 relay_state_hash);
 };
-
 
 
 #endif //TELEPORT_DATA_H

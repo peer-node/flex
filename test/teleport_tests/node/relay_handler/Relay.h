@@ -4,11 +4,11 @@
 
 #include <src/crypto/point.h>
 #include <test/teleport_tests/teleport_data/MemoryDataStore.h>
-#include "RelayJoinMessage.h"
-#include "KeyDistributionMessage.h"
-#include "GoodbyeMessage.h"
-#include "RelayKeyHolderData.h"
-#include "RelayMessageHashData.h"
+#include "test/teleport_tests/node/relay_handler/RelayJoinMessage.h"
+#include "test/teleport_tests/node/relay_handler/KeyDistributionMessage.h"
+#include "test/teleport_tests/node/relay_handler/GoodbyeMessage.h"
+#include "test/teleport_tests/node/relay_handler/RelayKeyHolderData.h"
+#include "test/teleport_tests/node/relay_handler/RelayMessageHashData.h"
 
 
 class Relay
