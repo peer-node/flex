@@ -429,7 +429,7 @@ set(NEW_CREDITS_FILES
         test/teleport_tests/node/testShortHashList.cpp
         test/teleport_tests/node/testTeleportNetworkNode.cpp
         test/teleport_tests/node/TeleportNetworkNode.cpp
-        test/teleport_tests/node/TeleportNetworkNode.h test/teleport_tests/node/credit_handler/TipController.cpp test/teleport_tests/node/credit_handler/TipController.h test/teleport_tests/node/credit_handler/MinedCreditMessageBuilder.cpp test/teleport_tests/node/credit_handler/MinedCreditMessageBuilder.h)
+        test/teleport_tests/node/TeleportNetworkNode.h test/teleport_tests/node/credit_handler/TipController.cpp test/teleport_tests/node/credit_handler/TipController.h test/teleport_tests/node/credit_handler/MinedCreditMessageBuilder.cpp test/teleport_tests/node/credit_handler/MinedCreditMessageBuilder.h test/teleport_tests/node/relay_handler/RelayAdmissionHandler.cpp test/teleport_tests/node/relay_handler/RelayAdmissionHandler.h test/teleport_tests/node/relay_handler/RelaySuccessionHandler.cpp test/teleport_tests/node/relay_handler/RelaySuccessionHandler.h)
 
 set(DATA_HANDLER_FILES
         test/teleport_tests/node/data_handler/KnownHistoryMessage.cpp

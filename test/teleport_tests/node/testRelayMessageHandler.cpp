@@ -37,7 +37,8 @@ public:
         SetLatestMinedCreditMessageBatchNumberTo(1);
 
         relay_message_handler->AddScheduledTasks();
-        relay_message_handler->scheduler.running = false;
+        relay_message_handler->admission_handler.scheduler.running = false;
+        relay_message_handler->succession_handler.scheduler.running = false;
 
         relay_state = &relay_message_handler->relay_state;
     }
@@ -94,11 +95,11 @@ TEST_F(ARelayMessageHandler, DetectsWhetherTheMinedCreditMessageHashInARelayJoin
     auto msg = AMinedCreditMessageWithNonZeroTotalWork();
 
     relay_join_message.mined_credit_message_hash = msg.GetHash160();
-    bool in_main_chain = relay_message_handler->MinedCreditMessageHashIsInMainChain(relay_join_message);
+    bool in_main_chain = relay_message_handler->admission_handler.MinedCreditMessageHashIsInMainChain(relay_join_message);
     ASSERT_THAT(in_main_chain, Eq(false));
 
     credit_system->AddToMainChain(msg);
-    in_main_chain = relay_message_handler->MinedCreditMessageHashIsInMainChain(relay_join_message);
+    in_main_chain = relay_message_handler->admission_handler.MinedCreditMessageHashIsInMainChain(relay_join_message);
     ASSERT_THAT(in_main_chain, Eq(true));
 }
 
@@ -138,7 +139,7 @@ TEST_F(ARelayMessageHandler, AddsARelayToTheRelayStateWhenAcceptingARelayJoinMes
 {
     ASSERT_THAT(relay_message_handler->relay_state.relays.size(), Eq(0));
 
-    relay_message_handler->AcceptRelayJoinMessage(ARelayJoinMessageWithAValidSignature());
+    relay_message_handler->admission_handler.AcceptRelayJoinMessage(ARelayJoinMessageWithAValidSignature());
 
     ASSERT_THAT(relay_message_handler->relay_state.relays.size(), Eq(1));
 }
@@ -413,9 +414,8 @@ TEST_F(ARelayMessageHandlerWithAKeyDistributionMessage,
 {
     relay_message_handler->HandleKeyDistributionMessage(key_distribution_message);
 
-    ASSERT_TRUE(relay_message_handler->scheduler.TaskIsScheduledForTime("key_distribution",
-                                                                        key_distribution_message.GetHash160(),
-                                                                        TEST_START_TIME + RESPONSE_WAIT_TIME));
+    ASSERT_TRUE(relay_message_handler->admission_handler.scheduler.TaskIsScheduledForTime(
+            "key_distribution", key_distribution_message.GetHash160(), TEST_START_TIME + RESPONSE_WAIT_TIME));
 }
 
 TEST_F(ARelayMessageHandlerWithAKeyDistributionMessage,
@@ -481,7 +481,7 @@ public:
         ARelayMessageHandlerWithAKeyDistributionMessage::SetUp();
 
         static RelayState reference_relay_state;
-        static MemoryDataStore reference_keydata, reference_msgdata, reference_creditdata, reference_scheduledata;
+        static MemoryDataStore reference_keydata, reference_msgdata, reference_creditdata, reference_admission_scheduledata;
 
         if (reference_relay_state.relays.size() == 0)
         {
@@ -491,7 +491,7 @@ public:
             reference_keydata = keydata;
             reference_msgdata = msgdata;
             reference_creditdata = creditdata;
-            reference_scheduledata = relay_message_handler->scheduler.scheduledata;
+            reference_admission_scheduledata = relay_message_handler->admission_handler.scheduler.scheduledata;
         }
         else
         {
@@ -499,7 +499,7 @@ public:
             msgdata = reference_msgdata;
             creditdata = reference_creditdata;
             relay_message_handler->relay_state = reference_relay_state;
-            relay_message_handler->scheduler.scheduledata = reference_scheduledata;
+            relay_message_handler->admission_handler.scheduler.scheduledata = reference_admission_scheduledata;
         }
         key_sharer = GetRelayWhoSharedAQuarterKeyWithChosenRelay();
     }
@@ -566,7 +566,7 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage, RejectsAKey
 TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage, MarksTheMessageAsAcceptedIfNoComplaintsAreReceived)
 {
     SetMockTimeMicros(GetTimeMicros() + RESPONSE_WAIT_TIME);
-    relay_message_handler->scheduler.DoTasksScheduledForExecutionBeforeNow();
+    relay_message_handler->admission_handler.scheduler.DoTasksScheduledForExecutionBeforeNow();
     ASSERT_THAT(relay->key_distribution_message_accepted, Eq(true));
 }
 
@@ -576,7 +576,7 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage,
     vector<uint160> complaint_hashes{5};
     msgdata[key_distribution_message.GetHash160()]["complaints"] = complaint_hashes;
     SetMockTimeMicros(GetTimeMicros() + RESPONSE_WAIT_TIME);
-    relay_message_handler->scheduler.DoTasksScheduledForExecutionBeforeNow();
+    relay_message_handler->admission_handler.scheduler.DoTasksScheduledForExecutionBeforeNow();
     ASSERT_THAT(relay->key_distribution_message_accepted, Eq(false));
 }
 
@@ -587,7 +587,7 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage,
     relay_message_handler->Handle(goodbye_message, &peer);
     ASSERT_THAT(relay->hashes.goodbye_message_hash, Ne(0));
 
-    ASSERT_TRUE(relay_message_handler->scheduler.TaskIsScheduledForTime("goodbye",
+    ASSERT_TRUE(relay_message_handler->succession_handler.scheduler.TaskIsScheduledForTime("goodbye",
                                                                         relay->hashes.goodbye_message_hash,
                                                                         TEST_START_TIME + RESPONSE_WAIT_TIME));
 }
@@ -670,7 +670,7 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAValidGoodbyeMessage,
        GeneratesAnObituarySpecifyingThatTheRelaySaidGoodbyeIfNoComplaintsAreReceived)
 {
     SetMockTimeMicros(GetTimeMicros() + RESPONSE_WAIT_TIME);
-    relay_message_handler->scheduler.DoTasksScheduledForExecutionBeforeNow();
+    relay_message_handler->succession_handler.scheduler.DoTasksScheduledForExecutionBeforeNow();
     ASSERT_THAT(relay->hashes.obituary_hash, Ne(0));
     Obituary obituary = data->GetMessage(relay->hashes.obituary_hash);
     ASSERT_THAT(obituary.reason_for_leaving, Eq(OBITUARY_SAID_GOODBYE));
@@ -982,7 +982,7 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaint,
 TEST_F(ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaint,
        SchedulesATaskToCheckWhichQuarterHoldersHaveRespondedToTheObituary)
 {
-    ASSERT_TRUE(relay_message_handler->scheduler.TaskIsScheduledForTime("obituary",
+    ASSERT_TRUE(relay_message_handler->succession_handler.scheduler.TaskIsScheduledForTime("obituary",
                                                                         relay->hashes.obituary_hash,
                                                                         TEST_START_TIME + RESPONSE_WAIT_TIME));
 }
@@ -992,7 +992,7 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaint,
 {
     SetMockTimeMicros(TEST_START_TIME + RESPONSE_WAIT_TIME);
     msgdata[relay->hashes.obituary_hash]["secret_recovery_messages"] = vector<uint160>();
-    relay_message_handler->scheduler.DoTasksScheduledForExecutionBeforeNow();
+    relay_message_handler->succession_handler.scheduler.DoTasksScheduledForExecutionBeforeNow();
 
     for (auto quarter_holder_number : relay->holders.key_quarter_holders)
     {
@@ -1005,7 +1005,7 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaint,
        DoesntGeneratesObituariesForKeyQuarterHoldersWhoHaveRespondedToTheObituaryWhenCompletingTheScheduledTask)
 {
     SetMockTimeMicros(TEST_START_TIME + RESPONSE_WAIT_TIME);
-    relay_message_handler->scheduler.DoTasksScheduledForExecutionBeforeNow();
+    relay_message_handler->succession_handler.scheduler.DoTasksScheduledForExecutionBeforeNow();
 
     for (auto quarter_holder_number : relay->holders.key_quarter_holders)
     {
@@ -1031,9 +1031,8 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaint,
     vector<uint160> secret_recovery_message_hashes = msgdata[relay->hashes.obituary_hash]["secret_recovery_messages"];
     for (auto secret_recovery_message_hash : secret_recovery_message_hashes)
     {
-        ASSERT_TRUE(relay_message_handler->scheduler.TaskIsScheduledForTime("secret_recovery",
-                                                                            secret_recovery_message_hash,
-                                                                            TEST_START_TIME + RESPONSE_WAIT_TIME));
+        ASSERT_TRUE(relay_message_handler->succession_handler.scheduler.TaskIsScheduledForTime(
+                "secret_recovery", secret_recovery_message_hash, TEST_START_TIME + RESPONSE_WAIT_TIME));
     }
 }
 
@@ -1321,7 +1320,7 @@ public:
         data->StoreMessage(bad_recovery_message);
 
         if (suppress_audit_messages)
-            relay_message_handler->send_audit_messages = false;
+            relay_message_handler->succession_handler.send_audit_messages = false;
 
         relay_message_handler->Handle(bad_recovery_message, &peer);
     }
@@ -1503,7 +1502,7 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedASecretRecoveryFailureMessageAndNoAu
        WritesObituariesForTheKeyQuarterHoldersWhoDontRespondInTime)
 {
     SetMockTimeMicros(TEST_START_TIME + RESPONSE_WAIT_TIME);
-    relay_message_handler->scheduler.DoTasksScheduledForExecutionBeforeNow();
+    relay_message_handler->succession_handler.scheduler.DoTasksScheduledForExecutionBeforeNow();
 
     for (auto quarter_holder_number : relay->holders.key_quarter_holders)
     {
@@ -1516,14 +1515,13 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedASecretRecoveryFailureMessageAndNoAu
        SchedulesATaskToCheckWhichQuarterHoldersHaveRespondedToTheObituaries)
 {
     SetMockTimeMicros(TEST_START_TIME + RESPONSE_WAIT_TIME);
-    relay_message_handler->scheduler.DoTasksScheduledForExecutionBeforeNow();
+    relay_message_handler->succession_handler.scheduler.DoTasksScheduledForExecutionBeforeNow();
 
     for (auto quarter_holder_number : relay->holders.key_quarter_holders)
     {
         auto quarter_holder = relay_state->GetRelayByNumber(quarter_holder_number);
-        ASSERT_TRUE(relay_message_handler->scheduler.TaskIsScheduledForTime("obituary",
-                                                                            quarter_holder->hashes.obituary_hash,
-                                                                            TEST_START_TIME + 2 * RESPONSE_WAIT_TIME));
+        ASSERT_TRUE(relay_message_handler->succession_handler.scheduler.TaskIsScheduledForTime(
+                "obituary", quarter_holder->hashes.obituary_hash, TEST_START_TIME + 2 * RESPONSE_WAIT_TIME));
     }
 }
 
