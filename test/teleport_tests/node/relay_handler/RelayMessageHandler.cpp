@@ -115,6 +115,11 @@ bool RelayMessageHandler::ValidateGoodbyeComplaint(GoodbyeComplaint &complaint)
     return succession_handler.ValidateGoodbyeComplaint(complaint);
 }
 
+bool RelayMessageHandler::ValidateDurationWithoutResponse(DurationWithoutResponse &duration)
+{
+    return true;
+}
+
 bool RelayMessageHandler::ValidateMessage(uint160 &message_hash)
 {
     std::string message_type = data.MessageType(message_hash);
@@ -135,8 +140,14 @@ bool RelayMessageHandler::ValidateMessage(uint160 &message_hash)
     VALIDATE(RecoveryFailureAuditMessage);
     VALIDATE(GoodbyeMessage);
     VALIDATE(GoodbyeComplaint);
+    VALIDATE(DurationWithoutResponse);
 
 #undef VALIDATE
 
     return true;
+}
+
+void RelayMessageHandler::HandleDurationWithoutResponse(DurationWithoutResponse duration)
+{
+    relay_state.ProcessDurationWithoutResponse(duration, data);
 }

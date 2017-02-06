@@ -3,6 +3,7 @@
 
 
 #include <test/teleport_tests/node/wallet/Wallet.h>
+#include <test/teleport_tests/node/Data.h>
 #include "MinedCreditMessage.h"
 
 class MinedCreditMessageBuilder;
@@ -18,11 +19,9 @@ public:
     Wallet *wallet{NULL};
     MinedCreditMessageBuilder *builder;
 
-    TipController(MemoryDataStore &msgdata, MemoryDataStore &creditdata, MemoryDataStore &keydata):
-            msgdata(msgdata), creditdata(creditdata), keydata(keydata)
-    {
-
-    }
+    TipController(Data data):
+            msgdata(data.msgdata), creditdata(data.creditdata), keydata(data.keydata)
+    { }
 
     void SetMinedCreditMessageBuilder(MinedCreditMessageBuilder *builder_);
 

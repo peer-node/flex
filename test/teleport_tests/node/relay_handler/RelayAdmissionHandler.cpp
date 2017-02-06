@@ -5,6 +5,9 @@
 using std::vector;
 using std::string;
 
+#include "log.h"
+#define LOG_CATEGORY "RelayAdmissionHandler.cpp"
+
 
 RelayAdmissionHandler::RelayAdmissionHandler(Data data_, CreditSystem *credit_system, Calendar *calendar,
                                              RelayMessageHandler *handler):
@@ -66,9 +69,13 @@ void RelayAdmissionHandler::HandleKeyDistributionMessage(KeyDistributionMessage 
         relay_message_handler->RejectMessage(key_distribution_message.GetHash160());
         return;
     }
-    StoreKeyDistributionSecretsAndSendComplaints(key_distribution_message);
     relay_state->ProcessKeyDistributionMessage(key_distribution_message);
-    scheduler.Schedule("key_distribution", key_distribution_message.GetHash160(), GetTimeMicros() + RESPONSE_WAIT_TIME);
+    StoreKeyDistributionSecretsAndSendComplaints(key_distribution_message);
+    if (relay_message_handler->mode == LIVE)
+    {
+        scheduler.Schedule("key_distribution",
+                           key_distribution_message.GetHash160(), GetTimeMicros() + RESPONSE_WAIT_TIME);
+    }
 }
 
 void RelayAdmissionHandler::HandleKeyDistributionMessageAfterDuration(uint160 key_distribution_message_hash)
@@ -131,10 +138,8 @@ void RelayAdmissionHandler::RecoverSecretsAndSendKeyDistributionComplaints(Relay
         bool ok = RecoverAndStoreSecret(recipient, encrypted_secrets[position], public_key_sixteenths[position])
                   and relay->public_key_set.VerifyRowOfGeneratedPoints(position, data.keydata);
 
-        if (not ok)
-        {
+        if (not ok and relay_message_handler->mode == LIVE)
             SendKeyDistributionComplaint(key_distribution_message_hash, set_of_secrets, position);
-        }
     }
 }
 

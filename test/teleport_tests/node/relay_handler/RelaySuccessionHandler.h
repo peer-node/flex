@@ -125,6 +125,7 @@ public:
 
     bool ValidateGoodbyeComplaint(GoodbyeComplaint &complaint);
 
+    SecretRecoveryFailureMessage GenerateSecretRecoveryFailureMessage(std::vector<uint160> recovery_message_hashes);
 };
 
 

@@ -18,6 +18,7 @@
 #include "DiurnDataRequest.h"
 #include "DiurnDataMessage.h"
 #include "DiurnFailureMessage.h"
+#include "LoadHashesIntoDataStore.h"
 
 #include "log.h"
 #define LOG_CATEGORY "DataMessageHandler.h"
@@ -125,9 +126,5 @@ public:
     void HandleDiurnFailureMessage(DiurnFailureMessage diurn_failure_message);
 };
 
-void LoadHashesIntoDataStoreFromMessageTypesAndContents(MemoryDataStore &hashdata,
-                                                        std::vector<std::string> &types,
-                                                        std::vector<vch_t> &contents,
-                                                        CreditSystem *credit_system);
 
 #endif //TELEPORT_DATAMESSAGEHANDLER_H

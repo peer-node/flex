@@ -16,11 +16,15 @@ uint64_t TeleportNetworkNode::Balance()
 void TeleportNetworkNode::HandleMessage(std::string channel, CDataStream stream, CNode *peer)
 {
     RecordReceiptOfMessage(channel, stream);
+
     if (channel == "credit")
         credit_message_handler->HandleMessage(stream, peer);
 
     if (channel == "data")
         data_message_handler->HandleMessage(stream, peer);
+
+    if (channel == "relay" and relay_message_handler != NULL)
+        relay_message_handler->HandleMessage(stream, peer);
 }
 
 void TeleportNetworkNode::RecordReceiptOfMessage(std::string channel, CDataStream stream)
@@ -79,12 +83,16 @@ void TeleportNetworkNode::SwitchToNewCalendarAndSpentChain(Calendar new_calendar
 {
     uint160 old_tip_credit_hash = calendar.LastMinedCreditMessageHash();
     uint160 new_tip_credit_hash = new_calendar.LastMinedCreditMessageHash();
+
     uint160 fork = credit_system->FindFork(calendar.LastMinedCreditMessageHash(), new_tip_credit_hash);
+
     LOCK(credit_message_handler->calendar_mutex);
+
     credit_system->RemoveBatchAndChildrenFromMainChainAndDeleteRecordOfTotalWork(fork);
     credit_system->AddMinedCreditMessageAndPredecessorsToMainChain(new_tip_credit_hash);
     calendar = new_calendar;
     spent_chain = new_spent_chain;
+
     if (wallet != NULL)
         wallet->SwitchAcrossFork(old_tip_credit_hash, new_tip_credit_hash, credit_system);
 }
@@ -96,10 +104,12 @@ bool TeleportNetworkNode::StartCommunicator()
         log_ << "Can't start communicator: no config\n";
         return false;
     }
+
     uint64_t port = config->Uint64("port");
     communicator = new Communicator("default_communicator", (unsigned short) port);
     communicator->main_node.SetTeleportNetworkNode(*this);
     AttachCommunicatorNetworkToHandlers();
+
     if (not communicator->StartListening())
     {
         log_ << "Failed to start communicator. Port " << port << " may already be in use\n";
@@ -112,6 +122,7 @@ void TeleportNetworkNode::AttachCommunicatorNetworkToHandlers()
 {
     credit_message_handler->SetNetwork(communicator->network);
     data_message_handler->SetNetwork(communicator->network);
+    relay_message_handler->SetNetwork(communicator->network);
 }
 
 void TeleportNetworkNode::StopCommunicator()
@@ -120,4 +131,5 @@ void TeleportNetworkNode::StopCommunicator()
     delete communicator;
     credit_message_handler->network = NULL;
     data_message_handler->network = NULL;
+    relay_message_handler->network = NULL;
 }

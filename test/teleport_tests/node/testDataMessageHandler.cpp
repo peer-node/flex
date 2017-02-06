@@ -22,6 +22,7 @@ class ADataMessageHandler : public Test
 public:
     TestPeer peer;
     MemoryDataStore creditdata, msgdata, keydata;
+    Data *data;
     DataMessageHandler *data_message_handler;
     CreditMessageHandler *credit_message_handler;
     CreditSystem *credit_system;
@@ -30,6 +31,8 @@ public:
     virtual void SetUp()
     {
         peer.id = 1;
+
+        data = new Data(msgdata, creditdata, keydata);
         data_message_handler = new DataMessageHandler(msgdata, creditdata);
         data_message_handler->SetNetwork(peer.network);
         credit_system = new CreditSystem(msgdata, creditdata);
@@ -37,7 +40,7 @@ public:
         calendar = new Calendar();
         data_message_handler->SetCalendar(calendar);
 
-        credit_message_handler = new CreditMessageHandler(msgdata, creditdata, keydata);
+        credit_message_handler = new CreditMessageHandler(*data);
 
         credit_message_handler->SetCreditSystem(credit_system);
         credit_message_handler->SetCalendar(*calendar);

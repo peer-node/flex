@@ -15,6 +15,7 @@ public:
     MemoryDataStore &msgdata, &creditdata, &keydata;
     RelayState *relay_state{NULL};
     RelayMemoryCache *cache{NULL};
+    bool using_internal_cache{true};
 
 
     Data(MemoryDataStore &msgdata, MemoryDataStore &creditdata, MemoryDataStore &keydata):
@@ -24,6 +25,13 @@ public:
     Data(MemoryDataStore &msgdata, MemoryDataStore &creditdata, MemoryDataStore &keydata, RelayState *relay_state):
             msgdata(msgdata), creditdata(creditdata), keydata(keydata), relay_state(relay_state)
     { }
+
+    Data(const Data &other): msgdata(other.msgdata), creditdata(other.creditdata), keydata(other.keydata)
+    {
+        relay_state = other.relay_state;
+        cache = other.cache;
+        using_internal_cache = false;
+    }
 
     ~Data();
 
@@ -59,6 +67,8 @@ public:
     }
 
     RelayState GetRelayState(uint160 relay_state_hash);
+
+    void StoreRelayState(RelayState *relay_state);
 };
 
 

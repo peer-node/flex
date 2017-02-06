@@ -36,15 +36,13 @@ public:
 
     bool do_spot_checks{true}, using_internal_tip_controller{true}, using_internal_builder{true};
 
-    CreditMessageHandler(MemoryDataStore &msgdata_,
-                         MemoryDataStore &creditdata_,
-                         MemoryDataStore &keydata_):
-            MessageHandlerWithOrphanage(msgdata_),
-            creditdata(creditdata_), keydata(keydata_)
+    CreditMessageHandler(Data data):
+            MessageHandlerWithOrphanage(data.msgdata),
+            creditdata(data.creditdata), keydata(data.keydata)
     {
         channel = std::string("credit");
-        tip_controller = new TipController(msgdata, creditdata, keydata);
-        builder = new MinedCreditMessageBuilder(msgdata, creditdata, keydata);
+        tip_controller = new TipController(data);
+        builder = new MinedCreditMessageBuilder(data);
         tip_controller->SetMinedCreditMessageBuilder(builder);
     }
 

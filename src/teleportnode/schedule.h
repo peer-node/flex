@@ -108,7 +108,7 @@ class Scheduler
 public:
     MemoryDataStore scheduledata;
     std::vector<ScheduledTask> tasks;
-    boost::thread *running_thread;
+    boost::thread *running_thread{NULL};
     bool running;
 
     Scheduler()
@@ -119,9 +119,17 @@ public:
 
     ~Scheduler()
     {
+        Stop();
+    }
+
+    void Stop()
+    {
         running = false;
-        running_thread->interrupt();
-        running_thread->join();
+        if (running_thread != NULL)
+        {
+            running_thread->interrupt();
+            running_thread->join();
+        }
     }
 
     void DoTasks()
@@ -139,7 +147,7 @@ public:
 
     void DoTasksScheduledForExecutionBeforeNow()
     {
-        for (auto task : tasks)
+        for (auto &task : tasks)
             task.DoTasksScheduledForExecutionBeforeNow();
     }
 

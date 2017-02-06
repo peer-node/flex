@@ -106,11 +106,13 @@ void RelayMemoryCache::RemoveRelay(uint160 &relay_hash, uint32_t &relay_position
 
 RelayState RelayMemoryCache::RetrieveRelayState(uint160 &relay_state_hash)
 {
-    auto &relay_list = relay_lists[relay_state_hash];
+    if (not relay_lists.count(relay_state_hash))
+        return RelayState();
+
     RelayState state;
 
     LOCK(mutex);
-    for (auto &relay_hash_position : relay_list)
+    for (auto &relay_hash_position : relay_lists[relay_state_hash])
     {
         uint160 &relay_hash = relay_hashes[relay_hash_position];
         Relay relay = Retrieve(relay_hash);

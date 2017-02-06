@@ -1,3 +1,4 @@
+#include <test/teleport_tests/node/relay_handler/RelayJoinMessage.h>
 #include "gmock/gmock.h"
 #include "test/teleport_tests/node/calendar/Calendar.h"
 #include "TeleportNetworkNode.h"
@@ -40,7 +41,6 @@ public:
     {
         teleport_network_node.credit_message_handler->creditdata[msg.GetHash160()]["quickcheck_ok"] = true;
     }
-
 };
 
 TEST_F(ATeleportNetworkNode, StartsWithAnEmptyCalendar)
@@ -135,6 +135,14 @@ TEST_F(ATeleportNetworkNode, SendsDataMessagesToTheDataMessageHandler)
     TipMessage tip_message(dummy_request, &teleport_network_node.calendar); // unrequested tip
     teleport_network_node.HandleMessage(string("data"), GetDataStream("data", tip_message), (CNode*)&peer);
     bool rejected = teleport_network_node.msgdata[tip_message.GetHash160()]["rejected"];
+    ASSERT_THAT(rejected, Eq(true));
+}
+
+TEST_F(ATeleportNetworkNode, SendsRelayMessagesToTheRelayMessageHandler)
+{
+    RelayJoinMessage join;
+    teleport_network_node.HandleMessage(string("relay"), GetDataStream("relay", join), (CNode*)&peer);
+    bool rejected = teleport_network_node.msgdata[join.GetHash160()]["rejected"];
     ASSERT_THAT(rejected, Eq(true));
 }
 
@@ -706,3 +714,4 @@ TEST_F(TwoTeleportNetworkNodesWhoHaveDetectedAFailureInACalendar,
 
     ASSERT_TRUE(peer1.HasBeenInformedAbout("data", "calendar_failure", CalendarFailureMessage(details)));
 }
+

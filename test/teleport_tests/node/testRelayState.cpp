@@ -221,6 +221,9 @@ public:
 
     uint64_t TheNumberOfARelayWhichIsBeingUsedAsAKeyQuarterHolder()
     {
+        auto key_distribution_message = relay_state.relays[0].GenerateKeyDistributionMessage(*data, 6, relay_state);
+        data->StoreMessage(key_distribution_message);
+        relay_state.ProcessKeyDistributionMessage(key_distribution_message);
         return relay_state.relays[0].holders.key_quarter_holders[1];
     }
 
@@ -620,15 +623,29 @@ public:
 
     SecretRecoveryMessage AValidSecretRecoveryMessage()
     {
+        return ValidSecretRecoveryMessageForKeyQuarterHolder(1);
+    }
+
+    SecretRecoveryMessage ValidSecretRecoveryMessageForKeyQuarterHolder(uint32_t quarter_holder_position)
+    {
         SecretRecoveryMessage secret_recovery_message;
 
         secret_recovery_message.obituary_hash = obituary.GetHash160();
-        secret_recovery_message.quarter_holder_number = relay->holders.key_quarter_holders[1];
+        secret_recovery_message.quarter_holder_number = relay->holders.key_quarter_holders[quarter_holder_position];
         secret_recovery_message.successor_number = obituary.successor_number;
         secret_recovery_message.dead_relay_number = relay->number;
-
+        secret_recovery_message.PopulateSecrets(*data);
         secret_recovery_message.Sign(*data);
+        data->StoreMessage(secret_recovery_message);
         return secret_recovery_message;
+    }
+
+    vector<SecretRecoveryMessage> AllFourSecretRecoveryMessages()
+    {
+        vector<SecretRecoveryMessage> recovery_messages;
+        for (uint32_t i = 0; i < 4; i++)
+            recovery_messages.push_back(ValidSecretRecoveryMessageForKeyQuarterHolder(i));
+        return recovery_messages;
     }
 };
 
@@ -714,3 +731,87 @@ public:
 };
 
 
+class ARelayStateWithASecretRecoveryFailureMessage : public ARelayStateWithASecretRecoveryMessage
+{
+public:
+    SecretRecoveryFailureMessage failure_message;
+
+    virtual void SetUp()
+    {
+        ARelayStateWithASecretRecoveryMessage::SetUp();
+        auto recovery_messages = AllFourSecretRecoveryMessages();
+
+        vector<uint160> recovery_message_hashes;
+        for (auto recovery_message : recovery_messages)
+        {
+            relay_state.ProcessSecretRecoveryMessage(recovery_message);
+            recovery_message_hashes.push_back(recovery_message.GetHash160());
+        }
+
+        failure_message.recovery_message_hashes = recovery_message_hashes;
+        failure_message.obituary_hash = obituary.GetHash160();
+        failure_message.key_sharer_position = 0;
+        failure_message.shared_secret_quarter_position = 0;
+        failure_message.sum_of_decrypted_shared_secret_quarters = Point(CBigNum(2));
+        failure_message.Populate(recovery_message_hashes, *data);
+        failure_message.Sign(*data);
+        data->StoreMessage(failure_message);
+    }
+
+    virtual void TearDown()
+    {
+        ARelayStateWithASecretRecoveryMessage::TearDown();
+    }
+};
+
+TEST_F(ARelayStateWithASecretRecoveryFailureMessage, AssignsTheFailureMessageAsATaskToTheKeyQuarterHolders)
+{
+    relay_state.ProcessSecretRecoveryFailureMessage(failure_message, *data);
+    for (auto quarter_holder_number : relay->holders.key_quarter_holders)
+    {
+        auto quarter_holder = relay_state.GetRelayByNumber(quarter_holder_number);
+        ASSERT_TRUE(VectorContainsEntry(quarter_holder->tasks, failure_message.GetHash160()));
+    }
+}
+
+TEST_F(ARelayStateWithASecretRecoveryFailureMessage, GeneratesObituariesForRelaysThatDontRespond)
+{
+    relay_state.ProcessSecretRecoveryFailureMessage(failure_message, *data);
+    for (auto quarter_holder_number : relay->holders.key_quarter_holders)
+    {
+        DurationWithoutResponseFromRelay duration;
+        duration.message_hash = failure_message.GetHash160();
+        duration.relay_number = quarter_holder_number;
+        relay_state.ProcessDurationWithoutResponseFromRelay(duration, *data);
+        auto quarter_holder = relay_state.GetRelayByNumber(quarter_holder_number);
+        ASSERT_THAT(quarter_holder->hashes.obituary_hash, Ne(0));
+    }
+}
+
+
+class ARelayStateWithARecoveryFailureAuditMessage : public ARelayStateWithASecretRecoveryFailureMessage
+{
+public:
+    RecoveryFailureAuditMessage audit_message;
+
+    virtual void SetUp()
+    {
+        ARelayStateWithASecretRecoveryFailureMessage::SetUp();
+        relay_state.ProcessSecretRecoveryFailureMessage(failure_message, *data);
+        SecretRecoveryMessage recovery_message = data->GetMessage(failure_message.recovery_message_hashes[0]);
+        audit_message.Populate(failure_message, recovery_message, *data);
+    }
+
+    virtual void TearDown()
+    {
+        ARelayStateWithASecretRecoveryFailureMessage::TearDown();
+    }
+};
+
+TEST_F(ARelayStateWithARecoveryFailureAuditMessage, RemovesTheFailureMessageFromTheQuarterHoldersTasks)
+{
+    auto quarter_holder = relay_state.GetRelayByNumber(relay->holders.key_quarter_holders[0]);
+    ASSERT_THAT(quarter_holder->tasks.size(), Eq(2));
+    relay_state.ProcessRecoveryFailureAuditMessage(audit_message, *data);
+    ASSERT_THAT(quarter_holder->tasks.size(), Eq(1));
+}

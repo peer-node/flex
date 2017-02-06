@@ -3,6 +3,7 @@
 #include "gmock/gmock.h"
 #include "CreditSystem.h"
 #include "test/teleport_tests/node/credit_handler/MinedCreditMessageValidator.h"
+#include "test/teleport_tests/node/relay_handler/RelayMemoryCache.h"
 
 
 #include "log.h"
@@ -24,6 +25,7 @@ public:
     {
         credit_system = new CreditSystem(msgdata, creditdata);
         data = new Data(msgdata, creditdata, keydata);
+        data->cache = new RelayMemoryCache();
         validator.SetCreditSystem(credit_system);
         validator.SetData(data);
     }
@@ -73,6 +75,7 @@ public:
         second_msg.hash_list.GenerateShortHashes();
         relay_state.ProcessRelayJoinMessage(join);
         second_msg.mined_credit.network_state.relay_state_hash = relay_state.GetHash160();
+        data->cache->Store(relay_state);
         return second_msg;
     }
 
@@ -355,4 +358,116 @@ TEST_F(AMinedCreditMessageValidator, RejectsTheRelayStateHashWhenTheMinedCreditM
 
     bool ok = validator.CheckRelayStateHash(msg);
     ASSERT_THAT(ok, Eq(false));
+}
+
+
+class AMinedCreditMessageValidatorWithAValidKeyDistributionMessage : public AMinedCreditMessageValidator
+{
+public:
+    virtual void SetUp()
+    {
+        AMinedCreditMessageValidator::SetUp();
+    }
+
+    virtual void TearDown()
+    {
+        AMinedCreditMessageValidator::TearDown();
+    }
+
+    RelayState RelayStateWith37Relays()
+    {
+        RelayState state;
+
+        for (uint32_t i = 0; i < 37; i++)
+        {
+            auto join = Relay().GenerateJoinMessage(keydata, i);
+            data->StoreMessage(join);
+            state.ProcessRelayJoinMessage(join);
+        }
+
+        return state;
+    }
+
+    MinedCreditMessage MinedCreditMessageContainingARelayStateWith37Relays()
+    {
+        auto state = RelayStateWith37Relays();
+        data->cache->Store(state);
+        MinedCreditMessage msg;
+        msg.mined_credit.network_state.relay_state_hash = state.GetHash160();
+        msg.mined_credit.network_state.batch_number = 1;
+        return msg;
+    }
+
+    MinedCreditMessage MinedCreditMessageContainingAValidKeyDistributionMessage()
+    {
+        auto msg = MinedCreditMessageContainingARelayStateWith37Relays();
+        credit_system->StoreMinedCreditMessage(msg);
+        data->StoreMessage(msg);
+
+        auto state = data->cache->RetrieveRelayState(msg.mined_credit.network_state.relay_state_hash);
+        auto &relay = state.relays[0];
+
+        auto key_distribution_message = relay.GenerateKeyDistributionMessage(*data, msg.GetHash160(), state);
+        key_distribution_message.Sign(*data);
+        data->StoreMessage(key_distribution_message);
+
+        state.ProcessKeyDistributionMessage(key_distribution_message);
+        data->cache->Store(state);
+
+        return MinedCreditMessageContainingKeyDistributionMessage(msg, key_distribution_message, state);
+    }
+
+    MinedCreditMessage MinedCreditMessageContainingKeyDistributionMessage(
+            MinedCreditMessage previous_msg,
+            KeyDistributionMessage key_distribution_message,
+            RelayState &state)
+    {
+        MinedCreditMessage next_msg;
+        next_msg.mined_credit.network_state = credit_system->SucceedingNetworkState(previous_msg);
+        next_msg.mined_credit.network_state.relay_state_hash = state.GetHash160();
+        next_msg.hash_list.full_hashes.push_back(previous_msg.GetHash160());
+        next_msg.hash_list.full_hashes.push_back(key_distribution_message.GetHash160());
+        next_msg.hash_list.GenerateShortHashes();
+        data->StoreMessage(next_msg);
+
+        return next_msg;
+    }
+
+    MinedCreditMessage MinedCreditMessageContainingAValidKeyDistributionMessageAndADurationWithoutResponseAfterIt()
+    {
+        MinedCreditMessage msg = MinedCreditMessageContainingAValidKeyDistributionMessage();
+        DurationWithoutResponse duration;
+        duration.message_hash = msg.hash_list.full_hashes[1];
+        data->StoreMessage(duration);
+        msg.hash_list.full_hashes.push_back(duration.GetHash160());
+        msg.hash_list.GenerateShortHashes();
+
+        auto state = data->cache->RetrieveRelayState(msg.mined_credit.network_state.relay_state_hash);
+        state.ProcessDurationWithoutResponse(duration, *data);
+        data->StoreRelayState(&state);
+        msg.mined_credit.network_state.relay_state_hash = state.GetHash160();
+        data->StoreMessage(msg);
+        return msg;
+    }
+};
+
+TEST_F(AMinedCreditMessageValidatorWithAValidKeyDistributionMessage,
+       AcceptsTheRelayStateHashInTheMinedCreditMessageContainingTheKeyDistributionMessage)
+{
+    auto msg = MinedCreditMessageContainingAValidKeyDistributionMessage();
+    credit_system->StoreMinedCreditMessage(msg);
+    bool ok = validator.CheckRelayStateHash(msg);
+    ASSERT_THAT(ok, Eq(true));
+}
+
+TEST_F(AMinedCreditMessageValidatorWithAValidKeyDistributionMessage,
+       ChecksThatTheKeyDistributionMessageIsMarkedAsAcceptedIfADurationWithoutResponseIsEncodedAfterIt)
+{
+    auto msg = MinedCreditMessageContainingAValidKeyDistributionMessageAndADurationWithoutResponseAfterIt();
+    credit_system->StoreMinedCreditMessage(msg);
+    bool ok = validator.CheckRelayStateHash(msg);
+    ASSERT_THAT(ok, Eq(true));
+
+    auto state = data->GetRelayState(msg.mined_credit.network_state.relay_state_hash);
+    ASSERT_THAT(state.relays[0].key_distribution_message_accepted, Eq(true));
 }

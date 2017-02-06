@@ -1,6 +1,7 @@
 #include "InitialDataHandler.h"
 #include "test/teleport_tests/node/TeleportNetworkNode.h"
 #include "CalendarHandler.h"
+#include "LoadHashesIntoDataStore.h"
 
 #include "log.h"
 #define LOG_CATEGORY "InitialDataHandler.cpp"
@@ -80,27 +81,6 @@ bool InitialDataHandler::CheckSpentChainInInitialDataMessage(InitialDataMessage 
 {
     Calend calend = initial_data_message.GetLastCalend();
     return calend.mined_credit.network_state.spent_chain_hash == initial_data_message.spent_chain.GetHash160();
-}
-
-void LoadHashesIntoDataStoreFromMessageTypesAndContents(MemoryDataStore &hashdata,
-                                                        std::vector<std::string> &types,
-                                                        std::vector<vch_t> &contents,
-                                                        CreditSystem *credit_system)
-{
-    for (uint32_t i = 0; i < types.size(); i++)
-    {
-        uint160 enclosed_message_hash;
-        if (types[i] != "msg")
-            enclosed_message_hash = Hash160(contents[i].begin(), contents[i].end());
-        else
-        {
-            CDataStream ss(contents[i], SER_NETWORK, CLIENT_VERSION);
-            MinedCreditMessage msg;
-            ss >> msg;
-            enclosed_message_hash = msg.GetHash160();
-        }
-        credit_system->StoreHash(enclosed_message_hash, hashdata);
-    }
 }
 
 MemoryDataStore InitialDataHandler::GetEnclosedMessageHashes(InitialDataMessage &message)
@@ -212,13 +192,14 @@ void InitialDataHandler::SetMiningParametersForInitialDataMessageValidation(uint
 bool InitialDataHandler::ValidateMinedCreditMessagesInInitialDataMessage(InitialDataMessage initial_data_message)
 {
     MemoryDataStore msgdata_, creditdata_, keydata_;
+    Data data_(msgdata_, creditdata_, keydata_);
     CreditSystem credit_system_(msgdata_, creditdata_);
 
     credit_system_.SetMiningParameters(data_message_handler->calendar_handler->number_of_megabytes_for_mining,
                                        initial_difficulty, initial_diurnal_difficulty);
     StoreDataFromInitialDataMessageInCreditSystem(initial_data_message, credit_system_);
 
-    CreditMessageHandler credit_message_handler(msgdata_, creditdata_, keydata_);
+    CreditMessageHandler credit_message_handler(data_);
     credit_message_handler.SetCreditSystem(&credit_system_);
 
     BitChain spent_chain = initial_data_message.spent_chain;

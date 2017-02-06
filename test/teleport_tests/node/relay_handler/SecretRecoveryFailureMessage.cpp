@@ -62,3 +62,14 @@ bool SecretRecoveryFailureMessage::IsValid(Data data)
 
     return true;
 }
+
+std::vector<Relay *> SecretRecoveryFailureMessage::GetQuarterHolders(Data data)
+{
+    std::vector<Relay *> quarter_holders;
+    for (auto recovery_message_hash : recovery_message_hashes)
+    {
+        SecretRecoveryMessage recovery_message = data.GetMessage(recovery_message_hash);
+        quarter_holders.push_back(recovery_message.GetKeyQuarterHolder(data));
+    }
+    return quarter_holders;
+}

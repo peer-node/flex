@@ -54,6 +54,8 @@ public:
     bool ValidateSizes();
 
     bool IsValid(Data data);
+
+    std::vector<Relay *> GetQuarterHolders(Data data);
 };
 
 

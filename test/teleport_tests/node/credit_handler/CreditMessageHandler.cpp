@@ -2,6 +2,7 @@
 #include <src/crypto/secp256k1point.h>
 #include "CreditMessageHandler.h"
 #include "test/teleport_tests/node/data_handler/DataMessageHandler.h"
+#include "test/teleport_tests/node/data_handler/LoadHashesIntoDataStore.h"
 #include "test/teleport_tests/node/TeleportNetworkNode.h"
 
 

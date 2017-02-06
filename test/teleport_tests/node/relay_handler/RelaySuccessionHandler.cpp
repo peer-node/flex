@@ -27,8 +27,12 @@ void RelaySuccessionHandler::HandleNewlyDeadRelays()
 void RelaySuccessionHandler::HandleRelayDeath(Relay *dead_relay)
 {
     dead_relays.insert(dead_relay->number);
-    SendSecretRecoveryMessages(dead_relay);
-    ScheduleTaskToCheckWhichQuarterHoldersHaveRespondedToObituary(dead_relay->hashes.obituary_hash);
+
+    if (relay_message_handler->mode == LIVE)
+    {
+        SendSecretRecoveryMessages(dead_relay);
+        ScheduleTaskToCheckWhichQuarterHoldersHaveRespondedToObituary(dead_relay->hashes.obituary_hash);
+    }
 }
 
 void RelaySuccessionHandler::ScheduleTaskToCheckWhichQuarterHoldersHaveRespondedToObituary(uint160 obituary_hash)
@@ -116,8 +120,11 @@ void RelaySuccessionHandler::HandleSecretRecoveryMessage(SecretRecoveryMessage s
         return;
     }
     StoreSecretRecoveryMessage(secret_recovery_message, secret_recovery_message.obituary_hash);
-    scheduler.Schedule("secret_recovery", secret_recovery_message.GetHash160(), GetTimeMicros() + RESPONSE_WAIT_TIME);
 
+    if (relay_message_handler->mode != LIVE)
+        return;
+
+    scheduler.Schedule("secret_recovery", secret_recovery_message.GetHash160(), GetTimeMicros() + RESPONSE_WAIT_TIME);
     if (RelaysPrivateSigningKeyIsAvailable(secret_recovery_message.successor_number))
     {
         ComplainIfThereAreBadEncryptedSecretsInSecretRecoveryMessage(secret_recovery_message);
@@ -126,7 +133,7 @@ void RelaySuccessionHandler::HandleSecretRecoveryMessage(SecretRecoveryMessage s
 }
 
 void RelaySuccessionHandler::ComplainIfThereAreBadEncryptedSecretsInSecretRecoveryMessage(SecretRecoveryMessage
-                                                                                       secret_recovery_message)
+                                                                                          secret_recovery_message)
 {
     auto shared_secret_quarters = secret_recovery_message.RecoverSharedSecretQuartersForRelayKeyParts(data);
 
@@ -146,8 +153,8 @@ void RelaySuccessionHandler::ComplainIfThereAreBadEncryptedSecretsInSecretRecove
 }
 
 void RelaySuccessionHandler::SendSecretRecoveryComplaint(SecretRecoveryMessage recovery_message,
-                                                      uint32_t key_sharer_position,
-                                                      uint32_t key_part_position)
+                                                         uint32_t key_sharer_position,
+                                                         uint32_t key_part_position)
 {
     auto complaint = GenerateSecretRecoveryComplaint(recovery_message, key_sharer_position, key_part_position);
     relay_message_handler->Handle(complaint, NULL);
@@ -155,8 +162,8 @@ void RelaySuccessionHandler::SendSecretRecoveryComplaint(SecretRecoveryMessage r
 }
 
 SecretRecoveryComplaint RelaySuccessionHandler::GenerateSecretRecoveryComplaint(SecretRecoveryMessage recovery_message,
-                                                                             uint32_t key_sharer_position,
-                                                                             uint32_t key_part_position)
+                                                                                uint32_t key_sharer_position,
+                                                                                uint32_t key_part_position)
 {
     SecretRecoveryComplaint complaint;
     complaint.Populate(recovery_message, key_sharer_position, key_part_position, data);
@@ -202,11 +209,17 @@ bool RelaySuccessionHandler::TryToRecoverSecretsFromSecretRecoveryMessages(vecto
 
 void RelaySuccessionHandler::SendSecretRecoveryFailureMessage(vector<uint160> recovery_message_hashes)
 {
+    auto failure_message = GenerateSecretRecoveryFailureMessage(recovery_message_hashes);
+    relay_message_handler->Handle(failure_message, NULL);
+    relay_message_handler->Broadcast(failure_message);
+}
+
+SecretRecoveryFailureMessage RelaySuccessionHandler::GenerateSecretRecoveryFailureMessage(vector<uint160> recovery_message_hashes)
+{
     SecretRecoveryFailureMessage failure_message;
     failure_message.Populate(recovery_message_hashes, data);
     failure_message.Sign(data);
-    relay_message_handler->Handle(failure_message, NULL);
-    relay_message_handler->Broadcast(failure_message);
+    return failure_message;
 }
 
 void RelaySuccessionHandler::HandleSecretRecoveryFailureMessage(SecretRecoveryFailureMessage failure_message)
@@ -217,8 +230,12 @@ void RelaySuccessionHandler::HandleSecretRecoveryFailureMessage(SecretRecoveryFa
         return;
     }
     StoreSecretRecoveryFailureMessage(failure_message);
-    SendAuditMessagesInResponseToFailureMessage(failure_message);
-    scheduler.Schedule("secret_recovery_failure", failure_message.GetHash160(), GetTimeMicros() + RESPONSE_WAIT_TIME);
+    if (relay_message_handler->mode == LIVE)
+    {
+        SendAuditMessagesInResponseToFailureMessage(failure_message);
+        scheduler.Schedule("secret_recovery_failure", failure_message.GetHash160(),
+                           GetTimeMicros() + RESPONSE_WAIT_TIME);
+    }
 }
 
 bool RelaySuccessionHandler::ValidateSecretRecoveryFailureMessage(SecretRecoveryFailureMessage &failure_message)
@@ -339,7 +356,8 @@ void RelaySuccessionHandler::HandleGoodbyeMessage(GoodbyeMessage goodbye_message
     if (data.keydata[successor->public_signing_key].HasProperty("privkey"))
         TryToExtractSecretsFromGoodbyeMessage(goodbye_message);
     relay_state->ProcessGoodbyeMessage(goodbye_message);
-    scheduler.Schedule("goodbye", goodbye_message.GetHash160(), GetTimeMicros() + RESPONSE_WAIT_TIME);
+    if (relay_message_handler->mode == LIVE)
+        scheduler.Schedule("goodbye", goodbye_message.GetHash160(), GetTimeMicros() + RESPONSE_WAIT_TIME);
 }
 
 bool RelaySuccessionHandler::ValidateGoodbyeMessage(GoodbyeMessage &goodbye_message)
@@ -349,7 +367,7 @@ bool RelaySuccessionHandler::ValidateGoodbyeMessage(GoodbyeMessage &goodbye_mess
 
 void RelaySuccessionHandler::TryToExtractSecretsFromGoodbyeMessage(GoodbyeMessage goodbye_message)
 {
-    if (not (ExtractSecretsFromGoodbyeMessage(goodbye_message)))
+    if (not (ExtractSecretsFromGoodbyeMessage(goodbye_message)) and relay_message_handler->mode == LIVE)
         SendGoodbyeComplaint(goodbye_message);
 }
 

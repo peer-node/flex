@@ -108,7 +108,6 @@ vector<vector<Point> > SecretRecoveryMessage::RecoverSharedSecretQuartersForRela
 
         if (quartet.size() != 4 or quartet_points.size() != 4)
         {
-            log_ << "aborting\n";
             return shared_secret_quarters;
         }
 

@@ -6,6 +6,7 @@
 #include <src/crypto/hashtrees.h>
 #include <test/teleport_tests/node/wallet/Wallet.h>
 #include <test/teleport_tests/node/config/TeleportConfig.h>
+#include <test/teleport_tests/node/Data.h>
 
 
 class MinedCreditMessageBuilder
@@ -19,11 +20,9 @@ public:
     Wallet *wallet{NULL};
     std::vector<uint160> accepted_messages;
 
-    MinedCreditMessageBuilder(MemoryDataStore &msgdata, MemoryDataStore &creditdata, MemoryDataStore &keydata):
-            msgdata(msgdata), creditdata(creditdata), keydata(keydata)
-    {
-
-    }
+    MinedCreditMessageBuilder(Data data):
+            msgdata(data.msgdata), creditdata(data.creditdata), keydata(data.keydata)
+    { }
 
     void SetConfig(TeleportConfig& config_);
 

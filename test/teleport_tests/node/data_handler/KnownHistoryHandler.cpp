@@ -206,7 +206,8 @@ bool KnownHistoryHandler::ValidateDataInDiurnDataMessage(DiurnDataMessage diurn_
 bool KnownHistoryHandler::ValidateDataInDiurn(Diurn &diurn, CreditSystem *credit_system_, BitChain &initial_spent_chain)
 {
     MemoryDataStore keydata_;
-    CreditMessageHandler credit_message_handler(credit_system_->msgdata, credit_system_->creditdata, keydata_);
+    Data data_(credit_system_->msgdata, credit_system_->creditdata, keydata_);
+    CreditMessageHandler credit_message_handler(data_);
     credit_message_handler.SetCreditSystem(credit_system_);
     credit_message_handler.do_spot_checks = false;
 

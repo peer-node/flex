@@ -204,6 +204,8 @@ void RelayState::ProcessKeyDistributionMessage(KeyDistributionMessage key_distri
     if (relay == NULL) throw RelayStateException("no such relay");
     if (relay->hashes.key_distribution_message_hash != 0)
         throw RelayStateException("key distribution message for relay has already been processed");
+    if (relay->holders.key_quarter_holders.size() == 0)
+        AssignKeyPartHoldersToRelay(*relay, key_distribution_message.encoding_message_hash);
     relay->hashes.key_distribution_message_hash = key_distribution_message.GetHash160();
 }
 
@@ -461,10 +463,11 @@ void RelayState::ProcessDurationWithoutRelayResponseAfterSecretRecoveryFailureMe
 
 void RelayState::ProcessRecoveryFailureAuditMessage(RecoveryFailureAuditMessage audit_message, Data data)
 {
+    Relay *key_quarter_holder = GetRelayByNumber(audit_message.quarter_holder_number);
+    EraseEntryFromVector(audit_message.failure_message_hash, key_quarter_holder->tasks);
     if (not audit_message.VerifyPrivateReceivingKeyQuarterMatchesPublicReceivingKeyQuarter(data) or
         not audit_message.VerifyEncryptedSharedSecretQuarterInSecretRecoveryMessageWasCorrect(data))
     {
-        Relay *key_quarter_holder = GetRelayByNumber(audit_message.quarter_holder_number);
         if (key_quarter_holder->hashes.obituary_hash == 0)
             RecordRelayDeath(key_quarter_holder, data, OBITUARY_COMPLAINT);
         data.msgdata[audit_message.failure_message_hash]["bad_quarter_holder_found"] = true;
@@ -476,5 +479,16 @@ void RelayState::ProcessRecoveryFailureAuditMessage(RecoveryFailureAuditMessage 
         auto dead_relay = audit_message.GetDeadRelay(data);
         auto successor = data.relay_state->GetRelayByNumber(dead_relay->SuccessorNumber(data));
         RecordRelayDeath(successor, data, OBITUARY_COMPLAINT);
+    }
+}
+
+void RelayState::ProcessSecretRecoveryFailureMessage(SecretRecoveryFailureMessage failure_message, Data data)
+{
+    auto quarter_holders = failure_message.GetQuarterHolders(data);
+    uint160 failure_message_hash = failure_message.GetHash160();
+    for (auto quarter_holder : quarter_holders)
+    {
+        if (not VectorContainsEntry(quarter_holder->tasks, failure_message_hash))
+            quarter_holder->tasks.push_back(failure_message_hash);
     }
 }

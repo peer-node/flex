@@ -16,6 +16,10 @@
 
 #define RESPONSE_WAIT_TIME 8000000 // microseconds
 
+#define LIVE 1
+#define BLOCK_VALIDATION 2
+#define INITIAL_DATA_VALIDATION 3
+
 class RelayMessageHandler : public MessageHandlerWithOrphanage
 {
 public:
@@ -25,6 +29,8 @@ public:
     RelayState relay_state;
     RelayAdmissionHandler admission_handler;
     RelaySuccessionHandler succession_handler;
+
+    uint8_t mode{LIVE};
 
     RelayMessageHandler(Data data):
             MessageHandlerWithOrphanage(data.msgdata),
@@ -56,6 +62,8 @@ public:
         HANDLESTREAM(RecoveryFailureAuditMessage);
         HANDLESTREAM(GoodbyeMessage);
         HANDLESTREAM(GoodbyeComplaint);
+
+        HANDLESTREAM(DurationWithoutResponse);
     }
 
     void HandleMessage(uint160 message_hash)
@@ -69,6 +77,8 @@ public:
         HANDLEHASH(RecoveryFailureAuditMessage);
         HANDLEHASH(GoodbyeMessage);
         HANDLEHASH(GoodbyeComplaint);
+
+        HANDLEHASH(DurationWithoutResponse);
     }
 
     HANDLECLASS(RelayJoinMessage);
@@ -80,6 +90,17 @@ public:
     HANDLECLASS(RecoveryFailureAuditMessage);
     HANDLECLASS(GoodbyeMessage);
     HANDLECLASS(GoodbyeComplaint);
+
+    HANDLECLASS(DurationWithoutResponse);
+
+    template <typename T>
+    void Broadcast(T message)
+    {
+        if (mode != LIVE)
+            throw std::runtime_error("attempt to broadcast through relay message handler while not live.");
+        if (network != NULL)
+            network->Broadcast(channel, message.Type(), message);
+    }
 
     void HandleRelayJoinMessage(RelayJoinMessage relay_join_message);
 
@@ -93,13 +114,13 @@ public:
 
     void HandleSecretRecoveryFailureMessage(SecretRecoveryFailureMessage failure_message);
 
-    void HandleSecretRecoveryFailureMessageAfterDuration(uint160 failure_message_hash);
-
     void HandleRecoveryFailureAuditMessage(RecoveryFailureAuditMessage audit_message);
 
     void HandleGoodbyeMessage(GoodbyeMessage goodbye_message);
 
     void HandleGoodbyeComplaint(GoodbyeComplaint complaint);
+
+    void HandleDurationWithoutResponse(DurationWithoutResponse duration);
 
     bool ValidateRelayJoinMessage(RelayJoinMessage relay_join_message);
 
@@ -122,6 +143,8 @@ public:
     bool ValidateGoodbyeComplaint(GoodbyeComplaint &complaint);
 
     bool ValidateMessage(uint160 &message_hash);
+
+    bool ValidateDurationWithoutResponse(DurationWithoutResponse &duration);
 };
 
 

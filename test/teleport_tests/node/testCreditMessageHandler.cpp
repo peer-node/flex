@@ -15,6 +15,7 @@ class ACreditMessageHandler : public Test
 {
 public:
     MemoryDataStore msgdata, creditdata, keydata;
+    Data *data;
     CreditSystem *credit_system;
     CreditMessageHandler *credit_message_handler;
     TipController *tip_controller;
@@ -26,11 +27,13 @@ public:
 
     virtual void SetUp()
     {
+        data = new Data(msgdata, creditdata, keydata);
         credit_system = new CreditSystem(msgdata, creditdata);
         credit_system->initial_difficulty = 10000;
-        credit_message_handler = new CreditMessageHandler(msgdata, creditdata, keydata);
-        tip_controller = new TipController(msgdata, creditdata, keydata);
-        builder = new MinedCreditMessageBuilder(msgdata, creditdata, keydata);
+        credit_message_handler = new CreditMessageHandler(*data);
+        tip_controller = new TipController(*data);
+        builder = new MinedCreditMessageBuilder(*data);
+
         credit_message_handler->SetTipController(tip_controller);
         credit_message_handler->SetMinedCreditMessageBuilder(builder);
         credit_message_handler->SetCreditSystem(credit_system);
