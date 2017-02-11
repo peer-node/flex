@@ -13,7 +13,6 @@ class Obituary
 public:
     uint64_t dead_relay_number;
     uint160 relay_state_hash;
-    std::vector<std::pair<uint64_t, uint8_t> > key_quarters_held;
     uint64_t successor_number;
     uint32_t reason_for_leaving{0};
     bool in_good_standing{false};
@@ -24,14 +23,12 @@ public:
     (
         READWRITE(dead_relay_number);
         READWRITE(relay_state_hash);
-        READWRITE(key_quarters_held);
         READWRITE(successor_number);
         READWRITE(reason_for_leaving);
         READWRITE(in_good_standing);
     );
 
-    JSON(dead_relay_number, relay_state_hash, key_quarters_held, successor_number,
-         reason_for_leaving, in_good_standing);
+    JSON(dead_relay_number, relay_state_hash, successor_number, reason_for_leaving, in_good_standing);
 
     DEPENDENCIES();
 

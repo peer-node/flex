@@ -25,6 +25,12 @@ Relay *SecretRecoveryComplaint::GetSecretSender(Data data)
     return data.relay_state->GetRelayByNumber(secret_recovery_message.quarter_holder_number);
 }
 
+Relay *SecretRecoveryComplaint::GetDeadRelay(Data data)
+{
+    auto secret_recovery_message = GetSecretRecoveryMessage(data);
+    return data.relay_state->GetRelayByNumber(secret_recovery_message.dead_relay_number);
+}
+
 SecretRecoveryMessage SecretRecoveryComplaint::GetSecretRecoveryMessage(Data data)
 {
     return data.msgdata[secret_recovery_message_hash]["secret_recovery"];
@@ -53,11 +59,21 @@ bool SecretRecoveryComplaint::IsValid(Data data)
         return false;
     if (position_of_bad_encrypted_secret >= 4)
         return false;
+    if (DurationWithoutResponseHasElapsedSinceSecretRecoveryMessage(data))
+        return false;
     if (not PrivateReceivingKeyIsCorrect(data))
         return false;
     if (EncryptedSecretIsOk(data))
         return false;;
     return true;
+}
+
+bool SecretRecoveryComplaint::DurationWithoutResponseHasElapsedSinceSecretRecoveryMessage(Data data)
+{
+    auto recovery_message = GetSecretRecoveryMessage(data);
+    auto key_quarter_holder = GetSecretSender(data);
+    return key_quarter_holder != NULL and
+            not VectorContainsEntry(key_quarter_holder->tasks, recovery_message.obituary_hash);
 }
 
 bool SecretRecoveryComplaint::PrivateReceivingKeyIsCorrect(Data data)

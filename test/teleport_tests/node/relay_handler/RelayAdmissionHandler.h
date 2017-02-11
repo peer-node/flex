@@ -62,6 +62,9 @@ public:
 
     bool ValidateKeyDistributionComplaint(KeyDistributionComplaint complaint);
 
+    void AcceptKeyDistributionMessage(KeyDistributionMessage &key_distribution_message);
+
+    void AcceptKeyDistributionComplaint(KeyDistributionComplaint &complaint);
 };
 
 

@@ -1,5 +1,6 @@
 #include "RelaySuccessionHandler.h"
 #include "RelayMessageHandler.h"
+#include "test/teleport_tests/node/credit_handler/MinedCreditMessageBuilder.h"
 
 
 #include "log.h"
@@ -94,6 +95,7 @@ void RelaySuccessionHandler::ProcessKeyQuarterHoldersWhoHaventRespondedToObituar
         duration.relay_number = quarter_holder_number;
         data.StoreMessage(duration);
         relay_state->ProcessDurationWithoutResponseFromRelay(duration, data);
+        relay_message_handler->EncodeInChainIfLive(duration.GetHash160());
     }
     HandleNewlyDeadRelays();
 }
@@ -119,17 +121,32 @@ void RelaySuccessionHandler::HandleSecretRecoveryMessage(SecretRecoveryMessage s
         relay_message_handler->RejectMessage(secret_recovery_message.GetHash160());
         return;
     }
+    AcceptSecretRecoveryMessage(secret_recovery_message);
+}
+
+void RelaySuccessionHandler::AcceptSecretRecoveryMessage(SecretRecoveryMessage &secret_recovery_message)
+{
     StoreSecretRecoveryMessage(secret_recovery_message, secret_recovery_message.obituary_hash);
+    relay_state->ProcessSecretRecoveryMessage(secret_recovery_message);
 
     if (relay_message_handler->mode != LIVE)
         return;
-
+    relay_message_handler->EncodeInChainIfLive(secret_recovery_message.GetHash160());
     scheduler.Schedule("secret_recovery", secret_recovery_message.GetHash160(), GetTimeMicros() + RESPONSE_WAIT_TIME);
+
     if (RelaysPrivateSigningKeyIsAvailable(secret_recovery_message.successor_number))
     {
         ComplainIfThereAreBadEncryptedSecretsInSecretRecoveryMessage(secret_recovery_message);
         TryToRetrieveSecretsFromSecretRecoveryMessage(secret_recovery_message);
     }
+}
+
+void RelaySuccessionHandler::HandleSecretRecoveryMessageAfterDuration(uint160 recovery_message_hash)
+{
+    DurationWithoutResponse duration;
+    duration.message_hash = recovery_message_hash;
+    relay_state->ProcessDurationWithoutResponse(duration, data);
+    relay_message_handler->EncodeInChainIfLive(duration.GetHash160());
 }
 
 void RelaySuccessionHandler::ComplainIfThereAreBadEncryptedSecretsInSecretRecoveryMessage(SecretRecoveryMessage
@@ -229,7 +246,13 @@ void RelaySuccessionHandler::HandleSecretRecoveryFailureMessage(SecretRecoveryFa
         relay_message_handler->RejectMessage(failure_message.GetHash160());
         return;
     }
+    AcceptSecretRecoveryFailureMessage(failure_message);
+}
+
+void RelaySuccessionHandler::AcceptSecretRecoveryFailureMessage(SecretRecoveryFailureMessage &failure_message)
+{
     StoreSecretRecoveryFailureMessage(failure_message);
+    relay_message_handler->EncodeInChainIfLive(failure_message.GetHash160());
     if (relay_message_handler->mode == LIVE)
     {
         SendAuditMessagesInResponseToFailureMessage(failure_message);
@@ -278,8 +301,15 @@ void RelaySuccessionHandler::HandleSecretRecoveryComplaint(SecretRecoveryComplai
         relay_message_handler->RejectMessage(complaint.GetHash160());
         return;
     }
+    AcceptSecretRecoveryComplaint(complaint);
+}
+
+void RelaySuccessionHandler::AcceptSecretRecoveryComplaint(SecretRecoveryComplaint &complaint)
+{
     StoreSecretRecoveryComplaint(complaint);
     relay_state->ProcessSecretRecoveryComplaint(complaint, data);
+    relay_message_handler->EncodeInChainIfLive(complaint.GetHash160());
+    relay_message_handler->HandleNewlyDeadRelays();
 }
 
 bool RelaySuccessionHandler::ValidateSecretRecoveryComplaint(SecretRecoveryComplaint &complaint)
@@ -301,8 +331,14 @@ void RelaySuccessionHandler::HandleRecoveryFailureAuditMessage(RecoveryFailureAu
         relay_message_handler->RejectMessage(audit_message.GetHash160());
         return;
     }
+    AcceptRecoveryFailureAuditMessage(audit_message);
+}
+
+void RelaySuccessionHandler::AcceptRecoveryFailureAuditMessage(RecoveryFailureAuditMessage &audit_message)
+{
     StoreRecoveryFailureAuditMessage(audit_message);
     relay_state->ProcessRecoveryFailureAuditMessage(audit_message, data);
+    relay_message_handler->EncodeInChainIfLive(audit_message.GetHash160());
 }
 
 bool RelaySuccessionHandler::ValidateRecoveryFailureAuditMessage(RecoveryFailureAuditMessage &audit_message)
@@ -326,6 +362,7 @@ void RelaySuccessionHandler::HandleSecretRecoveryFailureMessageAfterDuration(uin
         duration.relay_number = quarter_holder_number;
         duration.message_hash = failure_message_hash;
         relay_state->ProcessDurationWithoutResponseFromRelay(duration, data);
+        relay_message_handler->EncodeInChainIfLive(duration.GetHash160());
     }
     HandleNewlyDeadRelays();
 }
@@ -352,10 +389,18 @@ void RelaySuccessionHandler::HandleGoodbyeMessage(GoodbyeMessage goodbye_message
         relay_message_handler->RejectMessage(goodbye_message.GetHash160());
         return;
     }
+    AcceptGoodbyeMessage(goodbye_message);
+}
+
+void RelaySuccessionHandler::AcceptGoodbyeMessage(GoodbyeMessage &goodbye_message)
+{
     auto successor = goodbye_message.GetSuccessor(data);
     if (data.keydata[successor->public_signing_key].HasProperty("privkey"))
         TryToExtractSecretsFromGoodbyeMessage(goodbye_message);
+
     relay_state->ProcessGoodbyeMessage(goodbye_message);
+    relay_message_handler->EncodeInChainIfLive(goodbye_message.GetHash160());
+
     if (relay_message_handler->mode == LIVE)
         scheduler.Schedule("goodbye", goodbye_message.GetHash160(), GetTimeMicros() + RESPONSE_WAIT_TIME);
 }
@@ -367,7 +412,7 @@ bool RelaySuccessionHandler::ValidateGoodbyeMessage(GoodbyeMessage &goodbye_mess
 
 void RelaySuccessionHandler::TryToExtractSecretsFromGoodbyeMessage(GoodbyeMessage goodbye_message)
 {
-    if (not (ExtractSecretsFromGoodbyeMessage(goodbye_message)) and relay_message_handler->mode == LIVE)
+    if (not ExtractSecretsFromGoodbyeMessage(goodbye_message) and relay_message_handler->mode == LIVE)
         SendGoodbyeComplaint(goodbye_message);
 }
 
@@ -387,9 +432,13 @@ void RelaySuccessionHandler::SendGoodbyeComplaint(GoodbyeMessage goodbye_message
 
 void RelaySuccessionHandler::HandleGoodbyeMessageAfterDuration(uint160 goodbye_message_hash)
 {
+    vector<uint160> complaint_hashes = data.msgdata[goodbye_message_hash]["complaints"];
+    if (complaint_hashes.size() > 0)
+        return;
     DurationWithoutResponse duration;
     duration.message_hash = goodbye_message_hash;
     relay_state->ProcessDurationWithoutResponse(duration, data);
+    relay_message_handler->EncodeInChainIfLive(duration.GetHash160());
 }
 
 void RelaySuccessionHandler::HandleGoodbyeComplaint(GoodbyeComplaint complaint)
@@ -399,8 +448,14 @@ void RelaySuccessionHandler::HandleGoodbyeComplaint(GoodbyeComplaint complaint)
         relay_message_handler->RejectMessage(complaint.GetHash160());
         return;
     }
+    AcceptGoodbyeComplaint(complaint);
+}
+
+void RelaySuccessionHandler::AcceptGoodbyeComplaint(GoodbyeComplaint &complaint)
+{
     StoreGoodbyeComplaint(complaint);
     relay_state->ProcessGoodbyeComplaint(complaint, data);
+    relay_message_handler->EncodeInChainIfLive(complaint.GetHash160());
     HandleNewlyDeadRelays();
 }
 
@@ -424,4 +479,35 @@ void RelaySuccessionHandler::RecordResponseToMessage(uint160 response_hash, uint
         response_hashes.push_back(response_hash);
 
     data.msgdata[message_hash][response_type] = response_hashes;
+}
+
+bool RelaySuccessionHandler::ValidateDurationWithoutResponseFromRelayAfterObituary(
+        DurationWithoutResponseFromRelay &duration)
+{
+    Obituary obituary = data.GetMessage(duration.message_hash);
+    auto non_responding_relay = relay_state->GetRelayByNumber(duration.relay_number);
+    auto dead_relay = relay_state->GetRelayByNumber(obituary.dead_relay_number);
+    for (auto recovery_message_hash : dead_relay->hashes.secret_recovery_message_hashes)
+    {
+        SecretRecoveryMessage recovery_message = data.GetMessage(recovery_message_hash);
+        if (recovery_message.quarter_holder_number == duration.relay_number)
+            return false;
+    }
+    return true;
+}
+
+bool
+RelaySuccessionHandler::ValidateDurationWithoutResponseAfterSecretRecoveryMessage(DurationWithoutResponse &duration)
+{
+    SecretRecoveryMessage recovery_message = data.GetMessage(duration.message_hash);
+    auto dead_relay = relay_state->GetRelayByNumber(recovery_message.dead_relay_number);
+    if (dead_relay == NULL)
+        return false;
+    for (auto complaint_hash : dead_relay->hashes.secret_recovery_complaint_hashes)
+    {
+        SecretRecoveryComplaint complaint = data.GetMessage(complaint_hash);
+        if (complaint.secret_recovery_message_hash == duration.message_hash)
+            return false;
+    }
+    return true;
 }

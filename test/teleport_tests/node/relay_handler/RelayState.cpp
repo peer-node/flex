@@ -408,13 +408,17 @@ void RelayState::ProcessDurationAfterSecretRecoveryMessage(SecretRecoveryMessage
 {
     Relay *key_quarter_holder = secret_recovery_message.GetKeyQuarterHolder(data);
     if (key_quarter_holder == NULL)
-        throw RelayStateException("no such relay");
+        throw RelayStateException("secret recovery message refers to non-existent relay");
     EraseEntryFromVector(secret_recovery_message.obituary_hash, key_quarter_holder->tasks);
 }
 
 void RelayState::ProcessSecretRecoveryComplaint(SecretRecoveryComplaint complaint, Data data)
 {
     Relay *key_quarter_holder = complaint.GetSecretSender(data);
+    Relay *dead_relay = complaint.GetDeadRelay(data);
+    if (key_quarter_holder == NULL or dead_relay == NULL)
+        throw RelayStateException("secret recovery complaint refers to non-existent relay");
+    dead_relay->hashes.secret_recovery_complaint_hashes.push_back(complaint.GetHash160());
     RecordRelayDeath(key_quarter_holder, data, OBITUARY_COMPLAINT);
 }
 
@@ -464,17 +468,19 @@ void RelayState::ProcessDurationWithoutRelayResponseAfterSecretRecoveryFailureMe
 void RelayState::ProcessRecoveryFailureAuditMessage(RecoveryFailureAuditMessage audit_message, Data data)
 {
     Relay *key_quarter_holder = GetRelayByNumber(audit_message.quarter_holder_number);
-    EraseEntryFromVector(audit_message.failure_message_hash, key_quarter_holder->tasks);
+    uint160 failure_message_hash = audit_message.failure_message_hash;
+    EraseEntryFromVector(failure_message_hash, key_quarter_holder->tasks);
+
     if (not audit_message.VerifyPrivateReceivingKeyQuarterMatchesPublicReceivingKeyQuarter(data) or
         not audit_message.VerifyEncryptedSharedSecretQuarterInSecretRecoveryMessageWasCorrect(data))
     {
         if (key_quarter_holder->hashes.obituary_hash == 0)
             RecordRelayDeath(key_quarter_holder, data, OBITUARY_COMPLAINT);
-        data.msgdata[audit_message.failure_message_hash]["bad_quarter_holder_found"] = true;
+        data.msgdata[failure_message_hash]["bad_quarter_holder_found"] = true;
         return;
     }
-    std::vector<uint160> audit_messages = data.msgdata[audit_message.failure_message_hash]["audit_messages"];
-    if (audit_messages.size() == 4 and not data.msgdata[audit_message.failure_message_hash]["bad_quarter_holder_found"])
+    std::vector<uint160> audit_messages = data.msgdata[failure_message_hash]["audit_messages"];
+    if (audit_messages.size() == 4 and not data.msgdata[failure_message_hash]["bad_quarter_holder_found"])
     {
         auto dead_relay = audit_message.GetDeadRelay(data);
         auto successor = data.relay_state->GetRelayByNumber(dead_relay->SuccessorNumber(data));

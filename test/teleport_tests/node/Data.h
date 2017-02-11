@@ -26,6 +26,10 @@ public:
             msgdata(msgdata), creditdata(creditdata), keydata(keydata), relay_state(relay_state)
     { }
 
+    Data(Data &other, RelayState *relay_state):
+            msgdata(other.msgdata), creditdata(other.creditdata), keydata(other.keydata), relay_state(relay_state)
+    { }
+
     Data(const Data &other): msgdata(other.msgdata), creditdata(other.creditdata), keydata(other.keydata)
     {
         relay_state = other.relay_state;

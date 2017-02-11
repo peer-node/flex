@@ -48,8 +48,6 @@ public:
 
     bool IsValid(Data data);
 
-    bool ReferencedSecretIsOk(Data data);
-
     bool EncryptedSecretIsOk(Data data);
 
     CBigNum RecoverSecret(Data data);
@@ -59,6 +57,10 @@ public:
     Point GetPointCorrespondingToSecret(Data data);
 
     bool PrivateReceivingKeyIsCorrect(Data data);
+
+    Relay *GetDeadRelay(Data data);
+
+    bool DurationWithoutResponseHasElapsedSinceSecretRecoveryMessage(Data data);
 };
 
 

@@ -222,6 +222,7 @@ bool MinedCreditMessageValidator::CheckRelayStateHash(MinedCreditMessage &msg)
     MinedCreditMessage previous_msg = credit_system->msgdata[previous_msg_hash]["msg"];
 
     RelayMessageHandler handler(*data);
+    handler.mode = BLOCK_VALIDATION;
     handler.relay_state = data->GetRelayState(previous_msg.mined_credit.network_state.relay_state_hash);
     handler.SetCreditSystem(credit_system);
     handler.relay_state.latest_mined_credit_message_hash = previous_msg_hash;

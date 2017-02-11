@@ -20,12 +20,15 @@
 #define BLOCK_VALIDATION 2
 #define INITIAL_DATA_VALIDATION 3
 
+class MinedCreditMessageBuilder;
+
 class RelayMessageHandler : public MessageHandlerWithOrphanage
 {
 public:
     Data data;
     CreditSystem *credit_system{NULL};
     Calendar *calendar{NULL};
+    MinedCreditMessageBuilder *builder{NULL};
     RelayState relay_state;
     RelayAdmissionHandler admission_handler;
     RelaySuccessionHandler succession_handler;
@@ -51,6 +54,8 @@ public:
 
     void SetCalendar(Calendar *calendar);
 
+    void SetMinedCreditMessageBuilder(MinedCreditMessageBuilder *builder);
+
     void HandleMessage(CDataStream ss, CNode* peer)
     {
         HANDLESTREAM(RelayJoinMessage);
@@ -64,6 +69,7 @@ public:
         HANDLESTREAM(GoodbyeComplaint);
 
         HANDLESTREAM(DurationWithoutResponse);
+        HANDLESTREAM(DurationWithoutResponseFromRelay);
     }
 
     void HandleMessage(uint160 message_hash)
@@ -79,6 +85,7 @@ public:
         HANDLEHASH(GoodbyeComplaint);
 
         HANDLEHASH(DurationWithoutResponse);
+        HANDLEHASH(DurationWithoutResponseFromRelay);
     }
 
     HANDLECLASS(RelayJoinMessage);
@@ -92,6 +99,7 @@ public:
     HANDLECLASS(GoodbyeComplaint);
 
     HANDLECLASS(DurationWithoutResponse);
+    HANDLECLASS(DurationWithoutResponseFromRelay);
 
     template <typename T>
     void Broadcast(T message)
@@ -122,6 +130,8 @@ public:
 
     void HandleDurationWithoutResponse(DurationWithoutResponse duration);
 
+    void HandleDurationWithoutResponseFromRelay(DurationWithoutResponseFromRelay duration);
+
     bool ValidateRelayJoinMessage(RelayJoinMessage relay_join_message);
 
     bool ValidateKeyDistributionMessage(KeyDistributionMessage key_distribution_message);
@@ -145,6 +155,10 @@ public:
     bool ValidateMessage(uint160 &message_hash);
 
     bool ValidateDurationWithoutResponse(DurationWithoutResponse &duration);
+
+    void EncodeInChainIfLive(uint160 message_hash);
+
+    bool ValidateDurationWithoutResponseFromRelay(DurationWithoutResponseFromRelay &duration);
 };
 
 

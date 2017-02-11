@@ -153,3 +153,9 @@ MinedCreditMessage MinedCreditMessageBuilder::GenerateMinedCreditMessageWithoutP
     credit_system->SetBatchRootAndSizeAndMessageListHashAndSpentChainHash(msg);
     return msg;
 }
+
+void MinedCreditMessageBuilder::AddToAcceptedMessages(uint160 message_hash)
+{
+    if (not VectorContainsEntry(accepted_messages, message_hash))
+        accepted_messages.push_back(message_hash);
+}

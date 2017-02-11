@@ -60,6 +60,7 @@ bool RelayAdmissionHandler::MinedCreditMessageHashIsInMainChain(RelayJoinMessage
 void RelayAdmissionHandler::AcceptRelayJoinMessage(RelayJoinMessage join_message)
 {
     relay_state->ProcessRelayJoinMessage(join_message);
+    relay_message_handler->EncodeInChainIfLive(join_message.GetHash160());
 }
 
 void RelayAdmissionHandler::HandleKeyDistributionMessage(KeyDistributionMessage key_distribution_message)
@@ -69,13 +70,18 @@ void RelayAdmissionHandler::HandleKeyDistributionMessage(KeyDistributionMessage 
         relay_message_handler->RejectMessage(key_distribution_message.GetHash160());
         return;
     }
+    AcceptKeyDistributionMessage(key_distribution_message);
+}
+
+void RelayAdmissionHandler::AcceptKeyDistributionMessage(KeyDistributionMessage& key_distribution_message)
+{
     relay_state->ProcessKeyDistributionMessage(key_distribution_message);
+    relay_message_handler->EncodeInChainIfLive(key_distribution_message.GetHash160());
     StoreKeyDistributionSecretsAndSendComplaints(key_distribution_message);
+
     if (relay_message_handler->mode == LIVE)
-    {
         scheduler.Schedule("key_distribution",
                            key_distribution_message.GetHash160(), GetTimeMicros() + RESPONSE_WAIT_TIME);
-    }
 }
 
 void RelayAdmissionHandler::HandleKeyDistributionMessageAfterDuration(uint160 key_distribution_message_hash)
@@ -85,7 +91,9 @@ void RelayAdmissionHandler::HandleKeyDistributionMessageAfterDuration(uint160 ke
         return;
     DurationWithoutResponse duration;
     duration.message_hash = key_distribution_message_hash;
+
     relay_state->ProcessDurationWithoutResponse(duration, data);
+    relay_message_handler->EncodeInChainIfLive(duration.GetHash160());
 }
 
 bool RelayAdmissionHandler::ValidateKeyDistributionMessage(KeyDistributionMessage key_distribution_message)
@@ -180,7 +188,13 @@ void RelayAdmissionHandler::HandleKeyDistributionComplaint(KeyDistributionCompla
         relay_message_handler->RejectMessage(complaint.GetHash160());
         return;
     }
+    AcceptKeyDistributionComplaint(complaint);
+}
+
+void RelayAdmissionHandler::AcceptKeyDistributionComplaint(KeyDistributionComplaint &complaint)
+{
     relay_state->ProcessKeyDistributionComplaint(complaint, data);
+    relay_message_handler->EncodeInChainIfLive(complaint.GetHash160());
     relay_message_handler->HandleNewlyDeadRelays();
 }
 

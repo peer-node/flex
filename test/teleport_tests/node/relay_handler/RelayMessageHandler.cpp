@@ -1,4 +1,5 @@
 #include "RelayMessageHandler.h"
+#include "test/teleport_tests/node/credit_handler/MinedCreditMessageBuilder.h"
 
 #include "log.h"
 #define LOG_CATEGORY "RelayMessageHandler.cpp"
@@ -18,6 +19,11 @@ void RelayMessageHandler::SetCalendar(Calendar *calendar_)
     calendar = calendar_;
     admission_handler.calendar = calendar;
     succession_handler.calendar = calendar;
+}
+
+void RelayMessageHandler::SetMinedCreditMessageBuilder(MinedCreditMessageBuilder *builder_)
+{
+    builder = builder_;
 }
 
 void RelayMessageHandler::HandleRelayJoinMessage(RelayJoinMessage relay_join_message)
@@ -117,6 +123,21 @@ bool RelayMessageHandler::ValidateGoodbyeComplaint(GoodbyeComplaint &complaint)
 
 bool RelayMessageHandler::ValidateDurationWithoutResponse(DurationWithoutResponse &duration)
 {
+    std::string message_type = data.MessageType(duration.message_hash);
+
+    if (message_type == "secret_recovery")
+        return succession_handler.ValidateDurationWithoutResponseAfterSecretRecoveryMessage(duration);
+
+    return true;
+}
+
+bool RelayMessageHandler::ValidateDurationWithoutResponseFromRelay(DurationWithoutResponseFromRelay &duration)
+{
+    std::string message_type = data.MessageType(duration.message_hash);
+
+    if (message_type == "obituary")
+        return succession_handler.ValidateDurationWithoutResponseFromRelayAfterObituary(duration);
+
     return true;
 }
 
@@ -141,6 +162,7 @@ bool RelayMessageHandler::ValidateMessage(uint160 &message_hash)
     VALIDATE(GoodbyeMessage);
     VALIDATE(GoodbyeComplaint);
     VALIDATE(DurationWithoutResponse);
+    VALIDATE(DurationWithoutResponseFromRelay);
 
 #undef VALIDATE
 
@@ -150,4 +172,15 @@ bool RelayMessageHandler::ValidateMessage(uint160 &message_hash)
 void RelayMessageHandler::HandleDurationWithoutResponse(DurationWithoutResponse duration)
 {
     relay_state.ProcessDurationWithoutResponse(duration, data);
+}
+
+void RelayMessageHandler::EncodeInChainIfLive(uint160 message_hash)
+{
+    if (mode == LIVE and builder != NULL)
+        builder->AddToAcceptedMessages(message_hash);
+}
+
+void RelayMessageHandler::HandleDurationWithoutResponseFromRelay(DurationWithoutResponseFromRelay duration)
+{
+    relay_state.ProcessDurationWithoutResponseFromRelay(duration, data);
 }

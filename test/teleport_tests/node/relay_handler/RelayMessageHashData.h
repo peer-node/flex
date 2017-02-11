@@ -15,6 +15,7 @@ public:
     uint160 goodbye_message_hash{0};
     uint160 obituary_hash{0};
     std::vector<uint160> secret_recovery_message_hashes;
+    std::vector<uint160> secret_recovery_complaint_hashes;
 
     IMPLEMENT_SERIALIZE
     (
@@ -24,10 +25,11 @@ public:
         READWRITE(goodbye_message_hash);
         READWRITE(obituary_hash);
         READWRITE(secret_recovery_message_hashes);
+        READWRITE(secret_recovery_complaint_hashes);
     );
 
     JSON(join_message_hash, mined_credit_message_hash, key_distribution_message_hash, goodbye_message_hash,
-         obituary_hash, secret_recovery_message_hashes);
+         obituary_hash, secret_recovery_message_hashes, secret_recovery_complaint_hashes);
 
     HASH160();
 

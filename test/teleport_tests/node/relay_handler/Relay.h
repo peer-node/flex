@@ -85,6 +85,8 @@ public:
     uint256 EncryptSecretPoint(Point secret_point);
 
     Point DecryptSecretPoint(uint256 encrypted_secret, Point point_corresponding_to_secret, Data data);
+
+    std::vector<Relay *> QuarterHolders(Data data);
 };
 
 Point DecryptPointUsingHexPrefixes(CBigNum decrypted_secret, Point point_corresponding_to_secret);

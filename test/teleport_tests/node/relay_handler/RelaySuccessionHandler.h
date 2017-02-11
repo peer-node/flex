@@ -7,6 +7,7 @@
 #include "GoodbyeComplaint.h"
 #include "SecretRecoveryComplaint.h"
 #include "RecoveryFailureAuditMessage.h"
+#include "DurationWithoutResponseFromRelay.h"
 
 class RelayMessageHandler;
 
@@ -28,6 +29,9 @@ public:
     {
         scheduler.AddTask(ScheduledTask("obituary",
                                         &RelaySuccessionHandler::HandleObituaryAfterDuration, this));
+
+        scheduler.AddTask(ScheduledTask("secret_recovery",
+                                        &RelaySuccessionHandler::HandleSecretRecoveryMessageAfterDuration, this));
 
         scheduler.AddTask(ScheduledTask("secret_recovery_failure",
                                         &RelaySuccessionHandler::HandleSecretRecoveryFailureMessageAfterDuration, this));
@@ -126,6 +130,24 @@ public:
     bool ValidateGoodbyeComplaint(GoodbyeComplaint &complaint);
 
     SecretRecoveryFailureMessage GenerateSecretRecoveryFailureMessage(std::vector<uint160> recovery_message_hashes);
+
+    void AcceptGoodbyeMessage(GoodbyeMessage &goodbye_message);
+
+    void AcceptSecretRecoveryMessage(SecretRecoveryMessage &secret_recovery_message);
+
+    void AcceptSecretRecoveryComplaint(SecretRecoveryComplaint &complaint);
+
+    void AcceptSecretRecoveryFailureMessage(SecretRecoveryFailureMessage &failure_message);
+
+    void AcceptRecoveryFailureAuditMessage(RecoveryFailureAuditMessage &audit_message);
+
+    void AcceptGoodbyeComplaint(GoodbyeComplaint &complaint);
+
+    void HandleSecretRecoveryMessageAfterDuration(uint160 recovery_message_hash);
+
+    bool ValidateDurationWithoutResponseFromRelayAfterObituary(DurationWithoutResponseFromRelay &duration);
+
+    bool ValidateDurationWithoutResponseAfterSecretRecoveryMessage(DurationWithoutResponse &duration);
 };
 
 

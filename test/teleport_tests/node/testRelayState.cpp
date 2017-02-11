@@ -63,6 +63,7 @@ TEST_F(ARelayState, ThrowsAnExceptionIfTheSameMinedCreditMessageHashIsUsedTwiceI
     EXPECT_THROW(relay_state.ProcessRelayJoinMessage(relay_join_message), RelayStateException);
 }
 
+
 class ARelayStateWith37Relays : public ARelayState
 {
 public:
@@ -494,6 +495,26 @@ TEST_F(ARelayStateWhichHasProcessedAGoodbyeMessage, GeneratesAnObituaryAfterADur
     ASSERT_TRUE(RelayHasAnObituaryWithSpecificReasonForLeaving(relay, *data, OBITUARY_SAID_GOODBYE));
 }
 
+TEST_F(ARelayStateWhichHasProcessedAGoodbyeMessage,
+       DoesntAssignTheObituaryGeneratedAfterADurationWithoutAResponseAsATaskToKeyQuarterHolders)
+{
+    DurationWithoutResponse duration;
+    duration.message_hash = goodbye.GetHash160();
+    relay_state.ProcessDurationWithoutResponse(duration, *data);
+    for (auto quarter_holder : relay->QuarterHolders(*data))
+        ASSERT_FALSE(VectorContainsEntry(quarter_holder->tasks, relay->hashes.obituary_hash));
+}
+
+TEST_F(ARelayStateWhichHasProcessedAGoodbyeMessage,
+       AssignsTheExitingRelaysObituaryAsATaskToTheKeyQuarterHoldersWhenProcessingAGoodbyeComplaint)
+{
+    GoodbyeComplaint complaint;
+    complaint.Populate(goodbye, *data);
+    relay_state.ProcessGoodbyeComplaint(complaint, *data);
+    for (auto quarter_holder : relay->QuarterHolders(*data))
+        ASSERT_TRUE(VectorContainsEntry(quarter_holder->tasks, relay->hashes.obituary_hash));
+}
+
 
 class ARelayStateWhichHasProcessedAnObituary : public ARelayStateWhichHasProcessedAKeyDistributionMessage
 {
@@ -568,7 +589,7 @@ std::vector<std::pair<uint64_t, uint64_t> > GetQuarterHolderRoles(uint64_t relay
 };
 
 TEST_F(ARelayStateWhichHasProcessedAnObituary,
-       RelacesTheRelayWithItsSuccessorInAllQuarterHolderRolesWhenProcessingARelayExit)
+       ReplacesTheRelayWithItsSuccessorInAllQuarterHolderRolesWhenProcessingARelayExit)
 {
     RelayExit relay_exit = relay_state.GenerateRelayExit(relay);
     uint64_t relay_number = relay->number, successor = obituary.successor_number;
@@ -767,23 +788,19 @@ public:
 TEST_F(ARelayStateWithASecretRecoveryFailureMessage, AssignsTheFailureMessageAsATaskToTheKeyQuarterHolders)
 {
     relay_state.ProcessSecretRecoveryFailureMessage(failure_message, *data);
-    for (auto quarter_holder_number : relay->holders.key_quarter_holders)
-    {
-        auto quarter_holder = relay_state.GetRelayByNumber(quarter_holder_number);
+    for (auto quarter_holder : relay->QuarterHolders(*data))
         ASSERT_TRUE(VectorContainsEntry(quarter_holder->tasks, failure_message.GetHash160()));
-    }
 }
 
 TEST_F(ARelayStateWithASecretRecoveryFailureMessage, GeneratesObituariesForRelaysThatDontRespond)
 {
     relay_state.ProcessSecretRecoveryFailureMessage(failure_message, *data);
-    for (auto quarter_holder_number : relay->holders.key_quarter_holders)
+    for (auto quarter_holder : relay->QuarterHolders(*data))
     {
         DurationWithoutResponseFromRelay duration;
         duration.message_hash = failure_message.GetHash160();
-        duration.relay_number = quarter_holder_number;
+        duration.relay_number = quarter_holder->number;
         relay_state.ProcessDurationWithoutResponseFromRelay(duration, *data);
-        auto quarter_holder = relay_state.GetRelayByNumber(quarter_holder_number);
         ASSERT_THAT(quarter_holder->hashes.obituary_hash, Ne(0));
     }
 }

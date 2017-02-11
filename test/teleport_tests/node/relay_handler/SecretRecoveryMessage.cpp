@@ -281,7 +281,6 @@ bool SecretRecoveryMessage::IsValid(Data data)
 {
     if (not ValidateSizes())
         return false;
-
     Obituary obituary = data.GetMessage(obituary_hash);
     auto dead_relay = data.relay_state->GetRelayByNumber(obituary.dead_relay_number);
 

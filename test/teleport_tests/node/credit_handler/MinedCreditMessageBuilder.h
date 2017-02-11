@@ -34,6 +34,7 @@ public:
 
     void SetWallet(Wallet *wallet_) ;
 
+    void AddToAcceptedMessages(uint160 message_hash);
 
     void UpdateAcceptedMessagesAfterNewTip(MinedCreditMessage &msg);
 

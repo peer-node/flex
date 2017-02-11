@@ -198,3 +198,12 @@ std::vector<uint64_t> Relay::KeyQuarterSharers(RelayState *relay_state)
 
     return sharers;
 }
+
+std::vector<Relay *> Relay::QuarterHolders(Data data)
+{
+    std::vector<Relay *> quarter_holders;
+    for (auto quarter_holder_number : holders.key_quarter_holders)
+        quarter_holders.push_back(data.relay_state->GetRelayByNumber(quarter_holder_number));
+
+    return quarter_holders;
+}
