@@ -5,6 +5,7 @@
 #include <test/teleport_tests/node/calendar/Calendar.h>
 #include <src/teleportnode/schedule.h>
 #include "KeyDistributionComplaint.h"
+#include "DurationWithoutResponse.h"
 
 
 class RelayMessageHandler;
@@ -18,7 +19,7 @@ public:
     RelayState *relay_state{NULL};
     RelayMessageHandler *relay_message_handler;
     Scheduler scheduler;
-    uint8_t mode{0};
+    bool send_key_distribution_complaints{true};
 
     RelayAdmissionHandler(Data data, CreditSystem *credit_system, Calendar *calendar, RelayMessageHandler *handler);
 
@@ -65,6 +66,8 @@ public:
     void AcceptKeyDistributionMessage(KeyDistributionMessage &key_distribution_message);
 
     void AcceptKeyDistributionComplaint(KeyDistributionComplaint &complaint);
+
+    bool ValidateDurationWithoutResponseAfterKeyDistributionMessage(DurationWithoutResponse &duration);
 };
 
 

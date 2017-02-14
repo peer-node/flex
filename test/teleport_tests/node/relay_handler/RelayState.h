@@ -141,6 +141,8 @@ public:
                                                                               uint64_t relay_number, Data data);
 
     void ProcessSecretRecoveryFailureMessage(SecretRecoveryFailureMessage failure_message, Data data);
+
+    void ProcessObituary(Obituary obituary, Data data);
 };
 
 class RelayStateException : public std::runtime_error

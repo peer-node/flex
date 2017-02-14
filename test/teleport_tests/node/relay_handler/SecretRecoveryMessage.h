@@ -103,6 +103,8 @@ public:
     bool KeyQuarterPositionsAreAllLessThanFour();
 
     bool AllTheDeadRelaysKeySharersAreIncluded(Relay *dead_relay, Data data);
+
+    bool DurationWithoutResponseFromQuarterHolderHasElapsedSinceObituary(Data data);
 };
 
 std::string PadWithZero(std::string in);

@@ -125,8 +125,14 @@ bool RelayMessageHandler::ValidateDurationWithoutResponse(DurationWithoutRespons
 {
     std::string message_type = data.MessageType(duration.message_hash);
 
+    if (message_type == "key_distribution")
+        return admission_handler.ValidateDurationWithoutResponseAfterKeyDistributionMessage(duration);
+
     if (message_type == "secret_recovery")
         return succession_handler.ValidateDurationWithoutResponseAfterSecretRecoveryMessage(duration);
+
+    if (message_type == "goodbye")
+        return succession_handler.ValidateDurationWithoutResponseAfterGoodbyeMessage(duration);
 
     return true;
 }
@@ -137,6 +143,9 @@ bool RelayMessageHandler::ValidateDurationWithoutResponseFromRelay(DurationWitho
 
     if (message_type == "obituary")
         return succession_handler.ValidateDurationWithoutResponseFromRelayAfterObituary(duration);
+
+    if (message_type == "secret_recovery_failure")
+        return succession_handler.ValidateDurationWithoutResponseFromRelayAfterSecretRecoveryFailureMessage(duration);
 
     return true;
 }

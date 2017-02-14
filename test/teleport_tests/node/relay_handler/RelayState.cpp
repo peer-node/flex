@@ -283,7 +283,7 @@ bool RelayState::RelayIsOldEnoughToLeaveInGoodStanding(Relay *relay)
     return latest_relay_number > relay->number + 1440;
 }
 
-void RelayState::ProcessObituary(Obituary obituary)
+void RelayState::ProcessObituary(Obituary obituary, Data data)
 {
     Relay *relay = GetRelayByNumber(obituary.dead_relay_number);
     if (relay == NULL) throw RelayStateException("no such relay");
@@ -346,6 +346,8 @@ void RelayState::ProcessKeyDistributionComplaint(KeyDistributionComplaint compla
     if (secret_sender->key_distribution_message_accepted)
         throw RelayStateException("too late to process complaint");
 
+    secret_sender->hashes.key_distribution_complaint_hashes.push_back(complaint.GetHash160());
+
     RecordRelayDeath(secret_sender, data, OBITUARY_COMPLAINT);
 }
 
@@ -382,7 +384,7 @@ void RelayState::ProcessGoodbyeComplaint(GoodbyeComplaint complaint, Data data)
     Relay *dead_relay = complaint.GetSecretSender(data);
 
     if (dead_relay == NULL) throw RelayStateException("no such relay");
-
+    dead_relay->hashes.goodbye_complaint_hashes.push_back(complaint.GetHash160());
     RecordRelayDeath(dead_relay, data, OBITUARY_COMPLAINT);
 }
 
@@ -431,7 +433,7 @@ void RelayState::RecordRelayDeath(Relay *dead_relay, Data data, uint32_t reason)
 {
     Obituary obituary = GenerateObituary(dead_relay, reason);
     data.StoreMessage(obituary);
-    ProcessObituary(obituary);
+    ProcessObituary(obituary, data);
 }
 
 void RelayState::ProcessDurationWithoutResponseFromRelay(DurationWithoutResponseFromRelay duration, Data data)
@@ -467,6 +469,8 @@ void RelayState::ProcessDurationWithoutRelayResponseAfterSecretRecoveryFailureMe
 
 void RelayState::ProcessRecoveryFailureAuditMessage(RecoveryFailureAuditMessage audit_message, Data data)
 {
+    auto dead_relay = audit_message.GetDeadRelay(data);
+    dead_relay->hashes.recovery_failure_audit_message_hashes.push_back(audit_message.GetHash160());
     Relay *key_quarter_holder = GetRelayByNumber(audit_message.quarter_holder_number);
     uint160 failure_message_hash = audit_message.failure_message_hash;
     EraseEntryFromVector(failure_message_hash, key_quarter_holder->tasks);
@@ -479,10 +483,10 @@ void RelayState::ProcessRecoveryFailureAuditMessage(RecoveryFailureAuditMessage 
         data.msgdata[failure_message_hash]["bad_quarter_holder_found"] = true;
         return;
     }
-    std::vector<uint160> audit_messages = data.msgdata[failure_message_hash]["audit_messages"];
+
+    auto audit_messages = dead_relay->hashes.recovery_failure_audit_message_hashes;
     if (audit_messages.size() == 4 and not data.msgdata[failure_message_hash]["bad_quarter_holder_found"])
     {
-        auto dead_relay = audit_message.GetDeadRelay(data);
         auto successor = data.relay_state->GetRelayByNumber(dead_relay->SuccessorNumber(data));
         RecordRelayDeath(successor, data, OBITUARY_COMPLAINT);
     }
@@ -490,8 +494,10 @@ void RelayState::ProcessRecoveryFailureAuditMessage(RecoveryFailureAuditMessage 
 
 void RelayState::ProcessSecretRecoveryFailureMessage(SecretRecoveryFailureMessage failure_message, Data data)
 {
+    auto dead_relay = failure_message.GetDeadRelay(data);
     auto quarter_holders = failure_message.GetQuarterHolders(data);
     uint160 failure_message_hash = failure_message.GetHash160();
+    dead_relay->hashes.secret_recovery_failure_message_hash = failure_message_hash;
     for (auto quarter_holder : quarter_holders)
     {
         if (not VectorContainsEntry(quarter_holder->tasks, failure_message_hash))

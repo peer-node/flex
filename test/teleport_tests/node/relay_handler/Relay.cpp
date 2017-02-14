@@ -77,7 +77,9 @@ GoodbyeMessage Relay::GenerateGoodbyeMessage(Data data)
 
 Point Relay::GenerateRecipientPublicKey(Point point_corresponding_to_secret)
 {
-    return public_key_set.GenerateReceivingPublicKey(point_corresponding_to_secret);
+    uint64_t start = GetRealTimeMicros();
+    auto result = public_key_set.GenerateReceivingPublicKey(point_corresponding_to_secret);
+    return result;
 }
 
 Point Relay::GenerateRecipientPublicKeyQuarter(Point point_corresponding_to_secret,

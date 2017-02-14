@@ -62,6 +62,8 @@ public:
     bool EncryptedSecretIsOk(Data data);
 
     uint256 GetEncryptedSecret(Data data);
+
+    bool DurationWithoutResponseHasElapsedSinceGoodbyeMessage(Data data);
 };
 
 

@@ -149,6 +149,11 @@ Relay *RecoveryFailureAuditMessage::GetDeadRelay(Data data)
     return data.relay_state->GetRelayByNumber(GetSecretRecoveryMessage(data).dead_relay_number);
 }
 
+Relay *RecoveryFailureAuditMessage::GetKeyQuarterHolder(Data data)
+{
+    return data.relay_state->GetRelayByNumber(quarter_holder_number);
+}
+
 Point RecoveryFailureAuditMessage::GetSharedSecretQuarter(Data data)
 {
     Point public_key_sixteenth = GetPublicKeySixteenth(data);
@@ -159,8 +164,12 @@ Point RecoveryFailureAuditMessage::GetSharedSecretQuarter(Data data)
 bool RecoveryFailureAuditMessage::IsValid(Data data)
 {
     auto dead_relay = GetDeadRelay(data);
+    auto quarter_holder = GetKeyQuarterHolder(data);
 
     if (dead_relay == NULL or not VectorContainsEntry(dead_relay->holders.key_quarter_holders, quarter_holder_number))
+        return false;
+
+    if (quarter_holder == NULL or quarter_holder->hashes.obituary_hash != 0)
         return false;;
 
     return true;

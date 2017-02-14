@@ -62,6 +62,8 @@ public:
     bool ReferencedSecretExists(Data data);
 
     bool RecipientPrivateKeyIsOk(Data data);
+
+    bool DurationWithoutResponseHasElapsedSinceKeyDistributionMessage(Data data);
 };
 
 

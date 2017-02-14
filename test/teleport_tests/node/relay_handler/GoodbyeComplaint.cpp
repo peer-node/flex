@@ -72,17 +72,27 @@ bool GoodbyeComplaint::IsValid(Data data)
 
     if (key_sharer_position >= goodbye_message.key_quarter_sharers.size())
         return false;
-
     if (position_of_bad_encrypted_key_sixteenth >= 4)
         return false;
-
+    if (DurationWithoutResponseHasElapsedSinceGoodbyeMessage(data))
+        return false;
     if (PrivateReceivingKeyIsIncorrect(data))
         return false;
-
     if (EncryptedSecretIsOk(data))
         return false;;
-
     return true;
+}
+
+bool GoodbyeComplaint::DurationWithoutResponseHasElapsedSinceGoodbyeMessage(Data data)
+{
+    GoodbyeMessage goodbye_message = data.GetMessage(goodbye_message_hash);
+    auto dead_relay = data.relay_state->GetRelayByNumber(goodbye_message.dead_relay_number);
+    if (dead_relay == NULL)
+        return true;
+    if (dead_relay->hashes.obituary_hash == 0)
+        return false;
+    Obituary obituary = data.GetMessage(dead_relay->hashes.obituary_hash);
+    return obituary.reason_for_leaving == OBITUARY_SAID_GOODBYE;
 }
 
 bool GoodbyeComplaint::PrivateReceivingKeyIsIncorrect(Data data)

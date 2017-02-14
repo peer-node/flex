@@ -78,7 +78,6 @@ void RelayAdmissionHandler::AcceptKeyDistributionMessage(KeyDistributionMessage&
     relay_state->ProcessKeyDistributionMessage(key_distribution_message);
     relay_message_handler->EncodeInChainIfLive(key_distribution_message.GetHash160());
     StoreKeyDistributionSecretsAndSendComplaints(key_distribution_message);
-
     if (relay_message_handler->mode == LIVE)
         scheduler.Schedule("key_distribution",
                            key_distribution_message.GetHash160(), GetTimeMicros() + RESPONSE_WAIT_TIME);
@@ -86,8 +85,12 @@ void RelayAdmissionHandler::AcceptKeyDistributionMessage(KeyDistributionMessage&
 
 void RelayAdmissionHandler::HandleKeyDistributionMessageAfterDuration(uint160 key_distribution_message_hash)
 {
-    vector<uint160> complaint_hashes = data.msgdata[key_distribution_message_hash]["complaints"];
-    if (complaint_hashes.size() > 0)
+    KeyDistributionMessage key_distribution_message = data.GetMessage(key_distribution_message_hash);
+    auto key_sharer = relay_state->GetRelayByNumber(key_distribution_message.relay_number);
+    if (key_sharer == NULL)
+        return;
+
+    if (key_sharer->hashes.key_distribution_complaint_hashes.size() > 0)
         return;
     DurationWithoutResponse duration;
     duration.message_hash = key_distribution_message_hash;
@@ -146,13 +149,13 @@ void RelayAdmissionHandler::RecoverSecretsAndSendKeyDistributionComplaints(Relay
         bool ok = RecoverAndStoreSecret(recipient, encrypted_secrets[position], public_key_sixteenths[position])
                   and relay->public_key_set.VerifyRowOfGeneratedPoints(position, data.keydata);
 
-        if (not ok and relay_message_handler->mode == LIVE)
+        if (not ok and relay_message_handler->mode == LIVE and send_key_distribution_complaints)
             SendKeyDistributionComplaint(key_distribution_message_hash, set_of_secrets, position);
     }
 }
 
 bool RelayAdmissionHandler::RecoverAndStoreSecret(Relay *recipient, uint256 &encrypted_secret,
-                                                Point &point_corresponding_to_secret)
+                                                  Point &point_corresponding_to_secret)
 {
     CBigNum decrypted_secret = recipient->DecryptSecret(encrypted_secret, point_corresponding_to_secret, data);
 
@@ -164,7 +167,7 @@ bool RelayAdmissionHandler::RecoverAndStoreSecret(Relay *recipient, uint256 &enc
 }
 
 void RelayAdmissionHandler::SendKeyDistributionComplaint(uint160 key_distribution_message_hash, uint64_t set_of_secrets,
-                                                       uint32_t position_of_bad_secret)
+                                                         uint32_t position_of_bad_secret)
 {
     KeyDistributionComplaint complaint;
     complaint.Populate(key_distribution_message_hash, set_of_secrets, position_of_bad_secret, data);
@@ -201,4 +204,14 @@ void RelayAdmissionHandler::AcceptKeyDistributionComplaint(KeyDistributionCompla
 bool RelayAdmissionHandler::ValidateKeyDistributionComplaint(KeyDistributionComplaint complaint)
 {
     return complaint.IsValid(data) and complaint.VerifySignature(data);
+}
+
+bool
+RelayAdmissionHandler::ValidateDurationWithoutResponseAfterKeyDistributionMessage(DurationWithoutResponse &duration)
+{
+    KeyDistributionMessage key_distribution_message = data.GetMessage(duration.message_hash);
+    auto key_sharer = relay_state->GetRelayByNumber(key_distribution_message.relay_number);
+    if (key_sharer == NULL)
+        return false;
+    return key_sharer->hashes.key_distribution_complaint_hashes.size() == 0;
 }

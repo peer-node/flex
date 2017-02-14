@@ -347,7 +347,7 @@ TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
        RecordsARelaysObituaryHashWhenProcessingTheObituary)
 {
     Obituary obituary = relay_state.GenerateObituary(relay, OBITUARY_SAID_GOODBYE);
-    relay_state.ProcessObituary(obituary);
+    relay_state.ProcessObituary(obituary, *data);
     ASSERT_THAT(relay->hashes.obituary_hash, Eq(obituary.GetHash160()));
 }
 
@@ -355,7 +355,7 @@ TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
        AssignsTheObituaryAsATaskForTheKeyQuarterHoldersWhenProcessingItIfTheRelayDidntSayGoodbyeCorrectly)
 {
     Obituary obituary = relay_state.GenerateObituary(relay, OBITUARY_COMPLAINT);
-    relay_state.ProcessObituary(obituary);
+    relay_state.ProcessObituary(obituary, *data);
     for (auto key_quarter_holder_relay_number : relay->holders.key_quarter_holders)
     {
         auto key_quarter_holder = relay_state.GetRelayByNumber(key_quarter_holder_relay_number);
@@ -367,7 +367,7 @@ TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
        DoesntAssignTheObituaryAsATaskForTheKeyQuarterHoldersWhenProcessingItIfTheRelayDidSayGoodbyeCorrectly)
 {
     Obituary obituary = relay_state.GenerateObituary(relay, OBITUARY_SAID_GOODBYE);
-    relay_state.ProcessObituary(obituary);
+    relay_state.ProcessObituary(obituary, *data);
     for (auto key_quarter_holder_relay_number : relay->holders.key_quarter_holders)
     {
         auto key_quarter_holder = relay_state.GetRelayByNumber(key_quarter_holder_relay_number);
@@ -529,7 +529,7 @@ public:
         AssignATaskToTheRelay();
         obituary = relay_state.GenerateObituary(relay, OBITUARY_NOT_RESPONDING);
         data->StoreMessage(obituary);
-        relay_state.ProcessObituary(obituary);
+        relay_state.ProcessObituary(obituary, *data);
 
     }
 

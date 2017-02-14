@@ -21,6 +21,8 @@ public:
     RelayMessageHandler *relay_message_handler;
     Scheduler scheduler;
     bool send_audit_messages{true};
+    bool send_secret_recovery_messages{true};
+    bool send_goodbye_complaints{true};
     std::set<uint64_t> dead_relays;
 
     RelaySuccessionHandler(Data data, CreditSystem *credit_system, Calendar *calendar, RelayMessageHandler *handler);
@@ -148,6 +150,11 @@ public:
     bool ValidateDurationWithoutResponseFromRelayAfterObituary(DurationWithoutResponseFromRelay &duration);
 
     bool ValidateDurationWithoutResponseAfterSecretRecoveryMessage(DurationWithoutResponse &duration);
+
+    bool ValidateDurationWithoutResponseAfterGoodbyeMessage(DurationWithoutResponse &duration);
+
+    bool
+    ValidateDurationWithoutResponseFromRelayAfterSecretRecoveryFailureMessage(DurationWithoutResponseFromRelay &duration);
 };
 
 

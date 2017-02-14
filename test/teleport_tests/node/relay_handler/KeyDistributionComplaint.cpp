@@ -78,8 +78,22 @@ void KeyDistributionComplaint::Populate(uint160 key_distribution_message_hash_,
 
 bool KeyDistributionComplaint::IsValid(Data data)
 {
+    if (GetSecretSender(data) == NULL or GetComplainer(data) == NULL)
+        return false;
+
+    if (DurationWithoutResponseHasElapsedSinceKeyDistributionMessage(data))
+        return false;
+
     return ReferencedSecretExists(data) and RecipientPrivateKeyIsOk(data)
                                         and not (EncryptedSecretIsOk(data) and GeneratedRowOfPointsIsOk(data));
+}
+
+bool KeyDistributionComplaint::DurationWithoutResponseHasElapsedSinceKeyDistributionMessage(Data data)
+{
+    auto key_sharer = GetSecretSender(data);
+    if (key_sharer == NULL)
+        return false;
+    return key_sharer->key_distribution_message_accepted;
 }
 
 bool KeyDistributionComplaint::ReferencedSecretExists(Data data)

@@ -73,6 +73,8 @@ public:
     Relay *GetKeySharer(Data data);
 
     bool IsValid(Data data);
+
+    Relay *GetKeyQuarterHolder(Data data);
 };
 
 

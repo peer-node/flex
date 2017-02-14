@@ -281,6 +281,10 @@ bool SecretRecoveryMessage::IsValid(Data data)
 {
     if (not ValidateSizes())
         return false;
+
+    if (DurationWithoutResponseFromQuarterHolderHasElapsedSinceObituary(data))
+        return false;
+
     Obituary obituary = data.GetMessage(obituary_hash);
     auto dead_relay = data.relay_state->GetRelayByNumber(obituary.dead_relay_number);
 
@@ -288,6 +292,12 @@ bool SecretRecoveryMessage::IsValid(Data data)
            ReferencedQuarterHoldersAreValid(dead_relay, data) and
            AllTheDeadRelaysKeySharersAreIncluded(dead_relay, data) and
            KeyQuarterPositionsAreAllLessThanFour();
+}
+
+bool SecretRecoveryMessage::DurationWithoutResponseFromQuarterHolderHasElapsedSinceObituary(Data data)
+{
+    auto quarter_holder = data.relay_state->GetRelayByNumber(quarter_holder_number);
+    return quarter_holder == NULL or quarter_holder->hashes.obituary_hash != 0;
 }
 
 bool SecretRecoveryMessage::DeadRelayAndSuccessorNumberMatchObituary(Obituary &obituary, Data data)
