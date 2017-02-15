@@ -174,14 +174,7 @@ void RelayAdmissionHandler::SendKeyDistributionComplaint(uint160 key_distributio
     complaint.Sign(data);
     data.StoreMessage(complaint);
     relay_message_handler->Broadcast(complaint);
-    RecordSentComplaint(complaint.GetHash160(), key_distribution_message_hash);
-}
-
-void RelayAdmissionHandler::RecordSentComplaint(uint160 complaint_hash, uint160 bad_message_hash)
-{
-    vector<uint160> complaints = data.msgdata[bad_message_hash]["complaints"];
-    complaints.push_back(complaint_hash);
-    data.msgdata[bad_message_hash]["complaints"] = complaints;
+    relay_message_handler->Handle(complaint, NULL);
 }
 
 void RelayAdmissionHandler::HandleKeyDistributionComplaint(KeyDistributionComplaint complaint)

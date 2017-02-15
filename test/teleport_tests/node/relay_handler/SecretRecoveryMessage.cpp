@@ -93,6 +93,8 @@ void SecretRecoveryMessage::PopulateEncryptedSharedSecretQuarterForKeySixteenth(
 
     uint256 encrypted_shared_secret_quarter = successor->EncryptSecretPoint(shared_secret_quarter);
 
+    Point recovered_shared_secret_quarter = successor->DecryptSecretPoint(encrypted_shared_secret_quarter, Point(StorePointInBigNum(shared_secret_quarter)), data);
+
     points_corresponding_to_shared_secret_quarters.push_back(Point(StorePointInBigNum(shared_secret_quarter)));
     encrypted_shared_secret_quarters_for_relay_key_parts.push_back(encrypted_shared_secret_quarter);
 }
@@ -204,12 +206,13 @@ bool SecretRecoveryMessage::RecoverSecretsFromArrayOfSharedSecrets(vector<vector
     SecretRecoveryMessage recovery_message = data.GetMessage(recovery_message_hashes[0]);
 
     for (uint32_t i = 0; i < recovery_message.key_quarter_sharers.size(); i++)
-        if (not RecoverFourKeySixteenths(recovery_message.key_quarter_sharers[i],
-                                         recovery_message.dead_relay_number,
-                                         recovery_message.key_quarter_positions[i],
-                                         array_of_shared_secrets[i],
-                                         failure_key_part_position,
-                                         data))
+        if (array_of_shared_secrets.size() <= i or
+                not RecoverFourKeySixteenths(recovery_message.key_quarter_sharers[i],
+                                             recovery_message.dead_relay_number,
+                                             recovery_message.key_quarter_positions[i],
+                                             array_of_shared_secrets[i],
+                                             failure_key_part_position,
+                                             data))
         {
             failure_sharer_position = i;
             return false;

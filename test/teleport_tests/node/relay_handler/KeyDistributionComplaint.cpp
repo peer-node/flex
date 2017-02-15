@@ -92,7 +92,10 @@ bool KeyDistributionComplaint::DurationWithoutResponseHasElapsedSinceKeyDistribu
 {
     auto key_sharer = GetSecretSender(data);
     if (key_sharer == NULL)
+    {
+        log_ << "DurationWithoutResponseHasElapsedSinceKeyDistributionMessage: key sharer is null\n";
         return false;
+    }
     return key_sharer->key_distribution_message_accepted;
 }
 

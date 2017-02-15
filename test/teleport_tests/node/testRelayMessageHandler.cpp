@@ -494,7 +494,7 @@ TEST_F(ARelayMessageHandlerWithAKeyDistributionMessage,
 
     relay_message_handler->HandleMessage(GetDataStream(key_distribution_message), &peer);
 
-    vector<uint160> complaints = msgdata[key_distribution_message.GetHash160()]["complaints"];
+    vector<uint160> complaints = relay->hashes.key_distribution_complaint_hashes;
 
     ASSERT_THAT(complaints.size(), Eq(1));
     KeyDistributionComplaint complaint = data->GetMessage(complaints[0]);
@@ -510,7 +510,7 @@ TEST_F(ARelayMessageHandlerWithAKeyDistributionMessage,
 
     relay_message_handler->HandleMessage(GetDataStream(key_distribution_message), &peer);
 
-    vector<uint160> complaints = msgdata[key_distribution_message.GetHash160()]["complaints"];
+    vector<uint160> complaints = relay->hashes.key_distribution_complaint_hashes;
 
     ASSERT_THAT(complaints.size(), Eq(2));
     for (auto complaint_hash : complaints)
@@ -527,7 +527,7 @@ TEST_F(ARelayMessageHandlerWithAKeyDistributionMessage,
     relay->public_key_set.key_points[1][2] += Point(CBigNum(1));
     relay_message_handler->HandleMessage(GetDataStream(key_distribution_message), &peer);
 
-    vector<uint160> complaints = msgdata[key_distribution_message.GetHash160()]["complaints"];
+    vector<uint160> complaints = relay->hashes.key_distribution_complaint_hashes;
 
     ASSERT_THAT(complaints.size(), Eq(3));
     for (auto complaint_hash : complaints)
@@ -545,9 +545,7 @@ TEST_F(ARelayMessageHandlerWithAKeyDistributionMessage,
     key_distribution_message.Sign(*data);
     relay_message_handler->HandleMessage(GetDataStream(key_distribution_message), &peer);
 
-    vector<uint160> complaints = msgdata[key_distribution_message.GetHash160()]["complaints"];
-
-    ASSERT_THAT(complaints.size(), Eq(0));
+    ASSERT_THAT(relay->hashes.key_distribution_complaint_hashes.size(), Eq(0));
 }
 
 
@@ -955,7 +953,7 @@ public:
 TEST_F(ARelayMessageHandlerWhichHasProcessedAGoodbyeMessageWithABadSecret,
        SendsAGoodbyeComplaintIfTheSuccessorKeyIsAvailable)
 {
-    vector<uint160> complaint_hashes = msgdata[goodbye_message_hash]["complaints"];
+    vector<uint160> complaint_hashes = relay->hashes.goodbye_complaint_hashes;
     ASSERT_THAT(complaint_hashes.size(), Eq(1));
 
     GoodbyeComplaint complaint = data->GetMessage(complaint_hashes[0]);
@@ -966,7 +964,7 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAGoodbyeMessageWithABadSecret,
 TEST_F(ARelayMessageHandlerWhichHasProcessedAGoodbyeMessageWithABadSecret,
        EncodesAValidGoodbyeComplaint)
 {
-    vector<uint160> complaint_hashes = msgdata[goodbye_message_hash]["complaints"];
+    vector<uint160> complaint_hashes = relay->hashes.goodbye_complaint_hashes;
     ASSERT_THAT(complaint_hashes.size(), Eq(1));
     ASSERT_TRUE(VectorContainsEntry(builder->accepted_messages, complaint_hashes[0]));
 }
@@ -1003,7 +1001,7 @@ public:
 TEST_F(ARelayMessageHandlerInBlockValidationModeWhichHasProcessedAGoodbyeMessageWithABadSecret,
        DoesntSendAGoodbyeComplaint)
 {
-    vector<uint160> complaint_hashes = msgdata[goodbye_message_hash]["complaints"];
+    vector<uint160> complaint_hashes = relay->hashes.goodbye_complaint_hashes;
     ASSERT_THAT(complaint_hashes.size(), Eq(0));
 }
 
@@ -1124,10 +1122,12 @@ public:
     void DoSetUp()
     {
         EnsureThereIsSomethingToComplainAboutAndThatTheChosenRelayIsHoldingSecrets();
+        relay_message_handler->admission_handler.send_key_distribution_complaints = false;
         relay_message_handler->HandleMessage(GetDataStream(key_distribution_message), &peer);
         complaint.Populate(key_distribution_message.GetHash160(), 0, 1, *data);
         complaint.Sign(*data);
         data->StoreMessage(complaint);
+        relay_message_handler->admission_handler.send_key_distribution_complaints = true;
     }
 
     void EnsureThereIsSomethingToComplainAboutAndThatTheChosenRelayIsHoldingSecrets()
@@ -1710,7 +1710,7 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaintAndThr
     last_secret_recovery_message.Sign(*data);
     relay_message_handler->Handle(last_secret_recovery_message, NULL);
 
-    vector<uint160> complaints = msgdata[last_secret_recovery_message.GetHash160()]["complaints"];
+    vector<uint160> complaints = relay->hashes.secret_recovery_complaint_hashes;
     ASSERT_THAT(complaints.size(), Eq(1));
 
     SecretRecoveryComplaint complaint = data->GetMessage(complaints[0]);
@@ -1729,8 +1729,7 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaintAndThr
     relay_message_handler->mode = BLOCK_VALIDATION;
     relay_message_handler->Handle(last_secret_recovery_message, NULL);
 
-    vector<uint160> complaints = msgdata[last_secret_recovery_message.GetHash160()]["complaints"];
-    ASSERT_THAT(complaints.size(), Eq(0));
+    ASSERT_THAT(relay->hashes.secret_recovery_complaint_hashes.size(), Eq(0));
 }
 
 TEST_F(ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaintAndThreeSecretRecoveryMessages,
@@ -1755,7 +1754,7 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaintAndThr
     last_secret_recovery_message.Sign(*data);
     relay_message_handler->Handle(last_secret_recovery_message, NULL);
 
-    vector<uint160> complaints = msgdata[last_secret_recovery_message.GetHash160()]["complaints"];
+    vector<uint160> complaints = relay->hashes.secret_recovery_complaint_hashes;
     ASSERT_THAT(complaints.size(), Eq(1));
     ASSERT_TRUE(VectorContainsEntry(builder->accepted_messages, complaints[0]));
 }
@@ -1884,11 +1883,11 @@ public:
 TEST_F(ARelayMessageHandlerWhichHasProcessedFourSecretRecoveryMessagesOneOfWhichHasABadSharedSecretQuarter,
        SendsASecretRecoveryFailureMessageIfTheSuccessorsPrivateSigningKeyIsAvailable)
 {
-    vector<uint160> failure_message_hashes = msgdata[bad_recovery_message.obituary_hash]["failure_messages"];
+    uint160 failure_message_hash = relay->hashes.secret_recovery_failure_message_hash;
 
-    ASSERT_THAT(failure_message_hashes.size(), Eq(1));
+    ASSERT_THAT(failure_message_hash, Ne(0));
 
-    SecretRecoveryFailureMessage failure_message = data->GetMessage(failure_message_hashes[0]);
+    SecretRecoveryFailureMessage failure_message = data->GetMessage(failure_message_hash);
 
     ASSERT_THAT(failure_message.key_sharer_position, Eq(0));
     ASSERT_THAT(failure_message.shared_secret_quarter_position, Eq(2));
@@ -1916,8 +1915,7 @@ public:
 TEST_F(ARelayMessageHandlerInBlockValidationModeWithFourSecretRecoveryMessagesOneOfWhichHasABadSharedSecretQuarter,
        DoesntSendASecretRecoveryFailureMessage)
 {
-    vector<uint160> failure_message_hashes = msgdata[bad_recovery_message.obituary_hash]["failure_messages"];
-    ASSERT_THAT(failure_message_hashes.size(), Eq(0));
+    ASSERT_THAT(relay->hashes.secret_recovery_failure_message_hash, Eq(0));
 }
 
 
@@ -1931,8 +1929,7 @@ public:
     virtual void SetUp()
     {
         ARelayMessageHandlerWhichHasProcessedFourSecretRecoveryMessagesOneOfWhichHasABadSharedSecretQuarter::SetUp();
-        vector<uint160> failure_message_hashes = msgdata[bad_recovery_message.obituary_hash]["failure_messages"];
-        failure_message_hash = failure_message_hashes[0];
+        failure_message_hash = relay->hashes.secret_recovery_failure_message_hash;
         failure_message = data->GetMessage(failure_message_hash);
     }
 
@@ -2043,8 +2040,7 @@ public:
     {
         suppress_audit_messages = true;
         ARelayMessageHandlerWhichHasProcessedFourSecretRecoveryMessagesOneOfWhichHasABadSharedSecretQuarter::SetUp();
-        vector<uint160> failure_message_hashes = msgdata[bad_recovery_message.obituary_hash]["failure_messages"];
-        failure_message_hash = failure_message_hashes[0];
+        failure_message_hash = relay->hashes.secret_recovery_failure_message_hash;
         failure_message = data->GetMessage(failure_message_hash);
 
         vector<uint160> recovery_message_hashes = relay->hashes.secret_recovery_message_hashes;

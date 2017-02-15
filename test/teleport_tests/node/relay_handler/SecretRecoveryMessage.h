@@ -107,7 +107,7 @@ public:
     bool DurationWithoutResponseFromQuarterHolderHasElapsedSinceObituary(Data data);
 };
 
-std::string PadWithZero(std::string in);
+std::string PadWithZeroToEvenLength(std::string in);
 
 CBigNum StorePointInBigNum(Point point);
 

@@ -106,15 +106,12 @@ vector<uint64_t> RelaySuccessionHandler::GetKeyQuarterHoldersWhoHaventRespondedT
     Obituary obituary = data.GetMessage(obituary_hash);
     auto dead_relay = relay_state->GetRelayByNumber(obituary.dead_relay_number);
     vector<uint64_t> quarter_holders = dead_relay->holders.key_quarter_holders;
-    log_ << "quarter holders are: " << quarter_holders << "\n";
     vector<uint160> secret_recovery_message_hashes = dead_relay->hashes.secret_recovery_message_hashes;
-    log_ << "secret recovery message hashes are: " << secret_recovery_message_hashes << "\n";
     for (auto secret_recovery_message_hash : secret_recovery_message_hashes)
     {
         SecretRecoveryMessage secret_recovery_message = data.GetMessage(secret_recovery_message_hash);
         EraseEntryFromVector(secret_recovery_message.quarter_holder_number, quarter_holders);
     }
-    log_ << "returning: " << quarter_holders << "\n";
     return quarter_holders;
 }
 
@@ -312,7 +309,7 @@ void RelaySuccessionHandler::HandleSecretRecoveryComplaint(SecretRecoveryComplai
 
 void RelaySuccessionHandler::AcceptSecretRecoveryComplaint(SecretRecoveryComplaint &complaint)
 {
-    StoreSecretRecoveryComplaint(complaint);
+    data.StoreMessage(complaint);
     relay_state->ProcessSecretRecoveryComplaint(complaint, data);
     relay_message_handler->EncodeInChainIfLive(complaint.GetHash160());
     relay_message_handler->HandleNewlyDeadRelays();
@@ -321,13 +318,6 @@ void RelaySuccessionHandler::AcceptSecretRecoveryComplaint(SecretRecoveryComplai
 bool RelaySuccessionHandler::ValidateSecretRecoveryComplaint(SecretRecoveryComplaint &complaint)
 {
     return complaint.IsValid(data) and complaint.VerifySignature(data);
-}
-
-void RelaySuccessionHandler::StoreSecretRecoveryComplaint(SecretRecoveryComplaint complaint)
-{
-    data.StoreMessage(complaint);
-    uint160 complaint_hash = complaint.GetHash160();
-    RecordResponseToMessage(complaint_hash, complaint.secret_recovery_message_hash, "complaints");
 }
 
 void RelaySuccessionHandler::HandleRecoveryFailureAuditMessage(RecoveryFailureAuditMessage audit_message)
@@ -401,16 +391,15 @@ void RelaySuccessionHandler::HandleGoodbyeMessage(GoodbyeMessage goodbye_message
 void RelaySuccessionHandler::AcceptGoodbyeMessage(GoodbyeMessage &goodbye_message)
 {
     auto successor = goodbye_message.GetSuccessor(data);
-    if (data.keydata[successor->public_signing_key].HasProperty("privkey"))
-        TryToExtractSecretsFromGoodbyeMessage(goodbye_message);
 
     relay_state->ProcessGoodbyeMessage(goodbye_message);
     relay_message_handler->EncodeInChainIfLive(goodbye_message.GetHash160());
 
     if (relay_message_handler->mode == LIVE)
-    {
         scheduler.Schedule("goodbye", goodbye_message.GetHash160(), GetTimeMicros() + RESPONSE_WAIT_TIME);
-    }
+
+    if (data.keydata[successor->public_signing_key].HasProperty("privkey"))
+        TryToExtractSecretsFromGoodbyeMessage(goodbye_message);
 }
 
 bool RelaySuccessionHandler::ValidateGoodbyeMessage(GoodbyeMessage &goodbye_message)
@@ -441,8 +430,11 @@ void RelaySuccessionHandler::SendGoodbyeComplaint(GoodbyeMessage goodbye_message
 
 void RelaySuccessionHandler::HandleGoodbyeMessageAfterDuration(uint160 goodbye_message_hash)
 {
-    vector<uint160> complaint_hashes = data.msgdata[goodbye_message_hash]["complaints"];
-    if (complaint_hashes.size() > 0)
+    GoodbyeMessage goodbye_message = data.GetMessage(goodbye_message_hash);
+    auto dead_relay = relay_state->GetRelayByNumber(goodbye_message.dead_relay_number);
+    if (dead_relay == NULL)
+        return;
+    if (dead_relay->hashes.goodbye_complaint_hashes.size() > 0)
         return;
     DurationWithoutResponse duration;
     duration.message_hash = goodbye_message_hash;
@@ -462,7 +454,7 @@ void RelaySuccessionHandler::HandleGoodbyeComplaint(GoodbyeComplaint complaint)
 
 void RelaySuccessionHandler::AcceptGoodbyeComplaint(GoodbyeComplaint &complaint)
 {
-    StoreGoodbyeComplaint(complaint);
+    data.StoreMessage(complaint);
     relay_state->ProcessGoodbyeComplaint(complaint, data);
     relay_message_handler->EncodeInChainIfLive(complaint.GetHash160());
     HandleNewlyDeadRelays();
@@ -471,13 +463,6 @@ void RelaySuccessionHandler::AcceptGoodbyeComplaint(GoodbyeComplaint &complaint)
 bool RelaySuccessionHandler::ValidateGoodbyeComplaint(GoodbyeComplaint &complaint)
 {
     return complaint.IsValid(data) and complaint.VerifySignature(data);
-}
-
-void RelaySuccessionHandler::StoreGoodbyeComplaint(GoodbyeComplaint &complaint)
-{
-    data.StoreMessage(complaint);
-    uint160 complaint_hash = complaint.GetHash160();
-    RecordResponseToMessage(complaint_hash, complaint.goodbye_message_hash, "complaints");
 }
 
 void RelaySuccessionHandler::RecordResponseToMessage(uint160 response_hash, uint160 message_hash, string response_type)

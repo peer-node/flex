@@ -98,8 +98,6 @@ public:
     GenerateSecretRecoveryComplaint(SecretRecoveryMessage recovery_message, uint32_t key_sharer_position,
                                     uint32_t key_part_position);
 
-    void StoreSecretRecoveryComplaint(SecretRecoveryComplaint complaint);
-
     void SendAuditMessagesInResponseToFailureMessage(SecretRecoveryFailureMessage failure_message);
 
     void SendAuditMessageFromQuarterHolderInResponseToFailureMessage(SecretRecoveryFailureMessage failure_message,

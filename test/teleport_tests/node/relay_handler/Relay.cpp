@@ -119,9 +119,16 @@ CBigNum Relay::DecryptSecret(uint256 encrypted_secret, Point point_corresponding
     return Point(recovered_secret) == point_corresponding_to_secret ? recovered_secret : 0;
 }
 
-std::string PadWithZero(std::string in)
+std::string PadWithZeroToEvenLength(std::string in)
 {
     if (in.size() % 2 == 1)
+        in = "0" + in;
+    return in;
+}
+
+std::string PadWithZeroToLength64(std::string in)
+{
+    while (in.size() < 64)
         in = "0" + in;
     return in;
 }
@@ -138,7 +145,7 @@ Point RetrievePointFromBigNum(CBigNum n)
     if (n == 0)
         return Point(n);
     Point point;
-    point.setvch(ParseHex(PadWithZero(n.GetHex())));
+    point.setvch(ParseHex(PadWithZeroToEvenLength(n.GetHex())));
     return point;
 }
 
@@ -160,7 +167,7 @@ Point DecryptPointUsingHexPrefixes(CBigNum decrypted_secret, Point point_corresp
     Point recovered_point;
     for (auto prefix : prefixes)
     {
-        recovered_point.setvch(ParseHex(prefix + PadWithZero(secret_hex)));
+        recovered_point.setvch(ParseHex(prefix + PadWithZeroToLength64(secret_hex)));
         if (Point(StorePointInBigNum(recovered_point)) == point_corresponding_to_secret)
             return recovered_point;
     }
