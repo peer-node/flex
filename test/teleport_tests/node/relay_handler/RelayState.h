@@ -129,8 +129,6 @@ public:
 
     void ProcessSecretRecoveryComplaint(SecretRecoveryComplaint complaint, Data data);
 
-    void ProcessDurationAfterSecretRecoveryComplaint(SecretRecoveryComplaint complaint, Data data);
-
     void TransferTasksToSuccessor(uint64_t dead_relay_number, uint64_t successor_number);
 
     bool MinedCreditMessageHashIsAlreadyBeingUsed(uint160 mined_credit_message_hash);
@@ -143,6 +141,16 @@ public:
     void ProcessSecretRecoveryFailureMessage(SecretRecoveryFailureMessage failure_message, Data data);
 
     void ProcessObituary(Obituary obituary, Data data);
+
+    void ExamineAuditMessageToDetermineWrongdoer(RecoveryFailureAuditMessage audit_message, Relay *dead_relay,
+                                                 Relay *quarter_holder, Data data);
+
+    bool ContainsRelayWithNumber(uint64_t relay_number);
+
+    void RemoveRelayIfDurationsWithoutResponsesHaveFollowedAllFourSecretRecoveryMessages(
+            SecretRecoveryMessage &secret_recovery_message, Data data);
+
+    bool DurationsWithoutResponsesHaveFollowedAllFourSecretRecoveryMessages(Relay *dead_relay, Data data);
 };
 
 class RelayStateException : public std::runtime_error

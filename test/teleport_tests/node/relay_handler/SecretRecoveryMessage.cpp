@@ -287,11 +287,15 @@ bool SecretRecoveryMessage::IsValid(Data data)
 
     Obituary obituary = data.GetMessage(obituary_hash);
     auto dead_relay = data.relay_state->GetRelayByNumber(obituary.dead_relay_number);
-
-    return DeadRelayAndSuccessorNumberMatchObituary(obituary, data) and
-           ReferencedQuarterHoldersAreValid(dead_relay, data) and
-           AllTheDeadRelaysKeySharersAreIncluded(dead_relay, data) and
-           KeyQuarterPositionsAreAllLessThanFour();
+    if (not DeadRelayAndSuccessorNumberMatchObituary(obituary, data))
+        return false;
+    if (not ReferencedQuarterHoldersAreValid(dead_relay, data))
+        return false;
+    if (not AllTheDeadRelaysKeySharersAreIncluded(dead_relay, data))
+        return false;
+    if (not KeyQuarterPositionsAreAllLessThanFour())
+        return false;;
+    return true;
 }
 
 bool SecretRecoveryMessage::DurationWithoutResponseFromQuarterHolderHasElapsedSinceObituary(Data data)
@@ -317,7 +321,8 @@ bool SecretRecoveryMessage::AllTheDeadRelaysKeySharersAreIncluded(Relay *dead_re
 {
     uint32_t number_of_sharers = 0;
     for (auto &relay : data.relay_state->relays)
-        if (VectorContainsEntry(relay.holders.key_quarter_holders, dead_relay->number))
+        if (VectorContainsEntry(relay.holders.key_quarter_holders, dead_relay->number) and
+                relay.hashes.key_distribution_message_hash != 0)
             number_of_sharers++;
     return number_of_sharers == key_quarter_sharers.size();
 }

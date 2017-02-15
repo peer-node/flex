@@ -393,6 +393,7 @@ void RelayState::ProcessDurationAfterGoodbyeMessage(GoodbyeMessage goodbye, Data
     Relay *dead_relay = data.relay_state->GetRelayByNumber(goodbye.dead_relay_number);
     if (dead_relay == NULL) throw RelayStateException("no such relay");
     RecordRelayDeath(dead_relay, data, OBITUARY_SAID_GOODBYE);
+    ProcessRelayExit(GenerateRelayExit(dead_relay), data);
 }
 
 void RelayState::ProcessSecretRecoveryMessage(SecretRecoveryMessage secret_recovery_message)
@@ -402,16 +403,38 @@ void RelayState::ProcessSecretRecoveryMessage(SecretRecoveryMessage secret_recov
     Relay *recipient = GetRelayByNumber(secret_recovery_message.successor_number);
     if (dead_relay == NULL  or quarter_holder == NULL or recipient == NULL)
         throw RelayStateException("secret recovery message refers to non-existent relay");
-
     dead_relay->hashes.secret_recovery_message_hashes.push_back(secret_recovery_message.GetHash160());
 }
 
 void RelayState::ProcessDurationAfterSecretRecoveryMessage(SecretRecoveryMessage secret_recovery_message, Data data)
 {
     Relay *key_quarter_holder = secret_recovery_message.GetKeyQuarterHolder(data);
-    if (key_quarter_holder == NULL)
+    Relay *dead_relay = secret_recovery_message.GetDeadRelay(data);
+    if (key_quarter_holder == NULL or dead_relay == NULL)
         throw RelayStateException("secret recovery message refers to non-existent relay");
     EraseEntryFromVector(secret_recovery_message.obituary_hash, key_quarter_holder->tasks);
+
+    if (dead_relay->hashes.secret_recovery_failure_message_hash == 0)
+        RemoveRelayIfDurationsWithoutResponsesHaveFollowedAllFourSecretRecoveryMessages(secret_recovery_message, data);
+}
+
+void RelayState::RemoveRelayIfDurationsWithoutResponsesHaveFollowedAllFourSecretRecoveryMessages(
+        SecretRecoveryMessage &secret_recovery_message, Data data)
+{
+    Relay *dead_relay = secret_recovery_message.GetDeadRelay(data);
+    if (not DurationsWithoutResponsesHaveFollowedAllFourSecretRecoveryMessages(dead_relay, data))
+        return;
+    ProcessRelayExit(GenerateRelayExit(dead_relay), data);
+}
+
+bool RelayState::DurationsWithoutResponsesHaveFollowedAllFourSecretRecoveryMessages(Relay *dead_relay, Data data)
+{
+    for (auto quarter_holder : dead_relay->QuarterHolders(data))
+    {
+        if (VectorContainsEntry(quarter_holder->tasks, dead_relay->hashes.obituary_hash))
+            return false;
+    }
+    return true;
 }
 
 void RelayState::ProcessSecretRecoveryComplaint(SecretRecoveryComplaint complaint, Data data)
@@ -422,11 +445,6 @@ void RelayState::ProcessSecretRecoveryComplaint(SecretRecoveryComplaint complain
         throw RelayStateException("secret recovery complaint refers to non-existent relay");
     dead_relay->hashes.secret_recovery_complaint_hashes.push_back(complaint.GetHash160());
     RecordRelayDeath(key_quarter_holder, data, OBITUARY_COMPLAINT);
-}
-
-void RelayState::ProcessDurationAfterSecretRecoveryComplaint(SecretRecoveryComplaint complaint, Data data)
-{
-    Relay *key_quarter_holder = complaint.GetSecretSender(data);
 }
 
 void RelayState::RecordRelayDeath(Relay *dead_relay, Data data, uint32_t reason)
@@ -472,20 +490,25 @@ void RelayState::ProcessRecoveryFailureAuditMessage(RecoveryFailureAuditMessage 
     auto dead_relay = audit_message.GetDeadRelay(data);
     dead_relay->hashes.recovery_failure_audit_message_hashes.push_back(audit_message.GetHash160());
     Relay *key_quarter_holder = GetRelayByNumber(audit_message.quarter_holder_number);
-    uint160 failure_message_hash = audit_message.failure_message_hash;
-    EraseEntryFromVector(failure_message_hash, key_quarter_holder->tasks);
+    EraseEntryFromVector(audit_message.failure_message_hash, key_quarter_holder->tasks);
 
+    ExamineAuditMessageToDetermineWrongdoer(audit_message, dead_relay, key_quarter_holder, data);
+}
+
+void RelayState::ExamineAuditMessageToDetermineWrongdoer(RecoveryFailureAuditMessage audit_message,
+                                                         Relay *dead_relay, Relay *quarter_holder, Data data)
+{
     if (not audit_message.VerifyPrivateReceivingKeyQuarterMatchesPublicReceivingKeyQuarter(data) or
         not audit_message.VerifyEncryptedSharedSecretQuarterInSecretRecoveryMessageWasCorrect(data))
     {
-        if (key_quarter_holder->hashes.obituary_hash == 0)
-            RecordRelayDeath(key_quarter_holder, data, OBITUARY_COMPLAINT);
-        data.msgdata[failure_message_hash]["bad_quarter_holder_found"] = true;
+        if (quarter_holder->hashes.obituary_hash == 0)
+            RecordRelayDeath(quarter_holder, data, OBITUARY_COMPLAINT);
+        data.msgdata[audit_message.failure_message_hash]["bad_quarter_holder_found"] = true;
         return;
     }
 
     auto audit_messages = dead_relay->hashes.recovery_failure_audit_message_hashes;
-    if (audit_messages.size() == 4 and not data.msgdata[failure_message_hash]["bad_quarter_holder_found"])
+    if (audit_messages.size() == 4 and not data.msgdata[audit_message.failure_message_hash]["bad_quarter_holder_found"])
     {
         auto successor = data.relay_state->GetRelayByNumber(dead_relay->SuccessorNumber(data));
         RecordRelayDeath(successor, data, OBITUARY_COMPLAINT);
@@ -503,4 +526,9 @@ void RelayState::ProcessSecretRecoveryFailureMessage(SecretRecoveryFailureMessag
         if (not VectorContainsEntry(quarter_holder->tasks, failure_message_hash))
             quarter_holder->tasks.push_back(failure_message_hash);
     }
+}
+
+bool RelayState::ContainsRelayWithNumber(uint64_t relay_number)
+{
+    return GetRelayByNumber(relay_number) != NULL;
 }

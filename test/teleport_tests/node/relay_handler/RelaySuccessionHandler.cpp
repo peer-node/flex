@@ -55,7 +55,7 @@ void RelaySuccessionHandler::SendSecretRecoveryMessages(Relay *dead_relay)
 void RelaySuccessionHandler::SendSecretRecoveryMessage(Relay *dead_relay, Relay *quarter_holder)
 {
     auto secret_recovery_message = GenerateSecretRecoveryMessage(dead_relay, quarter_holder);
-    StoreSecretRecoveryMessage(secret_recovery_message, dead_relay->hashes.obituary_hash);
+    data.StoreMessage(secret_recovery_message);
     relay_message_handler->Broadcast(secret_recovery_message);
     relay_message_handler->Handle(secret_recovery_message, NULL);
 }
@@ -106,12 +106,15 @@ vector<uint64_t> RelaySuccessionHandler::GetKeyQuarterHoldersWhoHaventRespondedT
     Obituary obituary = data.GetMessage(obituary_hash);
     auto dead_relay = relay_state->GetRelayByNumber(obituary.dead_relay_number);
     vector<uint64_t> quarter_holders = dead_relay->holders.key_quarter_holders;
-    vector<uint160> secret_recovery_message_hashes = data.msgdata[obituary_hash]["secret_recovery_messages"];
+    log_ << "quarter holders are: " << quarter_holders << "\n";
+    vector<uint160> secret_recovery_message_hashes = dead_relay->hashes.secret_recovery_message_hashes;
+    log_ << "secret recovery message hashes are: " << secret_recovery_message_hashes << "\n";
     for (auto secret_recovery_message_hash : secret_recovery_message_hashes)
     {
         SecretRecoveryMessage secret_recovery_message = data.GetMessage(secret_recovery_message_hash);
         EraseEntryFromVector(secret_recovery_message.quarter_holder_number, quarter_holders);
     }
+    log_ << "returning: " << quarter_holders << "\n";
     return quarter_holders;
 }
 
@@ -204,7 +207,8 @@ bool RelaySuccessionHandler::RelaysPrivateSigningKeyIsAvailable(uint64_t relay_n
 
 void RelaySuccessionHandler::TryToRetrieveSecretsFromSecretRecoveryMessage(SecretRecoveryMessage recovery_message)
 {
-    vector<uint160> recovery_message_hashes = data.msgdata[recovery_message.obituary_hash]["secret_recovery_messages"];
+    auto dead_relay = recovery_message.GetDeadRelay(data);
+    vector<uint160> recovery_message_hashes = dead_relay->hashes.secret_recovery_message_hashes;
 
     if (recovery_message_hashes.size() != 4)
         return;
@@ -375,7 +379,7 @@ vector<uint64_t> RelaySuccessionHandler::RelaysNotRespondingToRecoveryFailureMes
     auto dead_relay = failure_message.GetDeadRelay(data);
     vector<uint64_t> remaining_quarter_holders = dead_relay->holders.key_quarter_holders;
 
-    vector<uint160> audit_message_hashes = data.msgdata[failure_message_hash]["audit_messages"];
+    vector<uint160> audit_message_hashes = dead_relay->hashes.recovery_failure_audit_message_hashes;
     for (auto audit_message_hash : audit_message_hashes)
     {
         RecoveryFailureAuditMessage audit_message = data.GetMessage(audit_message_hash);

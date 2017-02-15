@@ -780,13 +780,14 @@ public:
 };
 
 TEST_F(ARelayMessageHandlerWhichHasProcessedAValidGoodbyeMessage,
-       GeneratesAnObituarySpecifyingThatTheRelaySaidGoodbyeIfNoComplaintsAreReceived)
+       RemovesTheRelayFromTheRelayStateIfNoComplaintsAreReceived)
 {
+    uint64_t relay_number = relay->number;
+
     SetMockTimeMicros(GetTimeMicros() + RESPONSE_WAIT_TIME);
     relay_message_handler->succession_handler.scheduler.DoTasksScheduledForExecutionBeforeNow();
-    ASSERT_THAT(relay->hashes.obituary_hash, Ne(0));
-    Obituary obituary = data->GetMessage(relay->hashes.obituary_hash);
-    ASSERT_THAT(obituary.reason_for_leaving, Eq(OBITUARY_SAID_GOODBYE));
+
+    ASSERT_FALSE(relay_state->ContainsRelayWithNumber(relay_number));
 }
 
 TEST_F(ARelayMessageHandlerWhichHasProcessedAValidGoodbyeMessage,
@@ -1033,7 +1034,7 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAValidGoodbyeComplaint,
 TEST_F(ARelayMessageHandlerWhichHasProcessedAValidGoodbyeComplaint,
        SendsSecretRecoveryMessagesInResponseToTheObituary)
 {
-    vector<uint160> recovery_message_hashes = msgdata[relay->hashes.obituary_hash]["secret_recovery_messages"];
+    vector<uint160> recovery_message_hashes = relay->hashes.secret_recovery_message_hashes;
     ASSERT_THAT(recovery_message_hashes.size(), Eq(4));
 }
 
@@ -1250,12 +1251,28 @@ public:
     {
         ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaint::TearDown();
     }
+
+    void UnprocessSecretRecoveryMessages()
+    {
+        UnscheduleTasksToCheckForResponsesToSecretRecoveryMessages();
+        relay->hashes.secret_recovery_message_hashes = vector<uint160>();
+    }
+
+    void UnscheduleTasksToCheckForResponsesToSecretRecoveryMessages()
+    {
+        auto &scheduler = relay_message_handler->succession_handler.scheduler;
+        auto scheduled_tasks = scheduler.TasksScheduledForTime("secret_recovery", GetTimeMicros() + RESPONSE_WAIT_TIME);
+        for (auto recovery_message_hash : relay->hashes.secret_recovery_message_hashes)
+            EraseEntryFromVector(recovery_message_hash, scheduled_tasks);
+        scheduler.scheduledata[scheduled_tasks].Location("secret_recovery") = GetTimeMicros() + RESPONSE_WAIT_TIME;
+    }
+
 };
 
 TEST_F(ARelayMessageHandlerWhichHasProcessedAnObituary,
        SendsSecretRecoveryMessagesFromEachQuarterHolderWhosePrivateSigningKeyIsKnown)
 {
-    vector<uint160> secret_recovery_message_hashes = msgdata[relay->hashes.obituary_hash]["secret_recovery_messages"];
+    vector<uint160> secret_recovery_message_hashes = relay->hashes.secret_recovery_message_hashes;
     ASSERT_THAT(secret_recovery_message_hashes.size(), Eq(4));
 
     SecretRecoveryMessage secret_recovery_message;
@@ -1277,9 +1294,10 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAnObituary,
 TEST_F(ARelayMessageHandlerWhichHasProcessedAnObituary,
        GeneratesObituariesForKeyQuarterHoldersWhoHaveNotRespondedToTheObituaryWhenCompletingTheScheduledTask)
 {
+    UnprocessSecretRecoveryMessages();
     relay_message_handler->succession_handler.send_secret_recovery_messages = false;
+
     SetMockTimeMicros(TEST_START_TIME + RESPONSE_WAIT_TIME);
-    msgdata[relay->hashes.obituary_hash]["secret_recovery_messages"] = vector<uint160>();
     relay_message_handler->succession_handler.scheduler.DoTasksScheduledForExecutionBeforeNow();
 
     for (auto quarter_holder : relay->QuarterHolders(*data))
@@ -1289,16 +1307,15 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAnObituary,
 TEST_F(ARelayMessageHandlerWhichHasProcessedAnObituary,
        EncodesDurationsWithoutResponsesFromKeyQuarterHoldersWhoHaveNotRespondedToTheObituary)
 {
+    UnprocessSecretRecoveryMessages();
     relay_message_handler->succession_handler.send_secret_recovery_messages = false;
+
     SetMockTimeMicros(TEST_START_TIME + RESPONSE_WAIT_TIME);
-    msgdata[relay->hashes.obituary_hash]["secret_recovery_messages"] = vector<uint160>();
     relay_message_handler->succession_handler.scheduler.DoTasksScheduledForExecutionBeforeNow();
 
     for (auto quarter_holder : relay->QuarterHolders(*data))
     {
-        DurationWithoutResponseFromRelay duration;
-        duration.message_hash = relay->hashes.obituary_hash;
-        duration.relay_number = quarter_holder->number;
+        auto duration = GetDurationWithoutResponseFromRelay(relay->hashes.obituary_hash, quarter_holder->number);
         ASSERT_TRUE(VectorContainsEntry(builder->accepted_messages, duration.GetHash160()));
     }
 }
@@ -1319,7 +1336,7 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAnObituary,
 TEST_F(ARelayMessageHandlerWhichHasProcessedAnObituary,
        HandlesTheSecretRecoveryMessagesWhichItGeneratesInResponseToTheObituary)
 {
-    vector<uint160> secret_recovery_message_hashes = msgdata[relay->hashes.obituary_hash]["secret_recovery_messages"];
+    vector<uint160> secret_recovery_message_hashes = relay->hashes.secret_recovery_message_hashes;
     for (auto secret_recovery_message_hash : secret_recovery_message_hashes)
     {
         bool handled = msgdata[secret_recovery_message_hash]["handled"];
@@ -1330,7 +1347,7 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAnObituary,
 TEST_F(ARelayMessageHandlerWhichHasProcessedAnObituary,
        SchedulesTasksToCheckForComplaintsWhenHandlingASecretRecoveryMessage)
 {
-    vector<uint160> secret_recovery_message_hashes = msgdata[relay->hashes.obituary_hash]["secret_recovery_messages"];
+    vector<uint160> secret_recovery_message_hashes = relay->hashes.secret_recovery_message_hashes;
     for (auto secret_recovery_message_hash : secret_recovery_message_hashes)
     {
         ASSERT_TRUE(relay_message_handler->succession_handler.scheduler.TaskIsScheduledForTime(
@@ -1341,7 +1358,7 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAnObituary,
 TEST_F(ARelayMessageHandlerWhichHasProcessedAnObituary,
        EncodesAValidSecretRecoveryMessage)
 {
-    vector<uint160> secret_recovery_message_hashes = msgdata[relay->hashes.obituary_hash]["secret_recovery_messages"];
+    vector<uint160> secret_recovery_message_hashes = relay->hashes.secret_recovery_message_hashes;
     for (auto secret_recovery_message_hash : secret_recovery_message_hashes)
     {
         ASSERT_TRUE(VectorContainsEntry(builder->accepted_messages, secret_recovery_message_hash));
@@ -1354,7 +1371,7 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAnObituary,
     SetMockTimeMicros(GetTimeMicros() + RESPONSE_WAIT_TIME);
     relay_message_handler->succession_handler.scheduler.DoTasksScheduledForExecutionBeforeNow();
 
-    vector<uint160> secret_recovery_message_hashes = msgdata[relay->hashes.obituary_hash]["secret_recovery_messages"];
+    vector<uint160> secret_recovery_message_hashes = relay->hashes.secret_recovery_message_hashes;
     for (auto secret_recovery_message_hash : secret_recovery_message_hashes)
     {
         DurationWithoutResponse duration;
@@ -1404,7 +1421,7 @@ TEST_F(ARelayMessageHandlerInBlockValidationModeWhichHasProcessedAValidKeyDistri
 TEST_F(ARelayMessageHandlerInBlockValidationModeWhichHasProcessedAValidKeyDistributionComplaint,
        DoesntSendSecretRecoveryMessages)
 {
-    vector<uint160> secret_recovery_message_hashes = msgdata[relay->hashes.obituary_hash]["secret_recovery_messages"];
+    vector<uint160> secret_recovery_message_hashes = relay->hashes.secret_recovery_message_hashes;
     ASSERT_THAT(secret_recovery_message_hashes.size(), Eq(0));
 }
 
@@ -1436,9 +1453,9 @@ public:
     {
         ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaint::SetUp();
 
-        failure_message.Populate(msgdata[relay->hashes.obituary_hash]["secret_recovery_messages"], *data);
+        failure_message.Populate(relay->hashes.secret_recovery_message_hashes, *data);
 
-        vector<uint160> recovery_message_hashes = msgdata[relay->hashes.obituary_hash]["secret_recovery_messages"];
+        vector<uint160> recovery_message_hashes = relay->hashes.secret_recovery_message_hashes;
         SecretRecoveryMessage recovery_message = data->GetMessage(recovery_message_hashes[0]);
         complaint.Populate(recovery_message, 0, 0, *data);
     }
@@ -1528,11 +1545,18 @@ public:
 
     void UnprocessLastSecretRecoveryMessage()
     {
-        vector<uint160> secret_recovery_message_hashes = msgdata[relay->hashes.obituary_hash]["secret_recovery_messages"];
-        last_secret_recovery_message_hash = secret_recovery_message_hashes.back();
-        secret_recovery_message_hashes.pop_back();
-        msgdata[relay->hashes.obituary_hash]["secret_recovery_messages"] = secret_recovery_message_hashes;
+        last_secret_recovery_message_hash = relay->hashes.secret_recovery_message_hashes.back();
+        relay->hashes.secret_recovery_message_hashes.pop_back();
         msgdata[last_secret_recovery_message_hash]["handled"] = false;
+        UnscheduleTaskToCheckForResponsesToLastSecretRecoveryMessage();
+    }
+
+    void UnscheduleTaskToCheckForResponsesToLastSecretRecoveryMessage()
+    {
+        auto &scheduler = relay_message_handler->succession_handler.scheduler;
+        auto scheduled_tasks = scheduler.TasksScheduledForTime("secret_recovery", GetTimeMicros() + RESPONSE_WAIT_TIME);
+        EraseEntryFromVector(last_secret_recovery_message_hash, scheduled_tasks);
+        scheduler.scheduledata[scheduled_tasks].Location("secret_recovery") = GetTimeMicros() + RESPONSE_WAIT_TIME;
     }
 
     void ForgetKeyQuartersHeldByDeadRelay()
@@ -1949,7 +1973,7 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedASecretRecoveryFailureMessage,
 TEST_F(ARelayMessageHandlerWhichHasProcessedASecretRecoveryFailureMessage,
        DoesntSendRecoveryFailureAuditMessagesInBlockValidationMode)
 {
-    std::vector<uint160> recovery_message_hashes = msgdata[relay->hashes.obituary_hash]["secret_recovery_messages"];
+    std::vector<uint160> recovery_message_hashes = relay->hashes.secret_recovery_message_hashes;
     ASSERT_THAT(recovery_message_hashes.size(), Eq(4));
     auto failure_message = relay_message_handler->succession_handler.GenerateSecretRecoveryFailureMessage(recovery_message_hashes);
     relay->hashes.recovery_failure_audit_message_hashes = vector<uint160>();
@@ -2023,7 +2047,7 @@ public:
         failure_message_hash = failure_message_hashes[0];
         failure_message = data->GetMessage(failure_message_hash);
 
-        vector<uint160> recovery_message_hashes = msgdata[relay->hashes.obituary_hash]["secret_recovery_messages"];
+        vector<uint160> recovery_message_hashes = relay->hashes.secret_recovery_message_hashes;
         secret_recovery_message = data->GetMessage(recovery_message_hashes[0]);
     }
 
@@ -2197,7 +2221,7 @@ public:
         failure_message.key_sharer_position = 0;
         failure_message.shared_secret_quarter_position = 1;
         failure_message.obituary_hash = relay->hashes.obituary_hash;
-        std::vector<uint160> recovery_message_hashes = msgdata[relay->hashes.obituary_hash]["secret_recovery_messages"];
+        std::vector<uint160> recovery_message_hashes = relay->hashes.secret_recovery_message_hashes;
         failure_message.recovery_message_hashes = recovery_message_hashes;
         // falsely state that the decrypted shared secret quarters sum to 4
         failure_message.sum_of_decrypted_shared_secret_quarters = Point(CBigNum(4));

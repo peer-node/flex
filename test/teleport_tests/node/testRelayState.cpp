@@ -194,14 +194,15 @@ class ARelayStateWith37RelaysAndAKeyDistributionMessage : public ARelayStateWith
 {
 public:
     Relay *relay;
+    uint64_t number_of_chosen_relay;
     KeyDistributionMessage key_distribution_message;
 
     virtual void SetUp()
     {
         ARelayStateWith37Relays::SetUp();
         SetUpRelayState();
-
-        relay = relay_state.GetRelayByNumber(TheNumberOfARelayWhichIsBeingUsedAsAKeyQuarterHolder());
+        number_of_chosen_relay = TheNumberOfARelayWhichIsBeingUsedAsAKeyQuarterHolder();
+        relay = relay_state.GetRelayByNumber(number_of_chosen_relay);
         key_distribution_message = relay->GenerateKeyDistributionMessage(*data, 5, relay_state);
     }
 
@@ -487,12 +488,13 @@ public:
     }
 };
 
-TEST_F(ARelayStateWhichHasProcessedAGoodbyeMessage, GeneratesAnObituaryAfterADurationWithoutAResponse)
+TEST_F(ARelayStateWhichHasProcessedAGoodbyeMessage, RemovesTheRelayAfterADurationWithoutAResponse)
 {
     DurationWithoutResponse duration;
     duration.message_hash = goodbye.GetHash160();
+    uint64_t relay_number = relay->number;
     relay_state.ProcessDurationWithoutResponse(duration, *data);
-    ASSERT_TRUE(RelayHasAnObituaryWithSpecificReasonForLeaving(relay, *data, OBITUARY_SAID_GOODBYE));
+    ASSERT_FALSE(relay_state.ContainsRelayWithNumber(relay_number));
 }
 
 TEST_F(ARelayStateWhichHasProcessedAGoodbyeMessage,
@@ -690,6 +692,7 @@ TEST_F(ARelayStateWithASecretRecoveryMessage,
     EXPECT_THROW(relay_state.ProcessSecretRecoveryMessage(secret_recovery_message), RelayStateException);
 }
 
+
 class ARelayStateWhichHasProcessedASecretRecoveryMessage : public ARelayStateWithASecretRecoveryMessage
 {
 public:
@@ -751,23 +754,47 @@ public:
     }
 };
 
-
-class ARelayStateWithASecretRecoveryFailureMessage : public ARelayStateWithASecretRecoveryMessage
+class ARelayStateWhichHasProcessedFourSecretRecoveryMessages : public ARelayStateWithASecretRecoveryMessage
 {
 public:
-    SecretRecoveryFailureMessage failure_message;
+    vector<uint160> recovery_message_hashes;
 
     virtual void SetUp()
     {
         ARelayStateWithASecretRecoveryMessage::SetUp();
         auto recovery_messages = AllFourSecretRecoveryMessages();
 
-        vector<uint160> recovery_message_hashes;
         for (auto recovery_message : recovery_messages)
         {
             relay_state.ProcessSecretRecoveryMessage(recovery_message);
             recovery_message_hashes.push_back(recovery_message.GetHash160());
         }
+    }
+
+    virtual void TearDown()
+    {
+        ARelayStateWithASecretRecoveryMessage::TearDown();
+    }
+};
+
+TEST_F(ARelayStateWhichHasProcessedFourSecretRecoveryMessages,
+       RemovesTheDeadRelayIfDurationsWithoutResponsesFollowEachSecretRecoveryMessage)
+{
+    for (auto recovery_message_hash : recovery_message_hashes)
+        relay_state.ProcessDurationWithoutResponse(DurationWithoutResponseAfter(recovery_message_hash), *data);
+
+    ASSERT_FALSE(relay_state.ContainsRelayWithNumber(number_of_chosen_relay));
+}
+
+
+class ARelayStateWithASecretRecoveryFailureMessage : public ARelayStateWhichHasProcessedFourSecretRecoveryMessages
+{
+public:
+    SecretRecoveryFailureMessage failure_message;
+
+    virtual void SetUp()
+    {
+        ARelayStateWhichHasProcessedFourSecretRecoveryMessages::SetUp();
 
         failure_message.recovery_message_hashes = recovery_message_hashes;
         failure_message.obituary_hash = obituary.GetHash160();
@@ -781,7 +808,7 @@ public:
 
     virtual void TearDown()
     {
-        ARelayStateWithASecretRecoveryMessage::TearDown();
+        ARelayStateWhichHasProcessedFourSecretRecoveryMessages::TearDown();
     }
 };
 

@@ -30,5 +30,12 @@ public:
     HASH160();
 };
 
+inline DurationWithoutResponseFromRelay GetDurationWithoutResponseFromRelay(uint160 message_hash, uint64_t relay_number)
+{
+    DurationWithoutResponseFromRelay duration;
+    duration.message_hash = message_hash;
+    duration.relay_number = relay_number;
+    return duration;
+}
 
 #endif //TELEPORT_DURATIONWITHOUTRESPONSEFROMRELAY_H

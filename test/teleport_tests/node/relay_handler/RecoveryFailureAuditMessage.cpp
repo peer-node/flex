@@ -124,9 +124,7 @@ SecretRecoveryFailureMessage RecoveryFailureAuditMessage::GetSecretRecoveryFailu
 bool RecoveryFailureAuditMessage::VerifyEncryptedSharedSecretQuarterInSecretRecoveryMessageWasCorrect(Data data)
 {
     auto recovery_message = GetSecretRecoveryMessage(data);
-
     auto encrypted_shared_secret_quarter = GetEncryptedSharedSecretQuarterFromSecretRecoveryMessage(data);
-
     auto recipient = data.relay_state->GetRelayByNumber(recovery_message.successor_number);
 
     auto shared_secret_quarter = GetSharedSecretQuarter(data);
@@ -138,7 +136,6 @@ uint256 RecoveryFailureAuditMessage::GetEncryptedSharedSecretQuarterFromSecretRe
 {
     auto recovery_message = GetSecretRecoveryMessage(data);
     auto failure_message = GetSecretRecoveryFailureMessage(data);
-
     auto &encrypted_secrets = recovery_message.quartets_of_encrypted_shared_secret_quarters;
 
     return encrypted_secrets[failure_message.key_sharer_position][failure_message.shared_secret_quarter_position];
