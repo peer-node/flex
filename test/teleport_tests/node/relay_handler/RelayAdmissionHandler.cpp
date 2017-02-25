@@ -115,19 +115,27 @@ void RelayAdmissionHandler::StoreKeyDistributionSecretsAndSendComplaints(KeyDist
     Relay *relay = relay_state->GetRelayByNumber(key_distribution_message.relay_number);
 
     RecoverSecretsAndSendKeyDistributionComplaints(
-            relay, KEY_DISTRIBUTION_COMPLAINT_KEY_QUARTERS,
+            relay, KEY_QUARTER_HOLDERS,
             relay_state->GetKeyQuarterHoldersAsListOf16RelayNumbers(relay->number),
             key_distribution_message.GetHash160(),
             key_distribution_message.key_sixteenths_encrypted_for_key_quarter_holders);
 
+    if (relay_state->GetRelayByNumber(key_distribution_message.relay_number) == NULL or
+            relay->hashes.key_distribution_complaint_hashes.size() > 0)
+        return;
+
     RecoverSecretsAndSendKeyDistributionComplaints(
-            relay, KEY_DISTRIBUTION_COMPLAINT_FIRST_KEY_SIXTEENTHS,
+            relay, FIRST_SET_OF_KEY_SIXTEENTH_HOLDERS,
             relay_state->GetKeySixteenthHoldersAsListOf16RelayNumbers(relay->number, 1),
             key_distribution_message.GetHash160(),
             key_distribution_message.key_sixteenths_encrypted_for_first_set_of_key_sixteenth_holders);
 
+    if (relay_state->GetRelayByNumber(key_distribution_message.relay_number) == NULL or
+        relay->hashes.key_distribution_complaint_hashes.size() > 0)
+        return;
+
     RecoverSecretsAndSendKeyDistributionComplaints(
-            relay, KEY_DISTRIBUTION_COMPLAINT_SECOND_KEY_SIXTEENTHS,
+            relay, SECOND_SET_OF_KEY_SIXTEENTH_HOLDERS,
             relay_state->GetKeySixteenthHoldersAsListOf16RelayNumbers(relay->number, 2),
             key_distribution_message.GetHash160(),
             key_distribution_message.key_sixteenths_encrypted_for_second_set_of_key_sixteenth_holders);
@@ -179,6 +187,8 @@ void RelayAdmissionHandler::SendKeyDistributionComplaint(uint160 key_distributio
 
 void RelayAdmissionHandler::HandleKeyDistributionComplaint(KeyDistributionComplaint complaint)
 {
+    if (complaint.GetSecretSender(data) == NULL) // might have been ejected due to earlier complaint
+        return;
     if (not ValidateKeyDistributionComplaint(complaint))
     {
         relay_message_handler->RejectMessage(complaint.GetHash160());

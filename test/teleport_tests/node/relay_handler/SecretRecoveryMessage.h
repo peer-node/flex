@@ -7,9 +7,9 @@
 #include <test/teleport_tests/teleport_data/MemoryDataStore.h>
 #include "RelayJoinMessage.h"
 #include "test/teleport_tests/node/Data.h"
-#include "Relay.h"
 #include "Obituary.h"
 
+class Relay;
 
 class SecretRecoveryMessage
 {

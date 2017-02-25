@@ -24,6 +24,7 @@ public:
     std::map<uint64_t, Relay*> relays_by_number;
     std::map<uint160, Relay*> relays_by_join_hash;
     bool maps_are_up_to_date{false};
+    bool remove_dead_relays{true};
 
     RelayState& operator=(const RelayState &other)
     {
@@ -99,8 +100,6 @@ public:
 
     bool RelayIsOldEnoughToLeaveInGoodStanding(Relay *relay);
 
-    void ProcessObituary(Obituary obituary);
-
     RelayExit GenerateRelayExit(Relay *relay);
 
     void ProcessRelayExit(RelayExit relay_exit, Data data);
@@ -147,10 +146,13 @@ public:
 
     bool ContainsRelayWithNumber(uint64_t relay_number);
 
-    void RemoveRelayIfDurationsWithoutResponsesHaveFollowedAllFourSecretRecoveryMessages(
-            SecretRecoveryMessage &secret_recovery_message, Data data);
+    bool SuccessorWasLyingAboutSumOfRecoveredSharedSecretQuarters(Relay *dead_relay,
+                                                                  uint160 failure_message_hash, Data data);
 
-    bool DurationsWithoutResponsesHaveFollowedAllFourSecretRecoveryMessages(Relay *dead_relay, Data data);
+    void DetermineWhetherSuccessorOrKeySharerIsAtFaultInSecretRecoveryFailure(Relay *dead_relay,
+                                                                              uint160 failure_message_hash, Data data);
+
+    void ProcessSuccessionCompletedMessage(SuccessionCompletedMessage &succession_completed_message, Data data);
 };
 
 class RelayStateException : public std::runtime_error

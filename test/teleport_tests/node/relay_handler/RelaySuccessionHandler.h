@@ -8,6 +8,7 @@
 #include "SecretRecoveryComplaint.h"
 #include "RecoveryFailureAuditMessage.h"
 #include "DurationWithoutResponseFromRelay.h"
+#include "InheritedTaskHandler.h"
 
 class RelayMessageHandler;
 
@@ -19,13 +20,16 @@ public:
     Calendar *calendar{NULL};
     RelayState *relay_state{NULL};
     RelayMessageHandler *relay_message_handler;
+    InheritedTaskHandler inherited_task_handler;
     Scheduler scheduler;
     bool send_audit_messages{true};
     bool send_secret_recovery_messages{true};
+    bool send_secret_recovery_complaints{true};
     bool send_goodbye_complaints{true};
+    bool send_succession_completed_messages{true};
     std::set<uint64_t> dead_relays;
 
-    RelaySuccessionHandler(Data data, CreditSystem *credit_system, Calendar *calendar, RelayMessageHandler *handler);
+    RelaySuccessionHandler(Data data, CreditSystem *credit_system, Calendar *calendar, RelayMessageHandler *relay_message_handler);
 
     void AddScheduledTasks()
     {
@@ -79,7 +83,7 @@ public:
 
     bool ValidateSecretRecoveryMessage(SecretRecoveryMessage secret_recovery_message);
 
-    void TryToRetrieveSecretsFromSecretRecoveryMessage(SecretRecoveryMessage secret_recovery_message);
+    bool TryToRetrieveSecretsFromSecretRecoveryMessage(SecretRecoveryMessage secret_recovery_message);
 
     bool TryToRecoverSecretsFromSecretRecoveryMessages(std::vector<uint160> recovery_message_hashes);
 
@@ -109,13 +113,11 @@ public:
 
     void HandleNewlyDeadRelays();
 
-    void TryToExtractSecretsFromGoodbyeMessage(GoodbyeMessage goodbye_message);
+    bool TryToExtractSecretsFromGoodbyeMessage(GoodbyeMessage goodbye_message);
 
     bool ExtractSecretsFromGoodbyeMessage(GoodbyeMessage goodbye_message);
 
     void SendGoodbyeComplaint(GoodbyeMessage goodbye_message);
-
-    void StoreGoodbyeComplaint(GoodbyeComplaint &complaint);
 
     void RecordResponseToMessage(uint160 response_hash, uint160 message_hash, std::string response_type);
 
@@ -151,8 +153,24 @@ public:
 
     bool ValidateDurationWithoutResponseAfterGoodbyeMessage(DurationWithoutResponse &duration);
 
-    bool
-    ValidateDurationWithoutResponseFromRelayAfterSecretRecoveryFailureMessage(DurationWithoutResponseFromRelay &duration);
+    bool ValidateDurationWithoutResponseFromRelayAfterSecretRecoveryFailureMessage(
+            DurationWithoutResponseFromRelay &duration);
+
+    void HandleTasksInheritedFromDeadRelay(SecretRecoveryMessage &recovery_message);
+
+    void SendSuccessionCompletedMessage(GoodbyeMessage &goodbye_message);
+
+    void HandleSuccessionCompletedMessage(SuccessionCompletedMessage &succession_completed_message);
+
+    bool ValidateSuccessionCompletedMessage(SuccessionCompletedMessage &succession_completed_message);
+
+    void SendSuccessionCompletedMessage(SecretRecoveryMessage &recovery_message);
+
+    SuccessionCompletedMessage GenerateSuccessionCompletedMessage(SecretRecoveryMessage &recovery_message);
+
+    bool AllFourSecretRecoveryMessagesHaveBeenReceived(SecretRecoveryMessage &secret_recovery_message);
+
+    void HandleFourSecretRecoveryMessages(SecretRecoveryMessage &secret_recovery_message);
 };
 
 

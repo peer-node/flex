@@ -56,6 +56,12 @@ public:
     bool IsValid(Data data);
 
     std::vector<Relay *> GetQuarterHolders(Data data);
+
+    Point GetKeySixteenth(Data data);
+
+    Relay *GetKeySharer(Data data);
+
+    uint64_t GetKeyQuarterPosition(Data data);
 };
 
 

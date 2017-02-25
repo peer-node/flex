@@ -25,7 +25,7 @@ GoodbyeMessage GoodbyeComplaint::GetGoodbyeMessage(Data data)
 
 Relay *GoodbyeComplaint::GetSuccessor(Data data)
 {
-    return data.relay_state->GetRelayByNumber(GetGoodbyeMessage(data).successor_relay_number);
+    return data.relay_state->GetRelayByNumber(GetGoodbyeMessage(data).successor_number);
 }
 
 Relay *GoodbyeComplaint::GetComplainer(Data data)
@@ -74,7 +74,7 @@ bool GoodbyeComplaint::IsValid(Data data)
         return false;
     if (position_of_bad_encrypted_key_sixteenth >= 4)
         return false;
-    if (DurationWithoutResponseHasElapsedSinceGoodbyeMessage(data))
+    if (SuccessorHasAlreadySentASuccessionCompletedMessage(data))
         return false;
     if (PrivateReceivingKeyIsIncorrect(data))
         return false;
@@ -83,16 +83,17 @@ bool GoodbyeComplaint::IsValid(Data data)
     return true;
 }
 
-bool GoodbyeComplaint::DurationWithoutResponseHasElapsedSinceGoodbyeMessage(Data data)
+bool GoodbyeComplaint::SuccessorHasAlreadySentASuccessionCompletedMessage(Data data)
 {
     GoodbyeMessage goodbye_message = data.GetMessage(goodbye_message_hash);
-    auto dead_relay = data.relay_state->GetRelayByNumber(goodbye_message.dead_relay_number);
-    if (dead_relay == NULL)
-        return true;
-    if (dead_relay->hashes.obituary_hash == 0)
-        return false;
-    Obituary obituary = data.GetMessage(dead_relay->hashes.obituary_hash);
-    return obituary.reason_for_leaving == OBITUARY_SAID_GOODBYE;
+    auto successor = data.relay_state->GetRelayByNumber(goodbye_message.successor_number);
+    for (auto succession_completed_message_hash : successor->hashes.succession_completed_message_hashes)
+    {
+        SuccessionCompletedMessage succession_completed_message = data.GetMessage(succession_completed_message_hash);
+        if (succession_completed_message.goodbye_message_hash == goodbye_message_hash)
+            return true;
+    }
+    return false;
 }
 
 bool GoodbyeComplaint::PrivateReceivingKeyIsIncorrect(Data data)

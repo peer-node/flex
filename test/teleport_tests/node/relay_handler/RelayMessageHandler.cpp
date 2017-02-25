@@ -121,6 +121,11 @@ bool RelayMessageHandler::ValidateGoodbyeComplaint(GoodbyeComplaint &complaint)
     return succession_handler.ValidateGoodbyeComplaint(complaint);
 }
 
+bool RelayMessageHandler::ValidateSuccessionCompletedMessage(SuccessionCompletedMessage &succession_completed_message)
+{
+    return succession_handler.ValidateSuccessionCompletedMessage(succession_completed_message);
+}
+
 bool RelayMessageHandler::ValidateDurationWithoutResponse(DurationWithoutResponse &duration)
 {
     std::string message_type = data.MessageType(duration.message_hash);
@@ -170,6 +175,7 @@ bool RelayMessageHandler::ValidateMessage(uint160 &message_hash)
     VALIDATE(RecoveryFailureAuditMessage);
     VALIDATE(GoodbyeMessage);
     VALIDATE(GoodbyeComplaint);
+    VALIDATE(SuccessionCompletedMessage);
     VALIDATE(DurationWithoutResponse);
     VALIDATE(DurationWithoutResponseFromRelay);
 
@@ -192,4 +198,9 @@ void RelayMessageHandler::EncodeInChainIfLive(uint160 message_hash)
 void RelayMessageHandler::HandleDurationWithoutResponseFromRelay(DurationWithoutResponseFromRelay duration)
 {
     relay_state.ProcessDurationWithoutResponseFromRelay(duration, data);
+}
+
+void RelayMessageHandler::HandleSuccessionCompletedMessage(SuccessionCompletedMessage succession_completed_message)
+{
+    succession_handler.HandleSuccessionCompletedMessage(succession_completed_message);
 }

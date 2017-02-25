@@ -33,8 +33,8 @@ void SecretRecoveryFailureMessage::PopulateDetailsOfFailedSharedSecret(Data data
     key_sharer_position = failure_sharer_position;
     shared_secret_quarter_position = failure_key_part_position;
 
-    auto array_of_shared_secrets = SecretRecoveryMessage::GetSharedSecrets(recovery_message_hashes, data);
-    sum_of_decrypted_shared_secret_quarters = array_of_shared_secrets[failure_sharer_position][failure_key_part_position];
+    auto shared_secrets = SecretRecoveryMessage::GetSharedSecrets(recovery_message_hashes, data);
+    sum_of_decrypted_shared_secret_quarters = shared_secrets[failure_sharer_position][failure_key_part_position];
 }
 
 Relay *SecretRecoveryFailureMessage::GetDeadRelay(Data data)
@@ -72,4 +72,25 @@ std::vector<Relay *> SecretRecoveryFailureMessage::GetQuarterHolders(Data data)
         quarter_holders.push_back(recovery_message.GetKeyQuarterHolder(data));
     }
     return quarter_holders;
+}
+
+Point SecretRecoveryFailureMessage::GetKeySixteenth(Data data)
+{
+    auto key_sharer = GetKeySharer(data);
+    auto key_quarter_position = GetKeyQuarterPosition(data);
+    auto key_sixteenth_position = 4 * key_quarter_position + shared_secret_quarter_position;
+    return key_sharer->PublicKeySixteenths()[key_sixteenth_position];
+}
+
+uint64_t SecretRecoveryFailureMessage::GetKeyQuarterPosition(Data data)
+{
+    SecretRecoveryMessage recovery_message = data.GetMessage(recovery_message_hashes[0]);
+    return recovery_message.key_quarter_positions[key_sharer_position];
+}
+
+Relay *SecretRecoveryFailureMessage::GetKeySharer(Data data)
+{
+    SecretRecoveryMessage recovery_message = data.GetMessage(recovery_message_hashes[0]);
+    auto key_sharer_number = recovery_message.key_quarter_sharers[key_sharer_position];
+    return data.relay_state->GetRelayByNumber(key_sharer_number);
 }

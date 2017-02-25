@@ -29,7 +29,7 @@ public:
     HASH160();
 };
 
-inline DurationWithoutResponse DurationWithoutResponseAfter(uint160 message_hash)
+inline DurationWithoutResponse GetDurationWithoutResponseAfter(uint160 message_hash)
 {
     DurationWithoutResponse duration;
     duration.message_hash = message_hash;

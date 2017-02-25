@@ -11,9 +11,9 @@ using std::string;
 using std::set;
 
 RelaySuccessionHandler::RelaySuccessionHandler(Data data_, CreditSystem *credit_system, Calendar *calendar,
-                                               RelayMessageHandler *handler):
-        data(data_), relay_state(&handler->relay_state), credit_system(credit_system), calendar(calendar),
-        relay_message_handler(handler)
+                                               RelayMessageHandler *relay_message_handler):
+        data(data_), relay_state(&relay_message_handler->relay_state), credit_system(credit_system), calendar(calendar),
+        relay_message_handler(relay_message_handler), inherited_task_handler(relay_message_handler)
 {
     data.relay_state = relay_state;
 }
@@ -28,7 +28,6 @@ void RelaySuccessionHandler::HandleNewlyDeadRelays()
 void RelaySuccessionHandler::HandleRelayDeath(Relay *dead_relay)
 {
     dead_relays.insert(dead_relay->number);
-
     if (relay_message_handler->mode == LIVE)
     {
         if (send_secret_recovery_messages)
@@ -54,6 +53,7 @@ void RelaySuccessionHandler::SendSecretRecoveryMessages(Relay *dead_relay)
 
 void RelaySuccessionHandler::SendSecretRecoveryMessage(Relay *dead_relay, Relay *quarter_holder)
 {
+    log_ << "SendSecretRecoveryMessage: for " << dead_relay->number << " from " << quarter_holder->number << "\n";
     auto secret_recovery_message = GenerateSecretRecoveryMessage(dead_relay, quarter_holder);
     data.StoreMessage(secret_recovery_message);
     relay_message_handler->Broadcast(secret_recovery_message);
@@ -133,13 +133,52 @@ void RelaySuccessionHandler::AcceptSecretRecoveryMessage(SecretRecoveryMessage &
     if (relay_message_handler->mode != LIVE)
         return;
     relay_message_handler->EncodeInChainIfLive(secret_recovery_message.GetHash160());
-    scheduler.Schedule("secret_recovery", secret_recovery_message.GetHash160(), GetTimeMicros() + RESPONSE_WAIT_TIME);
 
     if (RelaysPrivateSigningKeyIsAvailable(secret_recovery_message.successor_number))
-    {
         ComplainIfThereAreBadEncryptedSecretsInSecretRecoveryMessage(secret_recovery_message);
-        TryToRetrieveSecretsFromSecretRecoveryMessage(secret_recovery_message);
-    }
+
+    if (AllFourSecretRecoveryMessagesHaveBeenReceived(secret_recovery_message))
+        HandleFourSecretRecoveryMessages(secret_recovery_message);
+}
+
+bool
+RelaySuccessionHandler::AllFourSecretRecoveryMessagesHaveBeenReceived(SecretRecoveryMessage &secret_recovery_message)
+{
+    auto dead_relay = secret_recovery_message.GetDeadRelay(data);
+    return dead_relay->hashes.secret_recovery_message_hashes.size() == 4;
+}
+
+void RelaySuccessionHandler::HandleFourSecretRecoveryMessages(SecretRecoveryMessage &recovery_message)
+{
+    uint64_t start = GetRealTimeMicros();
+    scheduler.Schedule("secret_recovery", recovery_message.GetHash160(), GetTimeMicros() + RESPONSE_WAIT_TIME);
+
+    if (RelaysPrivateSigningKeyIsAvailable(recovery_message.successor_number))
+        if (TryToRetrieveSecretsFromSecretRecoveryMessage(recovery_message) and send_succession_completed_messages)
+        {
+            SendSuccessionCompletedMessage(recovery_message);
+            HandleTasksInheritedFromDeadRelay(recovery_message);
+        }
+}
+
+void RelaySuccessionHandler::SendSuccessionCompletedMessage(SecretRecoveryMessage &recovery_message)
+{
+    auto succession_completed_message = GenerateSuccessionCompletedMessage(recovery_message);
+    relay_message_handler->Broadcast(succession_completed_message);
+    relay_message_handler->Handle(succession_completed_message, NULL);
+}
+
+SuccessionCompletedMessage
+RelaySuccessionHandler::GenerateSuccessionCompletedMessage(SecretRecoveryMessage &recovery_message)
+{
+    auto successor = recovery_message.GetSuccessor(data);
+    return successor->GenerateSuccessionCompletedMessage(recovery_message, data);
+}
+
+void RelaySuccessionHandler::HandleTasksInheritedFromDeadRelay(SecretRecoveryMessage &recovery_message)
+{
+    auto successor = recovery_message.GetSuccessor(data);
+    inherited_task_handler.HandleInheritedTasks(successor);
 }
 
 void RelaySuccessionHandler::HandleSecretRecoveryMessageAfterDuration(uint160 recovery_message_hash)
@@ -161,7 +200,8 @@ void RelaySuccessionHandler::ComplainIfThereAreBadEncryptedSecretsInSecretRecove
              key_part_position < shared_secret_quarters[key_sharer_position].size();
              key_part_position++)
         {
-            if (shared_secret_quarters[key_sharer_position][key_part_position].IsAtInfinity())
+            auto shared_secret_quarter = shared_secret_quarters[key_sharer_position][key_part_position];
+            if (shared_secret_quarter.IsAtInfinity() and send_secret_recovery_complaints)
             {
                 SendSecretRecoveryComplaint(secret_recovery_message, key_sharer_position, key_part_position);
                 return;
@@ -202,15 +242,14 @@ bool RelaySuccessionHandler::RelaysPrivateSigningKeyIsAvailable(uint64_t relay_n
     return data.keydata[relay->public_signing_key].HasProperty("privkey");
 }
 
-void RelaySuccessionHandler::TryToRetrieveSecretsFromSecretRecoveryMessage(SecretRecoveryMessage recovery_message)
+bool RelaySuccessionHandler::TryToRetrieveSecretsFromSecretRecoveryMessage(SecretRecoveryMessage recovery_message)
 {
     auto dead_relay = recovery_message.GetDeadRelay(data);
     vector<uint160> recovery_message_hashes = dead_relay->hashes.secret_recovery_message_hashes;
 
     if (recovery_message_hashes.size() != 4)
-        return;
-
-    TryToRecoverSecretsFromSecretRecoveryMessages(recovery_message_hashes);
+        return false;
+    return TryToRecoverSecretsFromSecretRecoveryMessages(recovery_message_hashes);
 }
 
 bool RelaySuccessionHandler::TryToRecoverSecretsFromSecretRecoveryMessages(vector<uint160> recovery_message_hashes)
@@ -219,10 +258,8 @@ bool RelaySuccessionHandler::TryToRecoverSecretsFromSecretRecoveryMessages(vecto
     bool succeeded = SecretRecoveryMessage::RecoverSecretsFromSecretRecoveryMessages(recovery_message_hashes,
                                                                                      failure_sharer_position,
                                                                                      failure_key_part_position, data);
-
     if (not succeeded)
         SendSecretRecoveryFailureMessage(recovery_message_hashes);
-
     return succeeded;
 }
 
@@ -399,7 +436,19 @@ void RelaySuccessionHandler::AcceptGoodbyeMessage(GoodbyeMessage &goodbye_messag
         scheduler.Schedule("goodbye", goodbye_message.GetHash160(), GetTimeMicros() + RESPONSE_WAIT_TIME);
 
     if (data.keydata[successor->public_signing_key].HasProperty("privkey"))
-        TryToExtractSecretsFromGoodbyeMessage(goodbye_message);
+    {
+        if (TryToExtractSecretsFromGoodbyeMessage(goodbye_message) and relay_message_handler->mode == LIVE
+                                                                   and send_succession_completed_messages)
+            SendSuccessionCompletedMessage(goodbye_message);
+    }
+}
+
+void RelaySuccessionHandler::SendSuccessionCompletedMessage(GoodbyeMessage &goodbye_message)
+{
+    auto successor = goodbye_message.GetSuccessor(data);
+    auto succession_completed_message = successor->GenerateSuccessionCompletedMessage(goodbye_message, data);
+    relay_message_handler->Broadcast(succession_completed_message);
+    relay_message_handler->Handle(succession_completed_message, NULL);
 }
 
 bool RelaySuccessionHandler::ValidateGoodbyeMessage(GoodbyeMessage &goodbye_message)
@@ -407,11 +456,12 @@ bool RelaySuccessionHandler::ValidateGoodbyeMessage(GoodbyeMessage &goodbye_mess
     return goodbye_message.IsValid(data) and goodbye_message.VerifySignature(data);
 }
 
-void RelaySuccessionHandler::TryToExtractSecretsFromGoodbyeMessage(GoodbyeMessage goodbye_message)
+bool RelaySuccessionHandler::TryToExtractSecretsFromGoodbyeMessage(GoodbyeMessage goodbye_message)
 {
-    if (not ExtractSecretsFromGoodbyeMessage(goodbye_message) and relay_message_handler->mode == LIVE
-                                                              and send_goodbye_complaints)
+    bool secrets_successfully_extracted = ExtractSecretsFromGoodbyeMessage(goodbye_message);
+    if (not secrets_successfully_extracted and relay_message_handler->mode == LIVE and send_goodbye_complaints)
         SendGoodbyeComplaint(goodbye_message);
+    return secrets_successfully_extracted;
 }
 
 bool RelaySuccessionHandler::ExtractSecretsFromGoodbyeMessage(GoodbyeMessage goodbye_message)
@@ -528,4 +578,20 @@ bool RelaySuccessionHandler::ValidateDurationWithoutResponseFromRelayAfterSecret
             return false;
     }
     return true;
+}
+
+void RelaySuccessionHandler::HandleSuccessionCompletedMessage(SuccessionCompletedMessage &succession_completed_message)
+{
+    if (not ValidateSuccessionCompletedMessage(succession_completed_message))
+    {
+        relay_message_handler->RejectMessage(succession_completed_message.GetHash160());
+        return;
+    }
+    relay_state->ProcessSuccessionCompletedMessage(succession_completed_message, data);
+}
+
+bool
+RelaySuccessionHandler::ValidateSuccessionCompletedMessage(SuccessionCompletedMessage &succession_completed_message)
+{
+    return succession_completed_message.IsValid(data) and succession_completed_message.VerifySignature(data);
 }

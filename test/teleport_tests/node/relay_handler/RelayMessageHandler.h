@@ -7,6 +7,7 @@
 #include "RelayState.h"
 #include "test/teleport_tests/node/CreditSystem.h"
 #include "test/teleport_tests/node/MessageHandlerWithOrphanage.h"
+#include "test/teleport_tests/node/SuccessionCompletedMessage.h"
 #include "RelayJoinMessage.h"
 #include "KeyDistributionMessage.h"
 #include "SecretRecoveryFailureMessage.h"
@@ -67,6 +68,7 @@ public:
         HANDLESTREAM(RecoveryFailureAuditMessage);
         HANDLESTREAM(GoodbyeMessage);
         HANDLESTREAM(GoodbyeComplaint);
+        HANDLESTREAM(SuccessionCompletedMessage);
 
         HANDLESTREAM(DurationWithoutResponse);
         HANDLESTREAM(DurationWithoutResponseFromRelay);
@@ -83,6 +85,7 @@ public:
         HANDLEHASH(RecoveryFailureAuditMessage);
         HANDLEHASH(GoodbyeMessage);
         HANDLEHASH(GoodbyeComplaint);
+        HANDLEHASH(SuccessionCompletedMessage);
 
         HANDLEHASH(DurationWithoutResponse);
         HANDLEHASH(DurationWithoutResponseFromRelay);
@@ -97,6 +100,7 @@ public:
     HANDLECLASS(RecoveryFailureAuditMessage);
     HANDLECLASS(GoodbyeMessage);
     HANDLECLASS(GoodbyeComplaint);
+    HANDLECLASS(SuccessionCompletedMessage);
 
     HANDLECLASS(DurationWithoutResponse);
     HANDLECLASS(DurationWithoutResponseFromRelay);
@@ -127,6 +131,8 @@ public:
     void HandleGoodbyeMessage(GoodbyeMessage goodbye_message);
 
     void HandleGoodbyeComplaint(GoodbyeComplaint complaint);
+
+    void HandleSuccessionCompletedMessage(SuccessionCompletedMessage succession_completed_message);
 
     void HandleDurationWithoutResponse(DurationWithoutResponse duration);
 
@@ -159,6 +165,8 @@ public:
     void EncodeInChainIfLive(uint160 message_hash);
 
     bool ValidateDurationWithoutResponseFromRelay(DurationWithoutResponseFromRelay &duration);
+
+    bool ValidateSuccessionCompletedMessage(SuccessionCompletedMessage &succession_completed_message);
 };
 
 

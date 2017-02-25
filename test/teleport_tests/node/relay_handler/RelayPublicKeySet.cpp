@@ -159,16 +159,6 @@ CBigNum RelayPublicKeySet::Decrypt(CBigNum encrypted_secret, MemoryDataStore &ke
     return decrypted_secret;
 }
 
-void RelayPublicKeySet::Store(MemoryObject &object)
-{
-    object[GetHash160()] = *this;
-}
-
-void RelayPublicKeySet::Retrieve(uint160 data_hash, MemoryObject &object)
-{
-    *this = object[data_hash];
-}
-
 bool RelayPublicKeySet::ValidateSizes()
 {
     if (key_points.size() != 16)

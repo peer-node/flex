@@ -383,8 +383,8 @@ TEST_F(ARelayInARelayStateWhichHasProcessedItsKeyDistributionMessage,
        GeneratesAGoodbyeMessageWithTheSameSuccessorAsItsObituary)
 {
     GoodbyeMessage goodbye = relay->GenerateGoodbyeMessage(*data);
-    Obituary obituary = relay_state.GenerateObituary(relay, OBITUARY_SAID_GOODBYE);
-    ASSERT_THAT(goodbye.successor_relay_number, Eq(obituary.successor_number));
+    Obituary obituary = relay_state.GenerateObituary(relay, SAID_GOODBYE);
+    ASSERT_THAT(goodbye.successor_number, Eq(obituary.successor_number));
 }
 
 TEST_F(ARelayInARelayStateWhichHasProcessedItsKeyDistributionMessage,
@@ -411,7 +411,7 @@ TEST_F(ARelayInARelayStateWhichHasProcessedItsKeyDistributionMessage,
             Point public_key_sixteenth = key_sharer->PublicKeySixteenths()[goodbye.key_quarter_positions[i] * 4 + j];
             CBigNum private_key_sixteenth = keydata[public_key_sixteenth]["privkey"];
             ASSERT_THAT(goodbye.encrypted_key_sixteenths[i][j],
-                        Eq(EncryptSecretForRelay(private_key_sixteenth, relay_state, goodbye.successor_relay_number)));
+                        Eq(EncryptSecretForRelay(private_key_sixteenth, relay_state, goodbye.successor_number)));
         }
     }
 }

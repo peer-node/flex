@@ -1,11 +1,13 @@
 #ifndef TELEPORT_OBITUARY_H
 #define TELEPORT_OBITUARY_H
 
-#include "Relay.h"
+#include "crypto/uint256.h"
+#include "base/serialize.h"
+#include "define.h"
 
-#define OBITUARY_SAID_GOODBYE 1
-#define OBITUARY_NOT_RESPONDING 2
-#define OBITUARY_COMPLAINT 3
+#define SAID_GOODBYE 1
+#define NOT_RESPONDING 2
+#define MISBEHAVED 3
 
 
 class Obituary

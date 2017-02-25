@@ -60,7 +60,7 @@ public:
 
     Relay *GetDeadRelay(Data data);
 
-    bool DurationWithoutResponseHasElapsedSinceSecretRecoveryMessage(Data data);
+    bool SuccessionCompletedMessageHasBeenReceived(Data data);
 };
 
 

@@ -19,7 +19,7 @@ Point GoodbyeMessage::VerificationKey(Data data)
 void GoodbyeMessage::PopulateEncryptedKeySixteenths(Data data)
 {
     Relay *leaving_relay = data.relay_state->GetRelayByNumber(dead_relay_number);
-    Relay *successor = data.relay_state->GetRelayByNumber(successor_relay_number);
+    Relay *successor = data.relay_state->GetRelayByNumber(successor_number);
 
     for (Relay &sharer : data.relay_state->relays)
         for (uint8_t position = 0; position < sharer.holders.key_quarter_holders.size(); position++)
@@ -41,7 +41,7 @@ void GoodbyeMessage::PopulateFourEncryptedKeySixteenths(Relay *sharer, Relay *su
 
 Relay *GoodbyeMessage::GetSuccessor(Data data)
 {
-    return data.relay_state->GetRelayByNumber(successor_relay_number);
+    return data.relay_state->GetRelayByNumber(successor_number);
 }
 
 bool GoodbyeMessage::ExtractSecrets(Data data)
@@ -53,7 +53,7 @@ bool GoodbyeMessage::ExtractSecrets(Data data)
 bool GoodbyeMessage::ExtractSecrets(Data data, uint32_t& key_sharer_position,
                                                uint32_t &encrypted_key_sixteenth_position)
 {
-    Relay *successor = data.relay_state->GetRelayByNumber(successor_relay_number);
+    Relay *successor = data.relay_state->GetRelayByNumber(successor_number);
     key_sharer_position = 0;
 
     for (Relay &sharer : data.relay_state->relays)
@@ -111,7 +111,7 @@ bool GoodbyeMessage::IsValid(Data data)
     auto dead_relay = data.relay_state->GetRelayByNumber(dead_relay_number);
     auto generated_successor_number = data.relay_state->AssignSuccessorToRelay(dead_relay);
 
-    if (successor_relay_number != generated_successor_number)
+    if (successor_number != generated_successor_number)
         return false;
 
     if (not CheckKeyQuarterSharersAndPositions(data))

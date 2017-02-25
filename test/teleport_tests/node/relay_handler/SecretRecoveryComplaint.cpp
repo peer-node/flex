@@ -59,7 +59,7 @@ bool SecretRecoveryComplaint::IsValid(Data data)
         return false;
     if (position_of_bad_encrypted_secret >= 4)
         return false;
-    if (DurationWithoutResponseHasElapsedSinceSecretRecoveryMessage(data))
+    if (SuccessionCompletedMessageHasBeenReceived(data))
         return false;
     if (not PrivateReceivingKeyIsCorrect(data))
         return false;
@@ -68,12 +68,18 @@ bool SecretRecoveryComplaint::IsValid(Data data)
     return true;
 }
 
-bool SecretRecoveryComplaint::DurationWithoutResponseHasElapsedSinceSecretRecoveryMessage(Data data)
+bool SecretRecoveryComplaint::SuccessionCompletedMessageHasBeenReceived(Data data)
 {
-    auto recovery_message = GetSecretRecoveryMessage(data);
-    auto key_quarter_holder = GetSecretSender(data);
-    return key_quarter_holder != NULL and
-            not VectorContainsEntry(key_quarter_holder->tasks, recovery_message.obituary_hash);
+    auto successor = GetSecretRecoveryMessage(data).GetSuccessor(data);
+    if (successor == NULL)
+        return false;
+    for (auto succession_completed_message_hash : successor->hashes.succession_completed_message_hashes)
+    {
+        SuccessionCompletedMessage succession_completed_message = data.GetMessage(succession_completed_message_hash);
+        if (VectorContainsEntry(succession_completed_message.recovery_message_hashes, secret_recovery_message_hash))
+            return true;
+    }
+    return false;
 }
 
 bool SecretRecoveryComplaint::PrivateReceivingKeyIsCorrect(Data data)

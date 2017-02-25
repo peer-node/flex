@@ -63,7 +63,7 @@ public:
 
     uint256 GetEncryptedSecret(Data data);
 
-    bool DurationWithoutResponseHasElapsedSinceGoodbyeMessage(Data data);
+    bool SuccessorHasAlreadySentASuccessionCompletedMessage(Data data);
 };
 
 

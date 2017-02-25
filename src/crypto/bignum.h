@@ -679,10 +679,9 @@ inline const CBigNum operator%(const CBigNum& a, const CBigNum& b)
     CAutoBN_CTX pctx;
     CBigNum r;
     if (!BN_mod(&r, &a, &b, pctx))
-        throw bignum_error("CBigNum::operator% : BN_div failed");
+        throw bignum_error("CBigNum::operator% : BN_mod failed");
     return r;
 }
-
 
 inline const CBigNum operator<<(const CBigNum& a, unsigned int shift)
 {

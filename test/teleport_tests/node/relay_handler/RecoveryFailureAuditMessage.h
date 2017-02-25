@@ -75,6 +75,8 @@ public:
     bool IsValid(Data data);
 
     Relay *GetKeyQuarterHolder(Data data);
+
+    bool ContainsCorrectData(Data data);
 };
 
 

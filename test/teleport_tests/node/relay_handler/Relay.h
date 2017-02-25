@@ -9,6 +9,8 @@
 #include "test/teleport_tests/node/relay_handler/GoodbyeMessage.h"
 #include "test/teleport_tests/node/relay_handler/RelayKeyHolderData.h"
 #include "test/teleport_tests/node/relay_handler/RelayMessageHashData.h"
+#include "test/teleport_tests/node/SuccessionCompletedMessage.h"
+#include "SecretRecoveryMessage.h"
 
 
 class Relay
@@ -87,6 +89,10 @@ public:
     Point DecryptSecretPoint(uint256 encrypted_secret, Point point_corresponding_to_secret, Data data);
 
     std::vector<Relay *> QuarterHolders(Data data);
+
+    SuccessionCompletedMessage GenerateSuccessionCompletedMessage(GoodbyeMessage &goodbye_message, Data data);
+
+    SuccessionCompletedMessage GenerateSuccessionCompletedMessage(SecretRecoveryMessage &recovery_message, Data data);
 };
 
 Point DecryptPointUsingHexPrefixes(CBigNum decrypted_secret, Point point_corresponding_to_secret);

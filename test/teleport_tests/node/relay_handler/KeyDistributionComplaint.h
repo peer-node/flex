@@ -6,9 +6,9 @@
 #include "test/teleport_tests/node/Data.h"
 #include "KeyDistributionMessage.h"
 
-#define KEY_DISTRIBUTION_COMPLAINT_KEY_QUARTERS 0
-#define KEY_DISTRIBUTION_COMPLAINT_FIRST_KEY_SIXTEENTHS 1
-#define KEY_DISTRIBUTION_COMPLAINT_SECOND_KEY_SIXTEENTHS 2
+#define KEY_QUARTER_HOLDERS 0
+#define FIRST_SET_OF_KEY_SIXTEENTH_HOLDERS 1
+#define SECOND_SET_OF_KEY_SIXTEENTH_HOLDERS 2
 
 
 class KeyDistributionComplaint

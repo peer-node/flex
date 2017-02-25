@@ -10,12 +10,12 @@ Relay *KeyDistributionComplaint::GetComplainer(Data data)
     if (sender == NULL)
         return NULL;
 
-    if (set_of_secrets == KEY_DISTRIBUTION_COMPLAINT_KEY_QUARTERS)
+    if (set_of_secrets == KEY_QUARTER_HOLDERS)
         return data.relay_state->GetRelayByNumber(sender->holders.key_quarter_holders[position_of_secret / 4]);
-    else if (set_of_secrets == KEY_DISTRIBUTION_COMPLAINT_FIRST_KEY_SIXTEENTHS)
+    else if (set_of_secrets == FIRST_SET_OF_KEY_SIXTEENTH_HOLDERS)
         return data.relay_state->GetRelayByNumber(
                 sender->holders.first_set_of_key_sixteenth_holders[position_of_secret]);
-    else if (set_of_secrets == KEY_DISTRIBUTION_COMPLAINT_SECOND_KEY_SIXTEENTHS)
+    else if (set_of_secrets == SECOND_SET_OF_KEY_SIXTEENTH_HOLDERS)
         return data.relay_state->GetRelayByNumber(
                 sender->holders.second_set_of_key_sixteenth_holders[position_of_secret]);
 
@@ -42,7 +42,7 @@ Point KeyDistributionComplaint::GetPointCorrespondingToSecret(Data data)
 {
     Relay *secret_sender = GetSecretSender(data);
     if (secret_sender == NULL)
-        throw RelayStateException("GetPointCorrespondingToSecret: no such relay");
+        throw RelayStateException("KeyDistributionComplaint::GetPointCorrespondingToSecret: no such relay");
     return secret_sender->PublicKeySixteenths()[position_of_secret];
 }
 
@@ -50,11 +50,11 @@ uint256 KeyDistributionComplaint::GetEncryptedSecret(Data data)
 {
     auto message = GetKeyDistributionMessage(data);
 
-    if (set_of_secrets == KEY_DISTRIBUTION_COMPLAINT_KEY_QUARTERS)
+    if (set_of_secrets == KEY_QUARTER_HOLDERS)
         return message.key_sixteenths_encrypted_for_key_quarter_holders[position_of_secret];
-    if (set_of_secrets == KEY_DISTRIBUTION_COMPLAINT_FIRST_KEY_SIXTEENTHS)
+    if (set_of_secrets == FIRST_SET_OF_KEY_SIXTEENTH_HOLDERS)
         return message.key_sixteenths_encrypted_for_first_set_of_key_sixteenth_holders[position_of_secret];
-    if (set_of_secrets == KEY_DISTRIBUTION_COMPLAINT_SECOND_KEY_SIXTEENTHS)
+    if (set_of_secrets == SECOND_SET_OF_KEY_SIXTEENTH_HOLDERS)
         return message.key_sixteenths_encrypted_for_second_set_of_key_sixteenth_holders[position_of_secret];
 
     return 0;
@@ -101,7 +101,7 @@ bool KeyDistributionComplaint::DurationWithoutResponseHasElapsedSinceKeyDistribu
 
 bool KeyDistributionComplaint::ReferencedSecretExists(Data data)
 {
-    return position_of_secret < 16 and set_of_secrets <= KEY_DISTRIBUTION_COMPLAINT_SECOND_KEY_SIXTEENTHS;
+    return position_of_secret < 16 and set_of_secrets <= SECOND_SET_OF_KEY_SIXTEENTH_HOLDERS;
 }
 
 bool KeyDistributionComplaint::RecipientPrivateKeyIsOk(Data data)

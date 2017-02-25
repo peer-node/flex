@@ -12,7 +12,7 @@ class GoodbyeMessage
 {
 public:
     uint64_t dead_relay_number{0};
-    uint64_t successor_relay_number{0};
+    uint64_t successor_number{0};
     std::vector<uint64_t> key_quarter_sharers;
     std::vector<uint8_t> key_quarter_positions;
     std::vector<std::vector<uint256> > encrypted_key_sixteenths;
@@ -24,14 +24,14 @@ public:
     IMPLEMENT_SERIALIZE
     (
         READWRITE(dead_relay_number);
-        READWRITE(successor_relay_number);
+        READWRITE(successor_number);
         READWRITE(key_quarter_sharers);
         READWRITE(key_quarter_positions);
         READWRITE(encrypted_key_sixteenths);
         READWRITE(signature);
     );
 
-    JSON(dead_relay_number, successor_relay_number, key_quarter_sharers, key_quarter_positions,
+    JSON(dead_relay_number, successor_number, key_quarter_sharers, key_quarter_positions,
          encrypted_key_sixteenths, signature);
 
     DEPENDENCIES();

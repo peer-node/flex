@@ -1,6 +1,7 @@
 #include <src/crypto/secp256k1point.h>
 #include <src/crypto/bignum_hashes.h>
 #include <src/base/util_hex.h>
+#include <test/teleport_tests/node/SuccessionCompletedMessage.h>
 #include "Relay.h"
 #include "test/teleport_tests/node/relay_handler/RelayState.h"
 #include "test/teleport_tests/node/relay_handler/RelayKeyHolderData.h"
@@ -69,7 +70,7 @@ GoodbyeMessage Relay::GenerateGoodbyeMessage(Data data)
 {
     GoodbyeMessage goodbye_message;
     goodbye_message.dead_relay_number = number;
-    goodbye_message.successor_relay_number = data.relay_state->AssignSuccessorToRelay(this);
+    goodbye_message.successor_number = data.relay_state->AssignSuccessorToRelay(this);
     goodbye_message.PopulateEncryptedKeySixteenths(data);
     goodbye_message.Sign(data);
     return goodbye_message;
@@ -215,4 +216,25 @@ std::vector<Relay *> Relay::QuarterHolders(Data data)
         quarter_holders.push_back(data.relay_state->GetRelayByNumber(quarter_holder_number));
 
     return quarter_holders;
+}
+
+SuccessionCompletedMessage Relay::GenerateSuccessionCompletedMessage(GoodbyeMessage &goodbye_message, Data data)
+{
+    SuccessionCompletedMessage succession_completed_message;
+    succession_completed_message.goodbye_message_hash = goodbye_message.GetHash160();
+    succession_completed_message.successor_number = goodbye_message.successor_number;
+    succession_completed_message.dead_relay_number = goodbye_message.dead_relay_number;
+    succession_completed_message.Sign(data);
+    return succession_completed_message;
+}
+
+SuccessionCompletedMessage Relay::GenerateSuccessionCompletedMessage(SecretRecoveryMessage &recovery_message, Data data)
+{
+    auto dead_relay = recovery_message.GetDeadRelay(data);
+    SuccessionCompletedMessage succession_completed_message;
+    succession_completed_message.recovery_message_hashes = dead_relay->hashes.secret_recovery_message_hashes;
+    succession_completed_message.dead_relay_number = dead_relay->number;
+    succession_completed_message.successor_number = recovery_message.successor_number;
+    succession_completed_message.Sign(data);
+    return succession_completed_message;
 }

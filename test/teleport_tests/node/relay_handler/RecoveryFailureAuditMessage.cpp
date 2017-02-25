@@ -171,3 +171,9 @@ bool RecoveryFailureAuditMessage::IsValid(Data data)
 
     return true;
 }
+
+bool RecoveryFailureAuditMessage::ContainsCorrectData(Data data)
+{
+    return VerifyPrivateReceivingKeyQuarterMatchesPublicReceivingKeyQuarter(data) and
+            VerifyEncryptedSharedSecretQuarterInSecretRecoveryMessageWasCorrect(data);
+}

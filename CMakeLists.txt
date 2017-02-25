@@ -660,7 +660,7 @@ set(RELAY_FILES
         test/teleport_tests/node/relay_handler/RelaySuccessionHandler.h
         test/teleport_tests/node/Data.h
         test/teleport_tests/node/Data.cpp
-        )
+        test/teleport_tests/node/SuccessionCompletedMessage.cpp test/teleport_tests/node/SuccessionCompletedMessage.h test/teleport_tests/node/relay_handler/InheritedTaskHandler.cpp test/teleport_tests/node/relay_handler/InheritedTaskHandler.h)
 
 add_executable(runRelayTests
         ${RELAY_FILES}
@@ -687,7 +687,7 @@ add_executable(runRelayTests
         test/teleport_tests/node/testRelayMessageHandler.cpp
         test/teleport_tests/node/testRelayPublicKeySet.cpp
         test/teleport_tests/node/testRelayJoinMessage.cpp
-        )
+        test/teleport_tests/node/SuccessionCompletedMessage.cpp test/teleport_tests/node/SuccessionCompletedMessage.h test/teleport_tests/node/relay_handler/InheritedTaskHandler.cpp test/teleport_tests/node/relay_handler/InheritedTaskHandler.h)
 
 add_executable(runNodeTests
         ${NODE_TEST_FILES}

@@ -2,11 +2,11 @@
 #include "SecretRecoveryMessage.h"
 #include "RelayState.h"
 
-#include "log.h"
+using std::vector;
 
+#include "log.h"
 #define LOG_CATEGORY "SecretRecoveryMessage.cpp"
 
-using std::vector;
 
 Point SecretRecoveryMessage::VerificationKey(Data data)
 {
@@ -93,8 +93,6 @@ void SecretRecoveryMessage::PopulateEncryptedSharedSecretQuarterForKeySixteenth(
 
     uint256 encrypted_shared_secret_quarter = successor->EncryptSecretPoint(shared_secret_quarter);
 
-    Point recovered_shared_secret_quarter = successor->DecryptSecretPoint(encrypted_shared_secret_quarter, Point(StorePointInBigNum(shared_secret_quarter)), data);
-
     points_corresponding_to_shared_secret_quarters.push_back(Point(StorePointInBigNum(shared_secret_quarter)));
     encrypted_shared_secret_quarters_for_relay_key_parts.push_back(encrypted_shared_secret_quarter);
 }
@@ -173,10 +171,12 @@ bool SecretRecoveryMessage::RecoverSecretsFromSecretRecoveryMessages(vector<uint
                                                                      uint32_t &failure_key_part_position,
                                                                      Data data)
 {
+    uint64_t start = GetRealTimeMicros();
     auto array_of_shared_secrets = GetSharedSecrets(recovery_message_hashes, data);
-
-    return RecoverSecretsFromArrayOfSharedSecrets(array_of_shared_secrets, recovery_message_hashes,
+    start = GetRealTimeMicros();
+    auto result = RecoverSecretsFromArrayOfSharedSecrets(array_of_shared_secrets, recovery_message_hashes,
                                                   failure_sharer_position, failure_key_part_position, data);
+    return result;
 }
 
 vector<vector<Point> > SecretRecoveryMessage::GetSharedSecrets(vector<uint160> recovery_message_hashes, Data data)
@@ -186,8 +186,9 @@ vector<vector<Point> > SecretRecoveryMessage::GetSharedSecrets(vector<uint160> r
     for (auto recovery_message_hash : recovery_message_hashes)
     {
         SecretRecoveryMessage secret_recovery_message = data.GetMessage(recovery_message_hash);
+        uint64_t start = GetRealTimeMicros();
         auto shared_secret_quarters = secret_recovery_message.RecoverSharedSecretQuartersForRelayKeyParts(data);
-
+        start = GetRealTimeMicros();
         if (SomePointsAreAtInfinity(shared_secret_quarters))
         {
             return array_of_shared_secrets;

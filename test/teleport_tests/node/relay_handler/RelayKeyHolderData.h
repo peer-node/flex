@@ -23,10 +23,6 @@ public:
     JSON(key_quarter_holders, first_set_of_key_sixteenth_holders, second_set_of_key_sixteenth_holders);
 
     HASH160();
-
-    void Store(MemoryObject &object);
-
-    void Retrieve(uint160 holder_data_hash, MemoryObject &object);
 };
 
 
