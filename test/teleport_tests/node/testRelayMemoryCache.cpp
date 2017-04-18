@@ -1,8 +1,8 @@
 #include <src/vector_tools.h>
 #include <src/base/util_time.h>
 #include "gmock/gmock.h"
-#include "test/teleport_tests/node/relay_handler/RelayState.h"
-#include "test/teleport_tests/node/relay_handler/RelayMemoryCache.h"
+#include "test/teleport_tests/node/relays/RelayState.h"
+#include "test/teleport_tests/node/relays/RelayMemoryCache.h"
 
 using namespace ::testing;
 using namespace std;
@@ -52,6 +52,26 @@ TEST_F(ARelayMemoryCache, StoresAndRetrieves10000Relays)
 TEST_F(ARelayMemoryCache, StoresAndRetrievesARelayStateWith10000Relays)
 {
     RelayState state;
+
+    for (uint64_t i = 0; i < 10000; i++)
+    {
+        Relay relay;
+        relay.number = i;
+        relay.hashes.join_message_hash = i;
+        state.relays.push_back(relay);
+    }
+
+    cache.Store(state);
+    uint160 state_hash = state.GetHash160();
+
+    RelayState state2 = cache.RetrieveRelayState(state_hash);
+    ASSERT_THAT(state2, Eq(state));
+}
+
+TEST_F(ARelayMemoryCache, StoresAndRetrievesARelayStateWithANonZeroLatestMinedCreditMessageHash)
+{
+    RelayState state;
+    state.latest_mined_credit_message_hash = 1;
 
     for (uint64_t i = 0; i < 10000; i++)
     {

@@ -22,15 +22,20 @@ public:
     void GenerateShortHashes()
     {
         short_hashes.resize(0);
-        HASH xor_of_full_hashes = 0;
+        HASH accumulator = 0;
         for (uint32_t i = 0; i < full_hashes.size(); i++)
         {
             uint32_t short_hash;
             memcpy(UBEGIN(short_hash), UBEGIN(full_hashes[i]), 4);
             short_hashes.push_back(short_hash);
-            xor_of_full_hashes ^= full_hashes[i];
+            accumulator ^= ModifyHashToIncludePositionInformation(full_hashes[i], i);
         }
-        disambiguator = xor_of_full_hashes;
+        disambiguator = accumulator;
+    }
+
+    HASH ModifyHashToIncludePositionInformation(HASH hash, uint32_t position)
+    {
+        return hash + (hash * 12345678910111213ULL) * (uint64_t)position;
     }
 
     std::vector<std::vector<HASH> > PossibleMatches(MemoryDataStore& hashdata)
@@ -112,7 +117,7 @@ public:
         HASH result = 0;
 
         for (uint32_t i = 0; i < hashes.size(); i++)
-             result ^= hashes[i][choices[i]];
+            result ^= ModifyHashToIncludePositionInformation(hashes[i][choices[i]], i);
 
         return result;
     }
@@ -139,12 +144,15 @@ public:
             return false;
         }
 
+        auto initial_working_hypothesis = working_hypothesis;
         for (uint32_t individual_choice = 0; individual_choice < possible_matches[working_hypothesis.size()].size(); individual_choice++)
         {
             working_hypothesis.push_back(individual_choice);
 
             if (ThereIsACorrectMatch(possible_matches, working_hypothesis, resulting_match))
                 return true;
+
+            working_hypothesis = initial_working_hypothesis;
         }
         return false;
     }

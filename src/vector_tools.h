@@ -10,10 +10,22 @@ bool VectorContainsEntry(std::vector<T> vector_, T entry)
     return std::find(vector_.begin(), vector_.end(), entry) != vector_.end();
 }
 
+template <typename T, std::size_t N>
+bool ArrayContainsEntry(std::array<T, N> array_, T entry)
+{
+    return std::find(array_.begin(), array_.end(), entry) != array_.end();
+}
+
 template <typename T>
 int64_t PositionOfEntryInVector(T entry, std::vector<T> vector_)
 {
     return std::distance(vector_.begin(), std::find(vector_.begin(), vector_.end(), entry));
+}
+
+template <typename T, std::size_t N>
+int64_t PositionOfEntryInArray(T entry, std::array<T, N> array_)
+{
+    return std::distance(array_.begin(), std::find(array_.begin(), array_.end(), entry));
 }
 
 template <typename T>

@@ -174,7 +174,7 @@ typedef std::string string_t;
     std::string _json_format(bool n)                                        \
     { std::stringstream ss; ss << n; return ss.str(); }                     \
     std::string _json_format(uint8_t n)                                     \
-    { std::stringstream ss; ss << n; return ss.str(); }                     \
+    { std::stringstream ss; ss << int(n); return ss.str(); }                \
     std::string _json_format(int64_t n)                                     \
     { std::stringstream ss; ss << n; return ss.str(); }                     \
     std::string _json_format(uint64_t n)                                    \
@@ -205,6 +205,16 @@ typedef std::string string_t;
         return result + "\"";                                               \
     }                                                                       \
     template<typename T> std::string _json_format(std::vector<T> entries)   \
+    {                                                                       \
+        std::string result{"["};                                            \
+        for (auto entry : entries)                                          \
+            result += _json_format(entry) + ",";                            \
+        if (result.size() > 1)                                              \
+            result.resize(result.size() - 1);                               \
+        return result + "]";                                                \
+    }                                                                       \
+    template<typename T, std::size_t N>                                     \
+    std::string _json_format(std::array<T, N> entries)                      \
     {                                                                       \
         std::string result{"["};                                            \
         for (auto entry : entries)                                          \

@@ -1,11 +1,13 @@
 #ifndef TELEPORT_MEMORYDATA_H
 #define TELEPORT_MEMORYDATA_H
 
+
 #include "base/serialize.h"
 #include "base/version.h"
 #include "define.h"
 
-
+#include <src/log.h>
+#define LOG_CATEGORY "MemoryData.h"
 
 class MemoryData
 {
@@ -27,13 +29,13 @@ public:
         value = blank_values[0];
 
         serialized_data = ReverseBytes(serialized_data);
-        CDataStream stream(serialized_data,
-                           SER_DISK,
-                           CLIENT_VERSION);
-        try
-        {
-            stream >> value;
-        } catch (...) { }
+        CDataStream stream(serialized_data, SER_DISK, CLIENT_VERSION);
+        if (stream.size() > 0)
+            try
+            {
+                stream >> value;
+            }
+            catch (...) { }
     }
 
 private:

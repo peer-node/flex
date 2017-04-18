@@ -3,7 +3,7 @@
 
 
 #include <test/teleport_tests/main_tests/Communicator.h>
-#include <test/teleport_tests/node/relay_handler/RelayMessageHandler.h>
+#include <test/teleport_tests/node/relays/RelayMessageHandler.h>
 #include "test/teleport_tests/node/calendar/Calendar.h"
 #include "test/teleport_tests/node/wallet/Wallet.h"
 #include "test/teleport_tests/node/credit_handler/CreditMessageHandler.h"

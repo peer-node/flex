@@ -389,6 +389,17 @@ template<typename Stream, typename T, typename A> void Unserialize_impl(Stream& 
 template<typename Stream, typename T, typename A> void Unserialize_impl(Stream& is, std::vector<T, A>& v, int nType, int nVersion, const boost::false_type&);
 template<typename Stream, typename T, typename A> inline void Unserialize(Stream& is, std::vector<T, A>& v, int nType, int nVersion);
 
+// array
+template<typename T, std::size_t A> unsigned int GetSerializeSize_impl(const std::array<T, A>& v, int nType, int nVersion, const boost::true_type&);
+template<typename T, std::size_t A> unsigned int GetSerializeSize_impl(const std::array<T, A>& v, int nType, int nVersion, const boost::false_type&);
+template<typename T, std::size_t A> inline unsigned int GetSerializeSize(const std::array<T, A>& v, int nType, int nVersion);
+template<typename Stream, typename T, std::size_t A> void Serialize_impl(Stream& os, const std::array<T, A>& v, int nType, int nVersion, const boost::true_type&);
+template<typename Stream, typename T, std::size_t A> void Serialize_impl(Stream& os, const std::array<T, A>& v, int nType, int nVersion, const boost::false_type&);
+template<typename Stream, typename T, std::size_t A> inline void Serialize(Stream& os, const std::array<T, A>& v, int nType, int nVersion);
+template<typename Stream, typename T, std::size_t A> void Unserialize_impl(Stream& is, std::array<T, A>& v, int nType, int nVersion, const boost::true_type&);
+template<typename Stream, typename T, std::size_t A> void Unserialize_impl(Stream& is, std::array<T, A>& v, int nType, int nVersion, const boost::false_type&);
+template<typename Stream, typename T, std::size_t A> inline void Unserialize(Stream& is, std::array<T, A>& v, int nType, int nVersion);
+
 // others derived from vector
 extern inline unsigned int GetSerializeSize(const CScript& v, int nType, int nVersion);
 template<typename Stream> void Serialize(Stream& os, const CScript& v, int nType, int nVersion);
@@ -567,6 +578,91 @@ inline void Unserialize(Stream& is, std::vector<T, A>& v, int nType, int nVersio
     Unserialize_impl(is, v, nType, nVersion, boost::is_fundamental<T>());
 }
 
+
+
+//
+// array
+//
+template<typename T, std::size_t A>
+unsigned int GetSerializeSize_impl(const std::array<T, A>& v, int nType, int nVersion, const boost::true_type&)
+{
+    return (GetSizeOfCompactSize(v.size()) + v.size() * sizeof(T));
+}
+
+template<typename T, std::size_t A>
+unsigned int GetSerializeSize_impl(const std::array<T, A>& v, int nType, int nVersion, const boost::false_type&)
+{
+    unsigned int nSize = GetSizeOfCompactSize(v.size());
+    for (typename std::array<T, A>::const_iterator vi = v.begin(); vi != v.end(); ++vi)
+        nSize += GetSerializeSize((*vi), nType, nVersion);
+    return nSize;
+}
+
+template<typename T, std::size_t A>
+inline unsigned int GetSerializeSize(const std::array<T, A>& v, int nType, int nVersion)
+{
+    return GetSerializeSize_impl(v, nType, nVersion, boost::is_fundamental<T>());
+}
+
+
+template<typename Stream, typename T, std::size_t A>
+void Serialize_impl(Stream& os, const std::array<T, A>& v, int nType, int nVersion, const boost::true_type&)
+{
+    WriteCompactSize(os, v.size());
+    if (!v.empty())
+        os.write((char*)&v[0], v.size() * sizeof(T));
+}
+
+template<typename Stream, typename T, std::size_t A>
+void Serialize_impl(Stream& os, const std::array<T, A>& v, int nType, int nVersion, const boost::false_type&)
+{
+    WriteCompactSize(os, v.size());
+    for (typename std::array<T, A>::const_iterator vi = v.begin(); vi != v.end(); ++vi)
+        ::Serialize(os, (*vi), nType, nVersion);
+}
+
+template<typename Stream, typename T, std::size_t A>
+inline void Serialize(Stream& os, const std::array<T, A>& v, int nType, int nVersion)
+{
+    Serialize_impl(os, v, nType, nVersion, boost::is_fundamental<T>());
+}
+
+
+template<typename Stream, typename T, std::size_t A>
+void Unserialize_impl(Stream& is, std::array<T, A>& v, int nType, int nVersion, const boost::true_type&)
+{
+    // Limit size per read so bogus size value won't cause out of memory
+    unsigned int nSize = ReadCompactSize(is);
+    unsigned int i = 0;
+    while (i < nSize)
+    {
+        unsigned int blk = std::min(nSize - i, (unsigned int)(1 + 4999999 / sizeof(T)));
+        is.read((char*)&v[i], blk * sizeof(T));
+        i += blk;
+    }
+}
+
+template<typename Stream, typename T, std::size_t A>
+void Unserialize_impl(Stream& is, std::array<T, A>& v, int nType, int nVersion, const boost::false_type&)
+{
+    unsigned int nSize = ReadCompactSize(is);
+    unsigned int i = 0;
+    unsigned int nMid = 0;
+    while (nMid < nSize)
+    {
+        nMid += 5000000 / sizeof(T);
+        if (nMid > nSize)
+            nMid = nSize;
+        for (; i < nMid; i++)
+            Unserialize(is, v[i], nType, nVersion);
+    }
+}
+
+template<typename Stream, typename T, std::size_t A>
+inline void Unserialize(Stream& is, std::array<T, A>& v, int nType, int nVersion)
+{
+    Unserialize_impl(is, v, nType, nVersion, boost::is_fundamental<T>());
+}
 
 
 //

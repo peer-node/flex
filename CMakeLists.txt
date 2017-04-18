@@ -545,7 +545,8 @@ add_executable(runDataTests
         test/teleport_tests/test_main.cpp
         test/teleport_tests/teleport_data/testMemoryDataStore.cpp
         test/teleport_tests/teleport_data/testDiskDataStore.cpp
-        test/teleport_tests/teleport_data/testDataStore.cpp)
+        test/teleport_tests/teleport_data/testDataStore.cpp
+        test/teleport_tests/node/testShortHashList.cpp)
 
 set(CONFIG_FILES
         test/teleport_tests/node/config/TeleportConfig.cpp
@@ -614,53 +615,45 @@ set(NODE_TEST_FILES
         test/teleport_tests/node/credit_handler/ListExpansionMessage.h)
 
 set(RELAY_FILES
-        test/teleport_tests/node/relay_handler/RelayState.cpp
-        test/teleport_tests/node/relay_handler/RelayState.h
-        test/teleport_tests/node/relay_handler/Relay.cpp
-        test/teleport_tests/node/relay_handler/Relay.h
-        test/teleport_tests/node/relay_handler/RelayJoinMessage.cpp
-        test/teleport_tests/node/relay_handler/RelayJoinMessage.h
-        test/teleport_tests/node/relay_handler/RelayMessageHandler.cpp
-        test/teleport_tests/node/relay_handler/RelayMessageHandler.h
-        test/teleport_tests/node/relay_handler/KeyDistributionMessage.cpp
-        test/teleport_tests/node/relay_handler/KeyDistributionMessage.h
-        test/teleport_tests/node/relay_handler/SecretRecoveryMessage.cpp
-        test/teleport_tests/node/relay_handler/SecretRecoveryMessage.h
-        test/teleport_tests/node/relay_handler/Obituary.cpp
-        test/teleport_tests/node/relay_handler/Obituary.h
-        test/teleport_tests/node/relay_handler/RelayExit.cpp
-        test/teleport_tests/node/relay_handler/RelayExit.h
-        test/teleport_tests/node/relay_handler/KeyDistributionComplaint.cpp
-        test/teleport_tests/node/relay_handler/KeyDistributionComplaint.h
-        test/teleport_tests/node/relay_handler/DurationWithoutResponse.cpp
-        test/teleport_tests/node/relay_handler/DurationWithoutResponse.h
-        test/teleport_tests/node/relay_handler/DurationWithoutResponseFromRelay.cpp
-        test/teleport_tests/node/relay_handler/DurationWithoutResponseFromRelay.h
-        test/teleport_tests/node/relay_handler/GoodbyeMessage.cpp
-        test/teleport_tests/node/relay_handler/GoodbyeMessage.h
-        test/teleport_tests/node/relay_handler/GoodbyeComplaint.cpp
-        test/teleport_tests/node/relay_handler/GoodbyeComplaint.h
-        test/teleport_tests/node/relay_handler/SecretRecoveryComplaint.cpp
-        test/teleport_tests/node/relay_handler/SecretRecoveryComplaint.h
-        test/teleport_tests/node/relay_handler/RelayPublicKeySet.cpp
-        test/teleport_tests/node/relay_handler/RelayPublicKeySet.h
-        test/teleport_tests/node/relay_handler/SecretRecoveryFailureMessage.cpp
-        test/teleport_tests/node/relay_handler/SecretRecoveryFailureMessage.h
-        test/teleport_tests/node/relay_handler/RecoveryFailureAuditMessage.cpp
-        test/teleport_tests/node/relay_handler/RecoveryFailureAuditMessage.h
-        test/teleport_tests/node/relay_handler/RelayKeyHolderData.cpp
-        test/teleport_tests/node/relay_handler/RelayKeyHolderData.h
-        test/teleport_tests/node/relay_handler/RelayMessageHashData.cpp
-        test/teleport_tests/node/relay_handler/RelayMessageHashData.h
-        test/teleport_tests/node/relay_handler/RelayMemoryCache.cpp
-        test/teleport_tests/node/relay_handler/RelayMemoryCache.h
-        test/teleport_tests/node/relay_handler/RelayAdmissionHandler.cpp
-        test/teleport_tests/node/relay_handler/RelayAdmissionHandler.h
-        test/teleport_tests/node/relay_handler/RelaySuccessionHandler.cpp
-        test/teleport_tests/node/relay_handler/RelaySuccessionHandler.h
+        test/teleport_tests/node/relays/RelayState.cpp
+        test/teleport_tests/node/relays/RelayState.h
+        test/teleport_tests/node/relays/Relay.cpp
+        test/teleport_tests/node/relays/Relay.h
+        test/teleport_tests/node/relays/RelayJoinMessage.cpp
+        test/teleport_tests/node/relays/RelayJoinMessage.h
+        test/teleport_tests/node/relays/RelayMessageHandler.cpp
+        test/teleport_tests/node/relays/RelayMessageHandler.h
+        test/teleport_tests/node/relays/KeyDistributionMessage.cpp
+        test/teleport_tests/node/relays/KeyDistributionMessage.h
+        test/teleport_tests/node/relays/SecretRecoveryMessage.cpp
+        test/teleport_tests/node/relays/SecretRecoveryMessage.h
+        test/teleport_tests/node/relays/KeyDistributionComplaint.cpp
+        test/teleport_tests/node/relays/KeyDistributionComplaint.h
+        test/teleport_tests/node/relays/DurationWithoutResponse.cpp
+        test/teleport_tests/node/relays/DurationWithoutResponse.h
+        test/teleport_tests/node/relays/DurationWithoutResponseFromRelay.cpp
+        test/teleport_tests/node/relays/DurationWithoutResponseFromRelay.h
+        test/teleport_tests/node/relays/GoodbyeMessage.cpp
+        test/teleport_tests/node/relays/GoodbyeMessage.h
+        test/teleport_tests/node/relays/SecretRecoveryComplaint.cpp
+        test/teleport_tests/node/relays/SecretRecoveryComplaint.h
+        test/teleport_tests/node/relays/RelayPublicKeySet.cpp
+        test/teleport_tests/node/relays/RelayPublicKeySet.h
+        test/teleport_tests/node/relays/SecretRecoveryFailureMessage.cpp
+        test/teleport_tests/node/relays/SecretRecoveryFailureMessage.h
+        test/teleport_tests/node/relays/RecoveryFailureAuditMessage.cpp
+        test/teleport_tests/node/relays/RecoveryFailureAuditMessage.h
+        test/teleport_tests/node/relays/RelayMessageHashData.cpp
+        test/teleport_tests/node/relays/RelayMessageHashData.h
+        test/teleport_tests/node/relays/RelayMemoryCache.cpp
+        test/teleport_tests/node/relays/RelayMemoryCache.h
+        test/teleport_tests/node/relays/RelayAdmissionHandler.cpp
+        test/teleport_tests/node/relays/RelayAdmissionHandler.h
+        test/teleport_tests/node/relays/RelaySuccessionHandler.cpp
+        test/teleport_tests/node/relays/RelaySuccessionHandler.h
         test/teleport_tests/node/Data.h
         test/teleport_tests/node/Data.cpp
-        test/teleport_tests/node/SuccessionCompletedMessage.cpp test/teleport_tests/node/SuccessionCompletedMessage.h test/teleport_tests/node/relay_handler/InheritedTaskHandler.cpp test/teleport_tests/node/relay_handler/InheritedTaskHandler.h)
+        test/teleport_tests/node/relays/SuccessionCompletedMessage.cpp test/teleport_tests/node/relays/SuccessionCompletedMessage.h test/teleport_tests/node/relays/InheritedTaskHandler.cpp test/teleport_tests/node/relays/InheritedTaskHandler.h test/teleport_tests/node/relays/RelayTipHandler.cpp test/teleport_tests/node/relays/RelayTipHandler.h test/teleport_tests/node/relays/KeyDistributionAuditMessage.cpp test/teleport_tests/node/relays/KeyDistributionAuditMessage.h test/teleport_tests/node/relays/KeyDistributionAuditorSelection.cpp test/teleport_tests/node/relays/KeyDistributionAuditorSelection.h test/teleport_tests/node/relays/KeyDistributionAuditComplaint.cpp test/teleport_tests/node/relays/KeyDistributionAuditComplaint.h test/teleport_tests/node/relays/KeyDistributionAuditFailureMessage.cpp test/teleport_tests/node/relays/KeyDistributionAuditFailureMessage.h test/teleport_tests/node/relays/Task.cpp test/teleport_tests/node/relays/Task.h test/teleport_tests/node/relays/KeyQuarterLocation.cpp test/teleport_tests/node/relays/KeyQuarterLocation.h test/teleport_tests/node/relays/EncryptedKeyQuarter.cpp test/teleport_tests/node/relays/EncryptedKeyQuarter.h test/teleport_tests/node/relays/SuccessionAttempt.cpp test/teleport_tests/node/relays/SuccessionAttempt.h test/teleport_tests/node/relays/RecoveryFailureAudit.cpp test/teleport_tests/node/relays/RecoveryFailureAudit.h test/teleport_tests/node/relays/FourSecretRecoveryMessages.cpp test/teleport_tests/node/relays/FourSecretRecoveryMessages.h test/teleport_tests/node/relays/FourRecoveryFailureAuditMessages.cpp test/teleport_tests/node/relays/FourRecoveryFailureAuditMessages.h test/teleport_tests/node/relays/SuccessionCompletedAuditMessage.cpp test/teleport_tests/node/relays/SuccessionCompletedAuditMessage.h)
 
 add_executable(runRelayTests
         ${RELAY_FILES}
@@ -687,7 +680,16 @@ add_executable(runRelayTests
         test/teleport_tests/node/testRelayMessageHandler.cpp
         test/teleport_tests/node/testRelayPublicKeySet.cpp
         test/teleport_tests/node/testRelayJoinMessage.cpp
-        test/teleport_tests/node/SuccessionCompletedMessage.cpp test/teleport_tests/node/SuccessionCompletedMessage.h test/teleport_tests/node/relay_handler/InheritedTaskHandler.cpp test/teleport_tests/node/relay_handler/InheritedTaskHandler.h)
+        test/teleport_tests/node/relays/SuccessionCompletedMessage.cpp
+        test/teleport_tests/node/relays/SuccessionCompletedMessage.h
+        test/teleport_tests/node/relays/InheritedTaskHandler.cpp
+        test/teleport_tests/node/relays/InheritedTaskHandler.h
+        test/teleport_tests/node/testRelayTipHandler.cpp
+        test/teleport_tests/node/relays/KeyDistributionAuditMessage.cpp
+        test/teleport_tests/node/relays/KeyDistributionAuditMessage.h
+        test/teleport_tests/node/testKeyDistributionAuditorSelection.cpp
+        test/teleport_tests/node/relays/KeyDistributionAuditComplaint.cpp
+        test/teleport_tests/node/relays/KeyDistributionAuditComplaint.h test/teleport_tests/node/relays/KeyDistributionAuditFailureMessage.cpp test/teleport_tests/node/relays/KeyDistributionAuditFailureMessage.h test/teleport_tests/node/relays/Task.cpp test/teleport_tests/node/relays/Task.h test/teleport_tests/node/relays/KeyQuarterLocation.cpp test/teleport_tests/node/relays/KeyQuarterLocation.h)
 
 add_executable(runNodeTests
         ${NODE_TEST_FILES}
@@ -713,7 +715,6 @@ add_executable(runNodeTests
         test/teleport_tests/node/testPointPrecomputation.cpp
         test/teleport_tests/node/testRelayPublicKeySet.cpp
         test/teleport_tests/node/testRelayMemoryCache.cpp
-        test/teleport_tests/node/testShortHashList.cpp
         test/teleport_tests/node/testTeleportNetworkNode.cpp
         test/teleport_tests/node/testCalendar.cpp
         test/teleport_tests/node/testCalend.cpp
@@ -724,7 +725,8 @@ add_executable(runNodeTests
         test/teleport_tests/node/testMinedCreditMessageValidator.cpp
         test/teleport_tests/node/testTransactionValidator.cpp
         test/teleport_tests/node/data_handler/LoadHashesIntoDataStore.h
-        test/teleport_tests/node/data_handler/LoadHashesIntoDataStore.cpp)
+        test/teleport_tests/node/data_handler/LoadHashesIntoDataStore.cpp
+        test/teleport_tests/node/testRelayTipHandler.cpp)
 
 add_executable(teleportd
         test/teleport_tests/teleport_data/TestData.h

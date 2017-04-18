@@ -1,6 +1,6 @@
 #include "Data.h"
-#include "relay_handler/RelayState.h"
-#include "relay_handler/RelayMemoryCache.h"
+#include "relays/RelayState.h"
+#include "relays/RelayMemoryCache.h"
 
 #include "log.h"
 #define LOG_CATEGORY "Data.cpp"

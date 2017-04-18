@@ -1,4 +1,4 @@
-#include <test/teleport_tests/node/relay_handler/RelayJoinMessage.h>
+#include <test/teleport_tests/node/relays/RelayJoinMessage.h>
 #include "gmock/gmock.h"
 #include "test/teleport_tests/node/calendar/Calendar.h"
 #include "TeleportNetworkNode.h"

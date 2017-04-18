@@ -1,9 +1,9 @@
 #include <src/base/util_time.h>
-#include <test/teleport_tests/node/relay_handler/RelayState.h>
+#include <test/teleport_tests/node/relays/RelayState.h>
 #include "gmock/gmock.h"
 #include "CreditSystem.h"
 #include "test/teleport_tests/node/credit_handler/MinedCreditMessageValidator.h"
-#include "test/teleport_tests/node/relay_handler/RelayMemoryCache.h"
+#include "test/teleport_tests/node/relays/RelayMemoryCache.h"
 
 
 #include "log.h"
@@ -418,7 +418,7 @@ public:
     {
         auto &relay = state.relays[0];
         auto key_distribution_message = relay.GenerateKeyDistributionMessage(*data, mined_credit_message_hash, state);
-        key_distribution_message.key_sixteenths_encrypted_for_key_quarter_holders[0] += 1;
+        key_distribution_message.encrypted_key_quarters[0].encrypted_key_twentyfourths[0] += 1;
         key_distribution_message.Sign(*data);
         data->StoreMessage(key_distribution_message);
         return key_distribution_message;
@@ -476,19 +476,6 @@ TEST_F(AMinedCreditMessageValidatorWithAnEncodedKeyDistributionMessage,
     ASSERT_THAT(ok, Eq(true));
 }
 
-TEST_F(AMinedCreditMessageValidatorWithAnEncodedKeyDistributionMessage,
-       ChecksThatTheKeyDistributionMessageIsMarkedAsAcceptedIfADurationWithoutResponseIsEncodedAfterIt)
-{
-    auto msg = MinedCreditMessageContainingAKeyDistributionMessageAndADurationWithoutResponseAfterIt();
-    credit_system->StoreMinedCreditMessage(msg);
-    bool ok = validator.CheckRelayStateHash(msg);
-    ASSERT_THAT(ok, Eq(true));
-
-    auto state = data->GetRelayState(msg.mined_credit.network_state.relay_state_hash);
-    ASSERT_THAT(state.relays[0].key_distribution_message_accepted, Eq(true));
-}
-
-
 class AMinedCreditMessageValidatorWithAnEncodedKeyDistributionComplaint :
         public AMinedCreditMessageValidatorWithAnEncodedKeyDistributionMessage
 {
@@ -517,8 +504,9 @@ public:
     KeyDistributionComplaint GenerateKeyDistributionComplaint(RelayState &state)
     {
         KeyDistributionMessage key_distribution_message;
-        key_distribution_message = msgdata[state.relays[0].hashes.key_distribution_message_hash]["key_distribution"];
-        complaint.Populate(key_distribution_message.GetHash160(), 0, 0, Data(*data, &state));
+        auto key_distribution_message_hash = state.relays[0].key_quarter_locations[0].message_hash;
+        key_distribution_message = msgdata[key_distribution_message_hash]["key_distribution"];
+        complaint.Populate(key_distribution_message.GetHash160(), 0, Data(*data, &state));
         complaint.Sign(Data(*data, &state));
         data->StoreMessage(complaint);
         return complaint;
@@ -531,7 +519,7 @@ public:
 };
 
 TEST_F(AMinedCreditMessageValidatorWithAnEncodedKeyDistributionComplaint,
-       ChecksThatAnObituaryHasBeenGeneratedForTheKeyDistributionMessageSender)
+       ChecksThatTheKeyDistributionMessageSenderHasBeenMarkedAsHavingMisbehaved)
 {
     auto msg = MinedCreditMessageWithAnEncodedKeyDistributionComplaint();
 
@@ -540,7 +528,7 @@ TEST_F(AMinedCreditMessageValidatorWithAnEncodedKeyDistributionComplaint,
     ASSERT_THAT(ok, Eq(true));
 
     auto state = data->GetRelayState(msg.mined_credit.network_state.relay_state_hash);
-    ASSERT_THAT(state.relays[0].hashes.obituary_hash, Ne(0));
+    ASSERT_THAT(state.relays[0].status, Ne(MISBEHAVED));
 }
 
 
@@ -561,8 +549,8 @@ public:
         data->relay_state = &state;
 
         DurationWithoutResponseFromRelay duration;
-        duration.message_hash = state.relays[0].hashes.obituary_hash;
-        duration.relay_number = state.relays[0].holders.key_quarter_holders[0];
+        duration.message_hash = Death(state.relays[0].number);
+        duration.relay_number = state.relays[0].key_quarter_holders[0];
 
         data->StoreMessage(duration);
         state.ProcessDurationWithoutResponseFromRelay(duration, *data);
@@ -578,7 +566,7 @@ public:
 };
 
 TEST_F(AMinedCreditMessageValidatorWithAnEncodedDurationWithoutResponseFromARelay,
-       ChecksThatAnObituaryHasBeenGeneratedForTheRelay)
+       ChecksThatTheRelayIsMarkedAsNotResponding)
 {
     auto msg = MinedCreditMessageWithAnEncodedDurationAfterAKeyDistributionComplaint();
 
@@ -589,7 +577,7 @@ TEST_F(AMinedCreditMessageValidatorWithAnEncodedDurationWithoutResponseFromARela
     auto state = data->GetRelayState(msg.mined_credit.network_state.relay_state_hash);
     data->relay_state = &state;
     auto quarter_holder = state.relays[0].QuarterHolders(*data)[0];
-    ASSERT_THAT(quarter_holder->hashes.obituary_hash, Ne(0));
+    ASSERT_THAT(quarter_holder->status, Eq(NOT_RESPONDING));
 }
 
 class AMinedCreditMessageValidatorWithBothAnEncodedResponseAndDurationWithoutResponse :
@@ -609,10 +597,9 @@ public:
         data->relay_state = &state;
 
         SecretRecoveryMessage recovery_message;
-        recovery_message.obituary_hash = state.relays[0].hashes.obituary_hash;
         recovery_message.dead_relay_number = state.relays[0].number;
-        recovery_message.quarter_holder_number = state.relays[0].holders.key_quarter_holders[0];
-        recovery_message.successor_number = state.relays[0].SuccessorNumber(*data);
+        recovery_message.quarter_holder_number = state.relays[0].key_quarter_holders[0];
+        recovery_message.successor_number = state.relays[0].SuccessorNumberFromLatestSuccessionAttempt(*data);
         recovery_message.PopulateSecrets(*data);
         recovery_message.Sign(*data);
         data->StoreMessage(recovery_message);
@@ -621,8 +608,8 @@ public:
         state.ProcessSecretRecoveryMessage(recovery_message);
 
         DurationWithoutResponseFromRelay duration;
-        duration.message_hash = state.relays[0].hashes.obituary_hash;
-        duration.relay_number = state.relays[0].holders.key_quarter_holders[0];
+        duration.message_hash = Death(state.relays[0].number);
+        duration.relay_number = state.relays[0].key_quarter_holders[0];
 
         data->StoreMessage(duration);
         state.ProcessDurationWithoutResponseFromRelay(duration, *data);

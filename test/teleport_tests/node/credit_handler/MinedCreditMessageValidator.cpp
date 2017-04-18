@@ -1,6 +1,6 @@
 #include <src/base/util_time.h>
-#include <test/teleport_tests/node/relay_handler/RelayState.h>
-#include <test/teleport_tests/node/relay_handler/RelayMessageHandler.h>
+#include <test/teleport_tests/node/relays/RelayState.h>
+#include <test/teleport_tests/node/relays/RelayMessageHandler.h>
 #include "MinedCreditMessageValidator.h"
 
 #include "log.h"

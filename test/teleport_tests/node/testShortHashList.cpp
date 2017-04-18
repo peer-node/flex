@@ -70,6 +70,24 @@ TEST_F(AShortHashListWithCollisions, RecoversFullHashes)
     ASSERT_THAT(hash_list.full_hashes[1], Eq(2));
 }
 
+TEST_F(AShortHashListWithCollisions, RecoversFullHashesInTheCorrectOrder)
+{
+    StoreHash(60);
+    StoreHash(60 + (1ULL << 35));
+
+    hash_list.full_hashes.push_back(60 + (1ULL << 35));
+    hash_list.full_hashes.push_back(60);
+
+    hash_list.GenerateShortHashes();
+    hash_list.full_hashes.resize(0);
+
+    ASSERT_TRUE(hash_list.RecoverFullHashes(msgdata));
+    ASSERT_THAT(hash_list.full_hashes[0], Eq(1));
+    ASSERT_THAT(hash_list.full_hashes[1], Eq(2));
+    ASSERT_THAT(hash_list.full_hashes[2], Eq(60 + (1ULL << 35)));
+    ASSERT_THAT(hash_list.full_hashes[3], Eq(60));
+}
+
 TEST_F(AShortHashListWithCollisions, DeterminesTheNumberOfCombinationsToTry)
 {
     hash_list.GenerateShortHashes();

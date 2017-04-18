@@ -1,6 +1,6 @@
 #include "gmock/gmock.h"
-#include "test/teleport_tests/node/relay_handler/RelayPublicKeySet.h"
-#include "test/teleport_tests/node/relay_handler/Relay.h"
+#include "test/teleport_tests/node/relays/RelayPublicKeySet.h"
+#include "test/teleport_tests/node/relays/Relay.h"
 
 using namespace ::testing;
 using namespace std;
@@ -19,22 +19,22 @@ public:
 
     virtual void SetUp()
     {
-        for (uint32_t i = 0; i < 16; i++)
+        for (uint32_t i = 0; i < 24; i++)
         {
-            CBigNum private_key_sixteenth;
-            private_key_sixteenth.Randomize(Secp256k1Point::Modulus());
-            Point public_key_sixteenth(private_key_sixteenth);
-            keydata[public_key_sixteenth]["privkey"] = private_key_sixteenth;
+            CBigNum private_key_twentyfourth;
+            private_key_twentyfourth.Randomize(Secp256k1Point::Modulus());
+            Point public_key_twentyfourth(private_key_twentyfourth);
+            keydata[public_key_twentyfourth]["privkey"] = private_key_twentyfourth;
         }
         secret_message.Randomize(Secp256k1Point::Modulus());
     }
 };
 
-TEST_F(ARelayPublicKeySet, GeneratesSixteenVectorsWithFourKeyPointsEach)
+TEST_F(ARelayPublicKeySet, GeneratesTwentyFourVectorsWithFourKeyPointsEach)
 {
     public_key_set.Populate(keydata);
 
-    ASSERT_THAT(public_key_set.key_points.size(), Eq(16));
+    ASSERT_THAT(public_key_set.key_points.size(), Eq(24));
     for (auto row_of_key_points : public_key_set.key_points)
         ASSERT_THAT(row_of_key_points.size(), Eq(4));
 }

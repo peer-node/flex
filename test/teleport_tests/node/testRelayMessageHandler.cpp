@@ -2,7 +2,7 @@
 #include <test/teleport_tests/node/credit_handler/MinedCreditMessageBuilder.h>
 #include "gmock/gmock.h"
 #include "TestPeer.h"
-#include "test/teleport_tests/node/relay_handler/RelayMessageHandler.h"
+#include "test/teleport_tests/node/relays/RelayMessageHandler.h"
 
 using namespace ::testing;
 using namespace std;
@@ -10,8 +10,8 @@ using namespace std;
 #include "log.h"
 #define LOG_CATEGORY "test"
 
-
 #define TEST_START_TIME 1000000000
+
 
 class ARelayMessageHandler : public Test
 {
@@ -82,10 +82,7 @@ public:
     bool RelayIsDeadWithReason(uint64_t relay_number, int reason)
     {
         auto relay = relay_state->GetRelayByNumber(relay_number);
-        if (relay == NULL or relay->hashes.obituary_hash == 0)
-            return false;
-        Obituary obituary = data->GetMessage(relay->hashes.obituary_hash);
-        return obituary.reason_for_leaving == reason;
+        return relay->status == reason;
     }
 };
 
@@ -127,7 +124,6 @@ RelayJoinMessage ARelayMessageHandler::ARelayJoinMessageWithAValidSignature()
     RelayJoinMessage relay_join_message;
     relay_join_message.mined_credit_message_hash = msg.GetHash160();
     relay_join_message.PopulatePublicKeySet(keydata);
-    relay_join_message.PopulatePrivateKeySixteenths(keydata);
     relay_join_message.Sign(*data);
     return relay_join_message;
 }
@@ -174,15 +170,6 @@ TEST_F(ARelayMessageHandler, RejectsARelayJoinMessageWhoseMinedCreditMessageHash
     relay_message_handler->HandleRelayJoinMessage(second_join);
 
     ASSERT_TRUE(IsRejected(second_join));
-}
-
-TEST_F(ARelayMessageHandler, RejectsARelayJoinMessageWithTheWrongNumberOfComponents)
-{
-    auto join = ARelayJoinMessageWithAValidSignature();
-    join.encrypted_private_key_sixteenths.pop_back();
-    join.Sign(*data);
-    relay_message_handler->HandleRelayJoinMessage(join);
-    ASSERT_TRUE(IsRejected(join));
 }
 
 TEST_F(ARelayMessageHandler, RejectsARelayJoinMessageWithABadSignature)
@@ -238,7 +225,8 @@ TEST_F(ARelayMessageHandler, ThrowsAnExceptionIfAskedToBroadcastWhileInBlockVali
     static MemoryDataStore reference_msgdata, reference_keydata, reference_creditdata,                      \
            reference_succession_scheduledata, reference_admission_scheduledata;                             \
     static RelayState reference_relay_state;                                                                \
-    static std::vector<uint160> reference_builder_accepted_messages;
+    static std::vector<uint160> reference_builder_accepted_messages;\
+    static std::set<uint64_t> reference_dead_relays;
 
 #define SAVE_CACHED_DATA                                                                                    \
     reference_msgdata = msgdata;                                                                            \
@@ -247,7 +235,8 @@ TEST_F(ARelayMessageHandler, ThrowsAnExceptionIfAskedToBroadcastWhileInBlockVali
     reference_relay_state = *relay_state;                                                                   \
     reference_succession_scheduledata = relay_message_handler->succession_handler.scheduler.scheduledata;   \
     reference_admission_scheduledata = relay_message_handler->admission_handler.scheduler.scheduledata;     \
-    reference_builder_accepted_messages = builder->accepted_messages;
+    reference_builder_accepted_messages = builder->accepted_messages;\
+    reference_dead_relays = relay_message_handler->succession_handler.dead_relays;
 
 #define LOAD_CACHED_DATA                                                                                     \
     msgdata = reference_msgdata;                                                                             \
@@ -256,7 +245,8 @@ TEST_F(ARelayMessageHandler, ThrowsAnExceptionIfAskedToBroadcastWhileInBlockVali
     *relay_state = reference_relay_state;                                                                    \
     relay_message_handler->succession_handler.scheduler.scheduledata = reference_succession_scheduledata;    \
     relay_message_handler->admission_handler.scheduler.scheduledata = reference_admission_scheduledata;      \
-    builder->accepted_messages = reference_builder_accepted_messages;
+    builder->accepted_messages = reference_builder_accepted_messages;\
+    relay_message_handler->succession_handler.dead_relays = reference_dead_relays;
 
 
 class ARelayMessageHandlerWithAMinedCreditMessageBuilder : public ARelayMessageHandler
@@ -279,11 +269,20 @@ public:
 };
 
 TEST_F(ARelayMessageHandlerWithAMinedCreditMessageBuilder,
-       SendsRelayJoinMessagesToTheMinedCreditMessageBuilderWhenTheyAreAcceptedInLiveMode)
+       SendsRelayJoinMessagesToTheMinedCreditMessageBuilderForEncodingInTheMainChainWhenTheyAreAcceptedInLiveMode)
 {
     RelayJoinMessage join_message = ARelayJoinMessageWithAValidSignature();
     relay_message_handler->HandleRelayJoinMessage(join_message);
     ASSERT_TRUE(VectorContainsEntry(builder->accepted_messages, join_message.GetHash160()));
+}
+
+TEST_F(ARelayMessageHandlerWithAMinedCreditMessageBuilder,
+       AddsMessagesToTheUnencodedObservedHistoryWhenTheyAreAcceptedInLiveMode)
+{
+    RelayJoinMessage join_message = ARelayJoinMessageWithAValidSignature();
+    relay_message_handler->HandleRelayJoinMessage(join_message);
+    ASSERT_TRUE(VectorContainsEntry(relay_message_handler->tip_handler.unencoded_observed_history,
+                                    join_message.GetHash160()));
 }
 
 TEST_F(ARelayMessageHandlerWithAMinedCreditMessageBuilder,
@@ -296,7 +295,91 @@ TEST_F(ARelayMessageHandlerWithAMinedCreditMessageBuilder,
 }
 
 
-class ARelayMessageHandlerWhichHasAccepted37Relays : public ARelayMessageHandlerWithAMinedCreditMessageBuilder
+class ARelayMessageHandlerWithAMinedCreditMessage : public ARelayMessageHandlerWithAMinedCreditMessageBuilder
+{
+public:
+    virtual void SetUp()
+    {
+        ARelayMessageHandlerWithAMinedCreditMessageBuilder::SetUp();
+        DECLARE_CACHED_DATA;
+
+        if (reference_relay_state.relays.size() == 0)
+        {
+            SAVE_CACHED_DATA;
+        }
+        else
+        {
+            LOAD_CACHED_DATA;
+        }
+    }
+
+    MinedCreditMessage MinedCreditMessageWithARelayJoinMessage()
+    {
+        MinedCreditMessage msg, prev_msg = MinedCreditMessageInTheMainChain();
+        credit_system->AddMinedCreditMessageAndPredecessorsToMainChain(prev_msg.GetHash160());
+        RelayJoinMessage join_message = Relay().GenerateJoinMessage(keydata, prev_msg.GetHash160());
+        join_message.Sign(*data);
+        data->StoreMessage(join_message);
+        msg.hash_list.full_hashes.push_back(join_message.GetHash160());
+        msg.hash_list.GenerateShortHashes();
+        credit_system->StoreMinedCreditMessage(msg);
+        return msg;
+    }
+
+    RelayJoinMessage JoinMessageReferencingAMinedCreditMessageInTheMainChain()
+    {
+        MinedCreditMessage prev_msg = MinedCreditMessageInTheMainChain();
+        credit_system->AddMinedCreditMessageAndPredecessorsToMainChain(prev_msg.GetHash160());
+        RelayJoinMessage join_message = Relay().GenerateJoinMessage(keydata, prev_msg.GetHash160());
+        join_message.Sign(*data);
+        data->StoreMessage(join_message);
+        return join_message;
+    }
+
+    MinedCreditMessage MinedCreditMessageInTheMainChain()
+    {
+        MinedCreditMessage msg;
+        msg.mined_credit.network_state.previous_total_work = 100;
+        msg.mined_credit.keydata = Point(SECP256K1, 2).getvch();
+        keydata[Point(SECP256K1, 2)]["privkey"] = CBigNum(2);
+        credit_system->StoreMinedCreditMessage(msg);
+        return msg;
+    }
+
+    virtual void TearDown()
+    {
+        SetMockTimeMicros(0);
+        ARelayMessageHandlerWithAMinedCreditMessageBuilder::TearDown();
+    }
+};
+
+TEST_F(ARelayMessageHandlerWithAMinedCreditMessage,
+       UpdatesTheLatestMinedCreditMessageHashWhenProcessingTheMinedCreditMessageAsANewTip)
+{
+    auto msg = MinedCreditMessageWithARelayJoinMessage();
+    relay_message_handler->HandleNewTip(msg);
+    ASSERT_THAT(relay_state->latest_mined_credit_message_hash, Eq(msg.GetHash160()));
+}
+
+TEST_F(ARelayMessageHandlerWithAMinedCreditMessage,
+       AddsARelayIfTheresAJoinMessageEncodedInTheNewTip)
+{
+    auto msg = MinedCreditMessageWithARelayJoinMessage();
+    relay_message_handler->HandleNewTip(msg);
+    ASSERT_THAT(relay_state->relays.size(), Eq(1));
+}
+
+TEST_F(ARelayMessageHandlerWithAMinedCreditMessage,
+       DoesntAddARelayIfTheJoinMessageWasAlreadyAccepted)
+{
+    auto msg = MinedCreditMessageWithARelayJoinMessage();
+    relay_message_handler->HandleNewTip(msg);
+    ASSERT_THAT(relay_state->relays.size(), Eq(1));
+}
+
+
+
+class ARelayMessageHandlerWhichHasAccepted53Relays : public ARelayMessageHandlerWithAMinedCreditMessageBuilder
 {
 public:
     virtual void SetUp()
@@ -317,7 +400,7 @@ public:
 
     void DoFirstSetUp()
     {
-        for (uint32_t i = 1; i <= 37; i++)
+        for (uint32_t i = 1; i <= 53; i++)
             AddARelay();
     }
 
@@ -353,13 +436,13 @@ public:
     }
 };
 
-TEST_F(ARelayMessageHandlerWhichHasAccepted37Relays, Has37Relays)
+TEST_F(ARelayMessageHandlerWhichHasAccepted53Relays, Has53Relays)
 {
-    ASSERT_THAT(relay_message_handler->relay_state.relays.size(), Eq(37));
+    ASSERT_THAT(relay_message_handler->relay_state.relays.size(), Eq(53));
 }
 
 
-class ARelayMessageHandlerWithAKeyDistributionMessage : public ARelayMessageHandlerWhichHasAccepted37Relays
+class ARelayMessageHandlerWithAKeyDistributionMessage : public ARelayMessageHandlerWhichHasAccepted53Relays
 {
 public:
     KeyDistributionMessage key_distribution_message;
@@ -367,7 +450,7 @@ public:
 
     virtual void SetUp()
     {
-        ARelayMessageHandlerWhichHasAccepted37Relays::SetUp();
+        ARelayMessageHandlerWhichHasAccepted53Relays::SetUp();
 
         relay = &relay_message_handler->relay_state.relays[30];
 
@@ -418,7 +501,7 @@ public:
     uint64_t NumberOfARelayWhoSharedAQuarterKeyWithChosenRelay()
     {
         for (auto &existing_relay : relay_message_handler->relay_state.relays)
-            if (VectorContainsEntry(existing_relay.holders.key_quarter_holders, relay->number))
+            if (ArrayContainsEntry(existing_relay.key_quarter_holders, relay->number))
                 return existing_relay.number;
         return 0;
     }
@@ -440,15 +523,14 @@ public:
 
     void AssignQuarterHoldersToRemainingRelays()
     {
-        uint160 hash = 1;
         for (auto &existing_relay : relay_message_handler->relay_state.relays)
-            if (existing_relay.holders.key_quarter_holders.size() == 0)
-                relay_message_handler->relay_state.AssignKeyPartHoldersToRelay(existing_relay, hash++);
+            if (not existing_relay.HasFourKeyQuarterHolders())
+                relay_message_handler->relay_state.AssignKeyQuarterHoldersToRelay(existing_relay);
     }
 
     virtual void TearDown()
     {
-        ARelayMessageHandlerWhichHasAccepted37Relays::TearDown();
+        ARelayMessageHandlerWhichHasAccepted53Relays::TearDown();
     }
 };
 
@@ -469,16 +551,6 @@ TEST_F(ARelayMessageHandlerWithAKeyDistributionMessage, RejectsAKeyDistributionM
     ASSERT_TRUE(IsRejected(key_distribution_message));
 }
 
-TEST_F(ARelayMessageHandlerWithAKeyDistributionMessage, RejectsAKeyDistributionMessageWithTheWrongNumbersOfSecrets)
-{
-    key_distribution_message.key_sixteenths_encrypted_for_first_set_of_key_sixteenth_holders.push_back(1);
-    key_distribution_message.Sign(*data);
-
-    relay_message_handler->HandleKeyDistributionMessage(key_distribution_message);
-
-    ASSERT_TRUE(IsRejected(key_distribution_message));
-}
-
 TEST_F(ARelayMessageHandlerWithAKeyDistributionMessage,
        SchedulesATaskToEncodeADurationWithoutResponseAfterReceivingAValidKeyDistributionMessage)
 {
@@ -489,7 +561,7 @@ TEST_F(ARelayMessageHandlerWithAKeyDistributionMessage,
 }
 
 TEST_F(ARelayMessageHandlerWithAKeyDistributionMessage,
-       EncodesAValidKeyDistributionMessage)
+       AcceptsAValidKeyDistributionMessageForEncoding)
 {
     relay_message_handler->HandleKeyDistributionMessage(key_distribution_message);
     ASSERT_TRUE(VectorContainsEntry(builder->accepted_messages, key_distribution_message.GetHash160()));
@@ -509,24 +581,7 @@ TEST_F(ARelayMessageHandlerWithAKeyDistributionMessage,
        SendsAKeyDistributionComplaintInResponseToABadEncryptedKeyQuarter)
 {
     relay_state->remove_dead_relays = false;
-    key_distribution_message.key_sixteenths_encrypted_for_key_quarter_holders[1] += 1;
-    key_distribution_message.Sign(*data);
-
-    relay_message_handler->HandleMessage(GetDataStream(key_distribution_message), &peer);
-
-    vector<uint160> complaints = relay->hashes.key_distribution_complaint_hashes;
-
-    ASSERT_THAT(complaints.size(), Eq(1));
-    KeyDistributionComplaint complaint = data->GetMessage(complaints[0]);
-    ASSERT_TRUE(peer.HasBeenInformedAbout("relay", "key_distribution_complaint", complaint));
-}
-
-TEST_F(ARelayMessageHandlerWithAKeyDistributionMessage,
-       SendsASingleKeyDistributionComplaintInResponseToBadEncryptedKeySixteenths)
-{
-    relay_message_handler->succession_handler.send_secret_recovery_messages = false;
-    key_distribution_message.key_sixteenths_encrypted_for_first_set_of_key_sixteenth_holders[1] += 1;
-    key_distribution_message.key_sixteenths_encrypted_for_second_set_of_key_sixteenth_holders[1] += 1;
+    key_distribution_message.encrypted_key_quarters[0].encrypted_key_twentyfourths[1] += 1;
     key_distribution_message.Sign(*data);
 
     relay_message_handler->HandleMessage(GetDataStream(key_distribution_message), &peer);
@@ -557,7 +612,7 @@ TEST_F(ARelayMessageHandlerWithAKeyDistributionMessage,
        DoesntSendAKeyDistributionComplaintInBlockValidationMode)
 {
     relay_message_handler->mode = BLOCK_VALIDATION;
-    key_distribution_message.key_sixteenths_encrypted_for_key_quarter_holders[1] += 1;
+    key_distribution_message.encrypted_key_quarters[0].encrypted_key_twentyfourths[1] += 1;
     key_distribution_message.Sign(*data);
     relay_message_handler->HandleMessage(GetDataStream(key_distribution_message), &peer);
 
@@ -596,24 +651,24 @@ public:
         ARelayMessageHandlerWithAKeyDistributionMessage::TearDown();
     }
 
-    void DeletePrivateKeySixteenthsSharedWithGivenRelay()
+    void DeletePrivateKeyTwentyFourthsSharedWithGivenRelay()
     {
         uint32_t quarter_holder_position = PositionOfGivenRelayAsAQuarterHolder();
-        for (uint32_t sixteenth_position = 4 * quarter_holder_position;
-             sixteenth_position < 4 + 4 * quarter_holder_position; sixteenth_position++)
-            keydata.Delete(key_sharer->PublicKeySixteenths()[sixteenth_position]);
+        for (uint32_t twentyfourth_position = 4 * quarter_holder_position;
+             twentyfourth_position < 4 + 4 * quarter_holder_position; twentyfourth_position++)
+            keydata.Delete(key_sharer->PublicKeyTwentyFourths()[twentyfourth_position]);
     }
 
     uint32_t PositionOfGivenRelayAsAQuarterHolder()
     {
-        return (uint32_t) PositionOfEntryInVector(relay->number, key_sharer->holders.key_quarter_holders);
+        return (uint32_t) PositionOfEntryInArray(relay->number, key_sharer->key_quarter_holders);
     }
 };
 
 TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage, RejectsAKeyDistributionComplaintWithABadSignature)
 {
     KeyDistributionComplaint complaint;
-    complaint.Populate(key_distribution_message.GetHash160(), 1, 1, *data);
+    complaint.Populate(key_distribution_message.GetHash160(), 1, *data);
     complaint.Sign(*data);
     complaint.signature.signature += 1;
     relay_message_handler->HandleMessage(GetDataStream(complaint), &peer);
@@ -625,7 +680,7 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage,
        RejectsAKeyDistributionComplaintWithAnIncorrectRecipientPrivateKey)
 {
     KeyDistributionComplaint complaint;
-    complaint.Populate(key_distribution_message.GetHash160(), 1, 1, *data);
+    complaint.Populate(key_distribution_message.GetHash160(), 1, *data);
     complaint.recipient_private_key += 1;
     complaint.Sign(*data);
     relay_message_handler->HandleMessage(GetDataStream(complaint), &peer);
@@ -636,7 +691,7 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage,
 TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage, RejectsAKeyDistributionComplaintAboutAGoodSecret)
 {
     KeyDistributionComplaint complaint;
-    complaint.Populate(key_distribution_message.GetHash160(), 1, 1, *data);
+    complaint.Populate(key_distribution_message.GetHash160(), 1, *data);
     complaint.Sign(*data);
 
     bool complaint_is_valid = complaint.IsValid(*data);
@@ -647,15 +702,8 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage, RejectsAKey
     ASSERT_TRUE(IsRejected(complaint));
 }
 
-TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage, MarksTheMessageAsAcceptedIfNoComplaintsAreReceived)
-{
-    SetMockTimeMicros(GetTimeMicros() + RESPONSE_WAIT_TIME);
-    relay_message_handler->admission_handler.scheduler.DoTasksScheduledForExecutionBeforeNow();
-    ASSERT_THAT(relay->key_distribution_message_accepted, Eq(true));
-}
-
 TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage,
-       EncodesTheDurationWithoutResponseIfNoComplaintsAreReceived)
+       AcceptsTheDurationWithoutResponseForEncodingIfNoComplaintsAreReceived)
 {
     SetMockTimeMicros(GetTimeMicros() + RESPONSE_WAIT_TIME);
     relay_message_handler->admission_handler.scheduler.DoTasksScheduledForExecutionBeforeNow();
@@ -665,90 +713,7 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage,
 }
 
 TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage,
-       DoesntMarkTheMessageAsAcceptedIfComplaintsAreReceived)
-{
-    relay->hashes.key_distribution_complaint_hashes = vector<uint160>{5};
-    SetMockTimeMicros(GetTimeMicros() + RESPONSE_WAIT_TIME);
-    relay_message_handler->admission_handler.scheduler.DoTasksScheduledForExecutionBeforeNow();
-    ASSERT_THAT(relay->key_distribution_message_accepted, Eq(false));
-}
-
-TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage,
-       SchedulesACheckForGoodbyeComplaintsWhenProcessingAGoodByeMessage)
-{
-    GoodbyeMessage goodbye_message = relay->GenerateGoodbyeMessage(*data);
-    relay_message_handler->Handle(goodbye_message, &peer);
-    ASSERT_THAT(relay->hashes.goodbye_message_hash, Ne(0));
-
-    ASSERT_TRUE(relay_message_handler->succession_handler.scheduler.TaskIsScheduledForTime("goodbye",
-                                                                        relay->hashes.goodbye_message_hash,
-                                                                        TEST_START_TIME + RESPONSE_WAIT_TIME));
-}
-
-TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage,
-       DoesntScheduleACheckForGoodbyeComplaintsInBlockValidationMode)
-{
-    GoodbyeMessage goodbye_message = relay->GenerateGoodbyeMessage(*data);
-    relay_message_handler->mode = BLOCK_VALIDATION;
-    relay_message_handler->Handle(goodbye_message, &peer);
-    ASSERT_THAT(relay->hashes.goodbye_message_hash, Ne(0));
-
-    ASSERT_FALSE(relay_message_handler->succession_handler.scheduler.TaskIsScheduledForTime(
-                 "goodbye", relay->hashes.goodbye_message_hash, TEST_START_TIME + RESPONSE_WAIT_TIME));
-}
-
-TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage,
-       RejectsAGoodbyeMessageWithTheWrongNumberOfComponents)
-{
-    GoodbyeMessage goodbye_message = relay->GenerateGoodbyeMessage(*data);
-    goodbye_message.key_quarter_positions.push_back(0);
-    goodbye_message.Sign(*data);
-
-    relay_message_handler->Handle(goodbye_message, &peer);
-    ASSERT_TRUE(IsRejected(goodbye_message));
-}
-
-TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage,
-       RejectsAGoodbyeMessageWithTheWrongSuccessor)
-{
-    GoodbyeMessage goodbye_message = relay->GenerateGoodbyeMessage(*data);
-    goodbye_message.successor_number += 1;
-    goodbye_message.Sign(*data);
-
-    relay_message_handler->Handle(goodbye_message, &peer);
-    ASSERT_TRUE(IsRejected(goodbye_message));
-}
-
-TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage,
-       RejectsAGoodbyeMessageWithTheWrongKeyQuarterSharers)
-{
-    GoodbyeMessage goodbye_message = relay->GenerateGoodbyeMessage(*data);
-    goodbye_message.key_quarter_sharers[0] += 1;
-    goodbye_message.Sign(*data);
-
-    relay_message_handler->Handle(goodbye_message, &peer);
-    ASSERT_TRUE(IsRejected(goodbye_message));
-}
-
-TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage,
-       RecoversKeyQuartersHeldByTheExitingRelayWhenProcessingAGoodbyeMessage)
-{
-    GoodbyeMessage goodbye_message = relay->GenerateGoodbyeMessage(*data);
-    DeletePrivateKeySixteenthsSharedWithGivenRelay();
-    relay_message_handler->Handle(goodbye_message, &peer);
-
-    uint32_t quarter_holder_position = PositionOfGivenRelayAsAQuarterHolder();
-
-    for (uint32_t sixteenth_position = 4 * quarter_holder_position;
-         sixteenth_position < 4 + 4 * quarter_holder_position; sixteenth_position++)
-    {
-        auto public_key_sixteenth = key_sharer->PublicKeySixteenths()[sixteenth_position];
-        ASSERT_TRUE(keydata[public_key_sixteenth].HasProperty("privkey"));
-    }
-}
-
-TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage,
-       EncodesAValidGoodbyeMessageWhenProcessingIt)
+       AcceptsAValidGoodbyeMessageForEncodingWhenProcessingIt)
 {
     GoodbyeMessage goodbye_message = relay->GenerateGoodbyeMessage(*data);
     relay_message_handler->Handle(goodbye_message, &peer);
@@ -786,373 +751,11 @@ public:
         }
     }
 
-    Relay *Successor()
-    {
-        return relay_state->GetRelayByNumber(goodbye_message.successor_number);
-    }
-
     virtual void TearDown()
     {
         ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage::TearDown();
     }
 };
-
-TEST_F(ARelayMessageHandlerWithAValidGoodbyeMessage,
-       SendsASuccessionCompletedMessageIfTheSecretsAreSuccessfullyRecovered)
-{
-    auto succession_completed_message = Successor()->GenerateSuccessionCompletedMessage(goodbye_message, *data);
-    relay_message_handler->Handle(goodbye_message, &peer);
-    ASSERT_TRUE(peer.HasBeenInformedAbout("relay", "succession_completed", succession_completed_message));
-}
-
-TEST_F(ARelayMessageHandlerWithAValidGoodbyeMessage,
-       DoesntSendASuccessionCompletedMessageInBlockValidationMode)
-{
-    relay_message_handler->mode = BLOCK_VALIDATION;
-    auto succession_completed_message = Successor()->GenerateSuccessionCompletedMessage(goodbye_message, *data);
-    relay_message_handler->Handle(goodbye_message, &peer);
-    ASSERT_FALSE(peer.HasBeenInformedAbout("relay", "succession_completed", succession_completed_message));
-}
-
-TEST_F(ARelayMessageHandlerWithAValidGoodbyeMessage,
-       RemovesTheDeadRelayWhenProcessingTheSuccessionCompletedMessage)
-{
-    relay_message_handler->Handle(goodbye_message, &peer);
-    ASSERT_FALSE(relay_state->ContainsRelayWithNumber(goodbye_message.dead_relay_number));
-}
-
-TEST_F(ARelayMessageHandlerWithAValidGoodbyeMessage,
-       RecordsTheSuccessionCompletedMessageInTheSuccessorsMessageHashData)
-{
-    relay_message_handler->Handle(goodbye_message, &peer);
-    auto succession_completed_message = Successor()->GenerateSuccessionCompletedMessage(goodbye_message, *data);
-    ASSERT_TRUE(VectorContainsEntry(Successor()->hashes.succession_completed_message_hashes,
-                                    succession_completed_message.GetHash160()));
-}
-
-TEST_F(ARelayMessageHandlerWithAValidGoodbyeMessage,
-       DoesntEncodeADurationWithoutResponseIfASuccessionCompletedMessageIsReceived)
-{
-    relay_message_handler->Handle(goodbye_message, &peer);
-    SetMockTimeMicros(GetTimeMicros() + RESPONSE_WAIT_TIME);
-    relay_message_handler->succession_handler.scheduler.DoTasksScheduledForExecutionBeforeNow();
-    DurationWithoutResponse duration = GetDurationWithoutResponseAfter(goodbye_message.GetHash160());
-    ASSERT_FALSE(VectorContainsEntry(builder->accepted_messages, duration.GetHash160()));
-}
-
-
-class ARelayMessageHandlerWhichHasProcessedAValidGoodbyeMessageAndNoSuccessionCompletedMessage :
-        public ARelayMessageHandlerWithAValidGoodbyeMessage
-{
-public:
-    virtual void SetUp()
-    {
-        ARelayMessageHandlerWithAValidGoodbyeMessage::SetUp();
-        DoSetUpUsingCache();
-    }
-
-    void DoSetUpUsingCache()
-    {
-        DECLARE_CACHED_DATA;
-        if (reference_relay_state.relays.size() == 0)
-        {
-            relay_message_handler->succession_handler.send_succession_completed_messages = false;
-            relay_message_handler->Handle(goodbye_message, &peer);
-            SAVE_CACHED_DATA;
-        }
-        else
-        { LOAD_CACHED_DATA; }
-    }
-
-    virtual void TearDown()
-    {
-        ARelayMessageHandlerWithAValidGoodbyeMessage::TearDown();
-    }
-};
-
-TEST_F(ARelayMessageHandlerWhichHasProcessedAValidGoodbyeMessageAndNoSuccessionCompletedMessage,
-       MarksTheSuccessorAsNotRespondingIfNoResponseIsReceived)
-{
-    SetMockTimeMicros(GetTimeMicros() + RESPONSE_WAIT_TIME);
-    relay_message_handler->succession_handler.scheduler.DoTasksScheduledForExecutionBeforeNow();
-    ASSERT_TRUE(RelayIsDeadWithReason(goodbye_message.successor_number, NOT_RESPONDING));
-}
-
-TEST_F(ARelayMessageHandlerWhichHasProcessedAValidGoodbyeMessageAndNoSuccessionCompletedMessage,
-       EncodesTheDurationWithoutResponseIfNoResponseIsReceived)
-{
-    SetMockTimeMicros(GetTimeMicros() + RESPONSE_WAIT_TIME);
-    relay_message_handler->succession_handler.scheduler.DoTasksScheduledForExecutionBeforeNow();
-    DurationWithoutResponse duration;
-    duration.message_hash = goodbye_message.GetHash160();
-    ASSERT_TRUE(VectorContainsEntry(builder->accepted_messages, duration.GetHash160()));
-}
-
-TEST_F(ARelayMessageHandlerWhichHasProcessedAValidGoodbyeMessageAndNoSuccessionCompletedMessage,
-       RejectsASuccessionCompletedMessageWithTheWrongDeadRelayNumber)
-{
-    auto succession_completed_message = Successor()->GenerateSuccessionCompletedMessage(goodbye_message, *data);
-    succession_completed_message.dead_relay_number += 1;
-    succession_completed_message.Sign(*data);
-    relay_message_handler->Handle(succession_completed_message, &peer);
-    ASSERT_TRUE(IsRejected(succession_completed_message));
-}
-
-TEST_F(ARelayMessageHandlerWhichHasProcessedAValidGoodbyeMessageAndNoSuccessionCompletedMessage,
-       RejectsASuccessionCompletedMessageWithTheWrongSuccessorNumber)
-{
-    auto succession_completed_message = Successor()->GenerateSuccessionCompletedMessage(goodbye_message, *data);
-    succession_completed_message.successor_number += 1;
-    succession_completed_message.Sign(*data);
-    relay_message_handler->Handle(succession_completed_message, &peer);
-    ASSERT_TRUE(IsRejected(succession_completed_message));
-}
-
-TEST_F(ARelayMessageHandlerWhichHasProcessedAValidGoodbyeMessageAndNoSuccessionCompletedMessage,
-       RejectsAGoodbyeComplaintWithAnImpossibleKeySharerPosition)
-{
-    GoodbyeComplaint complaint;
-    complaint.goodbye_message_hash = goodbye_message.GetHash160();
-    complaint.key_sharer_position = 17;
-    complaint.Sign(*data);
-    relay_message_handler->Handle(complaint, &peer);
-    ASSERT_TRUE(IsRejected(complaint));
-}
-
-TEST_F(ARelayMessageHandlerWhichHasProcessedAValidGoodbyeMessageAndNoSuccessionCompletedMessage,
-       RejectsAGoodbyeComplaintWithAnImpossibleEncryptedSixteenthPosition)
-{
-    GoodbyeComplaint complaint;
-    complaint.goodbye_message_hash = goodbye_message.GetHash160();
-    complaint.position_of_bad_encrypted_key_sixteenth = 5;
-    complaint.Sign(*data);
-    relay_message_handler->Handle(complaint, &peer);
-    ASSERT_TRUE(IsRejected(complaint));
-}
-
-TEST_F(ARelayMessageHandlerWhichHasProcessedAValidGoodbyeMessageAndNoSuccessionCompletedMessage,
-       RejectsAGoodbyeComplaintWithAnIncorrectPrivateReceivingKey)
-{
-    GoodbyeComplaint complaint;
-    complaint.Populate(goodbye_message, *data);
-    complaint.key_sharer_position = 0;
-    complaint.position_of_bad_encrypted_key_sixteenth = 0;
-    complaint.recipient_private_key = 100;
-    complaint.Sign(*data);
-    relay_message_handler->Handle(complaint, &peer);
-    ASSERT_TRUE(IsRejected(complaint));
-}
-
-TEST_F(ARelayMessageHandlerWhichHasProcessedAValidGoodbyeMessageAndNoSuccessionCompletedMessage,
-       RejectsAGoodbyeComplaintAboutAGoodSecret)
-{
-    GoodbyeComplaint complaint;
-    complaint.Populate(goodbye_message, *data);
-    complaint.key_sharer_position = 0;
-    complaint.position_of_bad_encrypted_key_sixteenth = 0;
-    complaint.PopulateRecipientPrivateKey(*data);
-    complaint.Sign(*data);
-    relay_message_handler->Handle(complaint, &peer);
-    ASSERT_TRUE(IsRejected(complaint));
-}
-
-
-class ARelayMessageHandlerWithAGoodbyeMessageWithABadSecret :
-        public ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage
-{
-public:
-    GoodbyeMessage goodbye_message;
-    uint160 goodbye_message_hash;
-
-    virtual void SetUp()
-    {
-        ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage::SetUp();
-        DECLARE_CACHED_DATA;
-        static GoodbyeMessage reference_goodbye_message;
-        if (reference_relay_state.relays.size() == 0)
-        {
-            SendAKeyDistributionMessageWhichGivesAQuarterKeyToTheChosenRelay();
-            GenerateGoodbyeMessage();
-            SAVE_CACHED_DATA;
-            reference_goodbye_message = goodbye_message;
-        }
-        else
-        {
-            LOAD_CACHED_DATA;
-            goodbye_message = reference_goodbye_message;
-        }
-
-        goodbye_message_hash = goodbye_message.GetHash160();
-    }
-
-    void GenerateGoodbyeMessage()
-    {
-        goodbye_message = AGoodbyeMessageWithABadSecret();
-        data->StoreMessage(goodbye_message);
-    }
-
-    GoodbyeMessage AGoodbyeMessageWithABadSecret()
-    {
-        goodbye_message = relay->GenerateGoodbyeMessage(*data);
-        goodbye_message.encrypted_key_sixteenths[0][2] += 1;
-        goodbye_message.Sign(*data);
-        return goodbye_message;
-    }
-
-    GoodbyeComplaint ComplaintAboutBadGoodbyeMessage()
-    {
-        GoodbyeComplaint complaint;
-        complaint.key_sharer_position = 0;
-        complaint.position_of_bad_encrypted_key_sixteenth = 2;
-        complaint.Populate(goodbye_message, *data);
-        complaint.Sign(*data);
-        data->StoreMessage(complaint);
-        return complaint;
-    }
-
-    virtual void TearDown()
-    {
-        ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage::TearDown();
-    }
-};
-
-TEST_F(ARelayMessageHandlerWithAGoodbyeMessageWithABadSecret,
-       RejectsAGoodbyeComplaintThatArrivesAfterASuccessionCompletedMessage)
-{
-    relay_message_handler->succession_handler.send_goodbye_complaints = false;
-    relay_message_handler->Handle(goodbye_message, &peer);
-    SuccessionCompletedMessage succession_completed_message;
-    succession_completed_message.goodbye_message_hash = goodbye_message.GetHash160();
-    data->StoreMessage(succession_completed_message);
-
-    auto successor = goodbye_message.GetSuccessor(*data);
-    successor->hashes.succession_completed_message_hashes.push_back(succession_completed_message.GetHash160());
-    auto complaint = ComplaintAboutBadGoodbyeMessage();
-    relay_message_handler->Handle(complaint, &peer);
-
-    ASSERT_FALSE(VectorContainsEntry(builder->accepted_messages, complaint.GetHash160()));
-}
-
-TEST_F(ARelayMessageHandlerWithAGoodbyeMessageWithABadSecret,
-       FailsValidationOfADurationWithoutResponseIfAGoodbyeComplaintHasBeenProcessed)
-{
-    relay_message_handler->succession_handler.send_goodbye_complaints = false;
-    relay_message_handler->Handle(goodbye_message, &peer);
-
-    auto complaint = ComplaintAboutBadGoodbyeMessage();
-    relay_message_handler->Handle(complaint, &peer);
-
-    DurationWithoutResponse duration;
-    duration.message_hash = goodbye_message.GetHash160();
-    ASSERT_FALSE(relay_message_handler->ValidateDurationWithoutResponse(duration));
-}
-
-
-class ARelayMessageHandlerWhichHasProcessedAGoodbyeMessageWithABadSecret :
-        public ARelayMessageHandlerWithAGoodbyeMessageWithABadSecret
-{
-public:
-    virtual void SetUp()
-    {
-        ARelayMessageHandlerWithAGoodbyeMessageWithABadSecret::SetUp();
-        relay_message_handler->succession_handler.send_secret_recovery_messages = false;
-        relay_message_handler->Handle(goodbye_message, &peer);
-    }
-
-    virtual void TearDown()
-    {
-        ARelayMessageHandlerWithAGoodbyeMessageWithABadSecret::TearDown();
-    }
-};
-
-TEST_F(ARelayMessageHandlerWhichHasProcessedAGoodbyeMessageWithABadSecret,
-       SendsAGoodbyeComplaintIfTheSuccessorKeyIsAvailable)
-{
-    vector<uint160> complaint_hashes = relay->hashes.goodbye_complaint_hashes;
-    ASSERT_THAT(complaint_hashes.size(), Eq(1));
-
-    GoodbyeComplaint complaint = data->GetMessage(complaint_hashes[0]);
-    ASSERT_THAT(complaint.key_sharer_position, Eq(0));
-    ASSERT_THAT(complaint.position_of_bad_encrypted_key_sixteenth, Eq(2));
-}
-
-TEST_F(ARelayMessageHandlerWhichHasProcessedAGoodbyeMessageWithABadSecret,
-       EncodesAValidGoodbyeComplaint)
-{
-    vector<uint160> complaint_hashes = relay->hashes.goodbye_complaint_hashes;
-    ASSERT_THAT(complaint_hashes.size(), Eq(1));
-    ASSERT_TRUE(VectorContainsEntry(builder->accepted_messages, complaint_hashes[0]));
-}
-
-TEST_F(ARelayMessageHandlerWhichHasProcessedAGoodbyeMessageWithABadSecret,
-       DoesntEncodeADurationWithoutResponseIfItHasProcessedAValidGoodbyeComplaint)
-{
-    SetMockTimeMicros(GetTimeMicros() + RESPONSE_WAIT_TIME);
-    relay_message_handler->succession_handler.scheduler.DoTasksScheduledForExecutionBeforeNow();
-    DurationWithoutResponse duration;
-    duration.message_hash = goodbye_message.GetHash160();
-    ASSERT_FALSE(VectorContainsEntry(builder->accepted_messages, duration.GetHash160()));
-}
-
-
-class ARelayMessageHandlerInBlockValidationModeWhichHasProcessedAGoodbyeMessageWithABadSecret :
-        public ARelayMessageHandlerWhichHasProcessedAGoodbyeMessageWithABadSecret
-{
-public:
-    virtual void SetUp()
-    {
-        ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessage::SetUp();
-        relay_message_handler->mode = BLOCK_VALIDATION;
-        GenerateGoodbyeMessage();
-        relay_message_handler->Handle(goodbye_message, &peer);
-    }
-
-    virtual void TearDown()
-    {
-        ARelayMessageHandlerWhichHasProcessedAGoodbyeMessageWithABadSecret::TearDown();
-    }
-};
-
-TEST_F(ARelayMessageHandlerInBlockValidationModeWhichHasProcessedAGoodbyeMessageWithABadSecret,
-       DoesntSendAGoodbyeComplaint)
-{
-    vector<uint160> complaint_hashes = relay->hashes.goodbye_complaint_hashes;
-    ASSERT_THAT(complaint_hashes.size(), Eq(0));
-}
-
-
-class ARelayMessageHandlerWhichHasProcessedAValidGoodbyeComplaint :
-        public ARelayMessageHandlerWithAGoodbyeMessageWithABadSecret
-{
-public:
-    virtual void SetUp()
-    {
-        ARelayMessageHandlerWithAGoodbyeMessageWithABadSecret::SetUp();
-        relay_state->remove_dead_relays = false;
-        relay_message_handler->Handle(goodbye_message, &peer);
-    }
-
-    virtual void TearDown()
-    {
-        ARelayMessageHandlerWithAGoodbyeMessageWithABadSecret::TearDown();
-    }
-};
-
-TEST_F(ARelayMessageHandlerWhichHasProcessedAValidGoodbyeComplaint,
-       GeneratesAnObituarySpecifyingTheComplaintAsTheReasonForTheDeadRelayLeaving)
-{
-    ASSERT_THAT(relay->hashes.obituary_hash, Ne(0));
-
-    Obituary obituary = data->GetMessage(relay->hashes.obituary_hash);
-    ASSERT_THAT(obituary.reason_for_leaving, Eq(MISBEHAVED));
-}
-
-TEST_F(ARelayMessageHandlerWhichHasProcessedAValidGoodbyeComplaint,
-       SendsSecretRecoveryMessagesInResponseToTheObituary)
-{
-    vector<uint160> recovery_message_hashes = relay->hashes.secret_recovery_message_hashes;
-    ASSERT_THAT(recovery_message_hashes.size(), Eq(4));
-}
 
 
 class ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessageWithABadSecret :
@@ -1162,7 +765,7 @@ public:
     virtual void SetUp()
     {
         ARelayMessageHandlerWithAKeyDistributionMessage::SetUp();
-        key_distribution_message.key_sixteenths_encrypted_for_key_quarter_holders[1] += 1;
+        key_distribution_message.encrypted_key_quarters[0].encrypted_key_twentyfourths[1] += 1;
         key_distribution_message.Sign(*data);
         data->StoreMessage(key_distribution_message);
         relay_message_handler->admission_handler.send_key_distribution_complaints = false;
@@ -1180,7 +783,7 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessageWithABadSecre
        RejectsAKeyDistributionComplaintWhichRefersToANonExistentSecret)
 {
     KeyDistributionComplaint complaint;
-    complaint.Populate(key_distribution_message.GetHash160(), KEY_QUARTER_HOLDERS, 1, *data);
+    complaint.Populate(key_distribution_message.GetHash160(), 1, *data);
     complaint.position_of_secret = 51;
     complaint.Sign(*data);
 
@@ -1192,7 +795,7 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessageWithABadSecre
        AcceptsAKeyDistributionComplaintAboutTheBadSecret)
 {
     KeyDistributionComplaint complaint;
-    complaint.Populate(key_distribution_message.GetHash160(), KEY_QUARTER_HOLDERS, 1, *data);
+    complaint.Populate(key_distribution_message.GetHash160(), 1, *data);
     complaint.Sign(*data);
 
     bool complaint_is_valid = complaint.IsValid(*data);
@@ -1203,10 +806,10 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessageWithABadSecre
 }
 
 TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionMessageWithABadSecret,
-       EncodesAValidKeyDistributionComplaint)
+       AcceptsAValidKeyDistributionComplaintForEncoding)
 {
     KeyDistributionComplaint complaint;
-    complaint.Populate(key_distribution_message.GetHash160(), KEY_QUARTER_HOLDERS, 1, *data);
+    complaint.Populate(key_distribution_message.GetHash160(), 1, *data);
     complaint.Sign(*data);
     relay_message_handler->HandleMessage(GetDataStream(complaint), &peer);
     ASSERT_TRUE(VectorContainsEntry(builder->accepted_messages, complaint.GetHash160()));
@@ -1244,7 +847,7 @@ public:
         EnsureThereIsSomethingToComplainAboutAndThatTheChosenRelayIsHoldingSecrets();
         relay_message_handler->admission_handler.send_key_distribution_complaints = false;
         relay_message_handler->HandleMessage(GetDataStream(key_distribution_message), &peer);
-        complaint.Populate(key_distribution_message.GetHash160(), 0, 1, *data);
+        complaint.Populate(key_distribution_message.GetHash160(), 1, *data);
         complaint.Sign(*data);
         data->StoreMessage(complaint);
         relay_message_handler->admission_handler.send_key_distribution_complaints = true;
@@ -1281,18 +884,6 @@ TEST_F(ARelayMessageHandlerWithAValidComplaintAboutABadPointFromTheRelaysPublicK
 }
 
 TEST_F(ARelayMessageHandlerWithAValidComplaintAboutABadPointFromTheRelaysPublicKeySet,
-       RejectsAKeyDistributionComplaintWhichArrivesAfterADurationWithoutResponseAfterTheKeyDistributionMessage)
-{
-    relay_message_handler->succession_handler.send_secret_recovery_messages = false;
-    SetMockTimeMicros(GetTimeMicros() + RESPONSE_WAIT_TIME);
-    relay->hashes.key_distribution_complaint_hashes = vector<uint160>();
-    relay_message_handler->admission_handler.scheduler.DoTasksScheduledForExecutionBeforeNow();
-
-    relay_message_handler->HandleMessage(GetDataStream(complaint), &peer);
-    ASSERT_TRUE(IsRejected(complaint));
-}
-
-TEST_F(ARelayMessageHandlerWithAValidComplaintAboutABadPointFromTheRelaysPublicKeySet,
        FailsValidationOfADurationWithoutResponseAfterTheKeyDistributionComplaintHasBeenProcessed)
 {
     relay_message_handler->succession_handler.send_secret_recovery_messages = false;
@@ -1307,11 +898,11 @@ TEST_F(ARelayMessageHandlerWithAValidComplaintAboutABadPointFromTheRelaysPublicK
 }
 
 TEST_F(ARelayMessageHandlerWithAValidComplaintAboutABadPointFromTheRelaysPublicKeySet,
-       AddsAnObituaryForTheOffendingRelayWhenProcessingAValidKeyDistributionComplaint)
+       MarksTheOffendingRelayAsMisbehavingWhenProcessingAValidKeyDistributionComplaint)
 {
     relay_message_handler->succession_handler.send_secret_recovery_messages = false;
     relay_message_handler->HandleMessage(GetDataStream(complaint), &peer);
-    ASSERT_THAT(relay->hashes.obituary_hash, Ne(0));
+    ASSERT_THAT(relay->status, Eq(MISBEHAVED));
 }
 
 
@@ -1349,72 +940,56 @@ public:
 };
 
 TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionComplaintButNoSecretRecoveryMessages,
-       AssignsTheObituaryAsATaskToTheQuarterHolders)
+       AssignsTheDeathAsATaskToTheQuarterHolders)
 {
-    for (auto quarter_holder : relay->QuarterHolders(*data))
-        ASSERT_TRUE(VectorContainsEntry(quarter_holder->tasks, relay->hashes.obituary_hash));
-}
-
-TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionComplaintButNoSecretRecoveryMessages,
-       RemovesTheObituaryFromTheQuarterHoldersTasksWhenProcessingASecretRecoveryMessage)
-{
-    for (auto quarter_holder : relay->QuarterHolders(*data))
+    for (uint32_t position = 0; position < 4; position++)
     {
-        ASSERT_TRUE(VectorContainsEntry(quarter_holder->tasks, relay->hashes.obituary_hash));
-        relay_message_handler->succession_handler.SendSecretRecoveryMessage(relay, quarter_holder);
-        ASSERT_FALSE(VectorContainsEntry(quarter_holder->tasks, relay->hashes.obituary_hash));
+        auto quarter_holder = relay->QuarterHolders(*data)[position];
+        Task send_secret_recovery_message(SEND_SECRET_RECOVERY_MESSAGE, Death(relay->number), position);
+        ASSERT_TRUE(VectorContainsEntry(quarter_holder->tasks, send_secret_recovery_message));
     }
 }
 
 TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionComplaintButNoSecretRecoveryMessages,
-       ReaddsTheObituaryToTheQuarterHoldersTasksWhenProcessingASecretRecoveryComplaint)
+       RemovesTheDeathFromTheQuarterHoldersTasksWhenProcessingASecretRecoveryMessage)
+{
+    for (uint32_t position = 0; position < 4; position++)
+    {
+        auto quarter_holder = relay->QuarterHolders(*data)[position];
+
+        Task send_secret_recovery_message(SEND_SECRET_RECOVERY_MESSAGE, Death(relay->number), position);
+        ASSERT_TRUE(VectorContainsEntry(quarter_holder->tasks, send_secret_recovery_message));
+
+        relay_message_handler->succession_handler.SendSecretRecoveryMessage(relay, position);
+        ASSERT_FALSE(VectorContainsEntry(quarter_holder->tasks, send_secret_recovery_message)) << "failed at " << position;
+    }
+}
+
+TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionComplaintButNoSecretRecoveryMessages,
+       ReaddsTheDeathToTheQuarterHoldersTasksWhenProcessingASecretRecoveryComplaint)
 {
     relay_state->remove_dead_relays = false;
     relay_message_handler->succession_handler.send_succession_completed_messages = false;
     relay_message_handler->succession_handler.send_secret_recovery_messages = false;
 
-    for (auto quarter_holder : relay->QuarterHolders(*data))
+    for (uint32_t position = 0; position < 4; position++)
     {
-        relay_message_handler->succession_handler.SendSecretRecoveryMessage(relay, quarter_holder);
-        ASSERT_FALSE(VectorContainsEntry(quarter_holder->tasks, relay->hashes.obituary_hash));
+        auto quarter_holder = relay->QuarterHolders(*data)[position];
+
+        Task send_secret_recovery_message(SEND_SECRET_RECOVERY_MESSAGE, Death(relay->number), position);
+
+        relay_message_handler->succession_handler.SendSecretRecoveryMessage(relay, position);
+        ASSERT_FALSE(VectorContainsEntry(quarter_holder->tasks, send_secret_recovery_message));
         SecretRecoveryComplaint complaint;
-        complaint.secret_recovery_message_hash = relay->hashes.secret_recovery_message_hashes.back();
+        complaint.position_of_quarter_holder = position;
+        complaint.secret_recovery_message_hash = relay->succession_attempts.begin()->second.recovery_message_hashes[position];
         relay_message_handler->succession_handler.AcceptSecretRecoveryComplaint(complaint);
-        ASSERT_TRUE(VectorContainsEntry(quarter_holder->tasks, relay->hashes.obituary_hash));
+        ASSERT_TRUE(VectorContainsEntry(quarter_holder->tasks, send_secret_recovery_message));
     }
 }
 
-TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionComplaintButNoSecretRecoveryMessages,
-       RemovesTheSecretRecoveryMessageHashFromTheDeadRelayWhenProcessingASecretRecoveryComplaint)
-{
-    relay_state->remove_dead_relays = false;
-    relay_message_handler->succession_handler.send_succession_completed_messages = false;
-    relay_message_handler->succession_handler.send_secret_recovery_messages = false;
 
-    for (auto quarter_holder : relay->QuarterHolders(*data))
-    {
-        relay_message_handler->succession_handler.SendSecretRecoveryMessage(relay, quarter_holder);
-        SecretRecoveryComplaint complaint;
-        complaint.secret_recovery_message_hash = relay->hashes.secret_recovery_message_hashes.back();
-        relay_message_handler->succession_handler.AcceptSecretRecoveryComplaint(complaint);
-        ASSERT_FALSE(VectorContainsEntry(relay->hashes.secret_recovery_message_hashes,
-                                         complaint.secret_recovery_message_hash));
-    }
-}
-
-TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionComplaintButNoSecretRecoveryMessages,
-       AssignsTheFourthSecretRecoveryMessageAsATaskToTheSuccessor)
-{
-    relay_message_handler->succession_handler.send_succession_completed_messages = false;
-    relay_message_handler->succession_handler.SendSecretRecoveryMessages(relay);
-    auto last_recovery_message_hash = relay->hashes.secret_recovery_message_hashes.back();
-    auto successor = relay_state->GetRelayByNumber(relay->SuccessorNumber(*data));
-    ASSERT_TRUE(VectorContainsEntry(successor->tasks, last_recovery_message_hash));
-}
-
-
-
-class ARelayMessageHandlerWhichHasProcessedAKeyDistributionComplaintButHasntYetRemovedTheDeadRelay :
+class ARelayMessageHandlerWhichHasProcessedAKeyDistributionComplaint :
    public ARelayMessageHandlerWithAValidComplaintAboutABadPointFromTheRelaysPublicKeySet
 {
 public:
@@ -1430,9 +1005,7 @@ public:
 
         if (reference_relay_state.relays.size() == 0)
         {
-            relay_state->remove_dead_relays = false;
             relay_message_handler->HandleMessage(GetDataStream(complaint), &peer);
-            relay_state->remove_dead_relays = true;
             SAVE_CACHED_DATA;
         }
         else
@@ -1447,71 +1020,84 @@ public:
     }
 };
 
-class ARelayMessageHandlerWhichHasProcessedAnObituaryButHasntYetRemovedTheDeadRelay :
-        public ARelayMessageHandlerWhichHasProcessedAKeyDistributionComplaintButHasntYetRemovedTheDeadRelay
+class ARelayMessageHandlerWhichHasProcessedADeath :
+        public ARelayMessageHandlerWhichHasProcessedAKeyDistributionComplaint
 {
 public:
     virtual void SetUp()
     {
-        ARelayMessageHandlerWhichHasProcessedAKeyDistributionComplaintButHasntYetRemovedTheDeadRelay::SetUp();
+        ARelayMessageHandlerWhichHasProcessedAKeyDistributionComplaint::SetUp();
     }
 
     virtual void TearDown()
     {
-        ARelayMessageHandlerWhichHasProcessedAKeyDistributionComplaintButHasntYetRemovedTheDeadRelay::TearDown();
+        ARelayMessageHandlerWhichHasProcessedAKeyDistributionComplaint::TearDown();
     }
 
     void UnprocessSecretRecoveryMessages()
     {
         UnscheduleTasksToCheckForResponsesToSecretRecoveryMessages();
-        relay->hashes.secret_recovery_message_hashes = vector<uint160>();
-        auto successor = relay_state->GetRelayByNumber(relay->SuccessorNumber(*data));
-        successor->hashes.succession_completed_message_hashes.resize(0);
+        relay->succession_attempts.clear();
     }
 
     void UnscheduleTasksToCheckForResponsesToSecretRecoveryMessages()
     {
         auto &scheduler = relay_message_handler->succession_handler.scheduler;
         auto scheduled_tasks = scheduler.TasksScheduledForTime("secret_recovery", GetTimeMicros() + RESPONSE_WAIT_TIME);
-        for (auto recovery_message_hash : relay->hashes.secret_recovery_message_hashes)
-            EraseEntryFromVector(recovery_message_hash, scheduled_tasks);
+        for (auto &attempt : relay->succession_attempts)
+            for (auto recovery_message_hash : attempt.second.recovery_message_hashes)
+                EraseEntryFromVector(recovery_message_hash, scheduled_tasks);
         scheduler.scheduledata[scheduled_tasks].Location("secret_recovery") = GetTimeMicros() + RESPONSE_WAIT_TIME;
     }
 
 };
 
-TEST_F(ARelayMessageHandlerWhichHasProcessedAnObituaryButHasntYetRemovedTheDeadRelay,
+TEST_F(ARelayMessageHandlerWhichHasProcessedADeath,
        SendsSecretRecoveryMessagesFromEachQuarterHolderWhosePrivateSigningKeyIsKnown)
 {
-    vector<uint160> secret_recovery_message_hashes = relay->hashes.secret_recovery_message_hashes;
-    ASSERT_THAT(secret_recovery_message_hashes.size(), Eq(4));
+    auto &attempt = relay->succession_attempts[relay->current_successor_number];
+    ASSERT_THAT(attempt.HasFourRecoveryMessages(), Eq(true));
 
     SecretRecoveryMessage secret_recovery_message;
-    for (auto secret_recovery_message_hash : secret_recovery_message_hashes)
+    for (auto secret_recovery_message_hash : attempt.recovery_message_hashes)
     {
         secret_recovery_message = data->GetMessage(secret_recovery_message_hash);
-        ASSERT_TRUE(VectorContainsEntry(relay->holders.key_quarter_holders, secret_recovery_message.quarter_holder_number));
+        ASSERT_TRUE(ArrayContainsEntry(relay->key_quarter_holders, secret_recovery_message.quarter_holder_number));
         ASSERT_TRUE(peer.HasBeenInformedAbout("relay", "secret_recovery", secret_recovery_message));
     }
 }
 
-TEST_F(ARelayMessageHandlerWhichHasProcessedAnObituaryButHasntYetRemovedTheDeadRelay,
+TEST_F(ARelayMessageHandlerWhichHasProcessedADeath,
+       AcceptsTheDurationWithoutResponseForEncodingIfThereIsNoResponseToFourSecretRecoveryMessages)
+{
+    auto &attempt = relay->succession_attempts[relay->current_successor_number];
+    attempt.succession_completed_message_hash = 0;
+
+    SetMockTimeMicros(GetTimeMicros() + RESPONSE_WAIT_TIME);
+    relay_message_handler->succession_handler.scheduler.DoTasksScheduledForExecutionBeforeNow();
+
+    auto duration = GetDurationWithoutResponseAfter(attempt.GetFourSecretRecoveryMessages().GetHash160());
+    ASSERT_TRUE(VectorContainsEntry(builder->accepted_messages, duration.GetHash160()));
+}
+
+TEST_F(ARelayMessageHandlerWhichHasProcessedADeath,
        SendsASuccessionCompletedMessageIfTheSecretsHeldAreRecoveredFromTheSecretRecoveryMessages)
 {
-    SecretRecoveryMessage secret_recovery_message = data->GetMessage(relay->hashes.secret_recovery_message_hashes[0]);
-    auto successor = secret_recovery_message.GetSuccessor(*data);
-    ASSERT_THAT(successor->hashes.succession_completed_message_hashes.size(), Eq(1));
+    auto &attempt = relay->succession_attempts[relay->current_successor_number];
+    SecretRecoveryMessage secret_recovery_message = data->GetMessage(attempt.recovery_message_hashes[0]);
+
+    ASSERT_THAT(attempt.succession_completed_message_hash, Ne(0));
 }
 
-TEST_F(ARelayMessageHandlerWhichHasProcessedAnObituaryButHasntYetRemovedTheDeadRelay,
-       SchedulesATaskToCheckWhichQuarterHoldersHaveRespondedToTheObituary)
+TEST_F(ARelayMessageHandlerWhichHasProcessedADeath,
+       SchedulesATaskToCheckWhichQuarterHoldersHaveRespondedToTheDeath)
 {
     ASSERT_TRUE(relay_message_handler->succession_handler.scheduler.TaskIsScheduledForTime(
-                "obituary", relay->hashes.obituary_hash, TEST_START_TIME + RESPONSE_WAIT_TIME));
+                "death", Death(relay->number), TEST_START_TIME + RESPONSE_WAIT_TIME));
 }
 
-TEST_F(ARelayMessageHandlerWhichHasProcessedAnObituaryButHasntYetRemovedTheDeadRelay,
-       GeneratesObituariesForKeyQuarterHoldersWhoHaveNotRespondedToTheObituaryWhenCompletingTheScheduledTask)
+TEST_F(ARelayMessageHandlerWhichHasProcessedADeath,
+       MarksTheKeyQuarterHoldersWhoHaveNotRespondedToTheDeathAsNotRespondingWhenCompletingTheScheduledTask)
 {
     UnprocessSecretRecoveryMessages();
     relay_message_handler->succession_handler.send_secret_recovery_messages = false;
@@ -1520,11 +1106,11 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAnObituaryButHasntYetRemovedTheDeadR
     relay_message_handler->succession_handler.scheduler.DoTasksScheduledForExecutionBeforeNow();
 
     for (auto quarter_holder : relay->QuarterHolders(*data))
-        ASSERT_THAT(quarter_holder->hashes.obituary_hash, Ne(0));
+        ASSERT_THAT(quarter_holder->status, Ne(ALIVE));
 }
 
-TEST_F(ARelayMessageHandlerWhichHasProcessedAnObituaryButHasntYetRemovedTheDeadRelay,
-       EncodesDurationsWithoutResponsesFromKeyQuarterHoldersWhoHaveNotRespondedToTheObituary)
+TEST_F(ARelayMessageHandlerWhichHasProcessedADeath,
+       AcceptsDurationsWithoutResponsesFromKeyQuarterHoldersWhoHaveNotRespondedToTheDeathForEncoding)
 {
     UnprocessSecretRecoveryMessages();
     relay_message_handler->succession_handler.send_secret_recovery_messages = false;
@@ -1534,89 +1120,93 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAnObituaryButHasntYetRemovedTheDeadR
 
     for (auto quarter_holder : relay->QuarterHolders(*data))
     {
-        auto duration = GetDurationWithoutResponseFromRelay(relay->hashes.obituary_hash, quarter_holder->number);
+        auto duration = GetDurationWithoutResponseFromRelay(Death(relay->number), quarter_holder->number);
         ASSERT_TRUE(VectorContainsEntry(builder->accepted_messages, duration.GetHash160()));
     }
 }
 
-TEST_F(ARelayMessageHandlerWhichHasProcessedAnObituaryButHasntYetRemovedTheDeadRelay,
-       DoesntGenerateObituariesForKeyQuarterHoldersWhoHaveRespondedToTheObituaryWhenCompletingTheScheduledTask)
+TEST_F(ARelayMessageHandlerWhichHasProcessedADeath,
+       DoesntKillTheKeyQuarterHoldersWhoHaveRespondedToTheDeathWhenCompletingTheScheduledTask)
 {
     SetMockTimeMicros(TEST_START_TIME + RESPONSE_WAIT_TIME);
     relay_message_handler->succession_handler.scheduler.DoTasksScheduledForExecutionBeforeNow();
 
-    for (auto quarter_holder_number : relay->holders.key_quarter_holders)
+    for (auto quarter_holder_number : relay->key_quarter_holders)
     {
         auto quarter_holder = relay_message_handler->relay_state.GetRelayByNumber(quarter_holder_number);
-        ASSERT_THAT(quarter_holder->hashes.obituary_hash, Eq(0));
+        ASSERT_THAT(quarter_holder->status, Eq(ALIVE));
     }
 }
 
-TEST_F(ARelayMessageHandlerWhichHasProcessedAnObituaryButHasntYetRemovedTheDeadRelay,
-       HandlesTheSecretRecoveryMessagesWhichItGeneratesInResponseToTheObituary)
+TEST_F(ARelayMessageHandlerWhichHasProcessedADeath,
+       HandlesTheSecretRecoveryMessagesWhichItGeneratesInResponseToTheDeath)
 {
-    vector<uint160> secret_recovery_message_hashes = relay->hashes.secret_recovery_message_hashes;
-    for (auto secret_recovery_message_hash : secret_recovery_message_hashes)
+    auto &attempt = relay->succession_attempts[relay->current_successor_number];
+
+    for (auto secret_recovery_message_hash : attempt.recovery_message_hashes)
     {
         bool handled = msgdata[secret_recovery_message_hash]["handled"];
         ASSERT_THAT(handled, Eq(true));
     }
 }
 
-TEST_F(ARelayMessageHandlerWhichHasProcessedAnObituaryButHasntYetRemovedTheDeadRelay,
-       SchedulesTasksToCheckForAResponseFromTheSuccessorWhenHandlingTheFourthSecretRecoveryMessage)
+TEST_F(ARelayMessageHandlerWhichHasProcessedADeath,
+       SchedulesATaskToCheckForAResponseFromTheSuccessorWhenHandlingTheFourthSecretRecoveryMessage)
 {
     auto &scheduler = relay_message_handler->succession_handler.scheduler;
-    for (uint64_t i = 0; i < 4; i++)
-    {
-        auto secret_recovery_message_hash = relay->hashes.secret_recovery_message_hashes[i];
-        if (i < 3)
-            ASSERT_FALSE(scheduler.TaskIsScheduledForTime("secret_recovery", secret_recovery_message_hash,
-                                                          TEST_START_TIME + RESPONSE_WAIT_TIME));
-        else
-            ASSERT_TRUE(scheduler.TaskIsScheduledForTime("secret_recovery", secret_recovery_message_hash,
-                                                         TEST_START_TIME + RESPONSE_WAIT_TIME));
-    }
+    auto &attempt = relay->succession_attempts[relay->current_successor_number];
+
+    ASSERT_TRUE(scheduler.TaskIsScheduledForTime("secret_recovery",
+                                                 attempt.GetFourSecretRecoveryMessages().GetHash160(),
+                                                 TEST_START_TIME + RESPONSE_WAIT_TIME));
 }
 
-TEST_F(ARelayMessageHandlerWhichHasProcessedAnObituaryButHasntYetRemovedTheDeadRelay,
-       EncodesAValidSecretRecoveryMessage)
+TEST_F(ARelayMessageHandlerWhichHasProcessedADeath,
+       AcceptsAValidSecretRecoveryMessageForEncoding)
 {
-    vector<uint160> secret_recovery_message_hashes = relay->hashes.secret_recovery_message_hashes;
-    for (auto secret_recovery_message_hash : secret_recovery_message_hashes)
+    auto &attempt = relay->succession_attempts[relay->current_successor_number];
+
+    for (auto secret_recovery_message_hash : attempt.recovery_message_hashes)
         ASSERT_TRUE(VectorContainsEntry(builder->accepted_messages, secret_recovery_message_hash));
 }
 
-TEST_F(ARelayMessageHandlerWhichHasProcessedAnObituaryButHasntYetRemovedTheDeadRelay,
-       EncodesTheDurationWithoutResponseIfThereAreNoResponsesToTheFourthSecretRecoveryMessage)
+
+TEST_F(ARelayMessageHandlerWhichHasProcessedADeath,
+       MarksTheSuccessorAsNotRespondingIfThereAreNoResponsesToTheSecretRecoveryMessages)
 {
+    auto &attempt = relay->succession_attempts[relay->current_successor_number];
+    attempt.succession_completed_message_hash = 0;
+
     SetMockTimeMicros(GetTimeMicros() + RESPONSE_WAIT_TIME);
     relay_message_handler->succession_handler.scheduler.DoTasksScheduledForExecutionBeforeNow();
+    ASSERT_TRUE(RelayIsDeadWithReason(relay->SuccessorNumberFromLatestSuccessionAttempt(*data), NOT_RESPONDING));
+}
 
-    for (uint64_t i = 0; i < 4; i++)
+TEST_F(ARelayMessageHandlerWhichHasProcessedADeath,
+       DoesntMarkTheSuccessorAsNotRespondingIfThereIsAResponseToTheSecretRecoveryMessages)
+{
+    auto &attempt = relay->succession_attempts[relay->current_successor_number];
+
+    SecretRecoveryMessage last_recovery_message = data->GetMessage(attempt.recovery_message_hashes[3]);
+    auto successor = relay_state->GetRelayByNumber(relay->SuccessorNumberFromLatestSuccessionAttempt(*data));
+    auto succession_completed_message = successor->GenerateSuccessionCompletedMessage(last_recovery_message, *data);
+    relay_state->remove_dead_relays = false;
+    relay_message_handler->HandleSuccessionCompletedMessage(succession_completed_message);
+
+    SetMockTimeMicros(GetTimeMicros() + RESPONSE_WAIT_TIME);
+    relay_message_handler->succession_handler.scheduler.DoTasksScheduledForExecutionBeforeNow();
+    ASSERT_FALSE(RelayIsDeadWithReason(successor->number, NOT_RESPONDING));
+}
+
+TEST_F(ARelayMessageHandlerWhichHasProcessedADeath,
+       RemovesTheDeathFromTheQuarterHoldersTasksWhenProcessingASecretRecoveryMessage)
+{
+    for (uint32_t position = 0; position < 4; position++)
     {
-        auto secret_recovery_message_hash = relay->hashes.secret_recovery_message_hashes[i];
-        DurationWithoutResponse duration = GetDurationWithoutResponseAfter(secret_recovery_message_hash);
-        if (i == 3)
-            ASSERT_TRUE(VectorContainsEntry(builder->accepted_messages, duration.GetHash160()));
-        else
-            ASSERT_FALSE(VectorContainsEntry(builder->accepted_messages, duration.GetHash160()));
+        auto quarter_holder = relay->QuarterHolders(*data)[position];
+        Task send_secret_recovery_message(SEND_SECRET_RECOVERY_MESSAGE, Death(relay->number), position);
+        ASSERT_FALSE(VectorContainsEntry(quarter_holder->tasks, send_secret_recovery_message));
     }
-}
-
-TEST_F(ARelayMessageHandlerWhichHasProcessedAnObituaryButHasntYetRemovedTheDeadRelay,
-       MarksTheSuccessorAsNotRespondingIfThereAreNoResponsesToTheFourthSecretRecoveryMessage)
-{
-    SetMockTimeMicros(GetTimeMicros() + RESPONSE_WAIT_TIME);
-    relay_message_handler->succession_handler.scheduler.DoTasksScheduledForExecutionBeforeNow();
-    ASSERT_TRUE(RelayIsDeadWithReason(relay->SuccessorNumber(*data), NOT_RESPONDING));
-}
-
-TEST_F(ARelayMessageHandlerWhichHasProcessedAnObituaryButHasntYetRemovedTheDeadRelay,
-       RemovesTheObituaryFromTheQuarterHoldersTasksWhenProcessingASecretRecoveryMessage)
-{
-    for (auto quarter_holder : relay->QuarterHolders(*data))
-        ASSERT_FALSE(VectorContainsEntry(quarter_holder->tasks, relay->hashes.obituary_hash));
 }
 
 
@@ -1638,29 +1228,30 @@ public:
 };
 
 TEST_F(ARelayMessageHandlerInBlockValidationModeWhichHasProcessedAValidKeyDistributionComplaint,
-       DoesntScheduleATaskToCheckWhichQuarterHoldersHaveRespondedToTheObituary)
+       DoesntScheduleATaskToCheckWhichQuarterHoldersHaveRespondedToTheDeath)
 {
     ASSERT_FALSE(relay_message_handler->succession_handler.scheduler.TaskIsScheduledForTime(
-                 "obituary", relay->hashes.obituary_hash, TEST_START_TIME + RESPONSE_WAIT_TIME));
+                 "death", Death(relay->number), TEST_START_TIME + RESPONSE_WAIT_TIME));
 }
 
 TEST_F(ARelayMessageHandlerInBlockValidationModeWhichHasProcessedAValidKeyDistributionComplaint,
        DoesntSendSecretRecoveryMessages)
 {
-    vector<uint160> secret_recovery_message_hashes = relay->hashes.secret_recovery_message_hashes;
-    ASSERT_THAT(secret_recovery_message_hashes.size(), Eq(0));
+    auto &attempt = relay->succession_attempts[relay->current_successor_number];
+    ASSERT_THAT(attempt.HasFourRecoveryMessages(), Eq(false));
 }
 
 TEST_F(ARelayMessageHandlerInBlockValidationModeWhichHasProcessedAValidKeyDistributionComplaint,
        DoesntScheduleTasksToCheckForResponsesWhenHandlingTheFourthSecretRecoveryMessage)
 {
+    auto &attempt = relay->succession_attempts[relay->current_successor_number];
     auto &succession_handler = relay_message_handler->succession_handler;
-    for (auto quarter_holder : relay->QuarterHolders(*data))
+    for (uint32_t position = 0; position < 4; position++)
     {
-        auto recovery_message = succession_handler.GenerateSecretRecoveryMessage(relay, quarter_holder);
+        auto recovery_message = succession_handler.GenerateSecretRecoveryMessage(relay, position);
         relay_message_handler->Handle(recovery_message, NULL);
     }
-    auto secret_recovery_message_hash = relay->hashes.secret_recovery_message_hashes.back();
+    auto secret_recovery_message_hash = attempt.recovery_message_hashes[3];
     SecretRecoveryMessage recovery_message = data->GetMessage(secret_recovery_message_hash);
 
     ASSERT_FALSE(IsRejected(recovery_message));
@@ -1682,10 +1273,10 @@ public:
         ARelayMessageHandlerWithAValidComplaintAboutABadPointFromTheRelaysPublicKeySet::SetUp();
         DoCachedSetUp();
 
-        failure_message.Populate(relay->hashes.secret_recovery_message_hashes, *data);
+        auto &attempt = relay->succession_attempts[relay->current_successor_number];
+        failure_message.Populate(attempt.recovery_message_hashes, *data);
 
-        vector<uint160> recovery_message_hashes = relay->hashes.secret_recovery_message_hashes;
-        recovery_message = data->GetMessage(recovery_message_hashes[0]);
+        recovery_message = data->GetMessage(attempt.recovery_message_hashes[0]);
         recovery_complaint.Populate(recovery_message, 0, 0, *data);
     }
 
@@ -1711,15 +1302,6 @@ public:
         ARelayMessageHandlerWithAValidComplaintAboutABadPointFromTheRelaysPublicKeySet::TearDown();
     }
 };
-
-TEST_F(ARelayMessageHandlerWhichHasProcessedFourSecretRecoveryMessagesButNoSuccessionCompletedMessage,
-       RejectsASecretRecoveryFailureMessageWithTheWrongNumberOfRecoveryMessageHashes)
-{
-    failure_message.recovery_message_hashes.push_back(0);
-    failure_message.Sign(*data);
-    relay_message_handler->Handle(failure_message, NULL);
-    ASSERT_TRUE(IsRejected(failure_message));
-}
 
 TEST_F(ARelayMessageHandlerWhichHasProcessedFourSecretRecoveryMessagesButNoSuccessionCompletedMessage,
        RejectsASecretRecoveryFailureMessageWithAnImpossibleKeySharerPosition)
@@ -1792,11 +1374,9 @@ public:
 
     void SetUpRecoveryMessagesAndForgetKeyQuartersHeldByDeadRelay()
     {
-        for (auto quarter_holder : relay->QuarterHolders(*data))
+        for (uint32_t position = 0; position < 3; position++)
         {
-            if (quarter_holder == relay->QuarterHolders(*data).back())
-                break;
-            relay_message_handler->succession_handler.SendSecretRecoveryMessage(relay, quarter_holder);
+            relay_message_handler->succession_handler.SendSecretRecoveryMessage(relay, position);
         }
         SetUpLastRecoveryMessage();
         successor = last_recovery_message.GetSuccessor(*data);
@@ -1805,8 +1385,8 @@ public:
 
     void SetUpLastRecoveryMessage()
     {
-        auto last_quarter_holder = relay->QuarterHolders(*data).back();
-        last_recovery_message = relay_message_handler->succession_handler.GenerateSecretRecoveryMessage(relay, last_quarter_holder);
+        auto last_quarter_holder = relay->QuarterHolders(*data)[3];
+        last_recovery_message = relay_message_handler->succession_handler.GenerateSecretRecoveryMessage(relay, 3);
         last_recovery_message_hash = last_recovery_message.GetHash160();
         data->StoreMessage(last_recovery_message);
     }
@@ -1814,26 +1394,26 @@ public:
     void ForgetKeyQuartersHeldByDeadRelay()
     {
         for (auto &existing_relay : relay_message_handler->relay_state.relays)
-            if (VectorContainsEntry(existing_relay.holders.key_quarter_holders, relay->number))
+            if (ArrayContainsEntry(existing_relay.key_quarter_holders, relay->number))
                 ForgetKeyQuartersOfGivenRelayHeldByDeadRelay(existing_relay);
     }
 
     void ForgetKeyQuartersOfGivenRelayHeldByDeadRelay(Relay &given_relay)
     {
-        auto key_quarter_position = PositionOfEntryInVector(relay->number, given_relay.holders.key_quarter_holders);
+        auto key_quarter_position = PositionOfEntryInArray(relay->number, given_relay.key_quarter_holders);
 
-        for (auto key_sixteenth_position = key_quarter_position * 4;
-             key_sixteenth_position < 4 + key_quarter_position * 4;
-             key_sixteenth_position++)
+        for (auto key_twentyfourth_position = key_quarter_position * 4;
+             key_twentyfourth_position < 4 + key_quarter_position * 4;
+             key_twentyfourth_position++)
         {
-            keydata.Delete(given_relay.PublicKeySixteenths()[key_sixteenth_position]);
+            keydata.Delete(given_relay.PublicKeyTwentyFourths()[key_twentyfourth_position]);
         }
     }
 
     bool KeyQuartersHeldByDeadRelayAreKnown()
     {
         for (auto &existing_relay : relay_message_handler->relay_state.relays)
-            if (VectorContainsEntry(existing_relay.holders.key_quarter_holders, relay->number))
+            if (ArrayContainsEntry(existing_relay.key_quarter_holders, relay->number))
                 if (not KeyQuartersOfGivenRelayHeldByDeadRelayAreKnown(existing_relay))
                     return false;
         return true;
@@ -1841,10 +1421,11 @@ public:
 
     bool KeyQuartersOfGivenRelayHeldByDeadRelayAreKnown(Relay &given_relay)
     {
-        auto key_quarter_position = PositionOfEntryInVector(relay->number, given_relay.holders.key_quarter_holders);
-        for (auto key_sixteenth_position = key_quarter_position * 4; key_sixteenth_position < key_quarter_position * 5;
-                                                                     key_sixteenth_position++)
-            if (not keydata[given_relay.PublicKeySixteenths()[key_sixteenth_position]].HasProperty("privkey"))
+        auto key_quarter_position = PositionOfEntryInArray(relay->number, given_relay.key_quarter_holders);
+        for (auto key_twentyfourth_position = key_quarter_position * 6;
+             key_twentyfourth_position < 6 + key_quarter_position * 6;
+             key_twentyfourth_position++)
+            if (not keydata[given_relay.PublicKeyTwentyFourths()[key_twentyfourth_position]].HasProperty("privkey"))
                 return false;
         return true;
     }
@@ -1874,7 +1455,7 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaintAndThr
        RejectsASecretRecoveryMessageWhichContainsIncorrectRelayNumbers)
 {
     SecretRecoveryMessage secret_recovery_message = last_recovery_message;
-    while (VectorContainsEntry(relay->holders.key_quarter_holders, secret_recovery_message.quarter_holder_number))
+    while (ArrayContainsEntry(relay->key_quarter_holders, secret_recovery_message.quarter_holder_number))
         secret_recovery_message.quarter_holder_number += 1;
     secret_recovery_message.Sign(*data);
 
@@ -1905,27 +1486,17 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaintAndThr
 }
 
 TEST_F(ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaintAndThreeSecretRecoveryMessages,
-       RejectsASecretRecoveryMessageWhichDoesntHaveTheNecessaryEncryptedKeySixteenths)
+       RejectsASecretRecoveryMessageWhichDoesntHaveTheNecessaryEncryptedKeyTwentyFourths)
 {
     SecretRecoveryMessage secret_recovery_message = last_recovery_message;
     secret_recovery_message.key_quarter_sharers.resize(0);
     secret_recovery_message.key_quarter_positions.resize(0);
-    secret_recovery_message.quartets_of_encrypted_shared_secret_quarters.resize(0);
-    secret_recovery_message.quartets_of_points_corresponding_to_shared_secret_quarters.resize(0);
+    secret_recovery_message.sextets_of_encrypted_shared_secret_quarters.resize(0);
+    secret_recovery_message.sextets_of_points_corresponding_to_shared_secret_quarters.resize(0);
     secret_recovery_message.Sign(*data);
 
     relay_message_handler->Handle(secret_recovery_message, NULL);
     ASSERT_TRUE(IsRejected(secret_recovery_message));
-}
-
-TEST_F(ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaintAndThreeSecretRecoveryMessages,
-       RejectsASecretRecoveryMessageWhichArrivesAfterADurationWithoutResponseAfterTheObituary)
-{
-    SetMockTimeMicros(GetTimeMicros() + RESPONSE_WAIT_TIME);
-    relay_message_handler->succession_handler.scheduler.DoTasksScheduledForExecutionBeforeNow();
-
-    relay_message_handler->Handle(last_recovery_message, NULL);
-    ASSERT_TRUE(IsRejected(last_recovery_message));
 }
 
 TEST_F(ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaintAndThreeSecretRecoveryMessages,
@@ -1948,12 +1519,13 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaintAndThr
 {
     relay_message_handler->succession_handler.send_secret_recovery_messages = false;
 
-    last_recovery_message.quartets_of_encrypted_shared_secret_quarters[0][1] += 1;
+    last_recovery_message.sextets_of_encrypted_shared_secret_quarters[0][1] += 1;
     last_recovery_message.Sign(*data);
     data->StoreMessage(last_recovery_message);
     relay_message_handler->Handle(last_recovery_message, NULL);
+    auto &attempt = relay->succession_attempts[relay->current_successor_number];
 
-    vector<uint160> complaints = relay->hashes.secret_recovery_complaint_hashes;
+    vector<uint160> complaints = attempt.recovery_complaint_hashes;
     ASSERT_THAT(complaints.size(), Eq(1));
 
     SecretRecoveryComplaint complaint = data->GetMessage(complaints[0]);
@@ -1966,45 +1538,48 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaintAndThr
        DoesntSendASecretRecoveryComplaintInBlockValidationMode)
 {
     SecretRecoveryMessage secret_recovery_message = last_recovery_message;
-    secret_recovery_message.quartets_of_encrypted_shared_secret_quarters[0][1] += 1;
+    secret_recovery_message.sextets_of_encrypted_shared_secret_quarters[0][1] += 1;
     secret_recovery_message.Sign(*data);
+
+    auto &attempt = relay->succession_attempts[relay->current_successor_number];
+    attempt.recovery_complaint_hashes.resize(0);
 
     relay_message_handler->mode = BLOCK_VALIDATION;
     relay_message_handler->Handle(secret_recovery_message, NULL);
 
-    ASSERT_THAT(relay->hashes.secret_recovery_complaint_hashes.size(), Eq(0));
+    ASSERT_THAT(attempt.recovery_complaint_hashes.size(), Eq(0));
 }
 
 TEST_F(ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaintAndThreeSecretRecoveryMessages,
-       GeneratesAnObituaryForTheBadKeyQuarterHolderInResponseToAValidSecretRecoveryComplaint)
+       MarksTheBadKeyQuarterHolderAsHavingMisbehavedInResponseToAValidSecretRecoveryComplaint)
 {
     relay_message_handler->succession_handler.send_secret_recovery_messages = false;
-    last_recovery_message.quartets_of_encrypted_shared_secret_quarters[0][1] += 1;
+    last_recovery_message.sextets_of_encrypted_shared_secret_quarters[0][1] += 1;
     last_recovery_message.Sign(*data);
 
     relay_message_handler->Handle(last_recovery_message, NULL);
     auto key_quarter_holder = last_recovery_message.GetKeyQuarterHolder(*data);
-    ASSERT_THAT(key_quarter_holder->hashes.obituary_hash, Ne(0));
+    ASSERT_THAT(key_quarter_holder->status, Ne(ALIVE));
 }
 
 TEST_F(ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaintAndThreeSecretRecoveryMessages,
-       EncodesAValidSecretRecoveryComplaint)
+       AcceptsAValidSecretRecoveryComplaintForEncoding)
 {
     relay_message_handler->succession_handler.send_secret_recovery_messages = false;
-    last_recovery_message.quartets_of_encrypted_shared_secret_quarters[0][1] += 1;
+    last_recovery_message.sextets_of_encrypted_shared_secret_quarters[0][1] += 1;
     last_recovery_message.Sign(*data);
     relay_message_handler->Handle(last_recovery_message, NULL);
 
-    vector<uint160> complaints = relay->hashes.secret_recovery_complaint_hashes;
-    ASSERT_THAT(complaints.size(), Eq(1));
-    ASSERT_TRUE(VectorContainsEntry(builder->accepted_messages, complaints[0]));
+    auto &attempt = relay->succession_attempts[relay->current_successor_number];
+    ASSERT_THAT(attempt.recovery_complaint_hashes.size(), Eq(1));
+    ASSERT_TRUE(VectorContainsEntry(builder->accepted_messages, attempt.recovery_complaint_hashes[0]));
 }
 
 TEST_F(ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaintAndThreeSecretRecoveryMessages,
        FailsValidationOfADurationWithoutResponseAfterASecretRecoveryMessageIfThereHasBeenASecretRecoveryComplaint)
 {
     relay_message_handler->succession_handler.send_secret_recovery_messages = false;
-    last_recovery_message.quartets_of_encrypted_shared_secret_quarters[0][1] += 1;
+    last_recovery_message.sextets_of_encrypted_shared_secret_quarters[0][1] += 1;
     last_recovery_message.Sign(*data);
     data->StoreMessage(last_recovery_message);
     relay_message_handler->Handle(last_recovery_message, NULL);
@@ -2029,7 +1604,7 @@ SecretRecoveryMessage
 ARelayMessageHandlerWhichHasProcessedAValidKeyDistributionComplaintAndThreeSecretRecoveryMessages::BadSecretRecoveryMessage()
 {
     SecretRecoveryMessage last_secret_recovery_message = last_recovery_message;
-    last_secret_recovery_message.quartets_of_encrypted_shared_secret_quarters[0][1] += 1;
+    last_secret_recovery_message.sextets_of_encrypted_shared_secret_quarters[0][1] += 1;
     last_secret_recovery_message.Sign(*data);
     data->StoreMessage(last_secret_recovery_message);
     return last_secret_recovery_message;
@@ -2104,8 +1679,8 @@ public:
         uint256 encrypted_bad_shared_secret_quarter = successor->EncryptSecret(encoded_bad_shared_secret_quarter);
         Point corresponding_point(encoded_bad_shared_secret_quarter);
 
-        recovery_message.quartets_of_encrypted_shared_secret_quarters[0][2] = encrypted_bad_shared_secret_quarter;
-        recovery_message.quartets_of_points_corresponding_to_shared_secret_quarters[0][2] = corresponding_point;
+        recovery_message.sextets_of_encrypted_shared_secret_quarters[0][2] = encrypted_bad_shared_secret_quarter;
+        recovery_message.sextets_of_points_corresponding_to_shared_secret_quarters[0][2] = corresponding_point;
     }
 
     virtual void TearDown()
@@ -2117,9 +1692,10 @@ public:
 TEST_F(ARelayMessageHandlerWhichHasProcessedFourSecretRecoveryMessagesOneOfWhichHasABadSharedSecretQuarter,
        SendsASecretRecoveryFailureMessageIfTheSuccessorsPrivateSigningKeyIsAvailable)
 {
-    ASSERT_THAT(relay->hashes.secret_recovery_failure_message_hashes.size(), Ne(0));
+    auto &attempt = relay->succession_attempts[relay->current_successor_number];
+    ASSERT_THAT(attempt.audits.size(), Ne(0));
 
-    uint160 failure_message_hash = relay->hashes.secret_recovery_failure_message_hashes[0];
+    uint160 failure_message_hash = attempt.audits.begin()->first;
     SecretRecoveryFailureMessage failure_message = data->GetMessage(failure_message_hash);
 
     ASSERT_THAT(failure_message.key_sharer_position, Eq(0));
@@ -2148,7 +1724,8 @@ public:
 TEST_F(ARelayMessageHandlerInBlockValidationModeWithFourSecretRecoveryMessagesOneOfWhichHasABadSharedSecretQuarter,
        DoesntSendASecretRecoveryFailureMessage)
 {
-    ASSERT_THAT(relay->hashes.secret_recovery_failure_message_hashes.size(), Eq(0));
+    auto &attempt = relay->succession_attempts[relay->current_successor_number];
+    ASSERT_THAT(attempt.audits.size(), Eq(0));
 }
 
 
@@ -2162,7 +1739,8 @@ public:
     virtual void SetUp()
     {
         ARelayMessageHandlerWhichHasProcessedFourSecretRecoveryMessagesOneOfWhichHasABadSharedSecretQuarter::SetUp();
-        failure_message_hash = relay->hashes.secret_recovery_failure_message_hashes[0];
+        auto &attempt = relay->succession_attempts[relay->current_successor_number];
+        failure_message_hash = attempt.audits.begin()->first;
         failure_message = data->GetMessage(failure_message_hash);
     }
 
@@ -2179,7 +1757,7 @@ public:
 };
 
 TEST_F(ARelayMessageHandlerWhichHasProcessedASecretRecoveryFailureMessage,
-       EncodesTheSecretRecoveryFailureMessageInTheChain)
+       AcceptsTheSecretRecoveryFailureMessageForEncodingInTheChain)
 {
     ASSERT_TRUE(VectorContainsEntry(builder->accepted_messages, failure_message_hash));
 }
@@ -2187,47 +1765,56 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedASecretRecoveryFailureMessage,
 TEST_F(ARelayMessageHandlerWhichHasProcessedASecretRecoveryFailureMessage,
        SendsRecoveryFailureAuditMessagesFromEachQuarterHolderWhoseKeyIsAvailable)
 {
-    vector<uint160> audit_message_hashes = relay->hashes.recovery_failure_audit_message_hashes;
+    auto &attempt = relay->succession_attempts[relay->current_successor_number];
+    auto audit = attempt.audits.begin()->second;
 
-    ASSERT_THAT(audit_message_hashes.size(), Eq(4));
+    ASSERT_THAT(audit.FourAuditMessagesHaveBeenReceived(), Eq(true));
 }
 
 TEST_F(ARelayMessageHandlerWhichHasProcessedASecretRecoveryFailureMessage,
-       EncodesRecoveryFailureAuditMessages)
+       AcceptsRecoveryFailureAuditMessagesForEncoding)
 {
-    vector<uint160> audit_message_hashes = relay->hashes.recovery_failure_audit_message_hashes;
-    for (auto audit_message_hash : audit_message_hashes)
-        ASSERT_TRUE(VectorContainsEntry(builder->accepted_messages, audit_message_hash));
+    auto &attempt = relay->succession_attempts[relay->current_successor_number];
+    auto audit = attempt.audits.begin()->second;
+
+    for (auto audit_message_hash : audit.audit_message_hashes)
+    {
+        if (audit_message_hash != 0)
+            ASSERT_TRUE(VectorContainsEntry(builder->accepted_messages, audit_message_hash));
+    }
 }
 
 TEST_F(ARelayMessageHandlerWhichHasProcessedASecretRecoveryFailureMessage,
        DoesntSendRecoveryFailureAuditMessagesInBlockValidationMode)
 {
-    std::vector<uint160> recovery_message_hashes = relay->hashes.secret_recovery_message_hashes;
-    ASSERT_THAT(recovery_message_hashes.size(), Eq(4));
-    auto failure_message = relay_message_handler->succession_handler.GenerateSecretRecoveryFailureMessage(recovery_message_hashes);
-    relay->hashes.recovery_failure_audit_message_hashes = vector<uint160>();
+    auto &attempt = relay->succession_attempts[relay->current_successor_number];
+    ASSERT_THAT(attempt.HasFourRecoveryMessages(), Eq(true));
+
+    auto failure_message = relay_message_handler->succession_handler.GenerateSecretRecoveryFailureMessage(attempt.recovery_message_hashes);
+    attempt.audits.clear();
     relay_message_handler->mode = BLOCK_VALIDATION;
     relay_message_handler->HandleSecretRecoveryFailureMessage(failure_message);
-    vector<uint160> audit_message_hashes = relay->hashes.recovery_failure_audit_message_hashes;
-    ASSERT_THAT(audit_message_hashes.size(), Eq(0));
+
+    auto audit = attempt.audits.begin()->second;
+    for (uint32_t i = 0; i < 4; i++)
+        ASSERT_THAT(audit.audit_message_hashes[i], Eq(0));
 }
 
 TEST_F(ARelayMessageHandlerWhichHasProcessedASecretRecoveryFailureMessage,
        SendsAuditMessagesWhichContainTheReceivingKeyQuartersForTheSharedSecretQuartersReferencedInTheFailureMessage)
 {
-    vector<uint160> audit_message_hashes = relay->hashes.recovery_failure_audit_message_hashes;
-    RecoveryFailureAuditMessage audit_message = data->GetMessage(audit_message_hashes[0]);
+    auto &attempt = relay->succession_attempts[relay->current_successor_number];
+    auto audit = attempt.audits.begin()->second;
+    RecoveryFailureAuditMessage audit_message = data->GetMessage(audit.audit_message_hashes[0]);
 
     auto key_sharer = GetKeySharer();
-    int64_t position_of_key_quarter_holder = PositionOfEntryInVector(relay->number,
-                                                                     key_sharer->holders.key_quarter_holders);
+    int64_t position_of_key_quarter_holder = PositionOfEntryInArray(relay->number,
+                                                                    key_sharer->key_quarter_holders);
 
-    auto key_sixteenth_position = 4 * position_of_key_quarter_holder + failure_message.shared_secret_quarter_position;
-    auto public_key_sixteenth = key_sharer->PublicKeySixteenths()[key_sixteenth_position];
-    auto key_quarter_position = PositionOfEntryInVector(audit_message.quarter_holder_number,
-                                                        relay->holders.key_quarter_holders);
-    auto receiving_key_quarter = relay->GenerateRecipientPrivateKeyQuarter(public_key_sixteenth,
+    auto key_twentyfourth_position = 4 * position_of_key_quarter_holder + failure_message.shared_secret_quarter_position;
+    auto public_key_twentyfourth = key_sharer->PublicKeyTwentyFourths()[key_twentyfourth_position];
+    auto key_quarter_position = PositionOfEntryInArray(audit_message.quarter_holder_number, relay->key_quarter_holders);
+    auto receiving_key_quarter = relay->GenerateRecipientPrivateKeyQuarter(public_key_twentyfourth,
                                                                            (uint8_t) key_quarter_position, *data);
     ASSERT_THAT(audit_message.private_receiving_key_quarter, Eq(receiving_key_quarter.getuint256()));
 }
@@ -2235,11 +1822,12 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedASecretRecoveryFailureMessage,
 TEST_F(ARelayMessageHandlerWhichHasProcessedASecretRecoveryFailureMessage,
        SendsAuditMessagesWhosePrivateReceivingKeyQuartersMatchTheCorrespondingPublicReceivingKeyQuarters)
 {
-    vector<uint160> audit_message_hashes = relay->hashes.recovery_failure_audit_message_hashes;
+    auto &attempt = relay->succession_attempts[relay->current_successor_number];
+    auto audit = attempt.audits.begin()->second;
 
     for (uint32_t i = 0; i < 4; i++)
     {
-        RecoveryFailureAuditMessage audit_message = data->GetMessage(audit_message_hashes[i]);
+        RecoveryFailureAuditMessage audit_message = data->GetMessage(audit.audit_message_hashes[i]);
         bool ok = audit_message.VerifyPrivateReceivingKeyQuarterMatchesPublicReceivingKeyQuarter(*data);
         ASSERT_THAT(ok, Eq(true)) << "failed at " << i;
     }
@@ -2248,11 +1836,12 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedASecretRecoveryFailureMessage,
 TEST_F(ARelayMessageHandlerWhichHasProcessedASecretRecoveryFailureMessage,
        SendsAuditMessagesWhichRevealWhetherTheEncryptedKeyQuarterInTheSecretRecoveryMessageWasCorrect)
 {
-    vector<uint160> audit_message_hashes = relay->hashes.recovery_failure_audit_message_hashes;
+    auto &attempt = relay->succession_attempts[relay->current_successor_number];
+    auto audit = attempt.audits.begin()->second;
 
     for (uint32_t i = 0; i < 4; i++)
     {
-        RecoveryFailureAuditMessage audit_message = data->GetMessage(audit_message_hashes[i]);
+        RecoveryFailureAuditMessage audit_message = data->GetMessage(audit.audit_message_hashes[i]);
         bool ok = audit_message.VerifyEncryptedSharedSecretQuarterInSecretRecoveryMessageWasCorrect(*data);
         if (i < 3)
             ASSERT_THAT(ok, Eq(true));
@@ -2273,11 +1862,12 @@ public:
     {
         suppress_audit_messages = true;
         ARelayMessageHandlerWhichHasProcessedFourSecretRecoveryMessagesOneOfWhichHasABadSharedSecretQuarter::SetUp();
-        failure_message_hash = relay->hashes.secret_recovery_failure_message_hashes[0];
-        failure_message = data->GetMessage(failure_message_hash);
 
-        vector<uint160> recovery_message_hashes = relay->hashes.secret_recovery_message_hashes;
-        secret_recovery_message = data->GetMessage(recovery_message_hashes[0]);
+        auto &attempt = relay->succession_attempts[relay->current_successor_number];
+
+        failure_message_hash = attempt.audits.begin()->first;
+        failure_message = data->GetMessage(failure_message_hash);
+        secret_recovery_message = data->GetMessage(attempt.recovery_message_hashes[0]);
     }
 
     Relay *GetKeySharer()
@@ -2295,14 +1885,17 @@ public:
 TEST_F(ARelayMessageHandlerWhichHasProcessedASecretRecoveryFailureMessageAndNoAuditMessages,
        RecordsTheSecretRecoveryFailureMessageHash)
 {
-    ASSERT_THAT(relay->hashes.secret_recovery_failure_message_hashes[0], Eq(failure_message_hash));
+    auto &attempt = relay->succession_attempts[relay->current_successor_number];
+    ASSERT_THAT(attempt.audits.begin()->first, Eq(failure_message_hash));
 }
 
 TEST_F(ARelayMessageHandlerWhichHasProcessedASecretRecoveryFailureMessageAndNoAuditMessages,
        HasProcessedNoAuditMessages)
 {
-    vector<uint160> audit_message_hashes = relay->hashes.recovery_failure_audit_message_hashes;
-    ASSERT_THAT(audit_message_hashes.size(), Eq(0));
+    auto &attempt = relay->succession_attempts[relay->current_successor_number];
+    auto &audit = attempt.audits.begin()->second;
+    for (uint32_t i = 0; i < 4; i++)
+        ASSERT_THAT(audit.audit_message_hashes[i], Eq(0));
 }
 
 TEST_F(ARelayMessageHandlerWhichHasProcessedASecretRecoveryFailureMessageAndNoAuditMessages,
@@ -2317,18 +1910,18 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedASecretRecoveryFailureMessageAndNoAu
 }
 
 TEST_F(ARelayMessageHandlerWhichHasProcessedASecretRecoveryFailureMessageAndNoAuditMessages,
-       WritesObituariesForTheKeyQuarterHoldersWhoDontRespondInTime)
+       MarksTheKeyQuarterHoldersWhoDontRespondInTimeAsNotResponding)
 {
     relay_message_handler->succession_handler.send_secret_recovery_messages = false;
     SetMockTimeMicros(TEST_START_TIME + RESPONSE_WAIT_TIME);
     relay_message_handler->succession_handler.scheduler.DoTasksScheduledForExecutionBeforeNow();
 
     for (auto quarter_holder : relay->QuarterHolders(*data))
-        ASSERT_THAT(quarter_holder->hashes.obituary_hash, Ne(0));
+        ASSERT_THAT(quarter_holder->status, Eq(NOT_RESPONDING));
 }
 
 TEST_F(ARelayMessageHandlerWhichHasProcessedASecretRecoveryFailureMessageAndNoAuditMessages,
-       EncodesDurationsWithoutResponsesFromTheKeyQuarterHoldersWhoDontRespondInTime)
+       AcceptsDurationsWithoutResponsesFromTheKeyQuarterHoldersWhoDontRespondInTimeForEncoding)
 {
     relay_message_handler->succession_handler.send_secret_recovery_messages = false;
     SetMockTimeMicros(TEST_START_TIME + RESPONSE_WAIT_TIME);
@@ -2367,38 +1960,38 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedASecretRecoveryFailureMessageAndNoAu
 
     DurationWithoutResponseFromRelay duration;
     duration.message_hash = failure_message_hash;
-    duration.relay_number = relay->holders.key_quarter_holders[0];
+    duration.relay_number = relay->key_quarter_holders[0];
 
     ASSERT_FALSE(relay_message_handler->ValidateDurationWithoutResponseFromRelay(duration));
 }
 
 TEST_F(ARelayMessageHandlerWhichHasProcessedASecretRecoveryFailureMessageAndNoAuditMessages,
-       SchedulesATaskToCheckWhichQuarterHoldersHaveRespondedToTheObituaries)
+       SchedulesATaskToCheckWhichQuarterHoldersHaveRespondedToTheDeaths)
 {
     relay_message_handler->succession_handler.send_secret_recovery_messages = false;
     SetMockTimeMicros(TEST_START_TIME + RESPONSE_WAIT_TIME);
     relay_message_handler->succession_handler.scheduler.DoTasksScheduledForExecutionBeforeNow();
 
-    for (auto quarter_holder_number : relay->holders.key_quarter_holders)
+    for (auto quarter_holder_number : relay->key_quarter_holders)
     {
         auto quarter_holder = relay_state->GetRelayByNumber(quarter_holder_number);
         ASSERT_TRUE(relay_message_handler->succession_handler.scheduler.TaskIsScheduledForTime(
-                    "obituary", quarter_holder->hashes.obituary_hash, TEST_START_TIME + 2 * RESPONSE_WAIT_TIME));
+                    "death", Death(quarter_holder->number), TEST_START_TIME + 2 * RESPONSE_WAIT_TIME));
     }
 }
 
 TEST_F(ARelayMessageHandlerWhichHasProcessedASecretRecoveryFailureMessageAndNoAuditMessages,
-        DoesntScheduleATaskToCheckWhichQuarterHoldersHaveRespondedToTheObituariesInBlockValidationMode)
+        DoesntScheduleATaskToCheckWhichQuarterHoldersHaveRespondedToTheDeathsInBlockValidationMode)
 {
     relay_message_handler->mode = BLOCK_VALIDATION;
     SetMockTimeMicros(TEST_START_TIME + RESPONSE_WAIT_TIME);
     relay_message_handler->succession_handler.scheduler.DoTasksScheduledForExecutionBeforeNow();
 
-    for (auto quarter_holder_number : relay->holders.key_quarter_holders)
+    for (auto quarter_holder_number : relay->key_quarter_holders)
     {
         auto quarter_holder = relay_state->GetRelayByNumber(quarter_holder_number);
         ASSERT_FALSE(relay_message_handler->succession_handler.scheduler.TaskIsScheduledForTime(
-                     "obituary", quarter_holder->hashes.obituary_hash, TEST_START_TIME + 2 * RESPONSE_WAIT_TIME));
+                     "death", Death(quarter_holder->number), TEST_START_TIME + 2 * RESPONSE_WAIT_TIME));
     }
 }
 
@@ -2418,13 +2011,15 @@ class ARelayMessageHandlerWhichHasProcessedFourValidRecoveryFailureAuditMessages
 };
 
 TEST_F(ARelayMessageHandlerWhichHasProcessedFourValidRecoveryFailureAuditMessages,
-       GeneratesAnObituaryForTheQuarterHolderWhoSentABadSecretRecoveryMessage)
+       MarksTheQuarterHolderWhoSentABadSecretRecoveryMessageAsHavingMisbehaved)
 {
-    vector<uint160> audit_message_hashes = relay->hashes.recovery_failure_audit_message_hashes;
-    RecoveryFailureAuditMessage audit_message = data->GetMessage(audit_message_hashes[3]);
+    auto &attempt = relay->succession_attempts[relay->current_successor_number];
+
+    auto &audit = attempt.audits.begin()->second;
+    RecoveryFailureAuditMessage audit_message = data->GetMessage(audit.audit_message_hashes[3]);
     Relay *quarter_holder = relay_message_handler->relay_state.GetRelayByNumber(audit_message.quarter_holder_number);
 
-    ASSERT_THAT(quarter_holder->hashes.obituary_hash, Ne(0));
+    ASSERT_THAT(quarter_holder->status, Eq(MISBEHAVED));
 }
 
 
@@ -2449,9 +2044,10 @@ public:
         SecretRecoveryFailureMessage failure_message;
         failure_message.key_sharer_position = 0;
         failure_message.shared_secret_quarter_position = 1;
-        failure_message.obituary_hash = relay->hashes.obituary_hash;
-        std::vector<uint160> recovery_message_hashes = relay->hashes.secret_recovery_message_hashes;
-        failure_message.recovery_message_hashes = recovery_message_hashes;
+        failure_message.successor_number = relay->current_successor_number;
+        failure_message.dead_relay_number = relay->number;
+        auto &attempt = relay->succession_attempts[relay->current_successor_number];
+        failure_message.recovery_message_hashes = attempt.recovery_message_hashes;
         // falsely state that the decrypted shared secret quarters sum to 4
         failure_message.sum_of_decrypted_shared_secret_quarters = Point(CBigNum(4));
         failure_message.Sign(*data);
@@ -2465,58 +2061,11 @@ public:
 };
 
 TEST_F(ARelayMessageHandlerWhichHasProcessedABadSecretRecoveryFailureMessage,
-       GeneratesAnObituaryForTheSuccessorWhoSentTheBadFailureMessage)
+       MarksTheSuccessorWhoSentTheBadFailureMessageAsHavingMisbehaved)
 {
-    auto successor = relay_message_handler->relay_state.GetRelayByNumber(relay->SuccessorNumber(*data));
-    ASSERT_THAT(successor->hashes.obituary_hash, Ne(0));
-}
-
-
-class ARelayMessageHandlerWithAGoodRecoveryFailureMessageWhichRevealsBadEncryptedSecretsInTheRelayJoinMessage :
-        public ARelayMessageHandlerWithAGoodbyeMessageWithABadSecret
-{
-public:
-    virtual void SetUp()
-    {
-        ARelayMessageHandlerWithAGoodbyeMessageWithABadSecret::SetUp();
-        DECLARE_CACHED_DATA;
-        if (reference_relay_state.relays.size() == 0)
-        {
-            key_sharer->public_key_set.key_points[14][0] += Point(CBigNum(1));
-            relay_message_handler->Handle(goodbye_message, &peer);
-            SAVE_CACHED_DATA;
-        }
-        else
-        {
-            LOAD_CACHED_DATA;
-        }
-    }
-
-    virtual void TearDown()
-    {
-        ARelayMessageHandlerWithAGoodbyeMessageWithABadSecret::TearDown();
-    }
-};
-
-TEST_F(ARelayMessageHandlerWithAGoodRecoveryFailureMessageWhichRevealsBadEncryptedSecretsInTheRelayJoinMessage,
-       SendsFourAuditMessages)
-{
-    ASSERT_THAT(relay->hashes.recovery_failure_audit_message_hashes.size(), Eq(4));
-}
-
-TEST_F(ARelayMessageHandlerWithAGoodRecoveryFailureMessageWhichRevealsBadEncryptedSecretsInTheRelayJoinMessage,
-       GeneratesAnObituaryForTheMisbehavingKeySharer)
-{
-    ASSERT_THAT(key_sharer->hashes.obituary_hash, Ne(0));
-}
-
-TEST_F(ARelayMessageHandlerWithAGoodRecoveryFailureMessageWhichRevealsBadEncryptedSecretsInTheRelayJoinMessage,
-       DoesntGenerateAnObituaryForTheSuccessorOrQuarterHolders)
-{
-    auto successor = relay_state->GetRelayByNumber(relay->SuccessorNumber(*data));
-    ASSERT_THAT(successor->hashes.obituary_hash, Eq(0));
-    for (auto quarter_holder : relay->QuarterHolders(*data))
-        ASSERT_THAT(quarter_holder->hashes.obituary_hash, Eq(0));
+    auto successor = relay_message_handler->relay_state.GetRelayByNumber(
+            relay->SuccessorNumberFromLatestSuccessionAttempt(*data));
+    ASSERT_THAT(successor->status, Eq(MISBEHAVED));
 }
 
 
@@ -2556,21 +2105,20 @@ public:
     {
         for (auto &relay : relay_state->relays)
         {
-            if (relay.hashes.key_distribution_message_hash != 0)
+            if (relay.key_quarter_locations[0].message_hash != 0)
                 continue;
-            if (not relay_state->AssignKeyPartHoldersToRelay(relay, relay.number))
+            if (not relay_state->AssignKeyQuarterHoldersToRelay(relay))
                 continue;
             auto key_distribution_message = relay.GenerateKeyDistributionMessage(*data, relay.number, *relay_state);
             data->StoreMessage(key_distribution_message);
             relay_state->ProcessKeyDistributionMessage(key_distribution_message);
-            relay.key_distribution_message_accepted = true;
         }
     }
 
     void DeleteKeyPartsHeldByRelay(uint64_t relay_number)
     {
-        for (auto key_sixteenth : KeyPartsHeldByRelay(relay_number))
-            keydata.Delete(key_sixteenth);
+        for (auto key_twentyfourth : KeyPartsHeldByRelay(relay_number))
+            keydata.Delete(key_twentyfourth);
     }
 
     vector<Point> KeyPartsHeldByRelay(uint64_t relay_number)
@@ -2582,9 +2130,9 @@ public:
         for (auto sharer_number : KeySharersOfGivenRelay(relay_number))
         {
             auto sharer = relay_state->GetRelayByNumber(sharer_number);
-            auto key_quarter_position = PositionOfEntryInVector(relay_number, sharer->holders.key_quarter_holders);
-            for (int64_t i = 4 * key_quarter_position; i < 4 + 4 * key_quarter_position; i++)
-                parts.push_back(sharer->PublicKeySixteenths()[i]);
+            auto key_quarter_position = PositionOfEntryInArray(relay_number, sharer->key_quarter_holders);
+            for (int64_t i = 6 * key_quarter_position; i < 6 + 6 * key_quarter_position; i++)
+                parts.push_back(sharer->PublicKeyTwentyFourths()[i]);
         }
         key_parts_held_by_dead_relay = parts;
         return parts;
@@ -2595,8 +2143,7 @@ public:
         vector<uint64_t> sharers;
         for (auto &relay : relay_state->relays)
         {
-            if (not relay.key_distribution_message_accepted) continue;
-            if (VectorContainsEntry(relay.holders.key_quarter_holders, relay_number))
+            if (ArrayContainsEntry(relay.key_quarter_holders, relay_number))
                 sharers.push_back(relay.number);
         }
         return sharers;
@@ -2606,7 +2153,7 @@ public:
     {
         vector<uint64_t> holders;
         for (auto &relay : relay_state->relays)
-            for (auto quarter_holder_number : relay.holders.key_quarter_holders)
+            for (auto quarter_holder_number : relay.key_quarter_holders)
                 if (not VectorContainsEntry(holders, quarter_holder_number))
                     holders.push_back(quarter_holder_number);
         return holders;
@@ -2624,8 +2171,8 @@ public:
 
     bool KeyPartsHeldByRelayArePresent(uint64_t relay_number)
     {
-        for (auto public_key_sixteenth : KeyPartsHeldByRelay(relay_number))
-            if (not keydata[public_key_sixteenth].HasProperty("privkey"))
+        for (auto public_key_twentyfourth : KeyPartsHeldByRelay(relay_number))
+            if (not keydata[public_key_twentyfourth].HasProperty("privkey"))
                 return false;
         return true;
     }
@@ -2648,11 +2195,12 @@ TEST_F(ARelayMessageHandlerWithManyRelaysWhoseKeyDistributionMessagesHaveBeenAcc
     ASSERT_TRUE(KeyPartsHeldByRelayArePresent(relay_number));
 }
 
+
 TEST_F(ARelayMessageHandlerWithManyRelaysWhoseKeyDistributionMessagesHaveBeenAccepted,
        RecoversSecretsAfterTheDeathOfTwoRelaysOneOfWhichIsAQuarterHolderForTheOther)
 {
     auto relay_number = KeyPartHolders()[0];
-    auto quarter_holder_number = relay_state->GetRelayByNumber(relay_number)->holders.key_quarter_holders[0];
+    auto quarter_holder_number = relay_state->GetRelayByNumber(relay_number)->key_quarter_holders[0];
 
     DeleteKeyPartsHeldByRelay(relay_number);
     KillRelaySilently(relay_number);
@@ -2666,6 +2214,5 @@ TEST_F(ARelayMessageHandlerWithManyRelaysWhoseKeyDistributionMessagesHaveBeenAcc
     SetMockTimeMicros(GetTimeMicros() + RESPONSE_WAIT_TIME);
     relay_message_handler->succession_handler.scheduler.DoTasksScheduledForExecutionBeforeNow();
 
-    ASSERT_FALSE(relay_state->ContainsRelayWithNumber(quarter_holder_number));
     ASSERT_TRUE(KeyPartsHeldByRelayArePresent(relay_number));
 }

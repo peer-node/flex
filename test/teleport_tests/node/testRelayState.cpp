@@ -1,8 +1,9 @@
 #include <src/vector_tools.h>
 #include <src/base/util_time.h>
 #include "gmock/gmock.h"
-#include "test/teleport_tests/node/relay_handler/RelayState.h"
-#include "test/teleport_tests/node/relay_handler/SecretRecoveryComplaint.h"
+#include "test/teleport_tests/node/relays/RelayState.h"
+#include "test/teleport_tests/node/relays/RelayMemoryCache.h"
+#include "test/teleport_tests/node/relays/KeyQuarterLocation.h"
 
 using namespace ::testing;
 using namespace std;
@@ -22,6 +23,7 @@ public:
     virtual void SetUp()
     {
         data = new Data(msgdata, creditdata, keydata, &relay_state);
+        data->CreateCache();
     }
     virtual void TearDown()
     {
@@ -56,39 +58,42 @@ TEST_F(ARelayState, PopulatesTheRelaysJoinMessageHash)
     ASSERT_THAT(join_message_hash, Eq(relay_join_message.GetHash160()));
 }
 
-TEST_F(ARelayState, ThrowsAnExceptionIfTheSameMinedCreditMessageHashIsUsedTwiceInJoinMessages)
-{
-    RelayJoinMessage relay_join_message;
-    relay_state.ProcessRelayJoinMessage(relay_join_message);
-    EXPECT_THROW(relay_state.ProcessRelayJoinMessage(relay_join_message), RelayStateException);
-}
 
-
-class ARelayStateWith37Relays : public ARelayState
+class ARelayStateWith53Relays : public ARelayState
 {
 public:
     virtual void SetUp()
     {
         ARelayState::SetUp();
-        uint64_t start = GetTimeMicros();
         static RelayState reference_test_relay_state;
-        static MemoryDataStore reference_test_keydata;
+        static MemoryDataStore reference_test_keydata, reference_msgdata;
 
         if (reference_test_relay_state.relays.size() == 0)
         {
-            for (uint32_t i = 1; i <= 37; i++)
+            for (uint32_t i = 1; i <= 53; i++)
             {
                 RelayJoinMessage join_message = Relay().GenerateJoinMessage(keydata, i);
                 relay_state.ProcessRelayJoinMessage(join_message);
+                data->StoreMessage(join_message);
             }
             reference_test_relay_state = relay_state;
             reference_test_keydata = keydata;
+            reference_msgdata = msgdata;
         }
         else
         {
             relay_state = reference_test_relay_state;
             keydata = reference_test_keydata;
+            msgdata = reference_msgdata;
         }
+    }
+
+    bool RelayHasAQuarterHolderThatJoinedLaterThanIt(Relay *relay)
+    {
+        for (auto quarter_holder_number : relay->key_quarter_holders)
+            if (quarter_holder_number > relay->number)
+                return true;
+        return false;
     }
 
     virtual void TearDown()
@@ -97,100 +102,196 @@ public:
     }
 };
 
-bool VectorContainsANumberGreaterThan(std::vector<uint64_t> numbers, uint64_t given_number)
+TEST_F(ARelayStateWith53Relays, AssignsKeyQuarterHoldersToEachRelayWithARelayWhoJoinedLaterThanIt)
 {
-    for (auto number : numbers)
-        if (number > given_number)
-            return true;
-    return false;
-}
-
-TEST_F(ARelayStateWith37Relays, AssignsKeyPartHoldersToEachRelayWithThreeRelaysWhoJoinedLaterThanIt)
-{
-    uint160 encoding_message_hash = 1;
-    for (auto relay : relay_state.relays)
+    for (auto &relay : relay_state.relays)
     {
-        bool holders_assigned = relay_state.AssignKeyPartHoldersToRelay(relay, encoding_message_hash);
-        ASSERT_THAT(holders_assigned, Eq(relay.number <= 34));
+        bool holders_assigned = relay_state.AssignKeyQuarterHoldersToRelay(relay);
+        ASSERT_THAT(holders_assigned, Eq(relay.number <= 52)) << "failed at " << relay.number;
     }
 }
 
-TEST_F(ARelayStateWith37Relays, AssignsFourQuarterKeyHoldersAtLeastOneOfWhichJoinedLaterThanTheGivenRelay)
+TEST_F(ARelayStateWith53Relays, AssignsKeyQuarterHoldersAutomatically)
 {
-    for (auto relay : relay_state.relays)
+    for (auto &relay : relay_state.relays)
     {
-        if (relay_state.AssignKeyPartHoldersToRelay(relay, 1))
+        bool holders_assigned = relay.HasFourKeyQuarterHolders();
+        ASSERT_THAT(holders_assigned, Eq(relay.number <= 52)) << "failed at " << relay.number;
+    }
+}
+
+TEST_F(ARelayStateWith53Relays, AssignsAtLeastOneKeyQuarterHolderWhichJoinedLaterThanTheKeySharer)
+{
+    for (auto &relay : relay_state.relays)
+    {
+        bool holders_assigned = relay_state.AssignKeyQuarterHoldersToRelay(relay);
+        if (holders_assigned)
+            ASSERT_TRUE(RelayHasAQuarterHolderThatJoinedLaterThanIt(&relay));
+    }
+}
+
+TEST_F(ARelayStateWith53Relays, AssignsSuccessorsToEachRelayWithTwoRelaysWhichJoinedLater)
+{
+    for (auto &relay : relay_state.relays)
+    {
+        relay_state.AssignSuccessorToRelay(&relay);
+        if (relay.current_successor_number == 0)
+            ASSERT_THAT(relay.number, Gt(51));
+    }
+}
+
+TEST_F(ARelayStateWith53Relays, AssignsSuccessorsAutomatically)
+{
+    for (auto &relay : relay_state.relays)
+    {
+        if (relay.current_successor_number == 0)
+            ASSERT_THAT(relay.number, Gt(51));
+    }
+}
+
+
+class ARelayStateWith53RelaysWithRelayJoinMessagesEncodedInAMinedCreditMessage : public ARelayStateWith53Relays
+{
+public:
+    MinedCreditMessage msg;
+
+    virtual void SetUp()
+    {
+        ARelayStateWith53Relays::SetUp();
+
+        msg = MinedCreditMessageContainingAJoinMessage();
+    }
+
+    MinedCreditMessage MinedCreditMessageContainingAJoinMessage()
+    {
+        MinedCreditMessage msg;
+        for (uint32_t i = 0; i < 20; i++)
+            msg.hash_list.full_hashes.push_back(relay_state.relays[i].hashes.join_message_hash);
+        msg.hash_list.GenerateShortHashes();
+        return msg;
+    }
+
+    virtual void TearDown()
+    {
+        ARelayStateWith53Relays::TearDown();
+    }
+};
+
+TEST_F(ARelayStateWith53RelaysWithRelayJoinMessagesEncodedInAMinedCreditMessage,
+       SaysThatARelayShouldSendAKeyDistributionMessageIfItsQuarterHoldersHaveJoinMessagesWhichWereEncoded)
+{
+    relay_state.ProcessMinedCreditMessage(msg, *data);
+    for (auto &relay : relay_state.relays)
+    {
+        if (not relay.HasFourKeyQuarterHolders())
+            continue;
+        bool quarter_holders_have_encoded_messages = true;
+        for (auto quarter_holder_number : relay.key_quarter_holders)
         {
-            ASSERT_THAT(relay.holders.key_quarter_holders.size(), Eq(4));
-            ASSERT_TRUE(VectorContainsANumberGreaterThan(relay.holders.key_quarter_holders, relay.number));
+            auto quarter_holder = relay_state.GetRelayByNumber(quarter_holder_number);
+            if (quarter_holder == NULL) continue;
+            if (not quarter_holder->join_message_was_encoded)
+                quarter_holders_have_encoded_messages = false;
+        }
+        ASSERT_THAT(relay_state.RelayShouldSendAKeyDistributionMessage(relay),
+                    Eq(quarter_holders_have_encoded_messages)) << "failed at " << relay.number;
+    }
+}
+
+TEST_F(ARelayStateWith53RelaysWithRelayJoinMessagesEncodedInAMinedCreditMessage,
+       MarksTheJoinMessageAsEncodedWhenProcessingTheMinedCreditMessage)
+{
+    bool join_message_encoded = relay_state.relays[0].join_message_was_encoded;
+    ASSERT_FALSE(join_message_encoded);
+    relay_state.ProcessMinedCreditMessage(msg, *data);
+    join_message_encoded = relay_state.relays[0].join_message_was_encoded;
+    ASSERT_TRUE(join_message_encoded);
+}
+
+TEST_F(ARelayStateWith53RelaysWithRelayJoinMessagesEncodedInAMinedCreditMessage,
+       UpdatesTheLatestMinedCreditMessageHashWhenProcessingTheMinedCreditMessage)
+{
+    ASSERT_THAT(relay_state.latest_mined_credit_message_hash, Ne(msg.GetHash160()));
+    relay_state.ProcessMinedCreditMessage(msg, *data);
+    ASSERT_THAT(relay_state.latest_mined_credit_message_hash, Eq(msg.GetHash160()));
+}
+
+TEST_F(ARelayStateWith53RelaysWithRelayJoinMessagesEncodedInAMinedCreditMessage,
+       AssignsTheKeyDistributionTaskToEachRelayWhichShouldSendOne)
+{
+    relay_state.ProcessMinedCreditMessage(msg, *data);
+    for (auto &relay : relay_state.relays)
+    {
+        if (relay_state.RelayShouldSendAKeyDistributionMessage(relay))
+        {
+            Task task(SEND_KEY_DISTRIBUTION_MESSAGE, relay.hashes.join_message_hash, ALL_POSITIONS);
+            ASSERT_TRUE(VectorContainsEntry(relay.tasks, task));
         }
     }
 }
 
-TEST_F(ARelayStateWith37Relays, AssignsKeySixteenthHoldersAtLeastOneOfWhichJoinedLaterThanTheGivenRelay)
+
+class ARelayStateWith53RelaysWhichHasProcessedAKeyDistributionMessage : public ARelayStateWith53Relays
 {
-    for (auto relay : relay_state.relays)
+public:
+    Relay *relay;
+    KeyDistributionMessage key_distribution_message;
+
+    virtual void SetUp()
     {
-        if (relay_state.AssignKeyPartHoldersToRelay(relay, 1))
-        {
-            ASSERT_THAT(relay.holders.first_set_of_key_sixteenth_holders.size(), Eq(16));
-            ASSERT_TRUE(VectorContainsANumberGreaterThan(relay.holders.first_set_of_key_sixteenth_holders, relay.number));
-            ASSERT_THAT(relay.holders.second_set_of_key_sixteenth_holders.size(), Eq(16));
-            ASSERT_TRUE(VectorContainsANumberGreaterThan(relay.holders.second_set_of_key_sixteenth_holders, relay.number));
-        }
+        ARelayStateWith53Relays::SetUp();
+        relay = relay_state.GetRelayByNumber(22);
+        key_distribution_message = relay->GenerateKeyDistributionMessage(*data, 1, relay_state);
+        relay_state.ProcessKeyDistributionMessage(key_distribution_message);
+    }
+
+    virtual void TearDown()
+    {
+        ARelayStateWith53Relays::TearDown();
+    }
+};
+
+TEST_F(ARelayStateWith53RelaysWhichHasProcessedAKeyDistributionMessage, AssignsDistinctAuditors)
+{
+    auto auditor_selection = relay_state.GenerateKeyDistributionAuditorSelection(relay);
+    std::set<uint64_t> auditors;
+    for (auto auditor_number : auditor_selection.first_set_of_auditors)
+    {
+        ASSERT_FALSE(auditors.count(auditor_number)) << auditor_number << " occurred twice";
+        auditors.insert(auditor_number);
+    }
+    for (auto auditor_number : auditor_selection.second_set_of_auditors)
+    {
+        ASSERT_FALSE(auditors.count(auditor_number)) << auditor_number << " occurred twice";
+        auditors.insert(auditor_number);
     }
 }
 
-bool RelayHasDistinctKeyPartHolders(Relay &relay)
+TEST_F(ARelayStateWith53RelaysWhichHasProcessedAKeyDistributionMessage,
+       AssignsAuditorsNoneOfWhichAreKeyQuarterHolders)
 {
-    std::set<uint64_t> key_part_holders;
-    for (auto key_holder_group : relay.KeyPartHolderGroups())
-        for (auto key_part_holder : key_holder_group)
-            if (key_part_holders.count(key_part_holder))
-                return false;
-            else
-                key_part_holders.insert(key_part_holder);
-    return true;
-}
-
-TEST_F(ARelayStateWith37Relays, Assigns36DistinctKeyPartHolders)
-{
-    for (auto relay : relay_state.relays)
+    auto auditor_selection = relay_state.GenerateKeyDistributionAuditorSelection(relay);
+    for (auto auditor_number : auditor_selection.first_set_of_auditors)
     {
-        if (relay_state.AssignKeyPartHoldersToRelay(relay, 1))
-        {
-            ASSERT_TRUE(RelayHasDistinctKeyPartHolders(relay));
-        }
+        ASSERT_THAT(auditor_number, Ne(0));
+        for (auto quarter_holder_number : relay->key_quarter_holders)
+            ASSERT_THAT(auditor_number, Ne(quarter_holder_number));
     }
 }
 
-TEST_F(ARelayStateWith37Relays, DoesntAssignARelayToHoldItsOwnKeyParts)
+TEST_F(ARelayStateWith53RelaysWhichHasProcessedAKeyDistributionMessage,
+       AssignsAuditorsTwoOfWhichJoinedLaterThanTheKeySharer)
 {
-    for (Relay &relay : relay_state.relays)
-    {
-        relay_state.AssignKeyPartHoldersToRelay(relay, 1);
-        for (auto key_holder_group : relay.KeyPartHolderGroups())
-            ASSERT_THAT(VectorContainsEntry(key_holder_group, relay.number), Eq(false));
-    }
+    auto auditor_selection = relay_state.GenerateKeyDistributionAuditorSelection(relay);
+    auto first_auditor_in_first_set = relay_state.GetRelayByNumber(auditor_selection.first_set_of_auditors[0]);
+    auto first_auditor_in_second_set = relay_state.GetRelayByNumber(auditor_selection.second_set_of_auditors[0]);
+
+    ASSERT_THAT(first_auditor_in_first_set->number, Gt(relay->number));
+    ASSERT_THAT(first_auditor_in_second_set->number, Gt(relay->number));
 }
 
-TEST_F(ARelayStateWith37Relays, DoesntAssignTwoRelaysAsEachOthersKeyQuarterHolders)
-{
-    for (Relay &relay : relay_state.relays)
-        relay_state.AssignKeyPartHoldersToRelay(relay, relay.number);
 
-    for (Relay &first_relay : relay_state.relays)
-        for (Relay &second_relay : relay_state.relays)
-        {
-            bool first_has_second_as_quarter_holder = VectorContainsEntry(first_relay.holders.key_quarter_holders,
-                                                                          second_relay.number);
-            bool second_has_first_as_quarter_holder = VectorContainsEntry(second_relay.holders.key_quarter_holders,
-                                                                          first_relay.number);
-            ASSERT_FALSE(first_has_second_as_quarter_holder and second_has_first_as_quarter_holder);
-        }
-}
-
-class ARelayStateWith37RelaysAndAKeyDistributionMessage : public ARelayStateWith37Relays
+class ARelayStateWith53RelaysAndAKeyDistributionMessage : public ARelayStateWith53Relays
 {
 public:
     Relay *relay;
@@ -199,11 +300,12 @@ public:
 
     virtual void SetUp()
     {
-        ARelayStateWith37Relays::SetUp();
+        ARelayStateWith53Relays::SetUp();
         SetUpRelayState();
         number_of_chosen_relay = TheNumberOfARelayWhichIsBeingUsedAsAKeyQuarterHolder();
         relay = relay_state.GetRelayByNumber(number_of_chosen_relay);
         key_distribution_message = relay->GenerateKeyDistributionMessage(*data, 5, relay_state);
+        data->StoreMessage(key_distribution_message);
     }
 
     virtual void SetUpRelayState()
@@ -212,9 +314,6 @@ public:
 
         if (reference_test_relay_state.relays.size() == 0)
         {
-            uint160 encoding_message_hash = 1;
-            for (Relay& key_sharer : relay_state.relays)
-                relay_state.AssignKeyPartHoldersToRelay(key_sharer, encoding_message_hash++);
             reference_test_relay_state = relay_state;
         }
         else
@@ -226,153 +325,141 @@ public:
         auto key_distribution_message = relay_state.relays[0].GenerateKeyDistributionMessage(*data, 6, relay_state);
         data->StoreMessage(key_distribution_message);
         relay_state.ProcessKeyDistributionMessage(key_distribution_message);
-        return relay_state.relays[0].holders.key_quarter_holders[1];
+        return relay_state.relays[0].key_quarter_holders[1];
     }
 
     virtual void TearDown()
     {
-        ARelayStateWith37Relays::TearDown();
+        ARelayStateWith53Relays::TearDown();
     }
 };
 
-TEST_F(ARelayStateWith37RelaysAndAKeyDistributionMessage,
-       RecordsTheRelaysKeyDistributionMessageHashWhenProcessingAKeyDistributionMessage)
-{;
-    relay_state.ProcessKeyDistributionMessage(key_distribution_message);
-    ASSERT_THAT(relay->hashes.key_distribution_message_hash, Eq(key_distribution_message.GetHash160()));
-}
-
-TEST_F(ARelayStateWith37RelaysAndAKeyDistributionMessage,
-       ThrowsAnExceptionIfAskedToProcessAKeyDistributionMessageFromARelayWhichHasAlreadySentOne)
+TEST_F(ARelayStateWith53RelaysAndAKeyDistributionMessage,
+       RecordsTheKeyQuarterLocationsWhenProcessingAKeyDistributionMessage)
 {
     relay_state.ProcessKeyDistributionMessage(key_distribution_message);
-    EXPECT_THROW(relay_state.ProcessKeyDistributionMessage(key_distribution_message), RelayStateException);
+
+    for (uint32_t position = 0; position < 4; position++)
+    {
+        auto location = relay->key_quarter_locations[position];
+        ASSERT_THAT(location.message_hash, Eq(key_distribution_message.GetHash160()));
+        ASSERT_THAT(location.position, Eq(position));
+    }
+}
+
+TEST_F(ARelayStateWith53RelaysAndAKeyDistributionMessage,
+       RemovesTheKeyDistributionTaskWhenProcessingTheKeyDistributionMesssage)
+{
+    Task task(SEND_KEY_DISTRIBUTION_MESSAGE, relay->hashes.join_message_hash, ALL_POSITIONS);
+    relay->tasks.push_back(task);
+    relay_state.ProcessKeyDistributionMessage(key_distribution_message);
+    ASSERT_THAT(relay->tasks.size(), Eq(0));
 }
 
 
-class ARelayStateWhichHasProcessedAKeyDistributionMessage : public ARelayStateWith37RelaysAndAKeyDistributionMessage
+class ARelayStateWhichHasProcessedAKeyDistributionMessage : public ARelayStateWith53RelaysAndAKeyDistributionMessage
 {
 public:
     virtual void SetUp()
     {
-        ARelayStateWith37RelaysAndAKeyDistributionMessage::SetUp();
+        ARelayStateWith53RelaysAndAKeyDistributionMessage::SetUp();
         relay_state.ProcessKeyDistributionMessage(key_distribution_message);
         data->StoreMessage(key_distribution_message);
     }
 
+    MinedCreditMessage MinedCreditMessageWhichEncodesTheKeyDistributionMessage()
+    {
+        MinedCreditMessage msg;
+        msg.hash_list.full_hashes.push_back(key_distribution_message.GetHash160());
+        msg.hash_list.GenerateShortHashes();
+        data->StoreMessage(msg);
+        return msg;
+    }
+
     virtual void TearDown()
     {
-        ARelayStateWith37RelaysAndAKeyDistributionMessage::TearDown();
+        ARelayStateWith53RelaysAndAKeyDistributionMessage::TearDown();
     }
 };
 
-bool RelayHasAnObituaryWithSpecificReasonForLeaving(Relay *relay, Data data, uint32_t reason)
+
+TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
+       MarksTheKeyDistributionMessageAsEncodedWhenProcessingAMinedCreditMessageWhichEncodesIt)
 {
-    if (relay->hashes.obituary_hash == 0)
-        return false;
-    std::string message_type = data.msgdata[relay->hashes.obituary_hash]["type"];
-    if (message_type != "obituary")
-        return false;
-    Obituary obituary = data.msgdata[relay->hashes.obituary_hash]["obituary"];
-    return obituary.dead_relay_number == relay->number and obituary.reason_for_leaving == reason;
+    auto msg = MinedCreditMessageWhichEncodesTheKeyDistributionMessage();
+    relay_state.ProcessMinedCreditMessage(msg, *data);
+    ASSERT_THAT(relay->key_quarter_locations[0].message_was_encoded, Eq(true));
 }
 
 TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
-       GeneratesAnObituaryForTheRelayWhoWasComplainedAboutWhenProcessingAKeyDistributionComplaint)
+       AssignsTheSendAuditMessageTaskWhenProcessingAMinedCreditMessageWhichEncodesTheKeyDistributionMessage)
 {
-    uint64_t set_of_secrets = FIRST_SET_OF_KEY_SIXTEENTH_HOLDERS;
+    auto msg = MinedCreditMessageWhichEncodesTheKeyDistributionMessage();
+    relay_state.ProcessMinedCreditMessage(msg, *data);
+    Task task(SEND_KEY_DISTRIBUTION_AUDIT_MESSAGE, key_distribution_message.GetHash160(), ALL_POSITIONS);
+    ASSERT_TRUE(VectorContainsEntry(relay->tasks, task));
+}
+
+TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
+       RemovesTheSendAuditMessageTaskWhenProcessingTheKeyDistributionAuditMessage)
+{
+    auto msg = MinedCreditMessageWhichEncodesTheKeyDistributionMessage();
+    relay_state.ProcessMinedCreditMessage(msg, *data);
+    KeyDistributionAuditMessage audit_message;
+    audit_message.relay_number = relay->number;
+    audit_message.key_distribution_message_hash = key_distribution_message.GetHash160();
+    relay_state.ProcessKeyDistributionAuditMessage(audit_message);
+    Task task(SEND_KEY_DISTRIBUTION_AUDIT_MESSAGE, key_distribution_message.GetHash160(), ALL_POSITIONS);
+    ASSERT_FALSE(VectorContainsEntry(relay->tasks, task));
+}
+
+bool RelayHasStatus(Relay *relay, Data data, uint32_t reason)
+{
+    return relay->status == reason;
+}
+
+TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
+       MarksTheKeySharerAsMisbehavingWhenProcessingAKeyDistributionComplaint)
+{
     uint64_t position = 2;
     KeyDistributionComplaint complaint;
-    complaint.Populate(key_distribution_message.GetHash160(), set_of_secrets, position, *data);
+    complaint.Populate(key_distribution_message.GetHash160(), position, *data);
 
     relay_state.ProcessKeyDistributionComplaint(complaint, *data);
+    Relay *key_sharer = complaint.GetSecretSender(*data);
+
+    ASSERT_THAT(key_sharer->status, Eq(MISBEHAVED));
+}
+
+TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
+       IncrementsTheNumberOfComplaintsSentByTheComplainerWhenProcessingAKeyDistributionComplaint)
+{
+    KeyDistributionComplaint complaint;
+    complaint.Populate(key_distribution_message.GetHash160(), 2, *data);
 
     Relay *complainer = complaint.GetComplainer(*data);
-    Relay *secret_sender = complaint.GetSecretSender(*data);
+    ASSERT_THAT(complainer->number_of_complaints_sent, Eq(0));
 
-    ASSERT_TRUE(RelayHasAnObituaryWithSpecificReasonForLeaving(secret_sender, *data, MISBEHAVED));
-}
-
-TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage, AcceptsTheMessageAfterADurationWithoutAResponse)
-{
-    ASSERT_THAT(relay->key_distribution_message_accepted, Eq(false));
-
-    DurationWithoutResponse duration_after_key_distribution_message;
-    duration_after_key_distribution_message.message_hash = key_distribution_message.GetHash160();
-    relay_state.ProcessDurationWithoutResponse(duration_after_key_distribution_message, *data);
-
-    ASSERT_THAT(relay->key_distribution_message_accepted, Eq(true));
+    relay_state.ProcessKeyDistributionComplaint(complaint, *data);
+    ASSERT_THAT(complainer->number_of_complaints_sent, Eq(1));
 }
 
 TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
-       ThrowsAnExceptionIfAskedToProcessAComplaintAfterADurationWithoutAResponse)
+       RecordsARelaysStatusWhenRecordingItsDeath)
 {
-    DurationWithoutResponse duration_after_key_distribution_message;
-    duration_after_key_distribution_message.message_hash = key_distribution_message.GetHash160();
-    relay_state.ProcessDurationWithoutResponse(duration_after_key_distribution_message, *data);
-
-    KeyDistributionComplaint complaint;
-    complaint.Populate(key_distribution_message.GetHash160(),
-                       FIRST_SET_OF_KEY_SIXTEENTH_HOLDERS, 2, *data);
-    EXPECT_THROW(relay_state.ProcessKeyDistributionComplaint(complaint, *data), RelayStateException);
+    relay_state.RecordRelayDeath(relay, *data, MISBEHAVED);
+    ASSERT_THAT(relay->status, Eq(MISBEHAVED));
 }
 
 TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
-       GeneratesAnObituaryWithARelayInGoodStandingIfTheRelayIsOldEnoughAndSaidGoodbye)
+       AssignsTheDeathAsATaskForTheKeyQuarterHolders)
 {
-    relay_state.relays.back().number = 10000; // age is determined by difference between given and latest relay numbers
-    Obituary obituary = relay_state.GenerateObituary(relay, SAID_GOODBYE);
-    ASSERT_THAT(obituary.in_good_standing, Eq(true));
-}
-
-TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
-       GeneratesAnObituaryWithARelayNotInGoodStandingIfTheRelayIsNotOldEnoughOrDidntSayGoodbye)
-{
-    Obituary obituary = relay_state.GenerateObituary(relay, SAID_GOODBYE);
-    ASSERT_THAT(obituary.in_good_standing, Eq(false));
-    relay_state.relays.back().number = 10000;
-    obituary = relay_state.GenerateObituary(relay, NOT_RESPONDING);
-    ASSERT_THAT(obituary.in_good_standing, Eq(false));
-    obituary = relay_state.GenerateObituary(relay, MISBEHAVED);
-    ASSERT_THAT(obituary.in_good_standing, Eq(false));
-}
-
-TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
-       GeneratesAnObituaryWhichSpecifiesTheDeadRelaysSuccessor)
-{
-    Obituary obituary = relay_state.GenerateObituary(relay, SAID_GOODBYE);
-    ASSERT_THAT(obituary.successor_number, Eq(relay_state.AssignSuccessorToRelay(relay)));
-}
-
-TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
-       RecordsARelaysObituaryHashWhenProcessingTheObituary)
-{
-    Obituary obituary = relay_state.GenerateObituary(relay, SAID_GOODBYE);
-    relay_state.ProcessObituary(obituary, *data);
-    ASSERT_THAT(relay->hashes.obituary_hash, Eq(obituary.GetHash160()));
-}
-
-TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
-       AssignsTheObituaryAsATaskForTheKeyQuarterHoldersWhenProcessingItIfTheRelayDidntSayGoodbyeCorrectly)
-{
-    Obituary obituary = relay_state.GenerateObituary(relay, MISBEHAVED);
-    relay_state.ProcessObituary(obituary, *data);
-    for (auto key_quarter_holder_relay_number : relay->holders.key_quarter_holders)
+    relay_state.RecordRelayDeath(relay, *data, MISBEHAVED);
+    for (uint32_t position = 0; position < 4; position++)
     {
-        auto key_quarter_holder = relay_state.GetRelayByNumber(key_quarter_holder_relay_number);
-        ASSERT_TRUE(VectorContainsEntry(key_quarter_holder->tasks, obituary.GetHash160()));
-    }
-}
-
-TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
-       DoesntAssignTheObituaryAsATaskForTheKeyQuarterHoldersWhenProcessingItIfTheRelayDidSayGoodbyeCorrectly)
-{
-    Obituary obituary = relay_state.GenerateObituary(relay, SAID_GOODBYE);
-    relay_state.ProcessObituary(obituary, *data);
-    for (auto key_quarter_holder_relay_number : relay->holders.key_quarter_holders)
-    {
-        auto key_quarter_holder = relay_state.GetRelayByNumber(key_quarter_holder_relay_number);
-        ASSERT_FALSE(VectorContainsEntry(key_quarter_holder->tasks, obituary.GetHash160()));
+        auto key_quarter_holder = relay_state.GetRelayByNumber(relay->key_quarter_holders[position]);
+        Task task(SEND_SECRET_RECOVERY_MESSAGE, Death(relay->number), position);
+        ASSERT_TRUE(VectorContainsEntry(key_quarter_holder->tasks, task));
     }
 }
 
@@ -380,7 +467,7 @@ TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
        AssignsADistinctSuccessorWhichIsNotAKeyQuarterHolderToARelayWhichIsExiting)
 {
     uint64_t successor_relay_number = relay_state.AssignSuccessorToRelay(relay);
-    ASSERT_FALSE(VectorContainsEntry(relay->holders.key_quarter_holders, successor_relay_number));
+    ASSERT_FALSE(ArrayContainsEntry(relay->key_quarter_holders, successor_relay_number));
     ASSERT_THAT(relay->number, Ne(successor_relay_number));
 }
 
@@ -390,22 +477,85 @@ TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
     uint64_t successor_relay_number = relay_state.AssignSuccessorToRelay(relay);
 
     for (Relay &key_sharer : relay_state.relays)
-        if (VectorContainsEntry(key_sharer.holders.key_quarter_holders, relay->number))
+        if (ArrayContainsEntry(key_sharer.key_quarter_holders, relay->number))
         {
-            EraseEntryFromVector(relay->number, key_sharer.holders.key_quarter_holders);
-            key_sharer.holders.key_quarter_holders.push_back(successor_relay_number);
+            auto position = PositionOfEntryInArray(relay->number, key_sharer.key_quarter_holders);
+            key_sharer.key_quarter_holders[position] = successor_relay_number;
         }
 
     for (Relay &first_relay : relay_state.relays)
         for (Relay &second_relay : relay_state.relays)
         {
-            bool first_has_second_as_quarter_holder = VectorContainsEntry(first_relay.holders.key_quarter_holders,
-                                                                          second_relay.number);
-            bool second_has_first_as_quarter_holder = VectorContainsEntry(second_relay.holders.key_quarter_holders,
-                                                                          first_relay.number);
+            bool first_has_second_as_quarter_holder = ArrayContainsEntry(first_relay.key_quarter_holders,
+                                                                         second_relay.number);
+            bool second_has_first_as_quarter_holder = ArrayContainsEntry(second_relay.key_quarter_holders,
+                                                                         first_relay.number);
             ASSERT_FALSE(first_has_second_as_quarter_holder and second_has_first_as_quarter_holder);
         }
 }
+
+
+class ARelayStateWithAKeyDistributionAuditMessage : public ARelayStateWhichHasProcessedAKeyDistributionMessage
+{
+public:
+    KeyDistributionAuditMessage audit_message;
+
+    virtual void SetUp()
+    {
+        ARelayStateWhichHasProcessedAKeyDistributionMessage::SetUp();
+
+        auto msg = MessageContainingKeyDistributionMessageAndRelayState();
+        audit_message = relay->GenerateKeyDistributionAuditMessage(msg.GetHash160(), *data);
+        data->StoreMessage(audit_message);
+    }
+
+    MinedCreditMessage MessageContainingKeyDistributionMessageAndRelayState()
+    {
+        data->cache->Store(relay_state);
+        MinedCreditMessage msg;
+        msg.mined_credit.network_state.relay_state_hash = relay_state.GetHash160();
+        data->StoreMessage(msg);
+        return msg;
+    }
+
+    virtual void TearDown()
+    {
+        ARelayStateWhichHasProcessedAKeyDistributionMessage::TearDown();
+    }
+};
+
+TEST_F(ARelayStateWithAKeyDistributionAuditMessage, RecordsTheAuditMessageHashWhenProcessingIt)
+{
+    relay_state.ProcessKeyDistributionAuditMessage(audit_message);
+    uint160 recorded_audit_message_hash = relay->hashes.key_distribution_audit_message_hash;
+    ASSERT_THAT(recorded_audit_message_hash, Eq(audit_message.GetHash160()));
+}
+
+
+class ARelayStateWhichHasProcessedAKeyDistributionAuditMessage : public ARelayStateWithAKeyDistributionAuditMessage
+{
+public:
+    virtual void SetUp()
+    {
+        ARelayStateWithAKeyDistributionAuditMessage::SetUp();
+        relay_state.ProcessKeyDistributionAuditMessage(audit_message);
+    }
+
+    virtual void TearDown()
+    {
+        ARelayStateWithAKeyDistributionAuditMessage::TearDown();
+    }
+};
+
+TEST_F(ARelayStateWhichHasProcessedAKeyDistributionAuditMessage,
+       MarksTheKeyDistributionAsAuditedWhenProcessingADurationWithoutAResponse)
+{
+    auto duration = GetDurationWithoutResponseAfter(audit_message.GetHash160());
+    relay_state.ProcessDurationWithoutResponse(duration, *data);
+    ASSERT_THAT(relay->key_distribution_message_audited, Eq(true));
+}
+
+
 
 
 class ARelayStateWhichHasProcessedAComplaintAboutAKeyDistributionMessage :
@@ -420,9 +570,8 @@ public:
     virtual void SetUp()
     {
         ARelayStateWhichHasProcessedAKeyDistributionMessage::SetUp();
-        uint64_t set_of_secrets = FIRST_SET_OF_KEY_SIXTEENTH_HOLDERS;
         uint64_t position = 2;
-        complaint.Populate(key_distribution_message.GetHash160(), set_of_secrets, position, *data);
+        complaint.Populate(key_distribution_message.GetHash160(), position, *data);
         data->StoreMessage(complaint);
 
         relay_state_before_complaint = relay_state;
@@ -437,14 +586,6 @@ public:
         ARelayStateWhichHasProcessedAKeyDistributionMessage::TearDown();
     }
 };
-
-TEST_F(ARelayStateWhichHasProcessedAComplaintAboutAKeyDistributionMessage,
-       ThrowsAnExceptionIfAskedToProcessADurationAfterTheKeyDistributionMessageWithoutAResponse)
-{
-    DurationWithoutResponse duration;
-    duration.message_hash = key_distribution_message.GetHash160();
-    EXPECT_THROW(relay_state.ProcessDurationWithoutResponse(duration, *data), RelayStateException);
-}
 
 
 class ARelayStateWithAGoodbyeMessage : public ARelayStateWhichHasProcessedAKeyDistributionMessage
@@ -467,7 +608,7 @@ public:
 
 TEST_F(ARelayStateWithAGoodbyeMessage, RecordsTheGoodbyeMessageHashOfTheDeadRelay)
 {
-    relay_state.ProcessGoodbyeMessage(goodbye);
+    relay_state.ProcessGoodbyeMessage(goodbye, *data);
     uint160 goodbye_message_hash = relay->hashes.goodbye_message_hash;
     ASSERT_THAT(goodbye_message_hash, Eq(goodbye.GetHash160()));
 }
@@ -479,7 +620,7 @@ public:
     virtual void SetUp()
     {
         ARelayStateWithAGoodbyeMessage::SetUp();
-        relay_state.ProcessGoodbyeMessage(goodbye);
+        relay_state.ProcessGoodbyeMessage(goodbye, *data);
     }
 
     virtual void TearDown()
@@ -488,40 +629,10 @@ public:
     }
 };
 
-TEST_F(ARelayStateWhichHasProcessedAGoodbyeMessage, RemovesTheRelayAfterADurationWithoutAResponse)
-{
-    DurationWithoutResponse duration;
-    duration.message_hash = goodbye.GetHash160();
-    uint64_t relay_number = relay->number;
-    relay_state.ProcessDurationWithoutResponse(duration, *data);
-    ASSERT_FALSE(relay_state.ContainsRelayWithNumber(relay_number));
-}
 
-TEST_F(ARelayStateWhichHasProcessedAGoodbyeMessage,
-       DoesntAssignTheObituaryGeneratedAfterADurationWithoutAResponseAsATaskToKeyQuarterHolders)
-{
-    DurationWithoutResponse duration;
-    duration.message_hash = goodbye.GetHash160();
-    relay_state.ProcessDurationWithoutResponse(duration, *data);
-    for (auto quarter_holder : relay->QuarterHolders(*data))
-        ASSERT_FALSE(VectorContainsEntry(quarter_holder->tasks, relay->hashes.obituary_hash));
-}
-
-TEST_F(ARelayStateWhichHasProcessedAGoodbyeMessage,
-       AssignsTheExitingRelaysObituaryAsATaskToTheKeyQuarterHoldersWhenProcessingAGoodbyeComplaint)
-{
-    GoodbyeComplaint complaint;
-    complaint.Populate(goodbye, *data);
-    relay_state.ProcessGoodbyeComplaint(complaint, *data);
-    for (auto quarter_holder : relay->QuarterHolders(*data))
-        ASSERT_TRUE(VectorContainsEntry(quarter_holder->tasks, relay->hashes.obituary_hash));
-}
-
-
-class ARelayStateWhichHasProcessedAnObituary : public ARelayStateWhichHasProcessedAKeyDistributionMessage
+class ARelayStateWhichHasProcessedADeath : public ARelayStateWhichHasProcessedAKeyDistributionMessage
 {
 public:
-    Obituary obituary;
     uint160 task_hash;
 
     virtual void SetUp()
@@ -529,16 +640,14 @@ public:
         ARelayStateWhichHasProcessedAKeyDistributionMessage::SetUp();
 
         AssignATaskToTheRelay();
-        obituary = relay_state.GenerateObituary(relay, NOT_RESPONDING);
-        data->StoreMessage(obituary);
-        relay_state.ProcessObituary(obituary, *data);
+        relay_state.RecordRelayDeath(relay, *data, MISBEHAVED);
 
     }
 
     void AssignATaskToTheRelay()
     {
         task_hash = 5;
-        relay->tasks.push_back(task_hash);
+        relay->tasks.push_back(Task(SEND_KEY_DISTRIBUTION_MESSAGE, task_hash, 1));
     }
 
     virtual void TearDown()
@@ -547,84 +656,56 @@ public:
     }
 };
 
-TEST_F(ARelayStateWhichHasProcessedAnObituary,
-       GeneratesARelayExitWhichSpecifiesTheRelaysObituaryAndSecretRecoveryMessages)
-{
-    RelayExit relay_exit = relay_state.GenerateRelayExit(relay);
-    ASSERT_THAT(relay_exit.obituary_hash, Eq(relay->hashes.obituary_hash));
-    ASSERT_THAT(relay_exit.secret_recovery_message_hashes, Eq(relay->hashes.secret_recovery_message_hashes));
-}
-
-TEST_F(ARelayStateWhichHasProcessedAnObituary, RemovesTheRelayWhenProcessingARelayExit)
-{
-    RelayExit relay_exit = relay_state.GenerateRelayExit(relay);
-    uint64_t relay_number = relay->number;
-    relay_state.ProcessRelayExit(relay_exit, *data);
-    ASSERT_TRUE(relay_state.GetRelayByNumber(relay_number) == NULL);
-}
-
-TEST_F(ARelayStateWhichHasProcessedAnObituary, TransfersTasksFromTheDeadRelayToItsSuccessorWhenProcessingARelayExit)
-{
-    RelayExit relay_exit = relay_state.GenerateRelayExit(relay);
-    uint64_t relay_number = relay->number;
-    relay_state.ProcessRelayExit(relay_exit, *data);
-    ASSERT_TRUE(VectorContainsEntry(relay_state.GetRelayByNumber(obituary.successor_number)->tasks, task_hash));
-}
-
-TEST_F(ARelayStateWhichHasProcessedAnObituary, ThrowsAnExceptionIfTheRelayToRemoveCantBeFound)
-{
-    RelayExit relay_exit = relay_state.GenerateRelayExit(relay);
-    relay_exit.obituary_hash += 1;
-    EXPECT_THROW(relay_state.ProcessRelayExit(relay_exit, *data), RelayStateException);
-}
-
 std::vector<std::pair<uint64_t, uint64_t> > GetQuarterHolderRoles(uint64_t relay_number, RelayState *state)
 {
     std::vector<std::pair<uint64_t, uint64_t> > roles;
 
     for (uint64_t i = 0; i < state->relays.size(); i++)
-        for (uint64_t j = 0; j < state->relays[i].holders.key_quarter_holders.size(); j++)
-            if (state->relays[i].holders.key_quarter_holders[j] == relay_number)
+        for (uint64_t j = 0; j < state->relays[i].key_quarter_holders.size(); j++)
+            if (state->relays[i].key_quarter_holders[j] == relay_number)
                 roles.push_back(std::make_pair(state->relays[i].number, j));
 
     return roles;
 };
 
-TEST_F(ARelayStateWhichHasProcessedAnObituary,
-       ReplacesTheRelayWithItsSuccessorInAllQuarterHolderRolesWhenProcessingARelayExit)
+TEST_F(ARelayStateWhichHasProcessedADeath,
+       ReplacesTheRelayWithItsSuccessorInAllQuarterHolderRolesWhenProcessingASuccessionCompletedMessage)
 {
-    RelayExit relay_exit = relay_state.GenerateRelayExit(relay);
-    uint64_t relay_number = relay->number, successor = obituary.successor_number;
+    uint64_t successor_number = relay->current_successor_number;
 
-    auto initial_roles_of_exiting_relay = GetQuarterHolderRoles(relay_number, &relay_state);
+    auto initial_roles_of_exiting_relay = GetQuarterHolderRoles(relay->number, &relay_state);
     ASSERT_THAT(initial_roles_of_exiting_relay.size(), Gt(0));
 
-    relay_state.ProcessRelayExit(relay_exit, *data);
+    SuccessionCompletedMessage succession_completed_message;
+    succession_completed_message.dead_relay_number = relay->number;
+    succession_completed_message.successor_number = successor_number;
 
-    auto final_roles_of_exiting_relay = GetQuarterHolderRoles(relay_number, &relay_state);
+    relay_state.ProcessSuccessionCompletedMessage(succession_completed_message, *data);
+
+    auto final_roles_of_exiting_relay = GetQuarterHolderRoles(relay->number, &relay_state);
     ASSERT_THAT(final_roles_of_exiting_relay.size(), Eq(0));
 
-    auto final_roles_of_successor = GetQuarterHolderRoles(successor, &relay_state);
+    auto final_roles_of_successor = GetQuarterHolderRoles(successor_number, &relay_state);
     for (auto role : initial_roles_of_exiting_relay)
         ASSERT_TRUE(VectorContainsEntry(final_roles_of_successor, role));
 }
 
-TEST_F(ARelayStateWhichHasProcessedAnObituary,
+TEST_F(ARelayStateWhichHasProcessedADeath,
        MarksAKeyQuarterHolderAsNotRespondingAfterADurationWithoutAResponseFromThatRelay)
 {
     DurationWithoutResponseFromRelay duration;
-    duration.message_hash = obituary.GetHash160();
-    duration.relay_number = relay->holders.key_quarter_holders[1];
+    duration.message_hash = Death(relay->number);
+    duration.relay_number = relay->key_quarter_holders[1];
 
     relay_state.ProcessDurationWithoutResponseFromRelay(duration, *data);
 
     Relay *key_quarter_holder = relay_state.GetRelayByNumber(duration.relay_number);
 
-    ASSERT_TRUE(RelayHasAnObituaryWithSpecificReasonForLeaving(key_quarter_holder, *data, NOT_RESPONDING));
+    ASSERT_TRUE(RelayHasStatus(key_quarter_holder, *data, NOT_RESPONDING));
 }
 
 
-class ARelayStateWithASecretRecoveryMessage : public ARelayStateWhichHasProcessedAnObituary
+class ARelayStateWithASecretRecoveryMessage : public ARelayStateWhichHasProcessedADeath
 {
 public:
     Relay *key_quarter_holder{NULL};
@@ -632,7 +713,7 @@ public:
 
     virtual void SetUp()
     {
-        ARelayStateWhichHasProcessedAnObituary::SetUp();
+        ARelayStateWhichHasProcessedADeath::SetUp();
 
         secret_recovery_message = AValidSecretRecoveryMessage();
         data->StoreMessage(secret_recovery_message);
@@ -641,7 +722,7 @@ public:
 
     virtual void TearDown()
     {
-        ARelayStateWhichHasProcessedAnObituary::TearDown();
+        ARelayStateWhichHasProcessedADeath::TearDown();
     }
 
     SecretRecoveryMessage AValidSecretRecoveryMessage()
@@ -653,9 +734,9 @@ public:
     {
         SecretRecoveryMessage secret_recovery_message;
 
-        secret_recovery_message.obituary_hash = obituary.GetHash160();
-        secret_recovery_message.quarter_holder_number = relay->holders.key_quarter_holders[quarter_holder_position];
-        secret_recovery_message.successor_number = obituary.successor_number;
+        secret_recovery_message.quarter_holder_number = relay->key_quarter_holders[quarter_holder_position];
+        secret_recovery_message.position_of_quarter_holder = (uint8_t) quarter_holder_position;
+        secret_recovery_message.successor_number = relay->current_successor_number;
         secret_recovery_message.dead_relay_number = relay->number;
         secret_recovery_message.PopulateSecrets(*data);
         secret_recovery_message.Sign(*data);
@@ -675,21 +756,9 @@ public:
 TEST_F(ARelayStateWithASecretRecoveryMessage, RecordsTheHashWhenProcessingTheSecretRecoveryMessage)
 {
     relay_state.ProcessSecretRecoveryMessage(secret_recovery_message);
-    ASSERT_THAT(relay->hashes.secret_recovery_message_hashes.size(), Eq(1));
-    ASSERT_THAT(relay->hashes.secret_recovery_message_hashes[0], Eq(secret_recovery_message.GetHash160()));
-}
-
-TEST_F(ARelayStateWithASecretRecoveryMessage,
-       ThrowsAnExceptionIfAnyOfTheNamedRelaysInASecretRecoveryMessageDontExist)
-{
-    secret_recovery_message.dead_relay_number += 10000;
-    EXPECT_THROW(relay_state.ProcessSecretRecoveryMessage(secret_recovery_message), RelayStateException);
-    secret_recovery_message.dead_relay_number -= 10000;
-    secret_recovery_message.quarter_holder_number += 10000;
-    EXPECT_THROW(relay_state.ProcessSecretRecoveryMessage(secret_recovery_message), RelayStateException);
-    secret_recovery_message.quarter_holder_number -= 10000;
-    secret_recovery_message.successor_number += 10000;
-    EXPECT_THROW(relay_state.ProcessSecretRecoveryMessage(secret_recovery_message), RelayStateException);
+    auto &attempt = relay->succession_attempts[relay->current_successor_number];
+    ASSERT_THAT(attempt.recovery_message_hashes[secret_recovery_message.position_of_quarter_holder],
+                Eq(secret_recovery_message.GetHash160()));
 }
 
 
@@ -709,65 +778,63 @@ public:
 };
 
 TEST_F(ARelayStateWhichHasProcessedASecretRecoveryMessage,
-       GeneratesAnObituaryForTheKeyQuarterHolderWhenProcessingASecretRecoveryComplaint)
+       MarksTheKeyQuarterHolderAsMisbehavingWhenProcessingASecretRecoveryComplaint)
 {
     SecretRecoveryComplaint complaint;
     complaint.secret_recovery_message_hash = secret_recovery_message.GetHash160();
 
     relay_state.ProcessSecretRecoveryComplaint(complaint, *data);
 
-    ASSERT_TRUE(RelayHasAnObituaryWithSpecificReasonForLeaving(key_quarter_holder, *data, MISBEHAVED));
+    ASSERT_TRUE(RelayHasStatus(key_quarter_holder, *data, MISBEHAVED));
 }
 
 TEST_F(ARelayStateWhichHasProcessedASecretRecoveryMessage,
-       RemovesTheKeyQuarterHoldersObituaryTaskAfterADurationWithoutAResponse)
+       RemovesTheKeyQuarterHoldersTask)
 {
-    DurationWithoutResponse duration;
-    duration.message_hash = secret_recovery_message.GetHash160();
-    ASSERT_TRUE(VectorContainsEntry(key_quarter_holder->tasks, obituary.GetHash160()));
-    relay_state.ProcessDurationWithoutResponse(duration, *data);
-    ASSERT_FALSE(VectorContainsEntry(key_quarter_holder->tasks, obituary.GetHash160()));
+    bool still_there = VectorContainsEntry(key_quarter_holder->tasks,
+                                           Task(SEND_SECRET_RECOVERY_MESSAGE, Death(relay->number), 1));
+    ASSERT_FALSE(still_there);
 }
 
 
-class ARelayStateWhichHasProcessedASecretRecoveryComplaint : public ARelayStateWhichHasProcessedASecretRecoveryMessage
-{
-public:
-    SecretRecoveryComplaint complaint;
-
-    virtual void SetUp()
-    {
-        ARelayStateWhichHasProcessedASecretRecoveryMessage::SetUp();
-
-        complaint.secret_recovery_message_hash = secret_recovery_message.GetHash160();
-        complaint.Sign(*data);
-        ASSERT_TRUE(complaint.VerifySignature(*data));
-
-        data->StoreMessage(complaint);
-
-        relay_state.ProcessSecretRecoveryComplaint(complaint, *data);
-    }
-
-    virtual void TearDown()
-    {
-        ARelayStateWhichHasProcessedASecretRecoveryMessage::TearDown();
-    }
-};
+//class ARelayStateWhichHasProcessedASecretRecoveryComplaint : public ARelayStateWhichHasProcessedASecretRecoveryMessage
+//{
+//public:
+//    SecretRecoveryComplaint complaint;
+//
+//    virtual void SetUp()
+//    {
+//        ARelayStateWhichHasProcessedASecretRecoveryMessage::SetUp();
+//
+//        complaint.secret_recovery_message_hash = secret_recovery_message.GetHash160();
+//        complaint.Sign(*data);
+//        ASSERT_TRUE(complaint.VerifySignature(*data));
+//
+//        data->StoreMessage(complaint);
+//
+//        relay_state.ProcessSecretRecoveryComplaint(complaint, *data);
+//    }
+//
+//    virtual void TearDown()
+//    {
+//        ARelayStateWhichHasProcessedASecretRecoveryMessage::TearDown();
+//    }
+//};
 
 class ARelayStateWhichHasProcessedFourSecretRecoveryMessages : public ARelayStateWithASecretRecoveryMessage
 {
 public:
-    vector<uint160> recovery_message_hashes;
+    std::array<uint160, 4> recovery_message_hashes;
 
     virtual void SetUp()
     {
         ARelayStateWithASecretRecoveryMessage::SetUp();
         auto recovery_messages = AllFourSecretRecoveryMessages();
 
-        for (auto recovery_message : recovery_messages)
+        for (uint32_t i = 0; i < 4; i++)
         {
-            relay_state.ProcessSecretRecoveryMessage(recovery_message);
-            recovery_message_hashes.push_back(recovery_message.GetHash160());
+            relay_state.ProcessSecretRecoveryMessage(recovery_messages[i]);
+            recovery_message_hashes[i] = recovery_messages[i].GetHash160();
         }
     }
 
@@ -776,15 +843,6 @@ public:
         ARelayStateWithASecretRecoveryMessage::TearDown();
     }
 };
-
-TEST_F(ARelayStateWhichHasProcessedFourSecretRecoveryMessages,
-       RemovesTheDeadRelayIfDurationsWithoutResponsesFollowEachSecretRecoveryMessage)
-{
-    for (auto recovery_message_hash : recovery_message_hashes)
-        relay_state.ProcessDurationWithoutResponse(GetDurationWithoutResponseAfter(recovery_message_hash), *data);
-
-    ASSERT_FALSE(relay_state.ContainsRelayWithNumber(number_of_chosen_relay));
-}
 
 
 class ARelayStateWithASecretRecoveryFailureMessage : public ARelayStateWhichHasProcessedFourSecretRecoveryMessages
@@ -797,7 +855,6 @@ public:
         ARelayStateWhichHasProcessedFourSecretRecoveryMessages::SetUp();
 
         failure_message.recovery_message_hashes = recovery_message_hashes;
-        failure_message.obituary_hash = obituary.GetHash160();
         failure_message.key_sharer_position = 0;
         failure_message.shared_secret_quarter_position = 0;
         failure_message.sum_of_decrypted_shared_secret_quarters = Point(CBigNum(2));
@@ -815,11 +872,15 @@ public:
 TEST_F(ARelayStateWithASecretRecoveryFailureMessage, AssignsTheFailureMessageAsATaskToTheKeyQuarterHolders)
 {
     relay_state.ProcessSecretRecoveryFailureMessage(failure_message, *data);
-    for (auto quarter_holder : relay->QuarterHolders(*data))
-        ASSERT_TRUE(VectorContainsEntry(quarter_holder->tasks, failure_message.GetHash160()));
+    for (uint32_t i = 0; i < 4; i++)
+    {
+        auto quarter_holder = relay->QuarterHolders(*data)[i];
+        ASSERT_TRUE(VectorContainsEntry(quarter_holder->tasks,
+                                        Task(SEND_RECOVERY_FAILURE_AUDIT_MESSAGE, failure_message.GetHash160(), i)));
+    }
 }
 
-TEST_F(ARelayStateWithASecretRecoveryFailureMessage, GeneratesObituariesForRelaysThatDontRespond)
+TEST_F(ARelayStateWithASecretRecoveryFailureMessage, MarksTheRelaysThatDontRespondAsNotResponding)
 {
     relay_state.ProcessSecretRecoveryFailureMessage(failure_message, *data);
     for (auto quarter_holder : relay->QuarterHolders(*data))
@@ -828,7 +889,7 @@ TEST_F(ARelayStateWithASecretRecoveryFailureMessage, GeneratesObituariesForRelay
         duration.message_hash = failure_message.GetHash160();
         duration.relay_number = quarter_holder->number;
         relay_state.ProcessDurationWithoutResponseFromRelay(duration, *data);
-        ASSERT_THAT(quarter_holder->hashes.obituary_hash, Ne(0));
+        ASSERT_THAT(quarter_holder->status, Eq(NOT_RESPONDING));
     }
 }
 
@@ -854,8 +915,8 @@ public:
 
 TEST_F(ARelayStateWithARecoveryFailureAuditMessage, RemovesTheFailureMessageFromTheQuarterHoldersTasks)
 {
-    auto quarter_holder = relay_state.GetRelayByNumber(relay->holders.key_quarter_holders[0]);
-    ASSERT_THAT(quarter_holder->tasks.size(), Eq(2));
-    relay_state.ProcessRecoveryFailureAuditMessage(audit_message, *data);
+    auto quarter_holder = relay_state.GetRelayByNumber(relay->key_quarter_holders[0]);
     ASSERT_THAT(quarter_holder->tasks.size(), Eq(1));
+    relay_state.ProcessRecoveryFailureAuditMessage(audit_message, *data);
+    ASSERT_THAT(quarter_holder->tasks.size(), Eq(0));
 }
