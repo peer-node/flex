@@ -75,7 +75,7 @@ public:
 
     void PopulateEncryptedSharedSecretQuarter(Relay &relay, Data data);
 
-    void AddEncryptedSharedSecretQuarterForFourKeyTwentyFourths(Relay &relay, uint8_t position, Data data);
+    void AddEncryptedSharedSecretQuartersForSixKeyTwentyFourths(Relay &relay, uint8_t position, Data data);
 
     void PopulateEncryptedSharedSecretQuarterForKeyTwentyFourth(
             Relay &key_sharer, std::vector<uint256> &encrypted_shared_secret_quarters_for_relay_key_parts,

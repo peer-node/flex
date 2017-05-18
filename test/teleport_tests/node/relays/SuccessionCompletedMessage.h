@@ -5,51 +5,56 @@
 
 #include <src/crypto/signature.h>
 #include "test/teleport_tests/node/Data.h"
+#include "FourSecretRecoveryMessages.h"
+#include "EncryptedKeyQuarter.h"
 
 class SuccessionCompletedMessage
 {
 public:
-    uint160 goodbye_message_hash{0};
     std::array<uint160, 4> recovery_message_hashes;
     uint64_t dead_relay_number{0};
     uint64_t successor_number{0};
+    std::vector<EncryptedKeyQuarter> encrypted_key_quarters;
+    std::vector<uint64_t> key_quarter_sharers;
+    std::vector<uint8_t> key_quarter_positions;
     Signature signature;
 
     static std::string Type() { return "succession_completed"; }
 
     IMPLEMENT_SERIALIZE
     (
-        READWRITE(goodbye_message_hash);
         READWRITE(recovery_message_hashes);
         READWRITE(dead_relay_number);
         READWRITE(successor_number);
+        READWRITE(encrypted_key_quarters);
+        READWRITE(key_quarter_sharers);
+        READWRITE(key_quarter_positions);
         READWRITE(signature);
     );
 
-    JSON(goodbye_message_hash, recovery_message_hashes, dead_relay_number, successor_number, signature);
+    JSON(recovery_message_hashes, dead_relay_number, successor_number, encrypted_key_quarters,
+         key_quarter_sharers, key_quarter_positions, signature);
 
     IMPLEMENT_HASH_SIGN_VERIFY();
+
+    FourSecretRecoveryMessages GetFourSecretRecoveryMessages()
+    {
+        FourSecretRecoveryMessages four_messages;
+        four_messages.secret_recovery_messages = recovery_message_hashes;
+        return four_messages;
+    }
 
     std::vector<uint160> Dependencies()
     {
         std::vector<uint160> dependencies;
-        if (goodbye_message_hash == 0)
-        {
-            for (uint32_t i = 0; i < 4; i++)
-                dependencies.push_back(recovery_message_hashes[i]);
-        }
-        else
-            dependencies.push_back(goodbye_message_hash);
+        for (uint32_t i = 0; i < 4; i++)
+            dependencies.push_back(recovery_message_hashes[i]);
         return dependencies;
     }
 
     Point VerificationKey(Data data);
 
     bool IsValid(Data data);
-
-    bool IsValidSuccessionFromGoodbyeMessage(Data data);
-
-    bool IsValidSuccessionFromSecretRecoveryMessages(Data data);
 };
 
 

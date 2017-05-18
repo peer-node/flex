@@ -16,21 +16,27 @@ void KeyDistributionMessage::PopulateEncryptedKeyQuarters(MemoryDataStore &keyda
                                                           Relay &relay,
                                                           RelayState &relay_state)
 {
-    vector<CBigNum> private_key_twentyfourths = relay.PrivateKeyTwentyFourths(keydata);
-
     for (uint32_t key_quarter_position = 0; key_quarter_position < 4; key_quarter_position++)
-        for (uint64_t i = 0; i < 6; i++)
+        PopulateEncryptedKeyQuarter(keydata, relay, relay_state, key_quarter_position);
+}
+
+void KeyDistributionMessage::PopulateEncryptedKeyQuarter(MemoryDataStore &keydata,
+                                                         Relay &relay,
+                                                         RelayState &relay_state, uint32_t key_quarter_position)
+{
+    vector<CBigNum> private_key_twentyfourths = relay.PrivateKeyTwentyFourths(keydata);
+    for (uint64_t i = 0; i < 6; i++)
+    {
+        auto key_twentyfourth_position = 6 * key_quarter_position + i;
+        auto recipient = relay_state.GetRelayByNumber(relay.key_quarter_holders[key_quarter_position]);
+        if (recipient == NULL)
         {
-            auto key_twentyfourth_position = 6 * key_quarter_position + i;
-            auto recipient = relay_state.GetRelayByNumber(relay.key_quarter_holders[key_quarter_position]);
-            if (recipient == NULL)
-            {
-                log_ << "PopulateEncryptedKeyQuarters: no such relay\n";
-                return;
-            }
-            auto encrypted_secret = recipient->EncryptSecret(private_key_twentyfourths[key_twentyfourth_position]);
-            encrypted_key_quarters[key_quarter_position].encrypted_key_twentyfourths[i] = encrypted_secret;
+            log_ << "PopulateEncryptedKeyQuarters: no such relay\n";
+            return;
         }
+        auto encrypted_secret = recipient->EncryptSecret(private_key_twentyfourths[key_twentyfourth_position]);
+        encrypted_key_quarters[key_quarter_position].encrypted_key_twentyfourths[i] = encrypted_secret;
+    }
 }
 
 std::array<uint256, 24> KeyDistributionMessage::EncryptedKeyTwentyFourths()

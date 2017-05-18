@@ -13,7 +13,6 @@ class SuccessionCompletedAuditMessage
 public:
     uint64_t dead_relay_number{0};
     uint64_t successor_number{0};
-    uint160 failure_message_hash{0};
     uint160 succession_completed_message_hash{0};
     uint160 encoding_message_hash{0};
     std::vector<EncryptedKeyQuarter> encrypted_key_quarters;
@@ -25,14 +24,13 @@ public:
     (
         READWRITE(dead_relay_number);
         READWRITE(successor_number);
-        READWRITE(failure_message_hash);
         READWRITE(succession_completed_message_hash);
         READWRITE(encoding_message_hash);
         READWRITE(encrypted_key_quarters);
         READWRITE(signature);
     )
 
-    JSON(dead_relay_number, successor_number, failure_message_hash, succession_completed_message_hash,
+    JSON(dead_relay_number, successor_number, succession_completed_message_hash,
          encoding_message_hash, encrypted_key_quarters, signature);
 
     IMPLEMENT_HASH_SIGN_VERIFY();

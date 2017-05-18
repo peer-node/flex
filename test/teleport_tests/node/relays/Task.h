@@ -46,7 +46,7 @@ public:
 
     bool IsInheritable()
     {
-        return task_type == SEND_SECRET_RECOVERY_MESSAGE;
+        return task_type == SEND_SECRET_RECOVERY_MESSAGE or task_type == SEND_SUCCESSION_COMPLETED_MESSAGE;
     }
 };
 

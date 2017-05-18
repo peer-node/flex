@@ -65,6 +65,8 @@ public:
     bool VerifyRelayNumber(Data data);
 
     std::array<uint256, 24> EncryptedKeyTwentyFourths();
+
+    void PopulateEncryptedKeyQuarter(MemoryDataStore &keydata, Relay &relay, RelayState &relay_state, uint32_t position);
 };
 
 

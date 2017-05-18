@@ -1,26 +1,14 @@
 #include <src/vector_tools.h>
 #include <src/credits/creditsign.h>
+#include <boost/range/adaptor/reversed.hpp>
 #include "RelayState.h"
-#include "SuccessionCompletedAuditMessage.h"
-
+#include "SuccessionCompletedAuditComplaint.h"
 
 using std::vector;
 
 #include "log.h"
 #define LOG_CATEGORY "RelayState.cpp"
 
-vector<uint64_t> ChooseFromList(vector<uint64_t> list, uint64_t number_required, uint160 chooser)
-{
-    vector<uint64_t> choices;
-    while (choices.size() < number_required and list.size() > 0)
-    {
-        chooser = HashUint160(chooser);
-        auto chosen_position = chooser.GetLow64() % list.size();
-        choices.push_back(list[chosen_position]);
-        list.erase(list.begin() + chosen_position);
-    }
-    return choices;
-}
 
 void RelayState::ProcessRelayJoinMessage(RelayJoinMessage relay_join_message)
 {
@@ -76,28 +64,31 @@ Relay RelayState::GenerateRelayFromRelayJoinMessage(RelayJoinMessage relay_join_
 
 void RelayState::AssignRemainingKeyQuarterHoldersToRelay(Relay &relay)
 {
-    uint32_t quarter_holder_position = 1;
+    for (uint32_t quarter_holder_position = 1; quarter_holder_position < 4; quarter_holder_position++)
+        AssignKeyQuarterHolderToRelay(relay, quarter_holder_position);
+}
+
+bool RelayState::AssignKeyQuarterHolderToRelay(Relay &relay, uint32_t quarter_holder_position)
+{
     for (int64_t n = (int64_t)relay.number - 11; n >= 0 and n >= relays.front().number; n--)
         if (RelayIsASuitableQuarterHolder(&relay, n))
         {
             relay.key_quarter_holders[quarter_holder_position] = (uint64_t)n;
-            quarter_holder_position++;
-            if (quarter_holder_position == 4)
-                return;
+            return true;
         }
     for (int64_t n = (int64_t)relay.number + 1; n <= relays.back().number; n++)
         if (RelayIsASuitableQuarterHolder(&relay, n))
         {
             relay.key_quarter_holders[quarter_holder_position] = (uint64_t)n;
-            quarter_holder_position++;
-            if (quarter_holder_position == 4)
-                return;
+            return true;
         }
+    return false;
 }
 
 bool RelayState::RelayIsASuitableQuarterHolder(Relay *key_sharer, int64_t candidate_relay_number)
 {
     auto &candidate = relays[candidate_relay_number];
+
     if (candidate.status != ALIVE or key_sharer->number == candidate_relay_number)
         return false;
     if (ArrayContainsEntry(key_sharer->key_quarter_holders, (uint64_t) candidate_relay_number))
@@ -211,7 +202,7 @@ void RelayState::ProcessKeyDistributionMessage(KeyDistributionMessage key_distri
     auto relay = GetRelayByJoinHash(key_distribution_message.relay_join_hash);
 
     RecordKeyDistributionMessage(relay, key_distribution_message.GetHash160());
-    RemoveKeyDistributionTask(relay);
+    RemoveKeyDistributionTask(relay, key_distribution_message);
 }
 
 void RelayState::RecordKeyDistributionMessage(Relay *relay, uint160 key_distribution_message_hash)
@@ -223,9 +214,9 @@ void RelayState::RecordKeyDistributionMessage(Relay *relay, uint160 key_distribu
     }
 }
 
-void RelayState::RemoveKeyDistributionTask(Relay *relay)
+void RelayState::RemoveKeyDistributionTask(Relay *relay, KeyDistributionMessage &key_distribution_message)
 {
-    Task task(SEND_KEY_DISTRIBUTION_MESSAGE, relay->hashes.join_message_hash, ALL_POSITIONS);
+    Task task(SEND_KEY_DISTRIBUTION_MESSAGE, relay->hashes.join_message_hash, key_distribution_message.position);
     EraseEntryFromVector(task, relay->tasks);
 }
 
@@ -270,6 +261,8 @@ uint64_t RelayState::GetEligibleSuccessorForRelay(Relay *relay)
 
 bool RelayState::SuccessorToRelayIsSuitable(Relay *chosen_successor, Relay *relay)
 {
+    if (chosen_successor->status != ALIVE)
+        return false;
     if (chosen_successor->number == relay->number)
         return false;
     if (ArrayContainsEntry(relay->key_quarter_holders, chosen_successor->number))
@@ -294,23 +287,33 @@ std::vector<uint64_t> RelayState::RelayNumbersOfRelaysWhoseKeyQuartersAreHeldByG
     return relays_with_key_quarters_held;
 }
 
-void RelayState::AssignSecretRecoveryTasksToKeyQuarterHolders(Relay *dead_relay, Data data)
+void RelayState::AssignSecretRecoveryTasksToKeyQuarterHolders(Relay *dead_relay)
 {
     for (uint32_t position = 0; position < 4; position++)
-    {
-        auto key_quarter_holder = GetRelayByNumber(dead_relay->key_quarter_holders[position]);
-        Task task(SEND_SECRET_RECOVERY_MESSAGE, Death(dead_relay->number), position);
-        key_quarter_holder->tasks.push_back(task);
-    }
+        AssignSecretRecoveryTaskToKeyQuarterHolder(dead_relay, position);
 }
 
-void RelayState::TransferTasksToSuccessor(uint64_t dead_relay_number, uint64_t successor_number)
+void RelayState::AssignSecretRecoveryTaskToKeyQuarterHolder(Relay *dead_relay, uint32_t position)
+{
+    auto key_quarter_holder = GetRelayByNumber(dead_relay->key_quarter_holders[position]);
+    if (key_quarter_holder == NULL)
+    {
+        log_ << "relay " << dead_relay->number << " has no quarter holder for position " << position << "\n";
+        return;
+    }
+    Task task(SEND_SECRET_RECOVERY_MESSAGE, Death(dead_relay->number), position);
+    key_quarter_holder->tasks.push_back(task);
+}
+
+void RelayState::TransferInheritableTasksToSuccessor(uint64_t dead_relay_number, uint64_t successor_number)
 {
     Relay *successor = GetRelayByNumber(successor_number);
     Relay *dead_relay = GetRelayByNumber(dead_relay_number);
     if (dead_relay == NULL or successor == NULL) throw RelayStateException("no such relay");
 
-    successor->tasks = ConcatenateVectors(successor->tasks, dead_relay->tasks);
+    for (auto task : dead_relay->tasks)
+        if (task.IsInheritable())
+            successor->tasks.push_back(task);
 }
 
 void RelayState::ReplaceDeadRelayWithSuccessorInQuarterHolderRoles(uint64_t dead_relay_number,
@@ -344,15 +347,16 @@ void RelayState::RecordSentComplaint(Relay *complainer)
 void RelayState::ProcessDurationWithoutResponse(DurationWithoutResponse duration, Data data)
 {
     std::string message_type = data.msgdata[duration.message_hash]["type"];
+    uint160 hash = duration.message_hash;
 
     if (message_type == "key_distribution_audit")
-        ProcessDurationWithoutResponseAfterKeyDistributionAuditMessage(
-                data.msgdata[duration.message_hash][message_type], data);
+        ProcessDurationWithoutResponseAfterKeyDistributionAuditMessage(data.msgdata[hash][message_type], data);
 
     else if (message_type == "four_secret_recovery_messages")
-        ProcessDurationWithoutResponseAfterFourSecretRecoveryMessages(data.msgdata[duration.message_hash][message_type],
-                                                                      data);
+        ProcessDurationWithoutResponseAfterFourSecretRecoveryMessages(data.msgdata[hash][message_type], data);
 
+    else if (message_type == "succession_completed_audit")
+        ProcessDurationWithoutResponseAfterSuccessionCompletedAuditMessage(data.msgdata[hash][message_type], data);
 }
 
 void RelayState::ProcessDurationWithoutResponseAfterKeyDistributionAuditMessage(
@@ -369,6 +373,41 @@ void RelayState::ProcessDurationWithoutResponseAfterFourSecretRecoveryMessages(
     Relay *successor = secret_recovery_message.GetSuccessor(data);
     RecordRelayDeath(successor, data, NOT_RESPONDING);
 }
+
+void RelayState::ProcessDurationWithoutResponseAfterSuccessionCompletedAuditMessage(
+        SuccessionCompletedAuditMessage audit_message, Data data)
+{
+    uint160 succession_completed_hash = audit_message.succession_completed_message_hash;
+    SuccessionCompletedMessage succession_completed = data.GetMessage(succession_completed_hash);
+    CopyCurrentKeyQuarterLocationsToListOfPreviousLocations(succession_completed);
+    RecordSuccessionCompletedMessageAsTheLocationForRecoveredKeyQuarters(succession_completed_hash,
+                                                                         succession_completed);
+}
+
+void RelayState::CopyCurrentKeyQuarterLocationsToListOfPreviousLocations(
+        SuccessionCompletedMessage &succession_completed_message)
+{
+    for (uint32_t i = 0; i < succession_completed_message.key_quarter_sharers.size(); i++)
+    {
+        auto key_sharer = GetRelayByNumber(succession_completed_message.key_quarter_sharers[i]);
+        auto &location = key_sharer->key_quarter_locations[succession_completed_message.key_quarter_positions[i]];
+        if (not VectorContainsEntry(key_sharer->previous_key_quarter_locations, location.message_hash))
+            key_sharer->previous_key_quarter_locations.push_back(location.message_hash);
+    }
+}
+
+void RelayState::RecordSuccessionCompletedMessageAsTheLocationForRecoveredKeyQuarters(
+        uint160 succession_completed_message_hash, SuccessionCompletedMessage &succession_completed_message)
+{
+    for (uint32_t i = 0; i < succession_completed_message.key_quarter_sharers.size(); i++)
+    {
+        auto key_sharer = GetRelayByNumber(succession_completed_message.key_quarter_sharers[i]);
+        auto &location = key_sharer->key_quarter_locations[succession_completed_message.key_quarter_positions[i]];
+        location.message_hash = succession_completed_message_hash;
+        location.position = i;
+    }
+}
+
 
 void RelayState::ProcessGoodbyeMessage(GoodbyeMessage goodbye, Data data)
 {
@@ -415,24 +454,74 @@ void RelayState::RecordSecretRecoveryMessageTaskCompleted(SecretRecoveryMessage 
 
 void RelayState::ProcessSecretRecoveryComplaint(SecretRecoveryComplaint complaint, Data data)
 {
-    Relay *key_quarter_holder = complaint.GetSecretSender(data);
-    Relay *dead_relay = complaint.GetDeadRelay(data);
+    RemoveCompleteSuccessionTaskFromSuccessor(complaint, data);
+    RecordSentComplaint(complaint.GetComplainer(data));
 
-    auto recovery_message = complaint.GetSecretRecoveryMessage(data);
-    dead_relay->RecordSecretRecoveryComplaint(complaint);
+    auto dead_relay = complaint.GetDeadRelay(data);
+    dead_relay->RecordSecretRecoveryComplaintAndRejectBadRecoveryMessage(complaint);
 
-    Task task(SEND_SECRET_RECOVERY_MESSAGE,
-              Death(recovery_message.dead_relay_number),
-              recovery_message.position_of_quarter_holder);
+    AssignSecretRecoveryTaskToKeyQuarterHolder(dead_relay, complaint.position_of_quarter_holder);
 
-    key_quarter_holder->tasks.push_back(task);
+    auto key_quarter_holder = complaint.GetSecretSender(data);
     RecordRelayDeath(key_quarter_holder, data, MISBEHAVED);
+}
+
+void RelayState::RemoveCompleteSuccessionTaskFromSuccessor(SecretRecoveryComplaint &complaint, Data data)
+{
+    auto successor = GetRelayByNumber(complaint.successor_number);
+    auto dead_relay = complaint.GetDeadRelay(data);
+    auto &attempt = dead_relay->succession_attempts[complaint.successor_number];
+    auto hash_of_four_messages = attempt.GetFourSecretRecoveryMessages().GetHash160();
+    Task task(SEND_SUCCESSION_COMPLETED_MESSAGE, hash_of_four_messages);
+    EraseEntryFromVector(task, successor->tasks);
 }
 
 void RelayState::RecordRelayDeath(Relay *dead_relay, Data data, uint8_t reason)
 {
     dead_relay->status = reason;
-    AssignSecretRecoveryTasksToKeyQuarterHolders(dead_relay, data);
+    AssignSecretRecoveryTasksToKeyQuarterHolders(dead_relay);
+    AssignNewSuccessorsAfterRelayDeath(dead_relay);
+    ReassignSecretRecoveryTasksToQuarterHoldersAfterSuccessorDeath(dead_relay);
+    AssignNewQuarterHoldersIfNecessaryAfterRelayDeath(dead_relay);
+}
+
+void RelayState::AssignNewSuccessorsAfterRelayDeath(Relay *dead_relay)
+{
+    for (auto &relay : relays)
+        if (relay.current_successor_number == dead_relay->number)
+        {
+            relay.previous_successors.push_back(dead_relay->number);
+            AssignSuccessorToRelay(&relay);
+        }
+}
+
+void RelayState::ReassignSecretRecoveryTasksToQuarterHoldersAfterSuccessorDeath(Relay *dead_successor)
+{
+    for (auto &relay : relays)
+    {
+        if (relay.previous_successors.size() > 0 and relay.previous_successors.back() == dead_successor->number)
+        {
+            if (relay.current_successor_number != 0)
+                AssignSecretRecoveryTasksToKeyQuarterHolders(&relay);
+        }
+    }
+}
+
+void RelayState::AssignNewQuarterHoldersIfNecessaryAfterRelayDeath(Relay *dead_relay)
+{
+    if (dead_relay->current_successor_number != 0)
+        return;
+
+    for (auto &relay : relays)
+        for (uint32_t position = 0; position < 4; position++)
+            if (relay.key_quarter_holders[position] == dead_relay->number)
+                AssignReplacementQuarterHolderToRelay(&relay, position);
+}
+
+void RelayState::AssignReplacementQuarterHolderToRelay(Relay *relay, uint32_t position)
+{
+    AssignKeyQuarterHolderToRelay(*relay, position);
+    relay->key_quarter_locations[position] = KeyQuarterLocation();
 }
 
 void RelayState::ProcessDurationWithoutResponseFromRelay(DurationWithoutResponseFromRelay duration, Data data)
@@ -563,8 +652,18 @@ void RelayState::ProcessSuccessionCompletedMessage(SuccessionCompletedMessage &s
     auto dead_relay = GetRelayByNumber(succession_completed_message.dead_relay_number);
     dead_relay->RecordSuccessionCompletedMessage(succession_completed_message);
     auto successor = GetRelayByNumber(succession_completed_message.successor_number);
-    TransferTasksToSuccessor(dead_relay->number, successor->number);
+
+    RemoveCompleteSuccessionTaskFromSuccessor(succession_completed_message);
+    TransferInheritableTasksToSuccessor(dead_relay->number, successor->number);
     ReplaceDeadRelayWithSuccessorInQuarterHolderRoles(dead_relay->number, successor->number);
+}
+
+void RelayState::RemoveCompleteSuccessionTaskFromSuccessor(SuccessionCompletedMessage &succession_completed_message)
+{
+    auto successor = GetRelayByNumber(succession_completed_message.successor_number);
+    auto hash_of_four_messages = succession_completed_message.GetFourSecretRecoveryMessages().GetHash160();
+    Task task(SEND_SUCCESSION_COMPLETED_MESSAGE, hash_of_four_messages);
+    EraseEntryFromVector(task, successor->tasks);
 }
 
 void RelayState::ProcessSuccessionCompletedAuditMessage(SuccessionCompletedAuditMessage &audit_message, Data data)
@@ -597,18 +696,25 @@ void RelayState::RemoveKeyDistributionAuditTask(KeyDistributionAuditMessage &aud
 void RelayState::ProcessMinedCreditMessage(MinedCreditMessage &msg, Data data)
 {
     msg.hash_list.RecoverFullHashes(data.msgdata);
+    uint160 mined_credit_message_hash = msg.GetHash160();
 
     for (auto message_hash : msg.hash_list.full_hashes)
     {
-        if (data.MessageType(message_hash) == "relay_join")
+        std::string message_type = data.MessageType(message_hash);
+
+        if (message_type == "relay_join")
             MarkRelayJoinMessageAsEncoded(message_hash, data);
 
-        if (data.MessageType(message_hash) == "key_distribution")
+        if (message_type == "key_distribution")
             MarkKeyDistributionMessageAsEncoded(message_hash, data);
+
+        if (message_type == "succession_completed")
+            MarkSuccessionCompletedMessageAsEncodedInMinedCreditMessage(message_hash, mined_credit_message_hash, data);
     }
 
     AssignKeyDistributionTasks();
     AssignKeyDistributionAuditTasks();
+    AssignSuccessionCompletedAuditTasks();
     latest_mined_credit_message_hash = msg.GetHash160();
 }
 
@@ -625,9 +731,29 @@ void RelayState::AssignKeyDistributionTasks()
 
 void RelayState::AssignKeyDistributionTaskToRelay(Relay &relay)
 {
-    Task task(SEND_KEY_DISTRIBUTION_MESSAGE, relay.hashes.join_message_hash, ALL_POSITIONS);
-    if (not VectorContainsEntry(relay.tasks, task))
-        relay.tasks.push_back(task);
+    auto positions = PositionsForWhichRelayShouldSendAKeyDistributionMessage(relay);
+    vector<Task> tasks;
+
+    if (positions.size() == 4)
+        tasks.push_back(Task(SEND_KEY_DISTRIBUTION_MESSAGE, relay.hashes.join_message_hash, ALL_POSITIONS));
+    else
+        for (auto position : positions)
+            tasks.push_back(Task(SEND_KEY_DISTRIBUTION_MESSAGE, relay.hashes.join_message_hash, position));
+
+    for (auto task : tasks)
+        if (not VectorContainsEntry(relay.tasks, task))
+            relay.tasks.push_back(task);
+}
+
+vector<uint32_t> RelayState::PositionsForWhichRelayShouldSendAKeyDistributionMessage(Relay &relay)
+{
+    vector<uint32_t> positions;
+    for (uint32_t position = 0; position < 4; position++)
+    {
+        if (relay.key_quarter_locations[position].message_hash == 0)
+            positions.push_back(position);
+    }
+    return positions;
 }
 
 void RelayState::AssignKeyDistributionAuditTasks()
@@ -659,6 +785,53 @@ void RelayState::AssignKeyDistributionAuditTaskToRelay(Relay &relay)
     }
 }
 
+void RelayState::AssignSuccessionCompletedAuditTasks()
+{
+    for (auto &relay : relays)
+        if (RelayShouldSendASuccessionCompletedAuditMessage(relay))
+            AssignSuccessionCompletedAuditTasksToRelay(relay);
+}
+
+bool RelayState::RelayShouldSendASuccessionCompletedAuditMessage(Relay &relay)
+{
+    for (auto &candidate_predecessor : relays)
+        if (candidate_predecessor.succession_attempts.count(relay.number))
+        {
+            auto &attempt = candidate_predecessor.succession_attempts[relay.number];
+            if (SuccessionCompletedAuditMessageShouldBeSentForSuccessionAttempt(attempt))
+                return true;
+        }
+    return false;
+}
+
+bool RelayState::SuccessionCompletedAuditMessageShouldBeSentForSuccessionAttempt(SuccessionAttempt &attempt)
+{
+    if (attempt.succession_completed_message_hash == 0)
+        return false;
+    if (attempt.hash_of_message_containing_succession_completed_message == 0)
+        return false;
+    if (attempt.succession_completed_audit_message_hash != 0)
+        return false;;
+    return true;
+}
+
+void RelayState::AssignSuccessionCompletedAuditTasksToRelay(Relay &relay)
+{
+    for (auto &candidate_predecessor : relays)
+        if (candidate_predecessor.succession_attempts.count(relay.number))
+        {
+            auto &attempt = candidate_predecessor.succession_attempts[relay.number];
+            if (SuccessionCompletedAuditMessageShouldBeSentForSuccessionAttempt(attempt))
+                AssignSuccessionCompletedAuditTaskToRelay(attempt.succession_completed_message_hash, relay);
+        }
+}
+
+void RelayState::AssignSuccessionCompletedAuditTaskToRelay(uint160 succession_completed_message_hash, Relay &relay)
+{
+    Task task(SEND_SUCCESSION_COMPLETED_AUDIT_MESSAGE, succession_completed_message_hash);
+    relay.tasks.push_back((task));
+}
+
 bool RelayState::RelayShouldSendAKeyDistributionAuditMessage(Relay &relay)
 {
     if (relay.NumberOfKeyQuarterHoldersAssigned() == 0)
@@ -682,23 +855,33 @@ bool RelayState::RelayShouldSendAKeyDistributionMessage(Relay &relay)
         return false;
     if (RelayHasFourLivingQuarterHoldersWhoHaveReceivedKeyQuarters(relay))
         return false;
-    if (RelayHasSharedAKeyQuarterWithAQuarterHolderWhoIsNowDeadAndHasNoSuccessor(relay) and
-            NewQuarterHoldersAreAvailableToReplaceDeadOnesWithoutSuccessors(relay))
-        return true;
-    if (RelayHasFourLivingQuarterHoldersWithEncodedJoinMessagesWhoHaveNotReceivedKeyQuarters(relay))
+
+    if (RelayHasFourLivingKeyQuarterHoldersWithEncodedJoinMessages(relay) and
+            RelayHasALivingQuarterHolderWithAnEncodedJoinMessageWhoHasNotReceivedAKeyQuarter(relay))
         return true;;
     return false;
 }
 
-bool RelayState::RelayHasFourLivingQuarterHoldersWithEncodedJoinMessagesWhoHaveNotReceivedKeyQuarters(Relay &relay)
+bool RelayState::RelayHasALivingQuarterHolderWithAnEncodedJoinMessageWhoHasNotReceivedAKeyQuarter(Relay &relay)
 {
-    if (not RelayHasFourLivingKeyQuarterHoldersWithEncodedJoinMessages(relay))
+    for (uint32_t position = 0; position < 4; position++)
+    {
+        if (RelayIsAliveAndHasAnEncodedJoinMessage(relay.key_quarter_holders[position]))
+        {
+            if (relay.key_quarter_locations[position].message_hash == 0)
+                return true;
+        }
+    }
+    return false;
+}
+
+bool RelayState::RelayIsAliveAndHasAnEncodedJoinMessage(uint64_t relay_number)
+{
+    if (not ContainsRelayWithNumber(relay_number))
         return false;
 
-    for (auto key_quarter_location : relay.key_quarter_locations)
-        if (key_quarter_location.message_hash != 0)
-            return false;
-    return true;
+    auto relay = GetRelayByNumber(relay_number);
+    return relay->status == ALIVE and relay->join_message_was_encoded;
 }
 
 bool RelayState::RelayHasFourLivingKeyQuarterHolders(Relay &relay)
@@ -733,25 +916,6 @@ bool RelayState::RelayHasFourLivingQuarterHoldersWhoHaveReceivedKeyQuarters(Rela
     return true;
 }
 
-bool RelayState::RelayHasSharedAKeyQuarterWithAQuarterHolderWhoIsNowDeadAndHasNoSuccessor(Relay &relay)
-{
-    for (uint32_t i = 0; i < 4; i++)
-    {
-        auto quarter_holder = GetRelayByNumber(relay.key_quarter_holders[i]);
-        if (quarter_holder != NULL and quarter_holder->status != ALIVE)
-        {
-            if (relay.key_quarter_locations[i].message_hash != 0 and quarter_holder->current_successor_number == 0)
-                return true;
-        }
-    }
-    return false;
-}
-
-bool RelayState::NewQuarterHoldersAreAvailableToReplaceDeadOnesWithoutSuccessors(Relay &relay)
-{
-    return false;
-}
-
 void RelayState::MarkRelayJoinMessageAsEncoded(uint160 join_message_hash, Data data)
 {
     auto relay = GetRelayByJoinHash(join_message_hash);
@@ -764,4 +928,105 @@ void RelayState::MarkKeyDistributionMessageAsEncoded(uint160 key_distribution_me
     auto relay = GetRelayByNumber(key_distribution_message.relay_number);
     for (auto &location : relay->key_quarter_locations)
         location.message_was_encoded = true;
+}
+
+void RelayState::MarkSuccessionCompletedMessageAsEncodedInMinedCreditMessage(uint160 succession_completed_message_hash,
+                                                                             uint160 mined_credit_message_hash,
+                                                                             Data data)
+{
+    SuccessionCompletedMessage succession_completed_message = data.GetMessage(succession_completed_message_hash);
+    auto dead_relay = GetRelayByNumber(succession_completed_message.dead_relay_number);
+    auto &attempt = dead_relay->succession_attempts[succession_completed_message.successor_number];
+    attempt.hash_of_message_containing_succession_completed_message = mined_credit_message_hash;
+}
+
+void RelayState::ProcessSuccessionCompletedAuditComplaint(SuccessionCompletedAuditComplaint complaint, Data data)
+{
+    auto dead_relay = GetRelayByNumber(complaint.dead_relay_number);
+    auto &attempt = dead_relay->succession_attempts[complaint.successor_number];
+    attempt.succession_completed_audit_complaints.push_back(complaint.GetHash160());
+
+    auto auditor = GetRelayByNumber(complaint.auditor_number);
+    RecordSentComplaint(auditor);
+
+    RestorePreviousKeyQuarterLocationsAfterSuccessionCompletedAuditComplaint(complaint, data);
+
+    auto successor = GetRelayByNumber(complaint.successor_number);
+    RecordRelayDeath(successor, data, MISBEHAVED);
+}
+
+void RelayState::RestorePreviousKeyQuarterLocationsAfterSuccessionCompletedAuditComplaint(
+        SuccessionCompletedAuditComplaint &complaint, Data data)
+{
+    auto succession_completed_message_hash = complaint.succession_completed_message_hash;
+    SuccessionCompletedMessage succession_completed = data.GetMessage(succession_completed_message_hash);
+
+    for (auto &relay : relays)
+        if (relay.previous_key_quarter_locations.size() > 0)
+            for (auto &location : relay.key_quarter_locations)
+                if (location.message_hash == succession_completed_message_hash)
+                {
+                    RestorePreviousKeyQuarterLocationsForRelay(relay, succession_completed_message_hash, data);
+                    break;
+                }
+}
+
+void RelayState::RestorePreviousKeyQuarterLocationsForRelay(Relay &relay, uint160 bad_message_hash, Data data)
+{
+    vector<uint160> restored_locations;
+    for (uint32_t key_quarter_position = 0; key_quarter_position < 4; key_quarter_position++)
+    {
+        auto &location = relay.key_quarter_locations[key_quarter_position];
+        if (location.message_hash == bad_message_hash)
+        {
+            uint160 previous_location = GetPreviousLocationForRelaysKeyQuarter(relay, key_quarter_position, data);
+            location.message_hash = previous_location;
+            location.position = GetPositionOfRelaysKeyQuarterInMessage(relay, key_quarter_position,
+                                                                       previous_location, data);
+            if (not VectorContainsEntry(restored_locations, previous_location))
+                restored_locations.push_back(previous_location);
+        }
+    }
+    for (auto restored_location : restored_locations)
+        EraseEntryFromVector(restored_location, relay.previous_key_quarter_locations);
+}
+
+uint160 RelayState::GetPreviousLocationForRelaysKeyQuarter(Relay &relay, uint32_t key_quarter_position, Data data)
+{
+    for (uint160 previous_location_hash : boost::adaptors::reverse(relay.previous_key_quarter_locations))
+    {
+        std::string message_type = data.MessageType(previous_location_hash);
+        if (message_type == "key_distribution")
+            return previous_location_hash;
+        if (message_type == "succession_completed")
+        {
+            SuccessionCompletedMessage succession_completed = data.GetMessage(previous_location_hash);
+            for (uint32_t i = 0; i < succession_completed.key_quarter_sharers.size(); i++)
+            {
+                if (succession_completed.key_quarter_sharers[i] == relay.number)
+                    if (succession_completed.key_quarter_positions[i] == key_quarter_position)
+                        return previous_location_hash;
+            }
+        }
+    }
+    return 0;
+}
+
+uint32_t RelayState::GetPositionOfRelaysKeyQuarterInMessage(Relay &relay, uint32_t key_quarter_position,
+                                                            uint160 previous_location_hash, Data data)
+{
+    std::string message_type = data.MessageType(previous_location_hash);
+    if (message_type == "key_distribution")
+        return key_quarter_position;
+    if (message_type == "succession_completed")
+    {
+        SuccessionCompletedMessage succession_completed = data.GetMessage(previous_location_hash);
+        for (uint32_t i = 0; i < succession_completed.key_quarter_sharers.size(); i++)
+        {
+            if (succession_completed.key_quarter_sharers[i] == relay.number)
+                if (succession_completed.key_quarter_positions[i] == key_quarter_position)
+                    return i;
+        }
+    }
+    return 0;
 }

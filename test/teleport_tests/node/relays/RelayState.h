@@ -11,6 +11,7 @@
 #include "SecretRecoveryComplaint.h"
 #include "RecoveryFailureAuditMessage.h"
 #include "SuccessionCompletedAuditMessage.h"
+#include "SuccessionCompletedAuditComplaint.h"
 #include <test/teleport_tests/node/relays/KeyDistributionAuditorSelection.h>
 
 
@@ -88,7 +89,7 @@ public:
 
     void ProcessSecretRecoveryComplaint(SecretRecoveryComplaint complaint, Data data);
 
-    void TransferTasksToSuccessor(uint64_t dead_relay_number, uint64_t successor_number);
+    void TransferInheritableTasksToSuccessor(uint64_t dead_relay_number, uint64_t successor_number);
 
     bool MinedCreditMessageHashIsAlreadyBeingUsed(uint160 mined_credit_message_hash);
 
@@ -167,7 +168,7 @@ public:
 
     bool RelayHasSharedAKeyQuarterWithAQuarterHolderWhoIsNowDeadAndHasNoSuccessor(Relay &relay);
 
-    bool RelayHasFourLivingQuarterHoldersWithEncodedJoinMessagesWhoHaveNotReceivedKeyQuarters(Relay &relay);
+    bool RelayHasALivingQuarterHolderWithAnEncodedJoinMessageWhoHasNotReceivedAKeyQuarter(Relay &relay);
 
     bool RelayHasFourLivingKeyQuarterHolders(Relay &relay);
 
@@ -192,6 +193,66 @@ public:
     void AssignKeyDistributionTaskToRelay(Relay &relay);
 
     void AssignKeyDistributionAuditTaskToRelay(Relay &relay);
+
+    void RemoveCompleteSuccessionTaskFromSuccessor(SuccessionCompletedMessage &succession_completed_message);
+
+    void RemoveCompleteSuccessionTaskFromSuccessor(SecretRecoveryComplaint &complaint, Data data);
+
+    void AssignSecretRecoveryTaskToKeyQuarterHolder(Relay *dead_relay, uint32_t position);
+
+    void MarkSuccessionCompletedMessageAsEncodedInMinedCreditMessage(uint160 succession_completed_message_hash,
+                                                                     uint160 mined_credit_message_hash, Data data);
+
+    void AssignSuccessionCompletedAuditTasks();
+
+    bool RelayShouldSendASuccessionCompletedAuditMessage(Relay &relay);
+
+    void AssignSuccessionCompletedAuditTasksToRelay(Relay &relay);
+
+    bool SuccessionCompletedAuditMessageShouldBeSentForSuccessionAttempt(SuccessionAttempt &attempt);
+
+    void AssignSuccessionCompletedAuditTaskToRelay(uint160 succession_completed_message_hash, Relay &relay);
+
+    void ProcessDurationWithoutResponseAfterSuccessionCompletedAuditMessage(SuccessionCompletedAuditMessage audit_message,
+                                                                            Data data);
+
+    void RecordSuccessionCompletedMessageAsTheLocationForRecoveredKeyQuarters(uint160 succession_completed_message_hash,
+                                                                              SuccessionCompletedMessage &succession_completed_message);
+
+    void CopyCurrentKeyQuarterLocationsToListOfPreviousLocations(SuccessionCompletedMessage &succession_completed_message);
+
+    void ProcessSuccessionCompletedAuditComplaint(SuccessionCompletedAuditComplaint complaint, Data data);
+
+    void AssignNewSuccessorsAfterRelayDeath(Relay *dead_relay);
+
+    void ReassignSecretRecoveryTasksToQuarterHoldersAfterSuccessorDeath(Relay *dead_successor);
+
+    void AssignSecretRecoveryTasksToKeyQuarterHolders(Relay *dead_relay);
+
+    void
+    RestorePreviousKeyQuarterLocationsAfterSuccessionCompletedAuditComplaint(SuccessionCompletedAuditComplaint &complaint,
+                                                                             Data data);
+
+    void RestorePreviousKeyQuarterLocationsForRelay(Relay &relay, uint160 bad_message_hash);
+
+    void RestorePreviousKeyQuarterLocationsForRelay(Relay &relay, uint160 bad_message_hash, Data data);
+
+    uint160 GetPreviousLocationForRelaysKeyQuarter(Relay &relay, uint32_t key_quarter_position, Data data);
+
+    uint32_t GetPositionOfRelaysKeyQuarterInMessage(Relay &relay, uint32_t key_quarter_position, uint160 previous_location,
+                                                    Data data);
+
+    void AssignNewQuarterHoldersIfNecessaryAfterRelayDeath(Relay *dead_relay);
+
+    void AssignReplacementQuarterHolderToRelay(Relay *relay, uint32_t position);
+
+    bool AssignKeyQuarterHolderToRelay(Relay &relay, uint32_t quarter_holder_position);
+
+    bool RelayIsAliveAndHasAnEncodedJoinMessage(uint64_t relay_number);
+
+    std::vector<uint32_t> PositionsForWhichRelayShouldSendAKeyDistributionMessage(Relay &relay);
+
+    void RemoveKeyDistributionTask(Relay *relay, KeyDistributionMessage &key_distribution_message);
 };
 
 class RelayStateException : public std::runtime_error

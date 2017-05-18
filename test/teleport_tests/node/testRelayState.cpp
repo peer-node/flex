@@ -3,7 +3,6 @@
 #include "gmock/gmock.h"
 #include "test/teleport_tests/node/relays/RelayState.h"
 #include "test/teleport_tests/node/relays/RelayMemoryCache.h"
-#include "test/teleport_tests/node/relays/KeyQuarterLocation.h"
 
 using namespace ::testing;
 using namespace std;
@@ -230,6 +229,41 @@ TEST_F(ARelayStateWith53RelaysWithRelayJoinMessagesEncodedInAMinedCreditMessage,
     }
 }
 
+TEST_F(ARelayStateWith53RelaysWithRelayJoinMessagesEncodedInAMinedCreditMessage,
+       AssignsANewKeyDistributionTaskWhenProcessingAMinedCreditMessageAfterAQuarterHolderWithNoSuccessorHasDied)
+{
+    relay_state.ProcessMinedCreditMessage(msg, *data);
+
+    auto relay = relay_state.GetRelayByNumber(4);
+
+    auto key_distribution_message = relay->GenerateKeyDistributionMessage(*data, 1, relay_state);
+    relay_state.ProcessKeyDistributionMessage(key_distribution_message);
+
+    auto quarter_holder = relay->QuarterHolders(*data)[0];
+    quarter_holder->current_successor_number = 0;
+    relay_state.RecordRelayDeath(quarter_holder, *data, SAID_GOODBYE);
+
+    MinedCreditMessage msg_;
+    relay_state.ProcessMinedCreditMessage(msg_, *data);
+
+    Task task(SEND_KEY_DISTRIBUTION_MESSAGE, relay->hashes.join_message_hash, 0);
+    ASSERT_TRUE(VectorContainsEntry(relay->tasks, task));
+}
+
+TEST_F(ARelayStateWith53RelaysWithRelayJoinMessagesEncodedInAMinedCreditMessage,
+       RemovesAKeyDistributionTaskWithTheSpecifiedPositionWhenProcessingAKeyDistributionMessage)
+{
+    auto relay = relay_state.GetRelayByNumber(4);
+    Task task(SEND_KEY_DISTRIBUTION_MESSAGE, relay->hashes.join_message_hash, 0);
+
+    relay->tasks.push_back(task);
+
+    auto key_distribution_message = relay->GenerateKeyDistributionMessage(*data, 1, relay_state, 0);
+    relay_state.ProcessKeyDistributionMessage(key_distribution_message);
+
+    ASSERT_FALSE(VectorContainsEntry(relay->tasks, task));
+}
+
 
 class ARelayStateWith53RelaysWhichHasProcessedAKeyDistributionMessage : public ARelayStateWith53Relays
 {
@@ -301,23 +335,29 @@ public:
     virtual void SetUp()
     {
         ARelayStateWith53Relays::SetUp();
-        SetUpRelayState();
+
         number_of_chosen_relay = TheNumberOfARelayWhichIsBeingUsedAsAKeyQuarterHolder();
         relay = relay_state.GetRelayByNumber(number_of_chosen_relay);
-        key_distribution_message = relay->GenerateKeyDistributionMessage(*data, 5, relay_state);
+        DoCachedSetUpForARelayStateWith53RelaysAndAKeyDistributionMessage();
         data->StoreMessage(key_distribution_message);
     }
 
-    virtual void SetUpRelayState()
+    virtual void DoCachedSetUpForARelayStateWith53RelaysAndAKeyDistributionMessage()
     {
         static RelayState reference_test_relay_state;
+        static KeyDistributionMessage reference_key_distribution_message;
 
         if (reference_test_relay_state.relays.size() == 0)
         {
+            key_distribution_message = relay->GenerateKeyDistributionMessage(*data, 5, relay_state);
             reference_test_relay_state = relay_state;
+            reference_key_distribution_message = key_distribution_message;
         }
         else
+        {
             relay_state = reference_test_relay_state;
+            key_distribution_message = reference_key_distribution_message;
+        }
     }
 
     uint64_t TheNumberOfARelayWhichIsBeingUsedAsAKeyQuarterHolder()
@@ -411,11 +451,6 @@ TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
     relay_state.ProcessKeyDistributionAuditMessage(audit_message);
     Task task(SEND_KEY_DISTRIBUTION_AUDIT_MESSAGE, key_distribution_message.GetHash160(), ALL_POSITIONS);
     ASSERT_FALSE(VectorContainsEntry(relay->tasks, task));
-}
-
-bool RelayHasStatus(Relay *relay, Data data, uint32_t reason)
-{
-    return relay->status == reason;
 }
 
 TEST_F(ARelayStateWhichHasProcessedAKeyDistributionMessage,
@@ -555,9 +590,6 @@ TEST_F(ARelayStateWhichHasProcessedAKeyDistributionAuditMessage,
     ASSERT_THAT(relay->key_distribution_message_audited, Eq(true));
 }
 
-
-
-
 class ARelayStateWhichHasProcessedAComplaintAboutAKeyDistributionMessage :
         public ARelayStateWhichHasProcessedAKeyDistributionMessage
 {
@@ -629,11 +661,17 @@ public:
     }
 };
 
+TEST_F(ARelayStateWhichHasProcessedAGoodbyeMessage, MarksTheRelayAsHavingSaidGoodbye)
+{
+    ASSERT_THAT(relay->status, Eq(SAID_GOODBYE));
+}
+
 
 class ARelayStateWhichHasProcessedADeath : public ARelayStateWhichHasProcessedAKeyDistributionMessage
 {
 public:
     uint160 task_hash;
+    Relay *successor;
 
     virtual void SetUp()
     {
@@ -641,7 +679,7 @@ public:
 
         AssignATaskToTheRelay();
         relay_state.RecordRelayDeath(relay, *data, MISBEHAVED);
-
+        successor = relay_state.GetRelayByNumber(relay->current_successor_number);
     }
 
     void AssignATaskToTheRelay()
@@ -671,21 +709,19 @@ std::vector<std::pair<uint64_t, uint64_t> > GetQuarterHolderRoles(uint64_t relay
 TEST_F(ARelayStateWhichHasProcessedADeath,
        ReplacesTheRelayWithItsSuccessorInAllQuarterHolderRolesWhenProcessingASuccessionCompletedMessage)
 {
-    uint64_t successor_number = relay->current_successor_number;
-
     auto initial_roles_of_exiting_relay = GetQuarterHolderRoles(relay->number, &relay_state);
     ASSERT_THAT(initial_roles_of_exiting_relay.size(), Gt(0));
 
     SuccessionCompletedMessage succession_completed_message;
     succession_completed_message.dead_relay_number = relay->number;
-    succession_completed_message.successor_number = successor_number;
+    succession_completed_message.successor_number = successor->number;
 
     relay_state.ProcessSuccessionCompletedMessage(succession_completed_message, *data);
 
     auto final_roles_of_exiting_relay = GetQuarterHolderRoles(relay->number, &relay_state);
     ASSERT_THAT(final_roles_of_exiting_relay.size(), Eq(0));
 
-    auto final_roles_of_successor = GetQuarterHolderRoles(successor_number, &relay_state);
+    auto final_roles_of_successor = GetQuarterHolderRoles(successor->number, &relay_state);
     for (auto role : initial_roles_of_exiting_relay)
         ASSERT_TRUE(VectorContainsEntry(final_roles_of_successor, role));
 }
@@ -701,7 +737,35 @@ TEST_F(ARelayStateWhichHasProcessedADeath,
 
     Relay *key_quarter_holder = relay_state.GetRelayByNumber(duration.relay_number);
 
-    ASSERT_TRUE(RelayHasStatus(key_quarter_holder, *data, NOT_RESPONDING));
+    ASSERT_THAT(key_quarter_holder->status, Eq(NOT_RESPONDING));
+}
+
+class ARelayStateWithARelayWithAKeyQuarterHolderWhoHasDiedWithoutASuccessor :
+        public ARelayStateWhichHasProcessedAKeyDistributionMessage
+{
+public:
+    uint160 task_hash;
+    Relay *quarter_holder;
+
+    virtual void SetUp()
+    {
+        ARelayStateWhichHasProcessedAKeyDistributionMessage::SetUp();
+
+        quarter_holder = relay->QuarterHolders(*data)[0];
+        quarter_holder->current_successor_number = 0;
+        relay_state.RecordRelayDeath(quarter_holder, *data, SAID_GOODBYE);
+    }
+
+    virtual void TearDown()
+    {
+        ARelayStateWhichHasProcessedAKeyDistributionMessage::TearDown();
+    }
+};
+
+TEST_F(ARelayStateWithARelayWithAKeyQuarterHolderWhoHasDiedWithoutASuccessor, AssignsANewKeyQuarterHolderToTheRelay)
+{
+    auto new_quarter_holder_number = relay->QuarterHolders(*data)[0]->number;
+    ASSERT_THAT(new_quarter_holder_number, Ne(quarter_holder->number));
 }
 
 
@@ -736,7 +800,7 @@ public:
 
         secret_recovery_message.quarter_holder_number = relay->key_quarter_holders[quarter_holder_position];
         secret_recovery_message.position_of_quarter_holder = (uint8_t) quarter_holder_position;
-        secret_recovery_message.successor_number = relay->current_successor_number;
+        secret_recovery_message.successor_number = successor->number;
         secret_recovery_message.dead_relay_number = relay->number;
         secret_recovery_message.PopulateSecrets(*data);
         secret_recovery_message.Sign(*data);
@@ -756,7 +820,7 @@ public:
 TEST_F(ARelayStateWithASecretRecoveryMessage, RecordsTheHashWhenProcessingTheSecretRecoveryMessage)
 {
     relay_state.ProcessSecretRecoveryMessage(secret_recovery_message);
-    auto &attempt = relay->succession_attempts[relay->current_successor_number];
+    auto &attempt = relay->succession_attempts[successor->number];
     ASSERT_THAT(attempt.recovery_message_hashes[secret_recovery_message.position_of_quarter_holder],
                 Eq(secret_recovery_message.GetHash160()));
 }
@@ -777,19 +841,7 @@ public:
     }
 };
 
-TEST_F(ARelayStateWhichHasProcessedASecretRecoveryMessage,
-       MarksTheKeyQuarterHolderAsMisbehavingWhenProcessingASecretRecoveryComplaint)
-{
-    SecretRecoveryComplaint complaint;
-    complaint.secret_recovery_message_hash = secret_recovery_message.GetHash160();
-
-    relay_state.ProcessSecretRecoveryComplaint(complaint, *data);
-
-    ASSERT_TRUE(RelayHasStatus(key_quarter_holder, *data, MISBEHAVED));
-}
-
-TEST_F(ARelayStateWhichHasProcessedASecretRecoveryMessage,
-       RemovesTheKeyQuarterHoldersTask)
+TEST_F(ARelayStateWhichHasProcessedASecretRecoveryMessage, RemovesTheKeyQuarterHoldersTask)
 {
     bool still_there = VectorContainsEntry(key_quarter_holder->tasks,
                                            Task(SEND_SECRET_RECOVERY_MESSAGE, Death(relay->number), 1));
@@ -797,52 +849,130 @@ TEST_F(ARelayStateWhichHasProcessedASecretRecoveryMessage,
 }
 
 
-//class ARelayStateWhichHasProcessedASecretRecoveryComplaint : public ARelayStateWhichHasProcessedASecretRecoveryMessage
-//{
-//public:
-//    SecretRecoveryComplaint complaint;
-//
-//    virtual void SetUp()
-//    {
-//        ARelayStateWhichHasProcessedASecretRecoveryMessage::SetUp();
-//
-//        complaint.secret_recovery_message_hash = secret_recovery_message.GetHash160();
-//        complaint.Sign(*data);
-//        ASSERT_TRUE(complaint.VerifySignature(*data));
-//
-//        data->StoreMessage(complaint);
-//
-//        relay_state.ProcessSecretRecoveryComplaint(complaint, *data);
-//    }
-//
-//    virtual void TearDown()
-//    {
-//        ARelayStateWhichHasProcessedASecretRecoveryMessage::TearDown();
-//    }
-//};
+class ARelayStateWithASecretRecoveryComplaint : public ARelayStateWhichHasProcessedASecretRecoveryMessage
+{
+public:
+    SecretRecoveryComplaint complaint;
+
+    virtual void SetUp()
+    {
+        ARelayStateWhichHasProcessedASecretRecoveryMessage::SetUp();
+        complaint.successor_number = successor->number;
+        complaint.position_of_quarter_holder = secret_recovery_message.position_of_quarter_holder;
+        complaint.secret_recovery_message_hash = secret_recovery_message.GetHash160();
+        data->StoreMessage(complaint);
+    }
+
+    virtual void TearDown()
+    {
+        ARelayStateWhichHasProcessedASecretRecoveryMessage::TearDown();
+    }
+};
+
+TEST_F(ARelayStateWithASecretRecoveryComplaint, IncrementsTheNumberOfComplaintsSentByTheSuccessorWhenProcessingIt)
+{
+    ASSERT_THAT(successor->number_of_complaints_sent, Eq(0));
+    relay_state.ProcessSecretRecoveryComplaint(complaint, *data);
+    ASSERT_THAT(successor->number_of_complaints_sent, Eq(1));
+}
+
+
+class ARelayStateWhichHasProcessedASecretRecoveryComplaint : public ARelayStateWithASecretRecoveryComplaint
+{
+public:
+    virtual void SetUp()
+    {
+        ARelayStateWithASecretRecoveryComplaint::SetUp();
+        relay_state.ProcessSecretRecoveryComplaint(complaint, *data);
+    }
+
+    virtual void TearDown()
+    {
+        ARelayStateWithASecretRecoveryComplaint::TearDown();
+    }
+};
+
+TEST_F(ARelayStateWhichHasProcessedASecretRecoveryComplaint, RecordsTheHashOfTheComplaint)
+{
+    auto &attempt = relay->succession_attempts[successor->number];
+    ASSERT_TRUE(VectorContainsEntry(attempt.recovery_complaint_hashes, complaint.GetHash160()));
+}
+
+TEST_F(ARelayStateWhichHasProcessedASecretRecoveryComplaint,
+       MovesTheHashOfTheBadSecretRecoveryMessageToTheListOfRejectedMessages)
+{
+    auto &attempt = relay->succession_attempts[successor->number];
+    ASSERT_TRUE(VectorContainsEntry(attempt.rejected_recovery_messages, secret_recovery_message.GetHash160()));
+    ASSERT_FALSE(ArrayContainsEntry(attempt.recovery_message_hashes, secret_recovery_message.GetHash160()));
+}
+
+TEST_F(ARelayStateWhichHasProcessedASecretRecoveryComplaint, MarksTheKeyQuarterHolderAsMisbehaving)
+{
+    auto quarter_holder = complaint.GetSecretSender(*data);
+    ASSERT_THAT(key_quarter_holder->status, Eq(MISBEHAVED));
+}
+
+TEST_F(ARelayStateWhichHasProcessedASecretRecoveryComplaint,
+       ReassignsTheSendSecretRecoveryMessageTaskToTheMisbehavingQuarterHolder)
+{
+    auto quarter_holder = complaint.GetSecretSender(*data);
+    Task task(SEND_SECRET_RECOVERY_MESSAGE, Death(relay->number), complaint.position_of_quarter_holder);
+    ASSERT_TRUE(VectorContainsEntry(quarter_holder->tasks, task));
+}
+
 
 class ARelayStateWhichHasProcessedFourSecretRecoveryMessages : public ARelayStateWithASecretRecoveryMessage
 {
 public:
     std::array<uint160, 4> recovery_message_hashes;
+    FourSecretRecoveryMessages four_recovery_messages;
 
     virtual void SetUp()
     {
         ARelayStateWithASecretRecoveryMessage::SetUp();
         auto recovery_messages = AllFourSecretRecoveryMessages();
 
+        successor = relay_state.GetRelayByNumber(relay->current_successor_number);
+
         for (uint32_t i = 0; i < 4; i++)
         {
             relay_state.ProcessSecretRecoveryMessage(recovery_messages[i]);
             recovery_message_hashes[i] = recovery_messages[i].GetHash160();
         }
+        auto &attempt = relay->succession_attempts.begin()->second;
+        four_recovery_messages = attempt.GetFourSecretRecoveryMessages();
     }
 
     virtual void TearDown()
     {
         ARelayStateWithASecretRecoveryMessage::TearDown();
     }
+
+    SecretRecoveryComplaint ComplaintAboutOneOfTheSecretRecoveryMessages()
+    {
+        SecretRecoveryComplaint complaint;
+        complaint.successor_number = successor->number;
+        complaint.position_of_quarter_holder = secret_recovery_message.position_of_quarter_holder;
+        complaint.secret_recovery_message_hash = secret_recovery_message.GetHash160();
+        data->StoreMessage(complaint);
+        return complaint;
+    }
 };
+
+TEST_F(ARelayStateWhichHasProcessedFourSecretRecoveryMessages, AssignsACompleteSuccessionTaskToTheSuccessor)
+{
+    Task task(SEND_SUCCESSION_COMPLETED_MESSAGE, four_recovery_messages.GetHash160());
+    ASSERT_TRUE(VectorContainsEntry(successor->tasks, task));
+}
+
+TEST_F(ARelayStateWhichHasProcessedFourSecretRecoveryMessages,
+       RemovesTheCompleteSuccessionTaskFromTheSuccessorWhenProcessingASecretRecoveryComplaint)
+{
+    Task task(SEND_SUCCESSION_COMPLETED_MESSAGE, four_recovery_messages.GetHash160());
+    auto complaint = ComplaintAboutOneOfTheSecretRecoveryMessages();
+    relay_state.ProcessSecretRecoveryComplaint(complaint, *data);
+    ASSERT_FALSE(VectorContainsEntry(successor->tasks, task));
+}
 
 
 class ARelayStateWithASecretRecoveryFailureMessage : public ARelayStateWhichHasProcessedFourSecretRecoveryMessages
@@ -913,10 +1043,363 @@ public:
     }
 };
 
-TEST_F(ARelayStateWithARecoveryFailureAuditMessage, RemovesTheFailureMessageFromTheQuarterHoldersTasks)
+TEST_F(ARelayStateWithARecoveryFailureAuditMessage, RemovesTheSendAuditMessageTasksFromTheQuarterHolders)
 {
     auto quarter_holder = relay_state.GetRelayByNumber(relay->key_quarter_holders[0]);
     ASSERT_THAT(quarter_holder->tasks.size(), Eq(1));
     relay_state.ProcessRecoveryFailureAuditMessage(audit_message, *data);
     ASSERT_THAT(quarter_holder->tasks.size(), Eq(0));
+}
+
+
+class ARelayStateWithASuccessionCompletedMessage : public ARelayStateWhichHasProcessedFourSecretRecoveryMessages
+{
+public:
+    SuccessionCompletedMessage succession_completed_message;
+
+    virtual void SetUp()
+    {
+        ARelayStateWhichHasProcessedFourSecretRecoveryMessages::SetUp();
+
+        succession_completed_message.dead_relay_number = relay->number;
+        succession_completed_message.successor_number = relay->current_successor_number;
+        auto &attempt = relay->succession_attempts.begin()->second;
+        succession_completed_message.recovery_message_hashes = attempt.recovery_message_hashes;
+        SecretRecoveryMessage recovery_message = data->GetMessage(attempt.recovery_message_hashes[0]);
+        succession_completed_message.key_quarter_sharers = recovery_message.key_quarter_sharers;
+        succession_completed_message.key_quarter_positions = recovery_message.key_quarter_positions;
+
+        data->StoreMessage(succession_completed_message);
+    }
+
+    virtual void TearDown()
+    {
+        ARelayStateWhichHasProcessedFourSecretRecoveryMessages::TearDown();
+    }
+};
+
+TEST_F(ARelayStateWithASuccessionCompletedMessage, RecordsTheHashOfTheSuccessionCompletedMessageWhenProcessingIt)
+{
+    relay_state.ProcessSuccessionCompletedMessage(succession_completed_message, *data);
+    auto &attempt = relay->succession_attempts.begin()->second;
+    ASSERT_THAT(attempt.succession_completed_message_hash, Eq(succession_completed_message.GetHash160()));
+}
+
+TEST_F(ARelayStateWithASuccessionCompletedMessage, RemovesTheCompleteSuccessionTaskFromTheSuccessor)
+{
+    Task task(SEND_SUCCESSION_COMPLETED_MESSAGE, four_recovery_messages.GetHash160());
+    ASSERT_TRUE(VectorContainsEntry(successor->tasks, task));
+    relay_state.ProcessSuccessionCompletedMessage(succession_completed_message, *data);
+    ASSERT_FALSE(VectorContainsEntry(successor->tasks, task));
+}
+
+TEST_F(ARelayStateWithASuccessionCompletedMessage, AssignsTheDeadRelaysInheritableTasksToTheSuccessor)
+{
+    Task inheritable_task(SEND_SECRET_RECOVERY_MESSAGE, 1);
+    relay->tasks.push_back(inheritable_task);
+    relay_state.ProcessSuccessionCompletedMessage(succession_completed_message, *data);
+    ASSERT_TRUE(VectorContainsEntry(successor->tasks, inheritable_task));
+}
+
+TEST_F(ARelayStateWithASuccessionCompletedMessage, DoesntAssignTheDeadRelaysNonInheritableTasksToTheSuccessor)
+{
+    Task non_inheritable_task(SEND_KEY_DISTRIBUTION_MESSAGE, 1);
+    relay->tasks.push_back(non_inheritable_task);
+    relay_state.ProcessSuccessionCompletedMessage(succession_completed_message, *data);
+    ASSERT_FALSE(VectorContainsEntry(successor->tasks, non_inheritable_task));
+}
+
+
+class ARelayStateWhichHasProcessedASuccessionCompletedMessage : public ARelayStateWithASuccessionCompletedMessage
+{
+public:
+    virtual void SetUp()
+    {
+        ARelayStateWithASuccessionCompletedMessage::SetUp();
+        relay_state.ProcessSuccessionCompletedMessage(succession_completed_message, *data);
+    }
+
+    virtual void TearDown()
+    {
+        ARelayStateWithASuccessionCompletedMessage::TearDown();
+    }
+};
+
+
+class ARelayStateWithAMinedCreditMessageContainingASuccessionCompletedMessage :
+        public ARelayStateWhichHasProcessedASuccessionCompletedMessage
+{
+public:
+    MinedCreditMessage msg;
+
+    virtual void SetUp()
+    {
+        ARelayStateWhichHasProcessedASuccessionCompletedMessage::SetUp();
+
+        msg.hash_list.full_hashes.push_back(succession_completed_message.GetHash160());
+        msg.hash_list.GenerateShortHashes();
+    }
+
+    virtual void TearDown()
+    {
+        ARelayStateWhichHasProcessedASuccessionCompletedMessage::TearDown();
+    }
+};
+
+class ARelayStateWhichHasProcessedAMinedCreditMessageContainingASuccessionCompletedMessage :
+        public ARelayStateWithAMinedCreditMessageContainingASuccessionCompletedMessage
+{
+public:
+    virtual void SetUp()
+    {
+        ARelayStateWithAMinedCreditMessageContainingASuccessionCompletedMessage::SetUp();
+        relay_state.ProcessMinedCreditMessage(msg, *data);
+    }
+
+    virtual void TearDown()
+    {
+        ARelayStateWithAMinedCreditMessageContainingASuccessionCompletedMessage::TearDown();
+    }
+};
+
+TEST_F(ARelayStateWhichHasProcessedAMinedCreditMessageContainingASuccessionCompletedMessage,
+       MarksTheSuccessionCompletedMessageAsEncodedInTheMinedCreditMessage)
+{
+    auto &attempt = relay->succession_attempts[successor->number];
+    ASSERT_THAT(attempt.hash_of_message_containing_succession_completed_message, Eq(msg.GetHash160()));
+}
+
+TEST_F(ARelayStateWhichHasProcessedAMinedCreditMessageContainingASuccessionCompletedMessage,
+       AssignsASuccesionCompletedAuditTaskToTheSuccessor)
+{
+    Task task(SEND_SUCCESSION_COMPLETED_AUDIT_MESSAGE, succession_completed_message.GetHash160());
+    ASSERT_TRUE(VectorContainsEntry(successor->tasks, task));
+}
+
+
+class ARelayStateWithASuccessionCompletedAuditMessage :
+        public ARelayStateWhichHasProcessedAMinedCreditMessageContainingASuccessionCompletedMessage
+{
+public:
+    SuccessionCompletedAuditMessage audit_message;
+
+    virtual void SetUp()
+    {
+        ARelayStateWhichHasProcessedAMinedCreditMessageContainingASuccessionCompletedMessage::SetUp();
+
+        audit_message.dead_relay_number = relay->number;
+        audit_message.successor_number = successor->number;
+        audit_message.succession_completed_message_hash = succession_completed_message.GetHash160();
+        data->StoreMessage(audit_message);
+    }
+
+    virtual void TearDown()
+    {
+        ARelayStateWhichHasProcessedAMinedCreditMessageContainingASuccessionCompletedMessage::TearDown();
+    }
+};
+
+TEST_F(ARelayStateWithASuccessionCompletedAuditMessage, RecordsTheHashOfTheAuditMessage)
+{
+    relay_state.ProcessSuccessionCompletedAuditMessage(audit_message, *data);
+    auto &attempt = relay->succession_attempts[successor->number];
+    ASSERT_THAT(attempt.succession_completed_audit_message_hash, Eq(audit_message.GetHash160()));
+}
+
+TEST_F(ARelayStateWithASuccessionCompletedAuditMessage, RemovesTheSuccessionCompletedAuditTaskFromTheSuccessor)
+{
+    relay_state.ProcessSuccessionCompletedAuditMessage(audit_message, *data);
+    Task task(SEND_SUCCESSION_COMPLETED_AUDIT_MESSAGE, succession_completed_message.GetHash160());
+    ASSERT_TRUE(VectorContainsEntry(successor->tasks, task));
+}
+
+
+class ARelayStateWhichHasProcessedASuccessionCompletedAuditMessage : public ARelayStateWithASuccessionCompletedAuditMessage
+{
+public:
+    Relay *key_quarter_sharer;
+    uint8_t key_quarter_position;
+
+    virtual void SetUp()
+    {
+        ARelayStateWithASuccessionCompletedAuditMessage::SetUp();
+        relay_state.ProcessSuccessionCompletedAuditMessage(audit_message, *data);
+
+        uint64_t key_quarter_sharer_number = succession_completed_message.key_quarter_sharers[0];
+        key_quarter_sharer = relay_state.GetRelayByNumber(key_quarter_sharer_number);
+        key_quarter_position = succession_completed_message.key_quarter_positions[0];
+    }
+
+    virtual void TearDown()
+    {
+        ARelayStateWithASuccessionCompletedAuditMessage::TearDown();
+    }
+};
+
+TEST_F(ARelayStateWhichHasProcessedASuccessionCompletedAuditMessage,
+       SetsTheSuccessionCompletedMessageAsTheLocationForKeyQuartersAfterADurationWithoutAResponse)
+{
+    auto duration = GetDurationWithoutResponseAfter(audit_message.GetHash160());
+    relay_state.ProcessDurationWithoutResponse(duration, *data);
+
+    auto &location = key_quarter_sharer->key_quarter_locations[key_quarter_position];
+
+    ASSERT_THAT(location.message_hash, Eq(succession_completed_message.GetHash160()));
+}
+
+TEST_F(ARelayStateWhichHasProcessedASuccessionCompletedAuditMessage,
+       RecordsThePreviousLocationsOfTheQuarterHoldersAfterADurationWithoutAResponse)
+{
+    uint160 key_distribution_message_hash = key_quarter_sharer->key_quarter_locations[0].message_hash;
+
+    DurationWithoutResponse duration = GetDurationWithoutResponseAfter(audit_message.GetHash160());
+    relay_state.ProcessDurationWithoutResponse(duration, *data);
+
+    ASSERT_THAT(key_quarter_sharer->previous_key_quarter_locations.size(), Gt(0));
+    ASSERT_THAT(key_quarter_sharer->previous_key_quarter_locations.back(), Eq(key_distribution_message_hash));
+}
+
+
+class ARelayStateWithASuccessionCompletedAuditComplaint :
+        public ARelayStateWhichHasProcessedASuccessionCompletedAuditMessage
+{
+public:
+    SuccessionCompletedAuditComplaint complaint;
+    Relay *auditor;
+
+    virtual void SetUp()
+    {
+        ARelayStateWhichHasProcessedASuccessionCompletedAuditMessage::SetUp();
+
+        complaint.succession_completed_message_hash = succession_completed_message.GetHash160();
+        complaint.succession_completed_audit_message_hash = audit_message.GetHash160();
+        complaint.successor_number = successor->number;
+        complaint.dead_relay_number = relay->number;
+        complaint.auditor_number = 22;
+        data->StoreMessage(complaint);
+
+        auditor = relay_state.GetRelayByNumber(complaint.auditor_number);
+    }
+
+    virtual void TearDown()
+    {
+        ARelayStateWhichHasProcessedASuccessionCompletedAuditMessage::TearDown();
+    }
+};
+
+TEST_F(ARelayStateWithASuccessionCompletedAuditComplaint,
+       IncrementsTheNumberOfComplaintsSentByTheAuditorWhenProcessingTheComplaint)
+{
+    auto initial_number_of_complaints = auditor->number_of_complaints_sent;
+    relay_state.ProcessSuccessionCompletedAuditComplaint(complaint, *data);
+    ASSERT_THAT(auditor->number_of_complaints_sent, Eq(initial_number_of_complaints + 1));
+}
+
+TEST_F(ARelayStateWithASuccessionCompletedAuditComplaint,
+       RestoresThePreviousKeyQuarterLocationsIfTheComplaintArrivesAfterADurationWithoutAResponse)
+{
+    uint160 key_distribution_message_hash = key_quarter_sharer->key_quarter_locations[0].message_hash;
+
+    auto duration = GetDurationWithoutResponseAfter(audit_message.GetHash160());
+    relay_state.ProcessDurationWithoutResponse(duration, *data);
+    relay_state.ProcessSuccessionCompletedAuditComplaint(complaint, *data);
+
+    auto &location = key_quarter_sharer->key_quarter_locations[key_quarter_position];
+
+    ASSERT_THAT(location.message_hash, Eq(key_distribution_message_hash));
+    ASSERT_THAT(location.position, Eq(key_quarter_position));
+    ASSERT_THAT(key_quarter_sharer->previous_key_quarter_locations.size(), Eq(0));
+}
+
+
+class ARelayStateWithASuccessionCompletedAuditComplaintWithARelayWhoseKeyQuarterIsLocatedInASuccessionCompletedMessage :
+        public ARelayStateWithASuccessionCompletedAuditComplaint
+{
+public:
+    SuccessionCompletedMessage succession_completed1;
+
+    virtual void SetUp()
+    {
+        ARelayStateWithASuccessionCompletedAuditComplaint::SetUp();
+
+        succession_completed1 = SuccessionCompletedMessageWithKeyQuarterInPosition1();
+        key_quarter_sharer->key_quarter_locations[1].message_hash = succession_completed1.GetHash160();
+        key_quarter_sharer->key_quarter_locations[1].position = 0;
+    }
+
+    SuccessionCompletedMessage SuccessionCompletedMessageWithKeyQuarterInPosition1()
+    {
+        SuccessionCompletedMessage succession_completed;
+        succession_completed.key_quarter_sharers.push_back(2);
+        succession_completed.key_quarter_positions.push_back(0);
+        succession_completed.key_quarter_sharers.push_back(key_quarter_sharer->number);
+        succession_completed.key_quarter_positions.push_back(1);
+        data->StoreMessage(succession_completed);
+        return succession_completed;
+    }
+
+    virtual void TearDown()
+    {
+        ARelayStateWithASuccessionCompletedAuditComplaint::TearDown();
+    }
+};
+
+TEST_F(ARelayStateWithASuccessionCompletedAuditComplaintWithARelayWhoseKeyQuarterIsLocatedInASuccessionCompletedMessage,
+       RestoresThePreviousKeyQuarterLocationsIfTheComplaintArrivesAfterADurationWithoutAResponse)
+{
+    uint160 succession_completed1_hash = succession_completed1.GetHash160();
+
+    auto duration = GetDurationWithoutResponseAfter(audit_message.GetHash160());
+    relay_state.ProcessDurationWithoutResponse(duration, *data);
+    relay_state.ProcessSuccessionCompletedAuditComplaint(complaint, *data);
+
+    auto &location = key_quarter_sharer->key_quarter_locations[key_quarter_position];
+
+    ASSERT_THAT(location.message_hash, Eq(succession_completed1_hash));
+    ASSERT_THAT(location.position, Eq(1));
+    ASSERT_THAT(key_quarter_sharer->previous_key_quarter_locations.size(), Eq(0));
+}
+
+
+class ARelayStateWhichHasProcessedASuccessionCompletedAuditComplaint :
+        public ARelayStateWithASuccessionCompletedAuditComplaint
+{
+public:
+    virtual void SetUp()
+    {
+        ARelayStateWithASuccessionCompletedAuditComplaint::SetUp();
+        relay_state.ProcessSuccessionCompletedAuditComplaint(complaint, *data);
+    }
+
+    virtual void TearDown()
+    {
+        ARelayStateWithASuccessionCompletedAuditComplaint::TearDown();
+    }
+};
+
+TEST_F(ARelayStateWhichHasProcessedASuccessionCompletedAuditComplaint, RecordsTheHashOfTheComplaint)
+{
+    auto &attempt = relay->succession_attempts[successor->number];
+    ASSERT_TRUE(VectorContainsEntry(attempt.succession_completed_audit_complaints, complaint.GetHash160()));
+}
+
+TEST_F(ARelayStateWhichHasProcessedASuccessionCompletedAuditComplaint, MarksTheSuccessorAsMisbehaving)
+{
+    ASSERT_THAT(successor->status, Eq(MISBEHAVED));
+}
+
+TEST_F(ARelayStateWhichHasProcessedASuccessionCompletedAuditComplaint, AssignsANewSuccessorToTheDeadRelay)
+{
+    ASSERT_THAT(relay->current_successor_number, Ne(successor->number));
+}
+
+TEST_F(ARelayStateWhichHasProcessedASuccessionCompletedAuditComplaint,
+       ReassignsTheSecretRecoveryTasksToTheQuarterHolders)
+{
+    for (uint32_t position = 0; position < 4; position++)
+    {
+        auto quarter_holder = relay->QuarterHolders(*data)[position];
+        Task task(SEND_SECRET_RECOVERY_MESSAGE, Death(relay->number), position);
+        ASSERT_TRUE(VectorContainsEntry(quarter_holder->tasks, task));
+    }
 }

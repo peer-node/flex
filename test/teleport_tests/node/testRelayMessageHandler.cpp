@@ -982,6 +982,7 @@ TEST_F(ARelayMessageHandlerWhichHasProcessedAKeyDistributionComplaintButNoSecret
         ASSERT_FALSE(VectorContainsEntry(quarter_holder->tasks, send_secret_recovery_message));
         SecretRecoveryComplaint complaint;
         complaint.position_of_quarter_holder = position;
+        complaint.successor_number = relay->current_successor_number;
         complaint.secret_recovery_message_hash = relay->succession_attempts.begin()->second.recovery_message_hashes[position];
         relay_message_handler->succession_handler.AcceptSecretRecoveryComplaint(complaint);
         ASSERT_TRUE(VectorContainsEntry(quarter_holder->tasks, send_secret_recovery_message));

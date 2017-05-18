@@ -50,11 +50,12 @@ void SecretRecoveryMessage::PopulateEncryptedSharedSecretQuarter(Relay &relay, D
     key_quarter_sharers.push_back(relay.number);
     key_quarter_positions.push_back(position);
 
-    AddEncryptedSharedSecretQuarterForFourKeyTwentyFourths(relay, position, data);
+    AddEncryptedSharedSecretQuartersForSixKeyTwentyFourths(relay, position, data);
 }
 
-void SecretRecoveryMessage::AddEncryptedSharedSecretQuarterForFourKeyTwentyFourths(Relay &key_sharer,
-                                                                                   uint8_t key_quarter_position, Data data)
+void SecretRecoveryMessage::AddEncryptedSharedSecretQuartersForSixKeyTwentyFourths(Relay &key_sharer,
+                                                                                   uint8_t key_quarter_position,
+                                                                                   Data data)
 {
     vector<uint256> encrypted_shared_secret_quarters;
     vector<Point> points_corresponding_to_shared_secret_quarters;

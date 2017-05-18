@@ -19,7 +19,14 @@ RelayJoinMessage Relay::GenerateJoinMessage(MemoryDataStore &keydata, uint160 mi
     return join_message;
 }
 
-KeyDistributionMessage Relay::GenerateKeyDistributionMessage(Data data, uint160 encoding_message_hash, RelayState &relay_state)
+KeyDistributionMessage Relay::GenerateKeyDistributionMessage(Data data, uint160 encoding_message_hash,
+                                                             RelayState &relay_state)
+{
+    return GenerateKeyDistributionMessage(data, encoding_message_hash, relay_state, ALL_POSITIONS);
+}
+
+KeyDistributionMessage Relay::GenerateKeyDistributionMessage(Data data, uint160 encoding_message_hash,
+                                                             RelayState &relay_state, uint32_t position)
 {
     if (NumberOfKeyQuarterHoldersAssigned() == 0)
         relay_state.AssignKeyQuarterHoldersToRelay(*this);
@@ -28,7 +35,11 @@ KeyDistributionMessage Relay::GenerateKeyDistributionMessage(Data data, uint160 
     key_distribution_message.hash_of_message_containing_join = encoding_message_hash;
     key_distribution_message.relay_join_hash = hashes.join_message_hash;
     key_distribution_message.relay_number = number;
-    key_distribution_message.PopulateEncryptedKeyQuarters(data.keydata, *this, relay_state);
+    key_distribution_message.position = (uint8_t) position;
+    if (position == ALL_POSITIONS)
+        key_distribution_message.PopulateEncryptedKeyQuarters(data.keydata, *this, relay_state);
+    else
+        key_distribution_message.PopulateEncryptedKeyQuarter(data.keydata, *this, relay_state, position);
     key_distribution_message.Sign(data);
     return key_distribution_message;
 }
@@ -271,7 +282,7 @@ void Relay::RecordSecretRecoveryMessage(SecretRecoveryMessage &secret_recovery_m
     attempt.recovery_message_hashes[position] = secret_recovery_message.GetHash160();
 }
 
-void Relay::RecordSecretRecoveryComplaint(SecretRecoveryComplaint &complaint)
+void Relay::RecordSecretRecoveryComplaintAndRejectBadRecoveryMessage(SecretRecoveryComplaint &complaint)
 {
     auto &attempt = succession_attempts[complaint.successor_number];
     attempt.recovery_complaint_hashes.push_back(complaint.GetHash160());

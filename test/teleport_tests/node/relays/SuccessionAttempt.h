@@ -12,14 +12,6 @@
 class SuccessionAttempt
 {
 public:
-    std::vector<uint160> rejected_recovery_messages;
-    std::vector<uint160> recovery_complaint_hashes;
-    std::map<uint160, RecoveryFailureAudit> audits;
-    uint160 succession_completed_message_hash{0};
-    uint160 succession_completed_audit_message_hash{0};
-    std::vector<uint160> succession_completed_audit_complaints;
-    std::array<uint160, 4> recovery_message_hashes{{0,0,0,0}};
-
     bool HasFourRecoveryMessages()
     {
         for (uint32_t i = 0; i < 4; i++)
@@ -41,11 +33,22 @@ public:
         READWRITE(recovery_complaint_hashes);
         READWRITE(audits);
         READWRITE(succession_completed_message_hash);
+        READWRITE(succession_completed_message_encoded);
+        READWRITE(hash_of_message_containing_succession_completed_message);
         READWRITE(succession_completed_audit_message_hash);
         READWRITE(succession_completed_audit_complaints);
         READWRITE(recovery_message_hashes);
     );
 
+    std::vector<uint160> rejected_recovery_messages;
+    std::vector<uint160> recovery_complaint_hashes;
+    std::map<uint160, RecoveryFailureAudit> audits;
+    uint160 succession_completed_message_hash{0};
+    uint160 hash_of_message_containing_succession_completed_message{0};
+    bool succession_completed_message_encoded{false};
+    uint160 succession_completed_audit_message_hash{0};
+    std::vector<uint160> succession_completed_audit_complaints;
+    std::array<uint160, 4> recovery_message_hashes{{0,0,0,0}};
 };
 
 
