@@ -133,3 +133,8 @@ void TeleportNetworkNode::StopCommunicator()
     data_message_handler->network = NULL;
     relay_message_handler->network = NULL;
 }
+
+uint64_t TeleportNetworkNode::LatestBatchNumber()
+{
+    return Tip().mined_credit.network_state.batch_number;
+}

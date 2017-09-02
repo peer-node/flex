@@ -60,7 +60,7 @@ set(MESSAGING_FILES
         src/teleportnode/MockInit.h
         src/teleportnode/MockInit.cpp
         test/teleport_tests/main_tests/Communicator.cpp
-        test/teleport_tests/main_tests/Communicator.h)
+        test/teleport_tests/main_tests/Communicator.h test/teleport_tests/node/handler_modes.h)
 
 set(LEVELDB_FILES
         src/leveldb/util/arena.cc
@@ -303,6 +303,8 @@ set(MINCRYPTO_FILES
         src/crypto/hash.cpp
         src/crypto/hash.h
         src/crypto/hashtrees.h
+        src/crypto/key.h
+        src/crypto/key.cpp
         src/crypto/point.cpp
         src/crypto/point.h
         src/crypto/polynomial.cpp
@@ -379,7 +381,7 @@ set(CREDITS_FILES
         src/vector_tools.h
         src/credits/SignedTransaction.cpp
         src/credits/SignedTransaction.h
-        src/credits/creditsign.h)
+        src/credits/creditsign.h test/teleport_tests/node/deposits/messages/DepositAddressRequest.cpp test/teleport_tests/node/deposits/messages/DepositAddressRequest.h)
 
 set(NEW_CREDITS_FILES
         ${WORK_FILES}
@@ -399,57 +401,59 @@ set(NEW_CREDITS_FILES
         src/credits/SignedTransaction.cpp
         src/credits/SignedTransaction.h
         src/credits/creditsign.h
-        test/teleport_tests/node/CreditSystem.cpp
-        test/teleport_tests/node/CreditSystem.h
-        test/teleport_tests/node/credit_handler/MinedCreditMessageValidator.cpp
-        test/teleport_tests/node/credit_handler/MinedCreditMessageValidator.h
-        test/teleport_tests/node/credit_handler/TransactionValidator.cpp
-        test/teleport_tests/node/credit_handler/TransactionValidator.h
+        test/teleport_tests/node/credit/structures/CreditSystem.cpp
+        test/teleport_tests/node/credit/structures/CreditSystem.h
+        test/teleport_tests/node/credit/handlers/MinedCreditMessageValidator.cpp
+        test/teleport_tests/node/credit/handlers/MinedCreditMessageValidator.h
+        test/teleport_tests/node/credit/handlers/TransactionValidator.cpp
+        test/teleport_tests/node/credit/handlers/TransactionValidator.h
         test/teleport_tests/node/calendar/Diurn.cpp
         test/teleport_tests/node/calendar/Diurn.h
         test/teleport_tests/node/calendar/Calendar.cpp
         test/teleport_tests/node/calendar/Calendar.h
         test/teleport_tests/node/calendar/Calend.cpp
         test/teleport_tests/node/calendar/Calend.h
-        test/teleport_tests/node/credit_handler/CreditMessageHandler.cpp
-        test/teleport_tests/node/credit_handler/CreditMessageHandler.h
+        test/teleport_tests/node/credit/handlers/CreditMessageHandler.cpp
+        test/teleport_tests/node/credit/handlers/CreditMessageHandler.h
         test/teleport_tests/node/TestPeer.h
-        test/teleport_tests/node/credit_handler/BadBatchMessage.cpp
-        test/teleport_tests/node/credit_handler/BadBatchMessage.h
+        test/teleport_tests/node/credit/messages/BadBatchMessage.cpp
+        test/teleport_tests/node/credit/messages/BadBatchMessage.h
         test/teleport_tests/node/wallet/Wallet.cpp
         test/teleport_tests/node/wallet/Wallet.h
-        test/teleport_tests/node/credit_handler/TipController.cpp
-        test/teleport_tests/node/credit_handler/TipController.h
-        test/teleport_tests/node/credit_handler/MinedCreditMessageBuilder.cpp
-        test/teleport_tests/node/credit_handler/MinedCreditMessageBuilder.h)
+        test/teleport_tests/node/credit/handlers/TipController.cpp
+        test/teleport_tests/node/credit/handlers/TipController.h
+        test/teleport_tests/node/credit/handlers/MinedCreditMessageBuilder.cpp
+        test/teleport_tests/node/credit/handlers/MinedCreditMessageBuilder.h)
 
 set(DATA_HANDLER_FILES
-        test/teleport_tests/node/data_handler/KnownHistoryMessage.cpp
-        test/teleport_tests/node/data_handler/KnownHistoryMessage.h
-        test/teleport_tests/node/data_handler/KnownHistoryDeclaration.cpp
-        test/teleport_tests/node/data_handler/KnownHistoryDeclaration.h
-        test/teleport_tests/node/data_handler/DiurnMessageData.cpp
-        test/teleport_tests/node/data_handler/DiurnMessageData.h
-        test/teleport_tests/node/data_handler/EnclosedMessageData.h
-        test/teleport_tests/node/data_handler/EnclosedMessageData.cpp
-        test/teleport_tests/node/data_handler/TipHandler.cpp
-        test/teleport_tests/node/data_handler/TipHandler.h
-        test/teleport_tests/node/data_handler/CalendarHandler.cpp
-        test/teleport_tests/node/data_handler/CalendarHandler.h
-        test/teleport_tests/node/data_handler/InitialDataHandler.cpp
-        test/teleport_tests/node/data_handler/InitialDataHandler.h
-        test/teleport_tests/node/data_handler/KnownHistoryHandler.cpp
-        test/teleport_tests/node/data_handler/KnownHistoryHandler.h
-        test/teleport_tests/node/data_handler/KnownHistoryRequest.cpp
-        test/teleport_tests/node/data_handler/KnownHistoryRequest.h
-        test/teleport_tests/node/data_handler/DiurnDataRequest.cpp
-        test/teleport_tests/node/data_handler/DiurnDataRequest.h
-        test/teleport_tests/node/data_handler/DiurnDataMessage.cpp
-        test/teleport_tests/node/data_handler/DiurnDataMessage.h
-        test/teleport_tests/node/data_handler/DiurnFailureDetails.cpp
-        test/teleport_tests/node/data_handler/DiurnFailureDetails.h
-        test/teleport_tests/node/data_handler/DiurnFailureMessage.cpp
-        test/teleport_tests/node/data_handler/DiurnFailureMessage.h)
+        test/teleport_tests/node/historical_data/LoadHashesIntoDataStore.h
+        test/teleport_tests/node/historical_data/LoadHashesIntoDataStore.cpp
+        test/teleport_tests/node/historical_data/messages/KnownHistoryMessage.cpp
+        test/teleport_tests/node/historical_data/messages/KnownHistoryMessage.h
+        test/teleport_tests/node/historical_data/messages/KnownHistoryDeclaration.cpp
+        test/teleport_tests/node/historical_data/messages/KnownHistoryDeclaration.h
+        test/teleport_tests/node/historical_data/messages/DiurnMessageData.cpp
+        test/teleport_tests/node/historical_data/messages/DiurnMessageData.h
+        test/teleport_tests/node/historical_data/messages/EnclosedMessageData.h
+        test/teleport_tests/node/historical_data/messages/EnclosedMessageData.cpp
+        test/teleport_tests/node/historical_data/handlers/TipHandler.cpp
+        test/teleport_tests/node/historical_data/handlers/TipHandler.h
+        test/teleport_tests/node/historical_data/handlers/CalendarHandler.cpp
+        test/teleport_tests/node/historical_data/handlers/CalendarHandler.h
+        test/teleport_tests/node/historical_data/handlers/InitialDataHandler.cpp
+        test/teleport_tests/node/historical_data/handlers/InitialDataHandler.h
+        test/teleport_tests/node/historical_data/handlers/KnownHistoryHandler.cpp
+        test/teleport_tests/node/historical_data/handlers/KnownHistoryHandler.h
+        test/teleport_tests/node/historical_data/messages/KnownHistoryRequest.cpp
+        test/teleport_tests/node/historical_data/messages/KnownHistoryRequest.h
+        test/teleport_tests/node/historical_data/messages/DiurnDataRequest.cpp
+        test/teleport_tests/node/historical_data/messages/DiurnDataRequest.h
+        test/teleport_tests/node/historical_data/messages/DiurnDataMessage.cpp
+        test/teleport_tests/node/historical_data/messages/DiurnDataMessage.h
+        test/teleport_tests/node/historical_data/messages/DiurnFailureDetails.cpp
+        test/teleport_tests/node/historical_data/messages/DiurnFailureDetails.h
+        test/teleport_tests/node/historical_data/messages/DiurnFailureMessage.cpp
+        test/teleport_tests/node/historical_data/messages/DiurnFailureMessage.h)
 
 add_executable(runRPCTests
         test/teleport_tests/test_main.cpp
@@ -546,7 +550,7 @@ add_executable(runDataTests
         test/teleport_tests/teleport_data/testMemoryDataStore.cpp
         test/teleport_tests/teleport_data/testDiskDataStore.cpp
         test/teleport_tests/teleport_data/testDataStore.cpp
-        test/teleport_tests/node/testShortHashList.cpp)
+        test/teleport_tests/node/tests/testShortHashList.cpp)
 
 set(CONFIG_FILES
         test/teleport_tests/node/config/TeleportConfig.cpp
@@ -554,6 +558,30 @@ set(CONFIG_FILES
         test/teleport_tests/node/config/TeleportConfigDefaults.h
         test/teleport_tests/node/config/ConfigParser.cpp
         test/teleport_tests/node/config/ConfigParser.h)
+
+add_executable(runCurrencyTests
+        test/teleport_tests/node/tests/testCurrency.cpp
+        ${REMAINING_BASE_FILES}
+        ${MINCRYPTO_FILES}
+        ${DATABASE_FILES}
+        ${CONFIG_FILES}
+        test/teleport_tests/test_main.cpp
+        test/teleport_tests/node/server/HttpAuthServer.cpp
+        test/teleport_tests/node/server/HttpAuthServer.h
+        test/teleport_tests/currency/CurrencyRPC.cpp
+        test/teleport_tests/currency/CurrencyRPC.h
+        test/teleport_tests/currency/string_functions.h
+        test/teleport_tests/currency/CurrencyCommands.cpp
+        test/teleport_tests/currency/CurrencyCommands.h
+        test/teleport_tests/currency/CryptoCurrencyCommands.cpp
+        test/teleport_tests/currency/CryptoCurrencyCommands.h
+        test/teleport_tests/currency/Currency.cpp
+        test/teleport_tests/currency/Currency.h
+        test/teleport_tests/currency/CurrencyCrypto.cpp
+        test/teleport_tests/currency/CurrencyCrypto.h
+        test/teleport_tests/currency/NotaryRPC.cpp
+        test/teleport_tests/currency/NotaryRPC.h test/teleport_tests/currency/TestElectrumServer.cpp test/teleport_tests/currency/TestElectrumServer.h)
+
 
 set(NODE_TEST_FILES
         test/teleport_tests/teleport_data/TestData.h
@@ -588,72 +616,117 @@ set(NODE_TEST_FILES
         test/teleport_tests/mining/MiningRPCServer.h
         test/teleport_tests/mining/NetworkSpecificProofOfWork.cpp
         test/teleport_tests/mining/NetworkSpecificProofOfWork.h
-        test/teleport_tests/node/credit_handler/MinedCreditMessage.cpp
-        test/teleport_tests/node/credit_handler/MinedCreditMessage.h
-        test/teleport_tests/node/data_handler/DataMessageHandler.cpp
-        test/teleport_tests/node/data_handler/DataMessageHandler.h
-        test/teleport_tests/node/data_handler/TipRequestMessage.cpp
-        test/teleport_tests/node/data_handler/TipRequestMessage.h
-        test/teleport_tests/node/data_handler/TipMessage.cpp
-        test/teleport_tests/node/data_handler/TipMessage.h
-        test/teleport_tests/node/data_handler/CalendarRequestMessage.cpp
-        test/teleport_tests/node/data_handler/CalendarRequestMessage.h
-        test/teleport_tests/node/data_handler/CalendarMessage.cpp
-        test/teleport_tests/node/data_handler/CalendarMessage.h
-        test/teleport_tests/node/data_handler/CalendarFailureDetails.cpp
-        test/teleport_tests/node/data_handler/CalendarFailureDetails.h
-        test/teleport_tests/node/data_handler/CalendarFailureMessage.cpp
-        test/teleport_tests/node/data_handler/CalendarFailureMessage.h
-        test/teleport_tests/node/data_handler/InitialDataRequestMessage.cpp
-        test/teleport_tests/node/data_handler/InitialDataRequestMessage.h
-        test/teleport_tests/node/data_handler/InitialDataMessage.cpp
-        test/teleport_tests/node/data_handler/InitialDataMessage.h
+        test/teleport_tests/node/credit/messages/MinedCreditMessage.cpp
+        test/teleport_tests/node/credit/messages/MinedCreditMessage.h
+        test/teleport_tests/node/historical_data/handlers/DataMessageHandler.cpp
+        test/teleport_tests/node/historical_data/handlers/DataMessageHandler.h
+        test/teleport_tests/node/historical_data/messages/TipRequestMessage.cpp
+        test/teleport_tests/node/historical_data/messages/TipRequestMessage.h
+        test/teleport_tests/node/historical_data/messages/TipMessage.cpp
+        test/teleport_tests/node/historical_data/messages/TipMessage.h
+        test/teleport_tests/node/historical_data/messages/CalendarRequestMessage.cpp
+        test/teleport_tests/node/historical_data/messages/CalendarRequestMessage.h
+        test/teleport_tests/node/historical_data/messages/CalendarMessage.cpp
+        test/teleport_tests/node/historical_data/messages/CalendarMessage.h
+        test/teleport_tests/node/historical_data/messages/CalendarFailureDetails.cpp
+        test/teleport_tests/node/historical_data/messages/CalendarFailureDetails.h
+        test/teleport_tests/node/historical_data/messages/CalendarFailureMessage.cpp
+        test/teleport_tests/node/historical_data/messages/CalendarFailureMessage.h
+        test/teleport_tests/node/historical_data/messages/InitialDataRequestMessage.cpp
+        test/teleport_tests/node/historical_data/messages/InitialDataRequestMessage.h
+        test/teleport_tests/node/historical_data/messages/InitialDataMessage.cpp
+        test/teleport_tests/node/historical_data/messages/InitialDataMessage.h
         test/teleport_tests/node/TestPeerWithNetworkNode.h
-        test/teleport_tests/node/credit_handler/ListExpansionRequestMessage.cpp
-        test/teleport_tests/node/credit_handler/ListExpansionRequestMessage.h
-        test/teleport_tests/node/credit_handler/ListExpansionMessage.cpp
-        test/teleport_tests/node/credit_handler/ListExpansionMessage.h)
+        test/teleport_tests/node/credit/messages/ListExpansionRequestMessage.cpp
+        test/teleport_tests/node/credit/messages/ListExpansionRequestMessage.h
+        test/teleport_tests/node/credit/messages/ListExpansionMessage.cpp
+        test/teleport_tests/node/credit/messages/ListExpansionMessage.h)
 
 set(RELAY_FILES
-        test/teleport_tests/node/relays/RelayState.cpp
-        test/teleport_tests/node/relays/RelayState.h
-        test/teleport_tests/node/relays/Relay.cpp
-        test/teleport_tests/node/relays/Relay.h
-        test/teleport_tests/node/relays/RelayJoinMessage.cpp
-        test/teleport_tests/node/relays/RelayJoinMessage.h
-        test/teleport_tests/node/relays/RelayMessageHandler.cpp
-        test/teleport_tests/node/relays/RelayMessageHandler.h
-        test/teleport_tests/node/relays/KeyDistributionMessage.cpp
-        test/teleport_tests/node/relays/KeyDistributionMessage.h
-        test/teleport_tests/node/relays/SecretRecoveryMessage.cpp
-        test/teleport_tests/node/relays/SecretRecoveryMessage.h
-        test/teleport_tests/node/relays/KeyDistributionComplaint.cpp
-        test/teleport_tests/node/relays/KeyDistributionComplaint.h
-        test/teleport_tests/node/relays/DurationWithoutResponse.cpp
-        test/teleport_tests/node/relays/DurationWithoutResponse.h
-        test/teleport_tests/node/relays/DurationWithoutResponseFromRelay.cpp
-        test/teleport_tests/node/relays/DurationWithoutResponseFromRelay.h
-        test/teleport_tests/node/relays/GoodbyeMessage.cpp
-        test/teleport_tests/node/relays/GoodbyeMessage.h
-        test/teleport_tests/node/relays/SecretRecoveryComplaint.cpp
-        test/teleport_tests/node/relays/SecretRecoveryComplaint.h
-        test/teleport_tests/node/relays/RelayPublicKeySet.cpp
-        test/teleport_tests/node/relays/RelayPublicKeySet.h
-        test/teleport_tests/node/relays/SecretRecoveryFailureMessage.cpp
-        test/teleport_tests/node/relays/SecretRecoveryFailureMessage.h
-        test/teleport_tests/node/relays/RecoveryFailureAuditMessage.cpp
-        test/teleport_tests/node/relays/RecoveryFailureAuditMessage.h
-        test/teleport_tests/node/relays/RelayMessageHashData.cpp
-        test/teleport_tests/node/relays/RelayMessageHashData.h
-        test/teleport_tests/node/relays/RelayMemoryCache.cpp
-        test/teleport_tests/node/relays/RelayMemoryCache.h
-        test/teleport_tests/node/relays/RelayAdmissionHandler.cpp
-        test/teleport_tests/node/relays/RelayAdmissionHandler.h
-        test/teleport_tests/node/relays/RelaySuccessionHandler.cpp
-        test/teleport_tests/node/relays/RelaySuccessionHandler.h
+        test/teleport_tests/node/relays/structures/RelayState.cpp
+        test/teleport_tests/node/relays/structures/RelayState.h
+        test/teleport_tests/node/relays/structures/Relay.cpp
+        test/teleport_tests/node/relays/structures/Relay.h
+        test/teleport_tests/node/relays/messages/RelayJoinMessage.cpp
+        test/teleport_tests/node/relays/messages/RelayJoinMessage.h
+        test/teleport_tests/node/relays/handlers/RelayMessageHandler.cpp
+        test/teleport_tests/node/relays/handlers/RelayMessageHandler.h
+        test/teleport_tests/node/relays/messages/KeyDistributionMessage.cpp
+        test/teleport_tests/node/relays/messages/KeyDistributionMessage.h
+        test/teleport_tests/node/relays/messages/SecretRecoveryMessage.cpp
+        test/teleport_tests/node/relays/messages/SecretRecoveryMessage.h
+        test/teleport_tests/node/relays/messages/KeyDistributionComplaint.cpp
+        test/teleport_tests/node/relays/messages/KeyDistributionComplaint.h
+        test/teleport_tests/node/relays/structures/DurationWithoutResponse.cpp
+        test/teleport_tests/node/relays/structures/DurationWithoutResponse.h
+        test/teleport_tests/node/relays/structures/DurationWithoutResponseFromRelay.cpp
+        test/teleport_tests/node/relays/structures/DurationWithoutResponseFromRelay.h
+        test/teleport_tests/node/relays/messages/GoodbyeMessage.cpp
+        test/teleport_tests/node/relays/messages/GoodbyeMessage.h
+        test/teleport_tests/node/relays/messages/SecretRecoveryComplaint.cpp
+        test/teleport_tests/node/relays/messages/SecretRecoveryComplaint.h
+        test/teleport_tests/node/relays/structures/RelayPublicKeySet.cpp
+        test/teleport_tests/node/relays/structures/RelayPublicKeySet.h
+        test/teleport_tests/node/relays/messages/SecretRecoveryFailureMessage.cpp
+        test/teleport_tests/node/relays/messages/SecretRecoveryFailureMessage.h
+        test/teleport_tests/node/relays/messages/RecoveryFailureAuditMessage.cpp
+        test/teleport_tests/node/relays/messages/RecoveryFailureAuditMessage.h
+        test/teleport_tests/node/relays/structures/RelayMessageHashData.cpp
+        test/teleport_tests/node/relays/structures/RelayMessageHashData.h
+        test/teleport_tests/node/relays/structures/RelayMemoryCache.cpp
+        test/teleport_tests/node/relays/structures/RelayMemoryCache.h
+        test/teleport_tests/node/relays/handlers/RelayAdmissionHandler.cpp
+        test/teleport_tests/node/relays/handlers/RelayAdmissionHandler.h
+        test/teleport_tests/node/relays/handlers/RelaySuccessionHandler.cpp
+        test/teleport_tests/node/relays/handlers/RelaySuccessionHandler.h
         test/teleport_tests/node/Data.h
         test/teleport_tests/node/Data.cpp
-        test/teleport_tests/node/relays/SuccessionCompletedMessage.cpp test/teleport_tests/node/relays/SuccessionCompletedMessage.h test/teleport_tests/node/relays/InheritedTaskHandler.cpp test/teleport_tests/node/relays/InheritedTaskHandler.h test/teleport_tests/node/relays/RelayTipHandler.cpp test/teleport_tests/node/relays/RelayTipHandler.h test/teleport_tests/node/relays/KeyDistributionAuditMessage.cpp test/teleport_tests/node/relays/KeyDistributionAuditMessage.h test/teleport_tests/node/relays/KeyDistributionAuditorSelection.cpp test/teleport_tests/node/relays/KeyDistributionAuditorSelection.h test/teleport_tests/node/relays/KeyDistributionAuditComplaint.cpp test/teleport_tests/node/relays/KeyDistributionAuditComplaint.h test/teleport_tests/node/relays/KeyDistributionAuditFailureMessage.cpp test/teleport_tests/node/relays/KeyDistributionAuditFailureMessage.h test/teleport_tests/node/relays/Task.cpp test/teleport_tests/node/relays/Task.h test/teleport_tests/node/relays/KeyQuarterLocation.cpp test/teleport_tests/node/relays/KeyQuarterLocation.h test/teleport_tests/node/relays/EncryptedKeyQuarter.cpp test/teleport_tests/node/relays/EncryptedKeyQuarter.h test/teleport_tests/node/relays/SuccessionAttempt.cpp test/teleport_tests/node/relays/SuccessionAttempt.h test/teleport_tests/node/relays/RecoveryFailureAudit.cpp test/teleport_tests/node/relays/RecoveryFailureAudit.h test/teleport_tests/node/relays/FourSecretRecoveryMessages.cpp test/teleport_tests/node/relays/FourSecretRecoveryMessages.h test/teleport_tests/node/relays/FourRecoveryFailureAuditMessages.cpp test/teleport_tests/node/relays/FourRecoveryFailureAuditMessages.h test/teleport_tests/node/relays/SuccessionCompletedAuditMessage.cpp test/teleport_tests/node/relays/SuccessionCompletedAuditMessage.h test/teleport_tests/node/relays/SuccessionCompletedAuditComplaint.cpp test/teleport_tests/node/relays/SuccessionCompletedAuditComplaint.h)
+        test/teleport_tests/node/relays/messages/SuccessionCompletedMessage.cpp
+        test/teleport_tests/node/relays/messages/SuccessionCompletedMessage.h
+        test/teleport_tests/node/relays/handlers/InheritedTaskHandler.cpp
+        test/teleport_tests/node/relays/handlers/InheritedTaskHandler.h
+        test/teleport_tests/node/relays/handlers/RelayTipHandler.cpp
+        test/teleport_tests/node/relays/handlers/RelayTipHandler.h
+        test/teleport_tests/node/relays/messages/KeyDistributionAuditMessage.cpp
+        test/teleport_tests/node/relays/messages/KeyDistributionAuditMessage.h
+        test/teleport_tests/node/relays/structures/KeyDistributionAuditorSelection.cpp
+        test/teleport_tests/node/relays/structures/KeyDistributionAuditorSelection.h
+        test/teleport_tests/node/relays/messages/KeyDistributionAuditComplaint.cpp
+        test/teleport_tests/node/relays/messages/KeyDistributionAuditComplaint.h
+        test/teleport_tests/node/relays/messages/KeyDistributionAuditFailureMessage.cpp
+        test/teleport_tests/node/relays/messages/KeyDistributionAuditFailureMessage.h
+        test/teleport_tests/node/relays/structures/Task.cpp
+        test/teleport_tests/node/relays/structures/Task.h
+        test/teleport_tests/node/relays/structures/KeyQuarterLocation.cpp
+        test/teleport_tests/node/relays/structures/KeyQuarterLocation.h
+        test/teleport_tests/node/relays/structures/EncryptedKeyQuarter.cpp
+        test/teleport_tests/node/relays/structures/EncryptedKeyQuarter.h
+        test/teleport_tests/node/relays/structures/SuccessionAttempt.cpp
+        test/teleport_tests/node/relays/structures/SuccessionAttempt.h
+        test/teleport_tests/node/relays/structures/RecoveryFailureAudit.cpp
+        test/teleport_tests/node/relays/structures/RecoveryFailureAudit.h
+        test/teleport_tests/node/relays/messages/FourSecretRecoveryMessages.cpp
+        test/teleport_tests/node/relays/messages/FourSecretRecoveryMessages.h
+        test/teleport_tests/node/relays/messages/FourRecoveryFailureAuditMessages.cpp
+        test/teleport_tests/node/relays/messages/FourRecoveryFailureAuditMessages.h
+        test/teleport_tests/node/relays/messages/SuccessionCompletedAuditMessage.cpp
+        test/teleport_tests/node/relays/messages/SuccessionCompletedAuditMessage.h
+        test/teleport_tests/node/relays/messages/SuccessionCompletedAuditComplaint.cpp
+        test/teleport_tests/node/relays/messages/SuccessionCompletedAuditComplaint.h)
+
+set(MESSAGE_HANDLER_WITH_ORPHANAGE_FILES
+        test/teleport_tests/node/MessageHandlerWithOrphanage.cpp
+        test/teleport_tests/node/MessageHandlerWithOrphanage.h
+        )
+
+set(DEPOSIT_FILES
+        test/teleport_tests/node/deposits/handlers/DepositMessageHandler.cpp
+        test/teleport_tests/node/deposits/handlers/DepositMessageHandler.h
+        test/teleport_tests/node/deposits/messages/DepositAddressRequest.h
+        test/teleport_tests/node/deposits/messages/DepositAddressRequest.cpp
+        test/teleport_tests/node/deposits/messages/DepositAddressPartMessage.h
+        test/teleport_tests/node/deposits/messages/DepositAddressPartMessage.cpp
+        test/teleport_tests/node/deposits/messages/DepositAddressPartComplaint.cpp test/teleport_tests/node/deposits/messages/DepositAddressPartComplaint.h test/teleport_tests/node/deposits/messages/DepositAddressPartDisclosure.cpp test/teleport_tests/node/deposits/messages/DepositAddressPartDisclosure.h test/teleport_tests/node/deposits/messages/DepositDisclosureComplaint.cpp test/teleport_tests/node/deposits/messages/DepositDisclosureComplaint.h test/teleport_tests/node/deposits/messages/DepositTransferMessage.cpp test/teleport_tests/node/deposits/messages/DepositTransferMessage.h test/teleport_tests/node/deposits/messages/TransferAcknowledgement.cpp test/teleport_tests/node/deposits/messages/TransferAcknowledgement.h test/teleport_tests/node/deposits/messages/WithdrawalRequestMessage.cpp test/teleport_tests/node/deposits/messages/WithdrawalRequestMessage.h test/teleport_tests/node/deposits/messages/WithdrawalMessage.cpp test/teleport_tests/node/deposits/messages/WithdrawalMessage.h test/teleport_tests/node/deposits/messages/WithdrawalComplaint.cpp test/teleport_tests/node/deposits/messages/WithdrawalComplaint.h test/teleport_tests/node/deposits/handlers/DepositAddressRequestHandler.cpp test/teleport_tests/node/deposits/handlers/DepositAddressRequestHandler.h test/teleport_tests/node/deposits/messages/AddressPartSecret.cpp test/teleport_tests/node/deposits/messages/AddressPartSecret.h test/teleport_tests/node/deposits/messages/AddressPartSecretDisclosure.cpp test/teleport_tests/node/deposits/messages/AddressPartSecretDisclosure.h test/teleport_tests/node/deposits/handlers/DepositAddressDisclosureHandler.cpp test/teleport_tests/node/deposits/handlers/DepositAddressDisclosureHandler.h test/teleport_tests/node/deposits/handlers/DepositAddressTransferHandler.cpp test/teleport_tests/node/deposits/handlers/DepositAddressTransferHandler.h test/teleport_tests/node/deposits/handlers/DepositAddressWithdrawalHandler.cpp test/teleport_tests/node/deposits/handlers/DepositAddressWithdrawalHandler.h)
 
 add_executable(runRelayTests
         ${RELAY_FILES}
@@ -669,27 +742,35 @@ add_executable(runRelayTests
         test/teleport_tests/mining/MiningHashTree.h
         test/teleport_tests/mining/NetworkSpecificProofOfWork.cpp
         test/teleport_tests/mining/NetworkSpecificProofOfWork.h
-        test/teleport_tests/node/data_handler/EnclosedMessageData.h
-        test/teleport_tests/node/data_handler/EnclosedMessageData.cpp
-        test/teleport_tests/node/data_handler/LoadHashesIntoDataStore.h
-        test/teleport_tests/node/data_handler/LoadHashesIntoDataStore.cpp
+        test/teleport_tests/node/historical_data/messages/EnclosedMessageData.h
+        test/teleport_tests/node/historical_data/messages/EnclosedMessageData.cpp
+        test/teleport_tests/node/historical_data/LoadHashesIntoDataStore.h
+        test/teleport_tests/node/historical_data/LoadHashesIntoDataStore.cpp
         test/teleport_tests/test_main.cpp
-        test/teleport_tests/node/testRelayMemoryCache.cpp
-        test/teleport_tests/node/testRelayState.cpp
-        test/teleport_tests/node/testRelay.cpp
-        test/teleport_tests/node/testRelayMessageHandler.cpp
-        test/teleport_tests/node/testRelayPublicKeySet.cpp
-        test/teleport_tests/node/testRelayJoinMessage.cpp
-        test/teleport_tests/node/relays/SuccessionCompletedMessage.cpp
-        test/teleport_tests/node/relays/SuccessionCompletedMessage.h
-        test/teleport_tests/node/relays/InheritedTaskHandler.cpp
-        test/teleport_tests/node/relays/InheritedTaskHandler.h
-        test/teleport_tests/node/testRelayTipHandler.cpp
-        test/teleport_tests/node/relays/KeyDistributionAuditMessage.cpp
-        test/teleport_tests/node/relays/KeyDistributionAuditMessage.h
-        test/teleport_tests/node/testKeyDistributionAuditorSelection.cpp
-        test/teleport_tests/node/relays/KeyDistributionAuditComplaint.cpp
-        test/teleport_tests/node/relays/KeyDistributionAuditComplaint.h test/teleport_tests/node/relays/KeyDistributionAuditFailureMessage.cpp test/teleport_tests/node/relays/KeyDistributionAuditFailureMessage.h test/teleport_tests/node/relays/Task.cpp test/teleport_tests/node/relays/Task.h test/teleport_tests/node/relays/KeyQuarterLocation.cpp test/teleport_tests/node/relays/KeyQuarterLocation.h test/teleport_tests/node/relays/SuccessionCompletedAuditComplaint.cpp test/teleport_tests/node/relays/SuccessionCompletedAuditComplaint.h)
+        test/teleport_tests/node/tests/testRelayMemoryCache.cpp
+        test/teleport_tests/node/tests/testRelayState.cpp
+        test/teleport_tests/node/tests/testRelay.cpp
+        test/teleport_tests/node/tests/testRelayMessageHandler.cpp
+        test/teleport_tests/node/tests/testRelayPublicKeySet.cpp
+        test/teleport_tests/node/tests/testRelayJoinMessage.cpp
+        test/teleport_tests/node/relays/messages/SuccessionCompletedMessage.cpp
+        test/teleport_tests/node/relays/messages/SuccessionCompletedMessage.h
+        test/teleport_tests/node/relays/handlers/InheritedTaskHandler.cpp
+        test/teleport_tests/node/relays/handlers/InheritedTaskHandler.h
+        test/teleport_tests/node/tests/testRelayTipHandler.cpp
+        test/teleport_tests/node/relays/messages/KeyDistributionAuditMessage.cpp
+        test/teleport_tests/node/relays/messages/KeyDistributionAuditMessage.h
+        test/teleport_tests/node/tests/testKeyDistributionAuditorSelection.cpp
+        test/teleport_tests/node/relays/messages/KeyDistributionAuditComplaint.cpp
+        test/teleport_tests/node/relays/messages/KeyDistributionAuditComplaint.h
+        test/teleport_tests/node/relays/messages/KeyDistributionAuditFailureMessage.cpp
+        test/teleport_tests/node/relays/messages/KeyDistributionAuditFailureMessage.h
+        test/teleport_tests/node/relays/structures/Task.cpp
+        test/teleport_tests/node/relays/structures/Task.h
+        test/teleport_tests/node/relays/structures/KeyQuarterLocation.cpp
+        test/teleport_tests/node/relays/structures/KeyQuarterLocation.h
+        test/teleport_tests/node/relays/messages/SuccessionCompletedAuditComplaint.cpp
+        test/teleport_tests/node/relays/messages/SuccessionCompletedAuditComplaint.h)
 
 add_executable(runNodeTests
         ${NODE_TEST_FILES}
@@ -699,39 +780,49 @@ add_executable(runNodeTests
         test/teleport_tests/node/MessageHandlerWithOrphanage.h
         test/teleport_tests/test_main.cpp
         test/teleport_tests/main_tests/testCommunicator.cpp
-        test/teleport_tests/node/testDataMessageHandler.cpp
+        test/teleport_tests/node/tests/testDataMessageHandler.cpp
         test/teleport_tests/main_tests/testNetwork.cpp
-        test/teleport_tests/node/testConfigParser.cpp
-        test/teleport_tests/node/testTeleportLocalServer.cpp
-        test/teleport_tests/node/testMessageHandlerWithOrphanage.cpp
-        test/teleport_tests/node/testHttpAuthServer.cpp
-        test/teleport_tests/node/testTeleportConfig.cpp
-        test/teleport_tests/node/testTeleportRPCServer.cpp
-        test/teleport_tests/node/testRelayState.cpp
-        test/teleport_tests/node/testRelay.cpp
-        test/teleport_tests/node/testRelayMessageHandler.cpp
-        test/teleport_tests/node/testRelayJoinMessage.cpp
+        test/teleport_tests/node/tests/testConfigParser.cpp
+        test/teleport_tests/node/tests/testTeleportLocalServer.cpp
+        test/teleport_tests/node/tests/testMessageHandlerWithOrphanage.cpp
+        test/teleport_tests/node/tests/testHttpAuthServer.cpp
+        test/teleport_tests/node/tests/testTeleportConfig.cpp
+        test/teleport_tests/node/tests/testTeleportRPCServer.cpp
+        test/teleport_tests/node/tests/testRelayState.cpp
+        test/teleport_tests/node/tests/testRelay.cpp
+        test/teleport_tests/node/tests/testRelayMessageHandler.cpp
+        test/teleport_tests/node/tests/testRelayJoinMessage.cpp
         test/teleport_tests/node/Data.h
-        test/teleport_tests/node/testPointPrecomputation.cpp
-        test/teleport_tests/node/testRelayPublicKeySet.cpp
-        test/teleport_tests/node/testRelayMemoryCache.cpp
-        test/teleport_tests/node/testTeleportNetworkNode.cpp
-        test/teleport_tests/node/testCalendar.cpp
-        test/teleport_tests/node/testCalend.cpp
-        test/teleport_tests/node/testCreditMessageHandler.cpp
-        test/teleport_tests/node/testCreditSystem.cpp
-        test/teleport_tests/node/testDiurn.cpp
-        test/teleport_tests/node/testWallet.cpp
-        test/teleport_tests/node/testMinedCreditMessageValidator.cpp
-        test/teleport_tests/node/testTransactionValidator.cpp
-        test/teleport_tests/node/data_handler/LoadHashesIntoDataStore.h
-        test/teleport_tests/node/data_handler/LoadHashesIntoDataStore.cpp
-        test/teleport_tests/node/testRelayTipHandler.cpp)
+        test/teleport_tests/node/tests/testPointPrecomputation.cpp
+        test/teleport_tests/node/tests/testRelayPublicKeySet.cpp
+        test/teleport_tests/node/tests/testRelayMemoryCache.cpp
+        test/teleport_tests/node/tests/testTeleportNetworkNode.cpp
+        test/teleport_tests/node/tests/testCalendar.cpp
+        test/teleport_tests/node/tests/testCalend.cpp
+        test/teleport_tests/node/tests/testCreditMessageHandler.cpp
+        test/teleport_tests/node/tests/testCreditSystem.cpp
+        test/teleport_tests/node/tests/testDiurn.cpp
+        test/teleport_tests/node/tests/testWallet.cpp
+        test/teleport_tests/node/tests/testMinedCreditMessageValidator.cpp
+        test/teleport_tests/node/tests/testTransactionValidator.cpp
+        test/teleport_tests/node/tests/testRelayTipHandler.cpp)
+
+add_executable(runDepositTests
+        ${NODE_TEST_FILES}
+        ${DATA_HANDLER_FILES}
+        ${RELAY_FILES}
+        ${MESSAGE_HANDLER_WITH_ORPHANAGE_FILES}
+        ${DEPOSIT_FILES}
+        test/teleport_tests/node/tests/testDepositHandler.cpp)
 
 add_executable(teleportd
         test/teleport_tests/teleport_data/TestData.h
+        test/teleport_tests/node/MessageHandlerWithOrphanage.cpp
+        test/teleport_tests/node/MessageHandlerWithOrphanage.h
         ${NODE_TEST_FILES}
         ${DATA_HANDLER_FILES}
+        ${RELAY_FILES}
+        ${DATABASE_FILES}
         test/teleport_tests/node/teleportd.cpp)
 
 target_link_libraries(runRPCTests gmock gmock_main ssl crypto boost_system boost_program_options
@@ -745,7 +836,15 @@ target_link_libraries(runRelayTests gmock gmock_main ssl crypto boost_system boo
         boost_filesystem boost_thread jsoncpp microhttpd jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
         curl curl)
 
+target_link_libraries(runDepositTests gmock gmock_main ssl crypto boost_system boost_program_options
+        boost_filesystem boost_thread jsoncpp microhttpd jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
+        curl curl)
+
 target_link_libraries(teleportd gmock gmock_main ssl crypto boost_system boost_program_options
+        boost_filesystem boost_thread jsoncpp microhttpd jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
+        curl curl)
+
+target_link_libraries(runCurrencyTests gmock gmock_main ssl crypto boost_system boost_program_options
         boost_filesystem boost_thread jsoncpp microhttpd jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
         curl curl)
 

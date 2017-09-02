@@ -17,6 +17,8 @@ public:
     OrderedHashTree tree;
     std::vector<vch_t> serialized_credits;
 
+    JSON(previous_credit_hash, credits);
+
     CreditBatch();
 
     CreditBatch(uint160 previous_credit_hash, uint64_t offset);

@@ -59,12 +59,12 @@ def show_batch(credit_hash):
         return show_calendar()
     try:
         mined_credit = client.getminedcredit(credit_hash)
-        mined_credit_msg = client.getminedcreditmsg(credit_hash)
+        mined_credit_msg = client.getminedcreditmessage(credit_hash)
         batch = client.getbatch(credit_hash)
     except HTTPError:
         return show_calendar()
     return render_template('batch.html', mined_credit=mined_credit,
-                                         mined_credit_msg=mined_credit_msg,
+                                         mined_credit_message=mined_credit_msg,
                                          batch=batch)
 @app.route("/favicon.ico")
 def show_favicon():

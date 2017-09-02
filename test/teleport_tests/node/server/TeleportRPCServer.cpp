@@ -2,18 +2,18 @@
 #include <jsonrpccpp/client.h>
 #include "TeleportRPCServer.h"
 #include "TeleportLocalServer.h"
-#include "test/teleport_tests/node/data_handler/TipHandler.h"
+#include "test/teleport_tests/node/data_handler/handlers/TipHandler.h"
 
 #include "log.h"
 #define LOG_CATEGORY "TeleportRPCServer.cpp"
 
-void TeleportRPCServer::BindMethod(const char* method_name,
-                               void (TeleportRPCServer::*method)(const Json::Value &,Json::Value &))
+using namespace jsonrpc;
+using std::string;
+
+void TeleportRPCServer::BindMethod(const char* method_name, void (TeleportRPCServer::*method)(const Json::Value &,Json::Value &))
 {
-    this->bindAndAddMethod(
-            jsonrpc::Procedure(method_name, jsonrpc::PARAMS_BY_POSITION, jsonrpc::JSON_STRING, NULL),
-            method);
-    methods.push_back(method_name);
+    this->bindAndAddMethod(Procedure(method_name, PARAMS_BY_POSITION, JSON_STRING, NULL), method);
+    methods.push_back(string(method_name));
 }
 
 void TeleportRPCServer::Help(const Json::Value& request, Json::Value& response)
@@ -29,13 +29,19 @@ void TeleportRPCServer::GetInfo(const Json::Value& request, Json::Value& respons
         return;
     response["balance"] = FormatMoney(teleport_local_server->Balance());
 
-    uint160 latest_mined_credit_hash{0};
-    auto latest_mined_credit = teleport_local_server->teleport_network_node->Tip().mined_credit;
+    uint160 latest_mined_credit_message_hash{0};
+    auto latest_mined_credit_message = teleport_local_server->teleport_network_node->Tip();
 
-    if (latest_mined_credit.network_state.batch_number != 0)
-        latest_mined_credit_hash = latest_mined_credit.GetHash160();
-    response["latest_mined_credit_hash"] = latest_mined_credit_hash.ToString();
-    response["batch_number"] = latest_mined_credit.network_state.batch_number;
+    if (latest_mined_credit_message.mined_credit.network_state.batch_number != 0)
+        latest_mined_credit_message_hash = latest_mined_credit_message.GetHash160();
+    response["latest_mined_credit_message_hash"] = latest_mined_credit_message_hash.ToString();
+    response["batch_number"] = latest_mined_credit_message.mined_credit.network_state.batch_number;
+
+    if (teleport_local_server->teleport_network_node->relay_message_handler == NULL)
+        return;
+
+    RelayState &relay_state = teleport_local_server->teleport_network_node->relay_message_handler->relay_state;
+    response["number_of_relays"] = (uint32_t)relay_state.relays.size();
 }
 
 void TeleportRPCServer::SetNetworkID(const Json::Value& request, Json::Value& response)
@@ -166,8 +172,15 @@ void TeleportRPCServer::GetCalendar(const Json::Value &request, Json::Value &res
 void TeleportRPCServer::GetMinedCredit(const Json::Value &request, Json::Value &response)
 {
     uint160 credit_hash(request[0].asString());
-    MinedCredit mined_credit = teleport_local_server->teleport_network_node->creditdata[credit_hash]["mined_credit"];
-    response = GetJsonValue(mined_credit);
+    MinedCreditMessage msg = teleport_local_server->teleport_network_node->creditdata[credit_hash]["msg"];
+    response = GetJsonValue(msg.mined_credit);
+}
+
+void TeleportRPCServer::GetMinedCreditMessage(const Json::Value &request, Json::Value &response)
+{
+    uint160 credit_hash(request[0].asString());
+    MinedCreditMessage msg = teleport_local_server->teleport_network_node->creditdata[credit_hash]["msg"];
+    response = GetJsonValue(msg);
 }
 
 void TeleportRPCServer::ListUnspent(const Json::Value &request, Json::Value &response)
@@ -187,5 +200,13 @@ void TeleportRPCServer::GetTransaction(const Json::Value &request, Json::Value &
     uint160 tx_hash(tx_hash_string);
     SignedTransaction tx = teleport_local_server->teleport_network_node->msgdata[tx_hash]["tx"];
     response = GetJsonValue(tx);
+}
+
+void TeleportRPCServer::GetBatch(const Json::Value &request, Json::Value &response)
+{
+    uint160 credit_hash(request[0].asString());
+    MinedCreditMessage msg = teleport_local_server->teleport_network_node->creditdata[credit_hash]["msg"];
+    auto batch = teleport_local_server->teleport_network_node->credit_system->ReconstructBatch(msg);
+    response = GetJsonValue(batch);
 }
 

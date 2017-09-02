@@ -19,13 +19,13 @@ td {
 <table>
     <tr>
         <th>
-            credit hash
+            mined_credit_message_hash
         </th>
         <th>
-            {{ mined_credit.hash }}
+            {{ mined_credit_message.mined_credit_message_hash }}
         </th>
     </tr>
-    {% for key, value in mined_credit.items() %}
+    {% for key, value in mined_credit_message.items() %}
     <tr>
         <th>
             {{ key }}
@@ -40,8 +40,8 @@ td {
             previous
         </th>
         <td>
-            <a href="/{{ mined_credit.previous_mined_credit_hash }}">
-                {{ mined_credit.previous_mined_credit_hash }}
+            <a href="/{{ mined_credit.network_state.previous_mined_credit_hash }}">
+                {{ mined_credit.network_state.previous_mined_credit_hash }}
             </a>
         </td>
     </tr>
@@ -63,7 +63,7 @@ td {
             timestamp
         </th>
         <td>
-            {{ mined_credit_msg.timestamp }}
+            {{ mined_credit_message.mined_credit.network_state.timestamp }}
         </td>
     </tr>
     <tr>
@@ -72,7 +72,7 @@ td {
         </th>
         <td>
             <table>
-                {% for item in mined_credit_msg.contents %}
+                {% for item in mined_credit_message.contents %}
                     <tr>
                         <th>
                             {{ item.type }}

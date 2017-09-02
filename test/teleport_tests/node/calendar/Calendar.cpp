@@ -1,9 +1,9 @@
 #include "Calendar.h"
-#include "test/teleport_tests/node/CreditSystem.h"
+#include "test/teleport_tests/node/credit/structures/CreditSystem.h"
 #include <boost/range/adaptor/reversed.hpp>
 
 #include "log.h"
-#include "test/teleport_tests/node/data_handler/CalendarFailureDetails.h"
+#include "test/teleport_tests/node/data_handler/messages/CalendarFailureDetails.h"
 
 #define LOG_CATEGORY "Calendar.cpp"
 

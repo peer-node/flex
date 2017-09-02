@@ -22,8 +22,8 @@ td {
     {% for calend in calendar.calends %}
     <tr>
         <td>
-            <a href="/{{ calend.mined_credit_hash }}">
-                {{ calend.mined_credit_hash }}
+            <a href="/{{ calend.mined_credit_message_hash }}">
+                {{ calend.mined_credit_message_hash }}
             </a>
         </td>
     </tr>
@@ -33,11 +33,11 @@ td {
             current_diurn
         </th>
     </tr>
-    {% for mined_credit in calendar.current_diurn %}
+    {% for mined_credit_message in calendar.current_diurn.credits_in_diurn %}
     <tr>
         <td>
-            <a href="/{{ mined_credit.mined_credit_hash }}">
-                {{ mined_credit.mined_credit_hash }}
+            <a href="/{{ mined_credit_message.mined_credit_message_hash }}">
+                {{ mined_credit_message.mined_credit_message_hash }}
             </a>
         </td>
     </tr>

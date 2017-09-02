@@ -38,6 +38,8 @@ public:
         BindMethod("requesttips", &TeleportRPCServer::RequestTips);
         BindMethod("getcalendar", &TeleportRPCServer::GetCalendar);
         BindMethod("getminedcredit", &TeleportRPCServer::GetMinedCredit);
+        BindMethod("getminedcreditmessage", &TeleportRPCServer::GetMinedCreditMessage);
+        BindMethod("getbatch", &TeleportRPCServer::GetBatch);
         BindMethod("listunspent", &TeleportRPCServer::ListUnspent);
         BindMethod("gettransaction", &TeleportRPCServer::GetTransaction);
     }
@@ -76,6 +78,10 @@ public:
     void GetCalendar(const Json::Value &request, Json::Value &response);
 
     void GetMinedCredit(const Json::Value &request, Json::Value &response);
+
+    void GetMinedCreditMessage(const Json::Value &request, Json::Value &response);
+
+    void GetBatch(const Json::Value &request, Json::Value &response);
 
     void ListUnspent(const Json::Value &request, Json::Value &response);
 

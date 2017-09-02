@@ -12,6 +12,7 @@ class RelayMemoryCache;
 class Data
 {
 public:
+    MemoryDataStore depositdata;
     MemoryDataStore &msgdata, &creditdata, &keydata;
     RelayState *relay_state{NULL};
     RelayMemoryCache *cache{NULL};
@@ -32,6 +33,7 @@ public:
 
     Data(const Data &other): msgdata(other.msgdata), creditdata(other.creditdata), keydata(other.keydata)
     {
+        depositdata = other.depositdata;
         relay_state = other.relay_state;
         cache = other.cache;
         using_internal_cache = false;

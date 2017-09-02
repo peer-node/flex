@@ -3,11 +3,11 @@
 
 
 #include <test/teleport_tests/main_tests/Communicator.h>
-#include <test/teleport_tests/node/relays/RelayMessageHandler.h>
+#include <test/teleport_tests/node/relays/handlers/RelayMessageHandler.h>
 #include "test/teleport_tests/node/calendar/Calendar.h"
 #include "test/teleport_tests/node/wallet/Wallet.h"
-#include "test/teleport_tests/node/credit_handler/CreditMessageHandler.h"
-#include "test/teleport_tests/node/data_handler/DataMessageHandler.h"
+#include "test/teleport_tests/node/credit_handler/handlers/CreditMessageHandler.h"
+#include "test/teleport_tests/node/data_handler/handlers/DataMessageHandler.h"
 
 #include "log.h"
 #define LOG_CATEGORY "TeleportNetworkNode.h"
@@ -33,7 +33,6 @@ public:
             data(msgdata, creditdata, keydata),
             tip_controller(data),
             builder(data)
-
     {
         credit_system = new CreditSystem(msgdata, creditdata);
         wallet = new Wallet(keydata);
@@ -48,6 +47,7 @@ public:
         relay_message_handler = new RelayMessageHandler(data);
         relay_message_handler->SetCreditSystem(credit_system);
         relay_message_handler->SetCalendar(&calendar);
+        relay_message_handler->SetMinedCreditMessageBuilder(&builder);
     }
 
     void SetUpCreditMessageHandler()
@@ -95,6 +95,8 @@ public:
     void StopCommunicator();
 
     MinedCreditMessage Tip();
+
+    uint64_t LatestBatchNumber();
 
     MinedCreditMessage GenerateMinedCreditMessageWithoutProofOfWork();
 

@@ -30,7 +30,16 @@ public:
         READWRITE(keydata);
     )
 
-    JSON(amount, keydata);
+    std::string json()
+    {
+        std::string json_text("{");
+        std::stringstream ss;
+        ss << amount;
+        json_text += "\"amount\": " + ss.str();
+        json_text += ",\"keyhash\": \"" + KeyHash().ToString() + "\"";
+        json_text += "}";
+        return json_text;
+    }
 
     virtual string_t ToString() const;
 
