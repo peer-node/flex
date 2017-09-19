@@ -1,6 +1,6 @@
 #include "DataMessageHandler.h"
-#include "test/teleport_tests/node/data_handler/messages/CalendarFailureMessage.h"
-#include "test/teleport_tests/node/credit_handler/handlers/CreditMessageHandler.h"
+#include "test/teleport_tests/node/historical_data/messages/CalendarFailureMessage.h"
+#include "test/teleport_tests/node/credit/handlers/CreditMessageHandler.h"
 #include "test/teleport_tests/node/TeleportNetworkNode.h"
 #include "TipHandler.h"
 #include "CalendarHandler.h"

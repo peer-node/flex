@@ -12,28 +12,35 @@ class RelayMemoryCache;
 class Data
 {
 public:
-    MemoryDataStore depositdata;
-    MemoryDataStore &msgdata, &creditdata, &keydata;
+    MemoryDataStore &msgdata, &creditdata, &keydata, &depositdata;
     RelayState *relay_state{NULL};
     RelayMemoryCache *cache{NULL};
     bool using_internal_cache{true};
 
-
-    Data(MemoryDataStore &msgdata, MemoryDataStore &creditdata, MemoryDataStore &keydata):
-            msgdata(msgdata), creditdata(creditdata), keydata(keydata)
+    Data(MemoryDataStore &msgdata,
+         MemoryDataStore &creditdata,
+         MemoryDataStore &keydata,
+         MemoryDataStore &depositdata):
+            msgdata(msgdata), creditdata(creditdata), keydata(keydata), depositdata(depositdata)
     { }
 
-    Data(MemoryDataStore &msgdata, MemoryDataStore &creditdata, MemoryDataStore &keydata, RelayState *relay_state):
-            msgdata(msgdata), creditdata(creditdata), keydata(keydata), relay_state(relay_state)
+    Data(MemoryDataStore &msgdata,
+         MemoryDataStore &creditdata,
+         MemoryDataStore &keydata,
+         MemoryDataStore &depositdata,
+         RelayState *relay_state):
+            msgdata(msgdata), creditdata(creditdata), keydata(keydata), depositdata(depositdata),
+            relay_state(relay_state)
     { }
 
     Data(Data &other, RelayState *relay_state):
-            msgdata(other.msgdata), creditdata(other.creditdata), keydata(other.keydata), relay_state(relay_state)
+            msgdata(other.msgdata), creditdata(other.creditdata), keydata(other.keydata),
+            depositdata(other.depositdata), relay_state(relay_state)
     { }
 
-    Data(const Data &other): msgdata(other.msgdata), creditdata(other.creditdata), keydata(other.keydata)
+    Data(const Data &other):
+            msgdata(other.msgdata), creditdata(other.creditdata), keydata(other.keydata), depositdata(other.depositdata)
     {
-        depositdata = other.depositdata;
         relay_state = other.relay_state;
         cache = other.cache;
         using_internal_cache = false;

@@ -17,14 +17,17 @@ void TeleportNetworkNode::HandleMessage(std::string channel, CDataStream stream,
 {
     RecordReceiptOfMessage(channel, stream);
 
-    if (channel == "credit")
+    if (channel == "credit" and credit_message_handler != NULL)
         credit_message_handler->HandleMessage(stream, peer);
 
-    if (channel == "data")
+    if (channel == "data" and data_message_handler != NULL)
         data_message_handler->HandleMessage(stream, peer);
 
     if (channel == "relay" and relay_message_handler != NULL)
         relay_message_handler->HandleMessage(stream, peer);
+
+    if (channel == "deposit" and deposit_message_handler != NULL)
+        deposit_message_handler->HandleMessage(stream, peer);
 }
 
 void TeleportNetworkNode::RecordReceiptOfMessage(std::string channel, CDataStream stream)
@@ -81,20 +84,20 @@ uint160 TeleportNetworkNode::SendToAddress(std::string address, int64_t amount)
 
 void TeleportNetworkNode::SwitchToNewCalendarAndSpentChain(Calendar new_calendar, BitChain new_spent_chain)
 {
-    uint160 old_tip_credit_hash = calendar.LastMinedCreditMessageHash();
-    uint160 new_tip_credit_hash = new_calendar.LastMinedCreditMessageHash();
+    uint160 old_tip_message_hash = calendar.LastMinedCreditMessageHash();
+    uint160 new_tip_message_hash = new_calendar.LastMinedCreditMessageHash();
 
-    uint160 fork = credit_system->FindFork(calendar.LastMinedCreditMessageHash(), new_tip_credit_hash);
+    uint160 fork = credit_system->FindFork(old_tip_message_hash, new_tip_message_hash);
 
     LOCK(credit_message_handler->calendar_mutex);
 
     credit_system->RemoveBatchAndChildrenFromMainChainAndDeleteRecordOfTotalWork(fork);
-    credit_system->AddMinedCreditMessageAndPredecessorsToMainChain(new_tip_credit_hash);
+    credit_system->AddMinedCreditMessageAndPredecessorsToMainChain(new_tip_message_hash);
     calendar = new_calendar;
     spent_chain = new_spent_chain;
 
     if (wallet != NULL)
-        wallet->SwitchAcrossFork(old_tip_credit_hash, new_tip_credit_hash, credit_system);
+        wallet->SwitchAcrossFork(old_tip_message_hash, new_tip_message_hash, credit_system);
 }
 
 bool TeleportNetworkNode::StartCommunicator()
@@ -123,6 +126,7 @@ void TeleportNetworkNode::AttachCommunicatorNetworkToHandlers()
     credit_message_handler->SetNetwork(communicator->network);
     data_message_handler->SetNetwork(communicator->network);
     relay_message_handler->SetNetwork(communicator->network);
+    deposit_message_handler->SetNetwork(communicator->network);
 }
 
 void TeleportNetworkNode::StopCommunicator()
@@ -132,6 +136,7 @@ void TeleportNetworkNode::StopCommunicator()
     credit_message_handler->network = NULL;
     data_message_handler->network = NULL;
     relay_message_handler->network = NULL;
+    deposit_message_handler->network = NULL;
 }
 
 uint64_t TeleportNetworkNode::LatestBatchNumber()

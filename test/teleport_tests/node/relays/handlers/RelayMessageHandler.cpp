@@ -1,5 +1,5 @@
 #include "RelayMessageHandler.h"
-#include "test/teleport_tests/node/credit_handler/handlers/MinedCreditMessageBuilder.h"
+#include "test/teleport_tests/node/credit/handlers/MinedCreditMessageBuilder.h"
 
 #include "log.h"
 #define LOG_CATEGORY "RelayMessageHandler.cpp"

@@ -37,7 +37,7 @@ public:
 
     Point VerificationKey(Data data)
     {
-        return GetPartMessage(data).Relays()[number_of_secret];
+        return GetPartMessage(data).VerificationKey(data);
     }
 
     IMPLEMENT_HASH_SIGN_VERIFY();

@@ -9,9 +9,9 @@
 #include "MinedCreditMessageValidator.h"
 #include "test/teleport_tests/node/calendar/Calendar.h"
 #include "TransactionValidator.h"
-#include "test/teleport_tests/node/credit_handler/messages/BadBatchMessage.h"
+#include "test/teleport_tests/node/credit/messages/BadBatchMessage.h"
 #include "test/teleport_tests/node/wallet/Wallet.h"
-#include "test/teleport_tests/node/credit_handler/messages/ListExpansionMessage.h"
+#include "test/teleport_tests/node/credit/messages/ListExpansionMessage.h"
 #include "TipController.h"
 #include "MinedCreditMessageBuilder.h"
 
@@ -142,7 +142,7 @@ public:
 
     bool MinedCreditMessageWasRegardedAsValidAndHandled(MinedCreditMessage &msg);
 
-    void SendRelayJoinMessageIfAppropriate(MinedCreditMessage &msg);
+    void InformOtherMessageHandlersOfNewTip(MinedCreditMessage &msg);
 };
 
 

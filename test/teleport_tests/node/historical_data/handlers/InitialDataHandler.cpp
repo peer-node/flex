@@ -1,7 +1,7 @@
 #include "InitialDataHandler.h"
 #include "test/teleport_tests/node/TeleportNetworkNode.h"
 #include "CalendarHandler.h"
-#include "test/teleport_tests/node/data_handler/LoadHashesIntoDataStore.h"
+#include "test/teleport_tests/node/historical_data/LoadHashesIntoDataStore.h"
 
 #include "log.h"
 #define LOG_CATEGORY "InitialDataHandler.cpp"
@@ -191,8 +191,8 @@ void InitialDataHandler::SetMiningParametersForInitialDataMessageValidation(uint
 
 bool InitialDataHandler::ValidateMinedCreditMessagesInInitialDataMessage(InitialDataMessage initial_data_message)
 {
-    MemoryDataStore msgdata_, creditdata_, keydata_;
-    Data data_(msgdata_, creditdata_, keydata_);
+    MemoryDataStore msgdata_, creditdata_, keydata_, depositdata_;
+    Data data_(msgdata_, creditdata_, keydata_, depositdata_);
     CreditSystem credit_system_(msgdata_, creditdata_);
 
     credit_system_.SetMiningParameters(data_message_handler->calendar_handler->number_of_megabytes_for_mining,

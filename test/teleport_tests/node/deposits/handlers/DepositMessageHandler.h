@@ -27,7 +27,8 @@ class DepositMessageHandler : public MessageHandlerWithOrphanage
 {
 public:
     std::string channel{"deposit"};
-    MemoryDataStore &creditdata, &keydata;
+    uint8_t mode{LIVE};
+
     CreditSystem *credit_system{NULL};
     Calendar *calendar{NULL};
     BitChain *spent_chain{NULL};
@@ -35,7 +36,7 @@ public:
     TeleportNetworkNode *teleport_network_node{NULL};
     TeleportConfig config;
     Data data;
-    uint8_t mode{LIVE};
+
     DepositAddressRequestHandler address_request_handler;
     DepositAddressDisclosureHandler address_disclosure_handler;
     DepositAddressTransferHandler address_transfer_handler;
@@ -44,8 +45,11 @@ public:
     bool do_spot_checks{true}, using_internal_tip_controller{true}, using_internal_builder{true};
 
     explicit DepositMessageHandler(Data data):
-        data(data), MessageHandlerWithOrphanage(data.msgdata), creditdata(data.creditdata), keydata(data.keydata),
-        address_request_handler(this)
+        data(data), MessageHandlerWithOrphanage(data.msgdata),
+        address_request_handler(this),
+        address_disclosure_handler(this),
+        address_transfer_handler(this),
+        address_withdrawal_handler(this)
     { }
 
     void SetConfig(TeleportConfig& config_);
@@ -116,7 +120,7 @@ public:
 
     void HandleWithdrawalComplaint(WithdrawalComplaint complaint);
 
-    void AddBatchToTip(MinedCreditMessage &msg);
+    void HandleNewTip(MinedCreditMessage &msg);
 
     void CancelRequest(uint160 request_hash);
 
@@ -128,7 +132,7 @@ public:
 
     void AddAndRemoveMyAddresses(uint160 transfer_hash);
 
-    std::vector<uint64_t> GetRelaysForAddressRequest(uint160 request_hash, uint160 encoding_credit_hash);
+    std::vector<uint64_t> GetRelaysForAddressRequest(uint160 request_hash, uint160 encoding_message_hash);
 
     std::vector<uint64_t> GetRelaysForAddress(Point address);
 };

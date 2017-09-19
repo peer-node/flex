@@ -1,8 +1,8 @@
 #include <src/credits/creditsign.h>
 #include <src/crypto/secp256k1point.h>
 #include "CreditMessageHandler.h"
-#include "test/teleport_tests/node/data/handlers/DataMessageHandler.h"
-#include "test/teleport_tests/node/data/LoadHashesIntoDataStore.h"
+#include "test/teleport_tests/node/historical_data/handlers/DataMessageHandler.h"
+#include "test/teleport_tests/node/historical_data/LoadHashesIntoDataStore.h"
 #include "test/teleport_tests/node/TeleportNetworkNode.h"
 
 
@@ -196,11 +196,13 @@ void CreditMessageHandler::HandleValidMinedCreditMessage(MinedCreditMessage& msg
     credit_system->AcceptMinedCreditMessageAsValidByRecordingTotalWorkAndParent(msg);
     tip_controller->SwitchToNewTipIfAppropriate();
     credit_system->MarkMinedCreditMessageAsHandled(msg.GetHash160());
-    SendRelayJoinMessageIfAppropriate(msg);
+    InformOtherMessageHandlersOfNewTip(msg);
 }
 
-void CreditMessageHandler::SendRelayJoinMessageIfAppropriate(MinedCreditMessage& msg)
+void CreditMessageHandler::InformOtherMessageHandlersOfNewTip(MinedCreditMessage &msg)
 {
+    log_ << "informing other message handlers of " << msg.GetHash160() << "\n";
+    log_ << msg.hash_list.short_hashes.size() << " enclosed messages\n";
     Point public_key = msg.mined_credit.PublicKey();
     if (keydata[public_key].HasProperty("privkey"))
     {
@@ -209,6 +211,10 @@ void CreditMessageHandler::SendRelayJoinMessageIfAppropriate(MinedCreditMessage&
             teleport_network_node->relay_message_handler->HandleNewTip(msg);
             teleport_network_node->relay_message_handler->SendRelayJoinMessage(msg);
         }
+    }
+    if (teleport_network_node->deposit_message_handler != NULL)
+    {
+        teleport_network_node->deposit_message_handler->HandleNewTip(msg);
     }
 }
 

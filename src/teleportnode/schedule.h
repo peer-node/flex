@@ -6,10 +6,12 @@
 #include <boost/thread.hpp>
 #include "crypto/uint256.h"
 #include "vector_tools.h"
+#include "test/teleport_tests/node/Data.h"
 #include <functional>
 
 #include "log.h"
 #define LOG_CATEGORY "schedule.h"
+
 
 class ScheduledTask
 {

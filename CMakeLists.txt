@@ -534,6 +534,7 @@ add_executable(minerd
 
 add_executable(runSchedulerTests
         test/teleport_tests/teleport_data/TestData.h
+        src/teleportnode/schedule.h
         ${REMAINING_BASE_FILES}
         ${MINCRYPTO_FILES}
         test/teleport_tests/teleport_data/MemoryDataStore.cpp
@@ -559,13 +560,7 @@ set(CONFIG_FILES
         test/teleport_tests/node/config/ConfigParser.cpp
         test/teleport_tests/node/config/ConfigParser.h)
 
-add_executable(runCurrencyTests
-        test/teleport_tests/node/tests/testCurrency.cpp
-        ${REMAINING_BASE_FILES}
-        ${MINCRYPTO_FILES}
-        ${DATABASE_FILES}
-        ${CONFIG_FILES}
-        test/teleport_tests/test_main.cpp
+set(CURRENCY_FILES
         test/teleport_tests/node/server/HttpAuthServer.cpp
         test/teleport_tests/node/server/HttpAuthServer.h
         test/teleport_tests/currency/CurrencyRPC.cpp
@@ -580,7 +575,18 @@ add_executable(runCurrencyTests
         test/teleport_tests/currency/CurrencyCrypto.cpp
         test/teleport_tests/currency/CurrencyCrypto.h
         test/teleport_tests/currency/NotaryRPC.cpp
-        test/teleport_tests/currency/NotaryRPC.h test/teleport_tests/currency/TestElectrumServer.cpp test/teleport_tests/currency/TestElectrumServer.h)
+        test/teleport_tests/currency/NotaryRPC.h)
+
+add_executable(runCurrencyTests
+        test/teleport_tests/node/tests/testCurrency.cpp
+        ${REMAINING_BASE_FILES}
+        ${MINCRYPTO_FILES}
+        ${DATABASE_FILES}
+        ${CONFIG_FILES}
+        ${CURRENCY_FILES}
+        test/teleport_tests/test_main.cpp
+        test/teleport_tests/currency/TestElectrumServer.cpp
+        test/teleport_tests/currency/TestElectrumServer.h)
 
 
 set(NODE_TEST_FILES
@@ -720,13 +726,41 @@ set(MESSAGE_HANDLER_WITH_ORPHANAGE_FILES
         )
 
 set(DEPOSIT_FILES
+        src/teleportnode/schedule.h
         test/teleport_tests/node/deposits/handlers/DepositMessageHandler.cpp
         test/teleport_tests/node/deposits/handlers/DepositMessageHandler.h
         test/teleport_tests/node/deposits/messages/DepositAddressRequest.h
         test/teleport_tests/node/deposits/messages/DepositAddressRequest.cpp
         test/teleport_tests/node/deposits/messages/DepositAddressPartMessage.h
         test/teleport_tests/node/deposits/messages/DepositAddressPartMessage.cpp
-        test/teleport_tests/node/deposits/messages/DepositAddressPartComplaint.cpp test/teleport_tests/node/deposits/messages/DepositAddressPartComplaint.h test/teleport_tests/node/deposits/messages/DepositAddressPartDisclosure.cpp test/teleport_tests/node/deposits/messages/DepositAddressPartDisclosure.h test/teleport_tests/node/deposits/messages/DepositDisclosureComplaint.cpp test/teleport_tests/node/deposits/messages/DepositDisclosureComplaint.h test/teleport_tests/node/deposits/messages/DepositTransferMessage.cpp test/teleport_tests/node/deposits/messages/DepositTransferMessage.h test/teleport_tests/node/deposits/messages/TransferAcknowledgement.cpp test/teleport_tests/node/deposits/messages/TransferAcknowledgement.h test/teleport_tests/node/deposits/messages/WithdrawalRequestMessage.cpp test/teleport_tests/node/deposits/messages/WithdrawalRequestMessage.h test/teleport_tests/node/deposits/messages/WithdrawalMessage.cpp test/teleport_tests/node/deposits/messages/WithdrawalMessage.h test/teleport_tests/node/deposits/messages/WithdrawalComplaint.cpp test/teleport_tests/node/deposits/messages/WithdrawalComplaint.h test/teleport_tests/node/deposits/handlers/DepositAddressRequestHandler.cpp test/teleport_tests/node/deposits/handlers/DepositAddressRequestHandler.h test/teleport_tests/node/deposits/messages/AddressPartSecret.cpp test/teleport_tests/node/deposits/messages/AddressPartSecret.h test/teleport_tests/node/deposits/messages/AddressPartSecretDisclosure.cpp test/teleport_tests/node/deposits/messages/AddressPartSecretDisclosure.h test/teleport_tests/node/deposits/handlers/DepositAddressDisclosureHandler.cpp test/teleport_tests/node/deposits/handlers/DepositAddressDisclosureHandler.h test/teleport_tests/node/deposits/handlers/DepositAddressTransferHandler.cpp test/teleport_tests/node/deposits/handlers/DepositAddressTransferHandler.h test/teleport_tests/node/deposits/handlers/DepositAddressWithdrawalHandler.cpp test/teleport_tests/node/deposits/handlers/DepositAddressWithdrawalHandler.h)
+        test/teleport_tests/node/deposits/messages/DepositAddressPartComplaint.cpp
+        test/teleport_tests/node/deposits/messages/DepositAddressPartComplaint.h
+        test/teleport_tests/node/deposits/messages/DepositAddressPartDisclosure.cpp
+        test/teleport_tests/node/deposits/messages/DepositAddressPartDisclosure.h
+        test/teleport_tests/node/deposits/messages/DepositDisclosureComplaint.cpp
+        test/teleport_tests/node/deposits/messages/DepositDisclosureComplaint.h
+        test/teleport_tests/node/deposits/messages/DepositTransferMessage.cpp
+        test/teleport_tests/node/deposits/messages/DepositTransferMessage.h
+        test/teleport_tests/node/deposits/messages/TransferAcknowledgement.cpp
+        test/teleport_tests/node/deposits/messages/TransferAcknowledgement.h
+        test/teleport_tests/node/deposits/messages/WithdrawalRequestMessage.cpp
+        test/teleport_tests/node/deposits/messages/WithdrawalRequestMessage.h
+        test/teleport_tests/node/deposits/messages/WithdrawalMessage.cpp
+        test/teleport_tests/node/deposits/messages/WithdrawalMessage.h
+        test/teleport_tests/node/deposits/messages/WithdrawalComplaint.cpp
+        test/teleport_tests/node/deposits/messages/WithdrawalComplaint.h
+        test/teleport_tests/node/deposits/handlers/DepositAddressRequestHandler.cpp
+        test/teleport_tests/node/deposits/handlers/DepositAddressRequestHandler.h
+        test/teleport_tests/node/deposits/messages/AddressPartSecret.cpp
+        test/teleport_tests/node/deposits/messages/AddressPartSecret.h
+        test/teleport_tests/node/deposits/messages/AddressPartSecretDisclosure.cpp
+        test/teleport_tests/node/deposits/messages/AddressPartSecretDisclosure.h
+        test/teleport_tests/node/deposits/handlers/DepositAddressDisclosureHandler.cpp
+        test/teleport_tests/node/deposits/handlers/DepositAddressDisclosureHandler.h
+        test/teleport_tests/node/deposits/handlers/DepositAddressTransferHandler.cpp
+        test/teleport_tests/node/deposits/handlers/DepositAddressTransferHandler.h
+        test/teleport_tests/node/deposits/handlers/DepositAddressWithdrawalHandler.cpp
+        test/teleport_tests/node/deposits/handlers/DepositAddressWithdrawalHandler.h)
 
 add_executable(runRelayTests
         ${RELAY_FILES}
@@ -813,6 +847,7 @@ add_executable(runDepositTests
         ${RELAY_FILES}
         ${MESSAGE_HANDLER_WITH_ORPHANAGE_FILES}
         ${DEPOSIT_FILES}
+        ${CURRENCY_FILES}
         test/teleport_tests/node/tests/testDepositHandler.cpp)
 
 add_executable(teleportd
@@ -822,6 +857,8 @@ add_executable(teleportd
         ${NODE_TEST_FILES}
         ${DATA_HANDLER_FILES}
         ${RELAY_FILES}
+        ${DEPOSIT_FILES}
+        ${CURRENCY_FILES}
         ${DATABASE_FILES}
         test/teleport_tests/node/teleportd.cpp)
 

@@ -192,9 +192,8 @@ void DoScheduledDisclosureTimeoutCheck(uint160 part_msg_hash)
         }
         if (disclosure_hashes.size() == SECRETS_PER_DEPOSIT)
         {
-            teleportnode.scheduler.Schedule("post_disclosure_check",
-                                        request_hash,
-                                        GetTimeMicros() + COMPLAINT_WAIT_TIME);
+            teleportnode.scheduler.Schedule("post_disclosure_check", request_hash,
+                                            GetTimeMicros() + COMPLAINT_WAIT_TIME);
         }
     }
 

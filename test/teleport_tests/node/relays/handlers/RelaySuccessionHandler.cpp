@@ -1,6 +1,6 @@
 #include "RelaySuccessionHandler.h"
 #include "RelayMessageHandler.h"
-#include "test/teleport_tests/node/credit_handler/handlers/MinedCreditMessageBuilder.h"
+#include "test/teleport_tests/node/credit/handlers/MinedCreditMessageBuilder.h"
 
 
 #include "log.h"

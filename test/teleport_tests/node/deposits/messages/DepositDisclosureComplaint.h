@@ -14,9 +14,7 @@ public:
 
     DepositDisclosureComplaint() { }
 
-    DepositDisclosureComplaint(uint160 disclosure_hash,
-                               uint32_t number_of_secret,
-                               CBigNum secret):
+    DepositDisclosureComplaint(uint160 disclosure_hash, uint32_t number_of_secret, CBigNum secret):
             disclosure_hash(disclosure_hash),
             number_of_secret(number_of_secret),
             secret(secret)
@@ -41,24 +39,25 @@ public:
 
     bool Validate(Data data)
     {
-        if (number_of_secret > GetDisclosure(data).Relays().size())
-            return false;
-        if (secret != 0)
-        {
-            DepositAddressPartDisclosure disclosure = GetDisclosure(data);
-            uint160 part_msg_hash = disclosure.address_part_message_hash;
-            DepositAddressPartMessage part_msg = data.GetMessage(part_msg_hash);
-            return disclosure.disclosure.ValidatePurportedlyBadSecret(
-                    part_msg.address_part_secret,
-                    number_of_secret,
-                    secret);
-        }
+//        if (number_of_secret > GetDisclosure(data).Relays(data).size())
+//            return false;
+//        if (secret != 0)
+//        {
+//            DepositAddressPartDisclosure disclosure = GetDisclosure(data);
+//            uint160 part_msg_hash = disclosure.address_part_message_hash;
+//            DepositAddressPartMessage part_msg = data.GetMessage(part_msg_hash);
+//            return disclosure.disclosure.ValidatePurportedlyBadSecret(
+//                    part_msg.address_part_secret,
+//                    number_of_secret,
+//                    secret);
+//        }
         return true;
     }
 
     Point VerificationKey(Data data)
     {
-        return GetDisclosure(data).Relays()[number_of_secret];
+        //return GetDisclosure(data).Relays(data)[number_of_secret];
+        return Point(0);
     }
 
     IMPLEMENT_HASH_SIGN_VERIFY();

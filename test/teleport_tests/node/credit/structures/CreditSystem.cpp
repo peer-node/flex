@@ -4,13 +4,13 @@
 #include <src/credits/CreditBatch.h>
 #include <test/teleport_tests/mining/MiningHashTree.h>
 #include <src/base/util_time.h>
-#include <test/teleport_tests/node/data_handler/messages/InitialDataMessage.h>
-#include <test/teleport_tests/node/data_handler/messages/DiurnDataMessage.h>
-#include <test/teleport_tests/node/data_handler/messages/DiurnFailureMessage.h>
+#include <test/teleport_tests/node/historical_data/messages/InitialDataMessage.h>
+#include <test/teleport_tests/node/historical_data/messages/DiurnDataMessage.h>
+#include <test/teleport_tests/node/historical_data/messages/DiurnFailureMessage.h>
 #include "CreditSystem.h"
 #include "test/teleport_tests/node/credit/messages/MinedCreditMessage.h"
 #include "test/teleport_tests/node/calendar/Calend.h"
-#include "test/teleport_tests/node/data_handler/messages/CalendarMessage.h"
+#include "test/teleport_tests/node/historical_data/messages/CalendarMessage.h"
 
 #include "log.h"
 #define LOG_CATEGORY "CreditSystem.cpp"

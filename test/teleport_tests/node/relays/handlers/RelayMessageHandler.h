@@ -38,7 +38,7 @@ public:
 
     RelayMessageHandler(Data data):
             MessageHandlerWithOrphanage(data.msgdata),
-            data(data.msgdata, data.creditdata, data.keydata, &relay_state),
+            data(data.msgdata, data.creditdata, data.keydata, data.depositdata, &relay_state),
             admission_handler(data, credit_system, calendar, this),
             succession_handler(data, credit_system, calendar, this),
             tip_handler(this)

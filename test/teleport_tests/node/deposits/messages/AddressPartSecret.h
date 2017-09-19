@@ -6,6 +6,7 @@
 #include <array>
 #include <src/crypto/point.h>
 #include <test/teleport_tests/node/Data.h>
+#include <test/teleport_tests/node/relays/structures/Relay.h>
 
 #define SECRETS_PER_ADDRESS_PART 6
 
@@ -44,6 +45,7 @@ public:
             private_key.Randomize(point.Modulus());
             parts_of_address[i] = Point(curve, private_key);
             encrypted_secrets[i] = relay->EncryptSecret(private_key);
+            data.keydata[parts_of_address[i]]["privkey"] = private_key;
         }
     }
 

@@ -1,6 +1,9 @@
 #include "DepositAddressRequestHandler.h"
 #include "DepositMessageHandler.h"
 #include <test/teleport_tests/node/credit/handlers/MinedCreditMessageBuilder.h>
+#include <test/teleport_tests/currency/Currency.h>
+#include <test/teleport_tests/node/relays/handlers/RelayMessageHandler.h>
+#include "test/teleport_tests/node/TeleportNetworkNode.h"
 
 using std::vector;
 
@@ -13,7 +16,17 @@ extern std::vector<unsigned char> TCR;
 DepositAddressRequestHandler::DepositAddressRequestHandler(DepositMessageHandler *deposit_message_handler) :
     deposit_message_handler(deposit_message_handler), data(deposit_message_handler->data)
 {
-    teleport_network_node = deposit_message_handler->teleport_network_node;
+}
+
+void DepositAddressRequestHandler::SetNetworkNode(TeleportNetworkNode *node)
+{
+    teleport_network_node = node;
+}
+
+void DepositAddressRequestHandler::AddScheduledTasks()
+{
+    scheduler.AddTask(ScheduledTask("request_timeout_check",
+                                    &DepositAddressRequestHandler::DoScheduledAddressRequestTimeoutCheck, this));
 }
 
 void DepositAddressRequestHandler::HandleDepositAddressRequest(DepositAddressRequest request)
@@ -42,7 +55,7 @@ void DepositAddressRequestHandler::HandleDepositAddressRequest(DepositAddressReq
 
 bool DepositAddressRequestHandler::ValidateDepositAddressRequest(DepositAddressRequest &request)
 {
-    return request.VerifySignature(data) and request.CheckWork();
+    return request.VerifySignature(data);// and request.CheckWork();
     // todo: ensure it's not an old request
 }
 
@@ -56,12 +69,169 @@ void DepositAddressRequestHandler::AcceptDepositAddressRequest(DepositAddressReq
     data.depositdata[request_hash]["processed"] = true;
 }
 
+void DepositAddressRequestHandler::HandleEncodedRequests(MinedCreditMessage& msg)
+{
+    uint160 encoding_message_hash = msg.GetHash160();
+    log_ << "HandleEncodedRequests: " << encoding_message_hash << "\n";
+    log_ << msg.hash_list.short_hashes.size() << " enclosed messages\n";
+    msg.hash_list.RecoverFullHashes(data.msgdata);
+
+    for (auto hash : msg.hash_list.full_hashes)
+    {
+        string_t type = data.msgdata[hash]["type"];
+        log_ << "handling encoded message " << hash << " of type " << type << "\n";
+        if (type == "deposit_request")
+        {
+            log_ << "handling encoded request: " << hash << " of type " << type << "\n";
+            HandleEncodedRequest(hash, encoding_message_hash);
+        }
+    }
+}
+
+void DepositAddressRequestHandler::HandleEncodedRequest(uint160 request_hash, uint160 encoding_message_hash)
+{
+    log_ << "HandleEncodedRequest: " << request_hash << " encoded in " << encoding_message_hash << "\n";
+
+    uint160 encoded_request_identifier = RecordEncodedRequest(request_hash, encoding_message_hash);
+
+    if (data.depositdata[encoding_message_hash]["from_history"] or
+            data.depositdata[encoding_message_hash]["from_datamessage"])
+        return;
+
+    ScheduleCheckForResponsesToRequest(encoded_request_identifier);
+    SendDepositAddressPartMessages(request_hash, encoding_message_hash);
+}
+
+uint160 DepositAddressRequestHandler::RecordEncodedRequest(uint160 request_hash, uint160 encoding_message_hash)
+{
+    uint160 encoded_request_identifier = request_hash + encoding_message_hash;
+    data.depositdata[encoded_request_identifier]["request_hash"] = request_hash;
+    data.depositdata[encoded_request_identifier]["encoding_message_hash"] = encoding_message_hash;
+    return encoded_request_identifier;
+}
+
+void DepositAddressRequestHandler::ScheduleCheckForResponsesToRequest(uint160 encoded_request_identifier)
+{
+    if (data.depositdata[encoded_request_identifier]["scheduled"])
+        return;
+
+    scheduler.Schedule("request_timeout_check", encoded_request_identifier, GetTimeMicros() + RESPONSE_WAIT_TIME);
+    data.depositdata[encoded_request_identifier]["scheduled"] = true;
+}
+
+void DepositAddressRequestHandler::SendDepositAddressPartMessages(uint160 request_hash, uint160 encoding_message_hash)
+{
+    vector<uint64_t> relay_numbers = GetRelaysForAddressRequest(request_hash, encoding_message_hash);
+
+    for (uint32_t position = 0; position < relay_numbers.size(); position++)
+    {
+        if (RequestShouldBeRespondedTo(request_hash, encoding_message_hash, relay_numbers, position))
+        {
+            log_ << "sending part message " << position << " for request " << request_hash << "\n";
+            SendDepositAddressPartMessage(request_hash, encoding_message_hash, position, relay_numbers);
+        }
+    }
+}
+
+void DepositAddressRequestHandler::SendDepositAddressPartMessage(uint160 request_hash,
+                                                                 uint160 encoding_message_hash,
+                                                                 uint32_t position,
+                                                                 vector<uint64_t> relay_numbers)
+{
+    uint64_t relay_number = relay_numbers[position];
+    auto relay_state = RelayStateFromEncodingMessage(encoding_message_hash);
+    auto relay = relay_state.GetRelayByNumber(relay_number);
+
+    DepositAddressPartMessage part_msg(request_hash, encoding_message_hash, position, data, relay);
+    part_msg.Sign(data);
+    data.StoreMessage(part_msg);
+    deposit_message_handler->Broadcast(part_msg);
+    deposit_message_handler->HandleDepositAddressPartMessage(part_msg);
+}
+
+bool DepositAddressRequestHandler::RequestShouldBeRespondedTo(uint160 request_hash,
+                                                              uint160 encoding_message_hash,
+                                                              vector<uint64_t> relay_numbers,
+                                                              uint32_t position)
+{
+    if (RequestHasAlreadyBeenRespondedTo(request_hash, encoding_message_hash, position))
+        return false;
+
+    uint64_t relay_number = relay_numbers[position];
+    auto relay_state = RelayStateFromEncodingMessage(encoding_message_hash);
+    auto relay = relay_state.GetRelayByNumber(relay_number);
+    return relay->PrivateKeyIsPresent(data);
+}
+
+bool DepositAddressRequestHandler::RequestHasAlreadyBeenRespondedTo(uint160 request_hash,
+                                                                    uint160 encoding_message_hash,
+                                                                    uint32_t position)
+{
+    // todo
+    return false;
+}
+
+RelayState DepositAddressRequestHandler::RelayStateFromEncodingMessage(uint160 encoding_message_hash)
+{
+    MinedCreditMessage msg = data.GetMessage(encoding_message_hash);
+    return data.GetRelayState(msg.mined_credit.network_state.relay_state_hash);
+}
+
+vector<uint64_t> DepositAddressRequestHandler::GetRelaysForAddressRequest(uint160 request_hash,
+                                                                          uint160 encoding_message_hash)
+{
+    uint160 relay_chooser = encoding_message_hash ^ request_hash;
+    auto state = RelayStateFromEncodingMessage(encoding_message_hash);
+    return state.ChooseRelaysForDepositAddressRequest(relay_chooser, PARTS_PER_DEPOSIT_ADDRESS);
+}
+
+vector<uint64_t> DepositAddressRequestHandler::GetRelaysForAddress(Point address)
+{
+    uint160 request_hash = data.depositdata[address]["deposit_request"];
+    uint160 encoding_message_hash = data.depositdata[request_hash]["encoding_message_hash"];
+    return GetRelaysForAddressRequest(request_hash, encoding_message_hash);
+}
+
+void DepositAddressRequestHandler::DoScheduledAddressRequestTimeoutCheck(uint160 encoded_request_identifier)
+{
+    Point address_pubkey = data.depositdata[encoded_request_identifier]["address_pubkey"];
+
+    uint160 encoding_message_hash = data.depositdata[encoded_request_identifier]["encoding_message_hash"];
+    uint160 request_hash = data.depositdata[encoded_request_identifier]["request_hash"];
+
+    DoSuccessionForNonRespondingRelays(request_hash, encoding_message_hash);
+
+    if (not AllPartsHaveBeenReceived(request_hash, encoding_message_hash))
+        scheduler.Schedule("request_timeout_check", encoded_request_identifier, GetTimeMicros() + RESPONSE_WAIT_TIME);
+}
+
+bool DepositAddressRequestHandler::AllPartsHaveBeenReceived(uint160 request_hash, uint160 encoding_message_hash)
+{
+    for (uint32_t position = 0; position < PARTS_PER_DEPOSIT_ADDRESS; position++)
+        if (not PartHasBeenReceived(request_hash, encoding_message_hash, position))
+            return false;
+    return true;
+}
+
+bool DepositAddressRequestHandler::PartHasBeenReceived(uint160 request_hash, uint160 encoding_message_hash, uint32_t position)
+{
+    uint160 encoded_request_identifier = request_hash + encoding_message_hash;
+    vector<uint160> part_hashes = data.depositdata[encoded_request_identifier]["parts"];
+    return part_hashes[position] != 0;
+}
+
+void DepositAddressRequestHandler::DoSuccessionForNonRespondingRelays(uint160 request_hash, uint160 encoding_message_hash)
+{
+    // todo
+}
+
 void DepositAddressRequestHandler::HandleDepositAddressPartMessage(DepositAddressPartMessage part_message)
 {
-    log_ << "HandleDepositAddressPartMessage: " << part_message.GetHash160();
+    log_ << "HandleDepositAddressPartMessage: " << part_message.GetHash160() << "\n";
 
     if (not ValidateDepositAddressPartMessage(part_message))
     {
+        log_ << "failed validation\n";
         // should_forward = false;
         return;
     }
@@ -71,179 +241,89 @@ void DepositAddressRequestHandler::HandleDepositAddressPartMessage(DepositAddres
 
 bool DepositAddressRequestHandler::ValidateDepositAddressPartMessage(DepositAddressPartMessage &part_message)
 {
-    return part_message.VerifySignature(data);
+    return part_message.ValidateEnclosedData() and part_message.VerifySignature(data);
 }
 
 void DepositAddressRequestHandler::AcceptDepositAddressPartMessage(DepositAddressPartMessage &part_message)
 {
     uint160 part_msg_hash = part_message.GetHash160();
-    uint160 request_hash = part_message.address_request_hash;
+    uint160 encoded_request_identifier = part_message.EncodedRequestIdentifier();
 
     data.depositdata[part_msg_hash]["processed"] = true;
+
+    vector<uint160> part_hashes = data.depositdata[encoded_request_identifier]["parts"];
+    part_hashes.resize(PARTS_PER_DEPOSIT_ADDRESS);
+    part_hashes[part_message.position] = part_msg_hash;
+    data.depositdata[encoded_request_identifier]["parts"] = part_hashes;
+
+    if (NumberOfReceivedMessageParts(part_hashes) == PARTS_PER_DEPOSIT_ADDRESS)
+        HandleDepositAddressParts(encoded_request_identifier, part_message.address_request_hash, part_hashes);
 }
 
-void DepositAddressRequestHandler::HandleDepositAddressParts(uint160 request_hash, std::vector<uint160> part_hashes)
+uint32_t DepositAddressRequestHandler::NumberOfReceivedMessageParts(vector<uint160> part_hashes)
+{
+    uint32_t n = 0;
+    for (auto part_hash : part_hashes)
+        if (part_hash != 0)
+            n++;
+    return n;
+}
+
+void DepositAddressRequestHandler::HandleDepositAddressParts(uint160 encoded_request_identifier,
+                                                             uint160 request_hash,
+                                                             vector<uint160> part_hashes)
 {
     log_ << "HandleDepositAddressParts: " << request_hash << "\n";
-    DepositAddressRequest request;
-    request = data.msgdata[request_hash]["deposit_request"];
+    DepositAddressRequest request = data.GetMessage(request_hash);
 
-    Point address = GetDepositAddressPubKey(request, part_hashes);
+    Point address_pubkey = GetDepositAddressPubKey(request, part_hashes);
 
-    data.depositdata[request_hash]["address"] = address;
-    log_ << "address for " << request_hash << " is " << address << "\n";
-
-    data.depositdata[address]["deposit_request"] = request_hash;
-    log_ << "request_hash for " << address << " is " << request_hash << "\n";
-
-    data.depositdata[address]["depositor_key"] = request.depositor_key;
-    log_ << "depositor_key for " << address << " is " << request.depositor_key << "\n";
+    data.depositdata[address_pubkey]["encoded_request_identifier"] = encoded_request_identifier;
+    data.depositdata[address_pubkey]["deposit_request"] = request_hash;
+    data.depositdata[address_pubkey]["depositor_key"] = request.depositor_key;
 
     if (data.depositdata[request_hash]["is_mine"])
-        HandleMyDepositAddressParts(address, request, request_hash);
+        HandleMyDepositAddressParts(address_pubkey, request, request_hash);
 }
 
 Point DepositAddressRequestHandler::GetDepositAddressPubKey(DepositAddressRequest request, vector<uint160> part_hashes)
 {
-    Point address(request.curve, 0);
+    Point address_pubkey(request.curve, 0);
     for (auto part_msg_hash : part_hashes)
     {
         DepositAddressPartMessage part_msg = data.msgdata[part_msg_hash]["deposit_part"];
-        address += part_msg.PubKey();
+        address_pubkey += part_msg.PubKey();
     }
-    return address;
+    return address_pubkey;
 }
 
-void DepositAddressRequestHandler::HandleMyDepositAddressParts(Point address, DepositAddressRequest request,
+void DepositAddressRequestHandler::HandleMyDepositAddressParts(Point address_pubkey, DepositAddressRequest request,
                                                                uint160 request_hash)
 {
-    deposit_message_handler->AddAddress(address, request.currency_code);
-    RecordPubKeyForDespositAddress(address);
+    log_ << "received all parts for my deposit address: " << address_pubkey << "\n";
+    deposit_message_handler->AddAddress(address_pubkey, request.currency_code);
+    RecordPubKeyForDepositAddress(address_pubkey);
 
     Point offset_point = data.depositdata[request_hash]["offset_point"];
-    data.depositdata[address]["offset_point"] = offset_point;
-    uint160 secret_address_hash = KeyHash(address + offset_point);
+    data.depositdata[address_pubkey]["offset_point"] = offset_point;
+    uint160 secret_address_hash = KeyHash(address_pubkey + offset_point);
     if (request.currency_code == TCR)
         data.keydata[secret_address_hash]["watched"] = true;
 }
 
-void DepositAddressRequestHandler::RecordPubKeyForDespositAddress(Point address)
+void DepositAddressRequestHandler::RecordPubKeyForDepositAddress(Point address_pubkey)
 {
-    uint160 address_hash = Hash160(address.getvch());
-    data.depositdata[address_hash]["address"] = address;
-    data.depositdata[KeyHash(address)]["address"] = address;
-    data.depositdata[FullKeyHash(address)]["address"] = address;
-    data.keydata[address_hash]["pubkey"] = address;
-}
-
-void DepositAddressRequestHandler::HandleEncodedRequests(MinedCreditMessage& msg)
-{
-    uint160 credit_hash = msg.mined_credit.GetHash160();
-    log_ << "HandleEncodedRequests: " << credit_hash << "\n";
-    msg.hash_list.RecoverFullHashes(data.msgdata);
-
-    for (auto hash : msg.hash_list.full_hashes)
-    {
-        string_t type = data.msgdata[hash]["type"];
-
-        if (type == "deposit_request")
-        {
-            log_ << "handling encoded request: " << hash << " of type " << type << "\n";
-            HandleEncodedRequest(hash, credit_hash);
-        }
-    }
-}
-
-void DepositAddressRequestHandler::HandleEncodedRequest(uint160 request_hash, uint160 encoding_credit_hash)
-{
-    log_ << "HandleEncodedRequest: " << request_hash << " encoded in " << encoding_credit_hash << "\n";
-
-    if (data.depositdata[encoding_credit_hash]["from_history"] or data.depositdata[encoding_credit_hash]["from_datamessage"])
-        return;
-
-    SendDepositAddressPartMessages(request_hash, encoding_credit_hash);
-
-    ScheduleCheckForResponsesToRequest(request_hash, encoding_credit_hash);
-}
-
-void DepositAddressRequestHandler::SendDepositAddressPartMessages(uint160 request_hash, uint160 encoding_credit_hash)
-{
-    vector<uint64_t> relay_numbers = GetRelaysForAddressRequest(request_hash, encoding_credit_hash);
-
-    for (uint32_t position = 0; position < relay_numbers.size(); position++)
-    {
-        if (RequestShouldBeRespondedTo(request_hash, encoding_credit_hash, relay_numbers, position))
-            SendDepositAddressPartMessage(request_hash, encoding_credit_hash, position, relay_numbers);
-    }
-}
-
-bool DepositAddressRequestHandler::RequestShouldBeRespondedTo(uint160 request_hash,
-                                                              uint160 encoding_credit_hash,
-                                                              vector<uint64_t> relay_numbers,
-                                                              uint32_t position)
-{
-    if (RequestHasAlreadyBeenRespondedTo(request_hash, encoding_credit_hash, position))
-        return false;
-
-    uint64_t relay_number = relay_numbers[position];
-    auto relay = teleport_network_node->relay_message_handler->relay_state.GetRelayByNumber(relay_number);
-    return relay->PrivateKeyIsPresent(data);
-}
-
-bool DepositAddressRequestHandler::RequestHasAlreadyBeenRespondedTo(uint160 request_hash,
-                                                                    uint160 encoding_credit_hash,
-                                                                    uint32_t position)
-{
-    // todo
-    return false;
-}
-
-void DepositAddressRequestHandler::SendDepositAddressPartMessage(uint160 request_hash,
-                                                                 uint160 encoding_credit_hash,
-                                                                 uint32_t position,
-                                                                 vector<uint64_t> relay_numbers)
-{
-    uint64_t relay_number = relay_numbers[position];
-    auto relay = teleport_network_node->relay_message_handler->relay_state.GetRelayByNumber(relay_number);
-
-    DepositAddressPartMessage part_msg(request_hash, encoding_credit_hash, position, data, relay);
-    deposit_message_handler->Broadcast(part_msg);
-}
-
-void DepositAddressRequestHandler::ScheduleCheckForResponsesToRequest(uint160 request_hash, uint160 encoding_credit_hash)
-{
-    if (data.depositdata[request_hash]["scheduled"])
-        return;
-
-    scheduler.Schedule("request_timeout_check", request_hash, GetTimeMicros() + RESPONSE_WAIT_TIME);
-    data.depositdata[request_hash]["scheduled"] = true;
-}
-
-vector<uint64_t> DepositAddressRequestHandler::GetRelaysForAddressRequest(uint160 request_hash, uint160 encoding_credit_hash)
-{
-    log_ << "GetRelaysForAddressRequest: encoding_credit_hash is "
-         << encoding_credit_hash << " and request hash is " << request_hash << "\n";
-    if (encoding_credit_hash == 0)
-        encoding_credit_hash = data.depositdata[request_hash]["encoding_credit_hash"];
-    else
-        data.depositdata[request_hash]["encoding_credit_hash"] = encoding_credit_hash;
-    MinedCredit mined_credit = data.creditdata[encoding_credit_hash]["mined_credit"];
-    uint160 relay_chooser = mined_credit.GetHash160() ^ request_hash;
-    RelayState state = data.GetRelayState(mined_credit.network_state.relay_state_hash);
-    return state.ChooseRelaysForDepositAddressRequest(relay_chooser, SECRETS_PER_DEPOSIT);
-}
-
-vector<uint64_t> DepositAddressRequestHandler::GetRelaysForAddress(Point address)
-{
-    uint160 request_hash = data.depositdata[address]["deposit_request"];
-    uint160 encoding_credit_hash = data.depositdata[request_hash]["encoding_credit_hash"];
-    return GetRelaysForAddressRequest(request_hash, encoding_credit_hash);
+    uint160 address_pubkey_hash = Hash160(address_pubkey.getvch());
+    data.depositdata[address_pubkey_hash]["address_pubkey"] = address_pubkey;
+    data.depositdata[KeyHash(address_pubkey)]["address_pubkey"] = address_pubkey;
+    data.depositdata[FullKeyHash(address_pubkey)]["address_pubkey"] = address_pubkey;
+    data.keydata[address_pubkey_hash]["pubkey"] = address_pubkey;
 }
 
 void DepositAddressRequestHandler::HandlePostEncodedRequests(MinedCreditMessage& msg)
 {
-    uint160 credit_hash = msg.mined_credit.GetHash160();
-    log_ << "HandlePostEncodedRequests: " << credit_hash << "\n";
+    uint160 postencoding_message_hash = msg.GetHash160();
+    log_ << "HandlePostEncodedRequests: " << postencoding_message_hash << "\n";
 
     uint160 previous_hash = msg.mined_credit.network_state.previous_mined_credit_message_hash;
     MinedCreditMessage prev_msg = data.creditdata[previous_hash]["msg"];
@@ -256,75 +336,74 @@ void DepositAddressRequestHandler::HandlePostEncodedRequests(MinedCreditMessage&
         if (type == "deposit_request")
         {
             log_ << "post-encoded request: " << hash << "\n";
-            HandlePostEncodedRequest(hash, credit_hash);
+            HandlePostEncodedRequest(hash, postencoding_message_hash);
         }
     }
 }
 
-void DepositAddressRequestHandler::HandlePostEncodedRequest(uint160 request_hash, uint160 post_encoding_credit_hash)
+void DepositAddressRequestHandler::HandlePostEncodedRequest(uint160 request_hash, uint160 post_encoding_message_hash)
 {
     log_ << "HandlePostEncodedRequest: " << request_hash << "\n";
-    DepositAddressPartMessage part_msg;
-    vector<uint160> part_hashes = data.depositdata[request_hash]["parts"];
+    MinedCreditMessage post_encoding_message = data.GetMessage(post_encoding_message_hash);
+
+    uint160 encoding_message_hash = post_encoding_message.mined_credit.network_state.previous_mined_credit_message_hash;
+
+    RelayState relay_state = RelayStateFromEncodingMessage(encoding_message_hash);
+
+    uint160 encoded_request_identifier = request_hash + encoding_message_hash;
+    vector<uint160> part_hashes = data.depositdata[encoded_request_identifier]["parts"];
 
     for (auto part_msg_hash : part_hashes)
     {
-        part_msg = data.msgdata[part_msg_hash]["deposit_part"];
-        Point relay = part_msg.VerificationKey(data);
+        DepositAddressPartMessage part_message = data.GetMessage(part_msg_hash);
+        Relay *relay = relay_state.GetRelayByNumber(part_message.RelayNumber(data));
 
-        if (data.keydata[relay].HasProperty("privkey"))
+        if (relay->PrivateKeyIsPresent(data))
         {
-            log_ << "have key for " << relay << "; sending disclosure\n";
-            DepositAddressPartDisclosure disclosure(post_encoding_credit_hash, part_msg_hash, data);
+            log_ << "have key for " << relay->number << "; sending disclosure\n";
+            DepositAddressPartDisclosure disclosure(post_encoding_message_hash, part_msg_hash, data);
+            disclosure.Sign(data);
+            data.StoreMessage(disclosure);
             deposit_message_handler->Broadcast(disclosure);
+            deposit_message_handler->HandleDepositAddressPartDisclosure(disclosure);
             log_ << "sent disclosure\n";
         }
         scheduler.Schedule("disclosure_timeout_check", part_msg_hash, GetTimeMicros() + RESPONSE_WAIT_TIME);
     }
 }
 
-void DepositAddressRequestHandler::AddScheduledTasks()
+void DepositAddressRequestHandler::SendDepositAddressRequest(std::string currency_code)
 {
-    scheduler.AddTask(ScheduledTask("request_timeout_check", DoScheduledAddressRequestTimeoutCheck));
+    uint8_t curve;
+
+    if (currency_code == "TCR")
+        curve = 1;
+    else
+    {
+        Currency currency(currency_code, deposit_message_handler->config);
+        curve =  currency.crypto->curve;
+    }
+
+    vch_t code(currency_code.begin(), currency_code.end());
+    DepositAddressRequest request(curve, code, data);
+    request.Sign(data);
+    data.StoreMessage(request);
+    data.depositdata[request.GetHash160()]["is_mine"] = true;
+    deposit_message_handler->HandleDepositAddressRequest(request);
+    deposit_message_handler->Broadcast(request);
 }
 
-void DepositAddressRequestHandler::DoScheduledAddressRequestTimeoutCheck(uint160 request_hash)
+void DepositAddressRequestHandler::HandleDepositAddressPartComplaint(DepositAddressPartComplaint complaint)
 {
-    uint32_t parts_received = data.depositdata[request_hash]["parts_received"];
-    Point address = data.depositdata[request_hash]["address"];
 
-    uint160 encoding_message_hash = data.depositdata[request_hash]["encoding_message_hash"];
-    DoSuccessionForNonRespondingRelays(request_hash, encoding_message_hash);
-
-    if (not AllPartsHaveBeenReceived(address))
-        scheduler.Schedule("request_timeout_check", request_hash, GetTimeMicros() + RESPONSE_WAIT_TIME);
 }
 
-bool DepositAddressRequestHandler::AllPartsHaveBeenReceived(uint160 request_hash, uint160 encoding_message_hash)
+bool DepositAddressRequestHandler::ValidateDepositAddressPartComplaint(DepositAddressPartComplaint &complaint)
 {
-    for (uint32_t position = 0; position < SECRETS_PER_DEPOSIT; position++)
-        if (not PartHasBeenReceived(request_hash, encoding_message_hash, position))
-            return false;
-    return true;
+    return false;
 }
 
-bool DepositAddressRequestHandler::PartHasBeenReceived(uint160 request_hash, uint160 encoding_message_hash, uint32_t position)
+void DepositAddressRequestHandler::AcceptDepositAddressPartComplaint(DepositAddressPartComplaint &complaint)
 {
-    uint160 encoded_request_identifier = request_hash + encoding_message_hash;
-    uint32_t parts_received = data.depositdata[encoded_request_identifier]["parts_received"];
-    return (bool)(parts_received & (1 << position));
-}
 
-void DepositAddressRequestHandler::RecordReceiptOfPart(uint160 request_hash, uint160 encoding_message_hash, uint32_t position)
-{
-    uint160 encoded_request_identifier = request_hash + encoding_message_hash;
-    uint32_t parts_received = data.depositdata[encoded_request_identifier]["parts_received"];
-    parts_received |= (1 << position);
-    data.depositdata[encoded_request_identifier]["parts_received"] = parts_received;
 }
-
-void DepositAddressRequestHandler::DoSuccessionForNonRespondingRelays(uint160 request_hash, uint160 encoding_message_hash)
-{
-    // todo
-}
-

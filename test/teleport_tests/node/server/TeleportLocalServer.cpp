@@ -141,7 +141,7 @@ NetworkSpecificProofOfWork TeleportLocalServer::GetLatestProofOfWork()
 void TeleportLocalServer::SetNetworkNode(TeleportNetworkNode *teleport_network_node_)
 {
     teleport_network_node = teleport_network_node_;
-    teleport_network_node->config = &config;
+    teleport_network_node->SetConfig(&config);
 }
 
 uint64_t TeleportLocalServer::Balance()

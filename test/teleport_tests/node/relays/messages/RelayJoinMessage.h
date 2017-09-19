@@ -5,7 +5,7 @@
 
 #include <src/crypto/point.h>
 #include <src/crypto/signature.h>
-#include <test/teleport_tests/node/credit_handler/messages/MinedCreditMessage.h>
+#include <test/teleport_tests/node/credit/messages/MinedCreditMessage.h>
 #include <src/crypto/secp256k1point.h>
 #include "test/teleport_tests/teleport_data/MemoryDataStore.h"
 #include "test/teleport_tests/node/Data.h"

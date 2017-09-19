@@ -2,7 +2,7 @@
 #define TELEPORT_RELAYTIPHANDLER_H
 
 #include <test/teleport_tests/node/Data.h>
-#include <test/teleport_tests/node/credit_handler/messages/MinedCreditMessage.h>
+#include <test/teleport_tests/node/credit/messages/MinedCreditMessage.h>
 
 class RelayMessageHandler;
 

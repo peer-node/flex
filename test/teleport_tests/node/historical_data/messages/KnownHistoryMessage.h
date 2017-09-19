@@ -5,7 +5,7 @@
 
 #include <string>
 #include <src/crypto/uint256.h>
-#include <test/teleport_tests/node/data_handler/messages/KnownHistoryRequest.h>
+#include <test/teleport_tests/node/historical_data/messages/KnownHistoryRequest.h>
 #include "KnownHistoryDeclaration.h"
 
 class CreditSystem;

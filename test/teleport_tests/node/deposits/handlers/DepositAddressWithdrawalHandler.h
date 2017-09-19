@@ -2,12 +2,14 @@
 #define TELEPORT_DEPOSITADDRESSWITHDRAWALHANDLER_H
 
 
+#include <src/teleportnode/schedule.h>
 #include "test/teleport_tests/node/deposits/messages/WithdrawalRequestMessage.h"
 #include "test/teleport_tests/node/deposits/messages/WithdrawalMessage.h"
 #include "test/teleport_tests/node/deposits/messages/WithdrawalComplaint.h"
-#include <test/teleport_tests/node/TeleportNetworkNode.h>
+
 
 class DepositMessageHandler;
+class TeleportNetworkNode;
 
 class DepositAddressWithdrawalHandler
 {
@@ -16,6 +18,9 @@ public:
     TeleportNetworkNode *teleport_network_node{NULL};
     Scheduler scheduler;
     Data data;
+
+    explicit DepositAddressWithdrawalHandler(DepositMessageHandler *deposit_message_handler);
+
 
     void HandleWithdrawalRequestMessage(WithdrawalRequestMessage message);
     bool ValidateWithdrawalRequestMessage(WithdrawalRequestMessage &message);
@@ -28,6 +33,8 @@ public:
     void HandleWithdrawalComplaint(WithdrawalComplaint complaint);
     bool ValidateWithdrawalComplaint(WithdrawalComplaint &complaint);
     void AcceptWithdrawalComplaint(WithdrawalComplaint &complaint);
+
+    void SetNetworkNode(TeleportNetworkNode *node);
 };
 
 

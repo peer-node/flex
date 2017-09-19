@@ -2,9 +2,9 @@
 #ifndef TELEPORT_KNOWNHISTORYHANDLER_H
 #define TELEPORT_KNOWNHISTORYHANDLER_H
 
-#include <test/teleport_tests/node/data_handler/messages/DiurnFailureDetails.h>
+#include <test/teleport_tests/node/historical_data/messages/DiurnFailureDetails.h>
 #include "DataMessageHandler.h"
-#include "test/teleport_tests/node/data_handler/messages/DiurnFailureMessage.h"
+#include "test/teleport_tests/node/historical_data/messages/DiurnFailureMessage.h"
 
 #define DIURN_SCRUTINY_TIME 20000000
 

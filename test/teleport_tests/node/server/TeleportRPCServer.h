@@ -5,6 +5,7 @@
 #include <jsonrpccpp/server/connectors/httpserver.h>
 #include <jsonrpccpp/server/abstractserver.h>
 #include <src/crypto/uint256.h>
+#include <test/teleport_tests/node/Data.h>
 #include "HttpAuthServer.h"
 
 
@@ -19,6 +20,7 @@ public:
     std::string response{"a response"};
     TeleportLocalServer *teleport_local_server{NULL};
     std::vector<std::string> methods;
+    Data *data{NULL};
 
     TeleportRPCServer(jsonrpc::HttpAuthServer &server) :
             jsonrpc::AbstractServer<TeleportRPCServer>(server)
@@ -42,6 +44,9 @@ public:
         BindMethod("getbatch", &TeleportRPCServer::GetBatch);
         BindMethod("listunspent", &TeleportRPCServer::ListUnspent);
         BindMethod("gettransaction", &TeleportRPCServer::GetTransaction);
+
+        BindMethod("requestdepositaddress", &TeleportRPCServer::RequestDepositAddress);
+        BindMethod("listdepositaddresses", &TeleportRPCServer::ListDepositAddresses);
     }
 
     void SetTeleportLocalServer(TeleportLocalServer *teleport_local_server_);
@@ -86,6 +91,10 @@ public:
     void ListUnspent(const Json::Value &request, Json::Value &response);
 
     void GetTransaction(const Json::Value &request, Json::Value &response);
+
+    void RequestDepositAddress(const Json::Value &request, Json::Value &response);
+
+    void ListDepositAddresses(const Json::Value &request, Json::Value &response);
 };
 
 

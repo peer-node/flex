@@ -1,9 +1,11 @@
 #include <boost/program_options/detail/config_file.hpp>
-
 #include "test/teleport_tests/node/server/TeleportLocalServer.h"
 
 
 using namespace std;
+
+std::string tcr_string{"TCR"};
+std::vector<unsigned char> TCR{tcr_string.begin(), tcr_string.end()};
 
 
 void run_server(int argc, const char** argv)

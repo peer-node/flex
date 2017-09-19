@@ -2,13 +2,20 @@
 #include <jsonrpccpp/client.h>
 #include "TeleportRPCServer.h"
 #include "TeleportLocalServer.h"
-#include "test/teleport_tests/node/data_handler/handlers/TipHandler.h"
+#include "test/teleport_tests/node/historical_data/handlers/TipHandler.h"
 
 #include "log.h"
 #define LOG_CATEGORY "TeleportRPCServer.cpp"
 
 using namespace jsonrpc;
 using std::string;
+using std::vector;
+
+void TeleportRPCServer::SetTeleportLocalServer(TeleportLocalServer *teleport_local_server_)
+{
+    teleport_local_server = teleport_local_server_;
+    data = &teleport_local_server->teleport_network_node->data;
+}
 
 void TeleportRPCServer::BindMethod(const char* method_name, void (TeleportRPCServer::*method)(const Json::Value &,Json::Value &))
 {
@@ -59,11 +66,6 @@ void TeleportRPCServer::NewProof(const Json::Value &request, Json::Value &respon
 void TeleportRPCServer::Balance(const Json::Value &request, Json::Value &response)
 {
     response = FormatMoney((int64_t) teleport_local_server->Balance());
-}
-
-void TeleportRPCServer::SetTeleportLocalServer(TeleportLocalServer *teleport_local_server_)
-{
-    teleport_local_server = teleport_local_server_;
 }
 
 void TeleportRPCServer::StartMining(const Json::Value &request, Json::Value &response)
@@ -172,14 +174,14 @@ void TeleportRPCServer::GetCalendar(const Json::Value &request, Json::Value &res
 void TeleportRPCServer::GetMinedCredit(const Json::Value &request, Json::Value &response)
 {
     uint160 credit_hash(request[0].asString());
-    MinedCreditMessage msg = teleport_local_server->teleport_network_node->creditdata[credit_hash]["msg"];
+    MinedCreditMessage msg = data->creditdata[credit_hash]["msg"];
     response = GetJsonValue(msg.mined_credit);
 }
 
 void TeleportRPCServer::GetMinedCreditMessage(const Json::Value &request, Json::Value &response)
 {
     uint160 credit_hash(request[0].asString());
-    MinedCreditMessage msg = teleport_local_server->teleport_network_node->creditdata[credit_hash]["msg"];
+    MinedCreditMessage msg = data->creditdata[credit_hash]["msg"];
     response = GetJsonValue(msg);
 }
 
@@ -198,15 +200,35 @@ void TeleportRPCServer::GetTransaction(const Json::Value &request, Json::Value &
 {
     std::string tx_hash_string = request[0].asString();
     uint160 tx_hash(tx_hash_string);
-    SignedTransaction tx = teleport_local_server->teleport_network_node->msgdata[tx_hash]["tx"];
+    SignedTransaction tx = data->msgdata[tx_hash]["tx"];
     response = GetJsonValue(tx);
 }
 
 void TeleportRPCServer::GetBatch(const Json::Value &request, Json::Value &response)
 {
     uint160 credit_hash(request[0].asString());
-    MinedCreditMessage msg = teleport_local_server->teleport_network_node->creditdata[credit_hash]["msg"];
+    MinedCreditMessage msg = data->creditdata[credit_hash]["msg"];
     auto batch = teleport_local_server->teleport_network_node->credit_system->ReconstructBatch(msg);
     response = GetJsonValue(batch);
+}
+
+void TeleportRPCServer::ListDepositAddresses(const Json::Value &request, Json::Value &response)
+{
+    string currency_code = request[0].asString();
+    vector<Point> my_address_pubkeys = data->depositdata[currency_code]["addresses"];
+
+    Json::Value result;
+
+    for (auto pubkey : my_address_pubkeys)
+        result.append(pubkey.ToString());
+
+    response = result;
+}
+
+void TeleportRPCServer::RequestDepositAddress(const Json::Value &request, Json::Value &response)
+{
+    string currency_code = request[0].asString();
+    auto address_request_handler = teleport_local_server->teleport_network_node->deposit_message_handler->address_request_handler;
+    address_request_handler.SendDepositAddressRequest(currency_code);
 }
 

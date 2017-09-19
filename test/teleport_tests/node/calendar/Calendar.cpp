@@ -3,7 +3,7 @@
 #include <boost/range/adaptor/reversed.hpp>
 
 #include "log.h"
-#include "test/teleport_tests/node/data_handler/messages/CalendarFailureDetails.h"
+#include "test/teleport_tests/node/historical_data/messages/CalendarFailureDetails.h"
 
 #define LOG_CATEGORY "Calendar.cpp"
 

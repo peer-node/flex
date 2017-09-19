@@ -1,6 +1,7 @@
 #include <src/vector_tools.h>
 #include <src/credits/creditsign.h>
 #include <boost/range/adaptor/reversed.hpp>
+#include <test/teleport_tests/node/credit/messages/MinedCreditMessage.h>
 #include "RelayState.h"
 #include "test/teleport_tests/node/relays/messages/SuccessionCompletedAuditComplaint.h"
 
@@ -1044,4 +1045,10 @@ std::vector<uint64_t> RelayState::ChooseRelaysForDepositAddressRequest(uint160 r
         relay_numbers.push_back(relay.number);
     }
     return relay_numbers;
+}
+
+std::vector<uint64_t>
+RelayState::ChooseAuditorsForDepositAddressPart(uint160 relay_chooser, uint32_t number_of_auditors)
+{
+    return ChooseRelaysForDepositAddressRequest(relay_chooser, number_of_auditors);
 }

@@ -18,46 +18,45 @@ public:
     DepositTransferMessage() { }
 
     DepositTransferMessage(uint160 deposit_address_hash,
-                           uint160 recipient_key_hash):
+                           uint160 recipient_key_hash, Data data):
             recipient_key_hash(recipient_key_hash)
     {
-        deposit_address = depositdata[deposit_address_hash]["address"];
+        deposit_address = data.depositdata[deposit_address_hash]["address"];
 
-        previous_transfer_hash = depositdata[deposit_address]["latest_transfer"];
+        previous_transfer_hash = data.depositdata[deposit_address]["latest_transfer"];
         if (previous_transfer_hash == 0)
         {
-            sender_key = GetDepositRequest().depositor_key;
+            sender_key = GetDepositRequest(data).depositor_key;
         }
         else
         {
-            uint160 sender_key_hash = GetPreviousTransfer().recipient_key_hash;
-            sender_key = keydata[sender_key_hash]["pubkey"];
+            uint160 sender_key_hash = GetPreviousTransfer(data).recipient_key_hash;
+            sender_key = data.keydata[sender_key_hash]["pubkey"];
         }
         log_ << "DepositTransferMessage: recipient_key_hash is "
              << recipient_key_hash << "\n";
     }
 
     // We need the recipient pubkey to send a secret deposit
-    DepositTransferMessage(uint160 deposit_address_hash,
-                           Point recipient_key):
+    DepositTransferMessage(uint160 deposit_address_hash, Point recipient_key, Data data):
             recipient_key_hash(KeyHash(recipient_key))
     {
-        deposit_address = depositdata[deposit_address_hash]["address"];
-        Point offset_point = depositdata[deposit_address]["offset_point"];
-        CBigNum offset = keydata[offset_point]["privkey"];
+        deposit_address = data.depositdata[deposit_address_hash]["address"];
+        Point offset_point = data.depositdata[deposit_address]["offset_point"];
+        CBigNum offset = data.keydata[offset_point]["privkey"];
 
-        previous_transfer_hash = depositdata[deposit_address]["latest_transfer"];
+        previous_transfer_hash = data.depositdata[deposit_address]["latest_transfer"];
         if (previous_transfer_hash == 0)
         {
-            sender_key = GetDepositRequest().depositor_key;
+            sender_key = GetDepositRequest(data).depositor_key;
         }
         else
         {
-            uint160 sender_key_hash = GetPreviousTransfer().recipient_key_hash;
-            sender_key = keydata[sender_key_hash]["pubkey"];
+            uint160 sender_key_hash = GetPreviousTransfer(data).recipient_key_hash;
+            sender_key = data.keydata[sender_key_hash]["pubkey"];
         }
 
-        CBigNum sender_privkey = keydata[sender_key]["privkey"];
+        CBigNum sender_privkey = data.keydata[sender_key]["privkey"];
         CBigNum shared_secret = Hash(sender_privkey * recipient_key);
         offset_xor_shared_secret = offset ^ shared_secret;
 

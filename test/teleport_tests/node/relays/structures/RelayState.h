@@ -245,6 +245,8 @@ public:
     void RemoveKeyDistributionTask(Relay *relay, KeyDistributionMessage &key_distribution_message);
 
     std::vector<uint64_t> ChooseRelaysForDepositAddressRequest(uint160 relay_chooser, uint64_t number_of_relays);
+
+    std::vector<uint64_t> ChooseAuditorsForDepositAddressPart(uint160 relay_chooser, uint32_t number_of_auditors);
 };
 
 class RelayStateException : public std::runtime_error

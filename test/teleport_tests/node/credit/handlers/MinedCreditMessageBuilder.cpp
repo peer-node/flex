@@ -150,7 +150,7 @@ MinedCreditMessage MinedCreditMessageBuilder::GenerateMinedCreditMessageWithoutP
     else
         msg.mined_credit.network_state.network_id = config.Uint64("network_id");
 
-    vector<string> message_types_to_include{"tx", "relay_join"};
+    vector<string> message_types_to_include{"tx", "relay_join", "deposit_request"};
 
     log_ << "accepted messages are " << accepted_messages << "\n";
     for (auto hash : accepted_messages)
@@ -172,7 +172,7 @@ void MinedCreditMessageBuilder::SetRelayStateHashFromPreviousStateHashAndEnclose
 {
     uint160 previous_msg_hash = msg.mined_credit.network_state.previous_mined_credit_message_hash;
     MinedCreditMessage previous_msg = credit_system->msgdata[previous_msg_hash]["msg"];
-    Data data(msgdata, creditdata, keydata);
+    Data data(msgdata, creditdata, keydata, depositdata);
     RelayMessageHandler handler(data);
     handler.mode = BLOCK_VALIDATION;
     handler.relay_state = data.GetRelayState(previous_msg.mined_credit.network_state.relay_state_hash);

@@ -103,12 +103,12 @@ public:
 
     Point VerificationKey(Data data)
     {
-        Point address = GetDepositAddress(data);
-        std::vector<Point> relays = GetRelaysForAddress(address);
-
-        if (position >= relays.size())
-            return Point(SECP256K1, 0);
-        return relays[position];
+//        Point address = GetDepositAddress(data);
+//        std::vector<Point> relays = GetRelaysForAddress(address);
+//
+//        if (position >= relays.size())
+        return Point(SECP256K1, 0);
+//        return relays[position];
     }
 
     IMPLEMENT_HASH_SIGN_VERIFY();

@@ -3,7 +3,7 @@
 
 
 #include "crypto/uint256.h"
-#include "test/teleport_tests/node/credit_handler/messages/MinedCreditMessage.h"
+#include "test/teleport_tests/node/credit/messages/MinedCreditMessage.h"
 
 #include "log.h"
 #define LOG_CATEGORY "EnclosedMessageData.h"

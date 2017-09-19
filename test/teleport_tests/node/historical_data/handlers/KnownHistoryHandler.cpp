@@ -1,6 +1,6 @@
-#include <test/teleport_tests/node/data_handler/messages/DiurnDataRequest.h>
-#include <test/teleport_tests/node/data_handler/handlers/CalendarHandler.h>
-#include <test/teleport_tests/node/credit_handler/handlers/CreditMessageHandler.h>
+#include <test/teleport_tests/node/historical_data/messages/DiurnDataRequest.h>
+#include <test/teleport_tests/node/historical_data/handlers/CalendarHandler.h>
+#include <test/teleport_tests/node/credit/handlers/CreditMessageHandler.h>
 #include <test/teleport_tests/node/TeleportNetworkNode.h>
 #include "KnownHistoryHandler.h"
 
@@ -205,8 +205,8 @@ bool KnownHistoryHandler::ValidateDataInDiurnDataMessage(DiurnDataMessage diurn_
 
 bool KnownHistoryHandler::ValidateDataInDiurn(Diurn &diurn, CreditSystem *credit_system_, BitChain &initial_spent_chain)
 {
-    MemoryDataStore keydata_;
-    Data data_(credit_system_->msgdata, credit_system_->creditdata, keydata_);
+    MemoryDataStore keydata_, depositdata_;
+    Data data_(credit_system_->msgdata, credit_system_->creditdata, keydata_, depositdata_);
     CreditMessageHandler credit_message_handler(data_);
     credit_message_handler.SetCreditSystem(credit_system_);
     credit_message_handler.do_spot_checks = false;

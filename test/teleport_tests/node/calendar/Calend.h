@@ -2,8 +2,8 @@
 #define TELEPORT_CALEND_H
 
 
-#include "test/teleport_tests/node/credit_handler/messages/MinedCreditMessage.h"
-#include "test/teleport_tests/node/data_handler/messages/DiurnMessageData.h"
+#include "test/teleport_tests/node/credit/messages/MinedCreditMessage.h"
+#include "test/teleport_tests/node/historical_data/messages/DiurnMessageData.h"
 
 class CreditSystem;
 

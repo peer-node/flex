@@ -43,7 +43,7 @@ public:
         READWRITE(replaced_message);
         READWRITE(reason_for_replacement);
         READWRITE(signature);
-    )
+    );
 
     JSON(dead_relay_number, quarter_holder_number, successor_number,
          position_of_quarter_holder, sextets_of_encrypted_shared_secret_quarters,

@@ -1,5 +1,15 @@
-
 #include "DepositAddressWithdrawalHandler.h"
+#include "test/teleport_tests/node/TeleportNetworkNode.h"
+
+DepositAddressWithdrawalHandler::DepositAddressWithdrawalHandler(DepositMessageHandler *deposit_message_handler):
+        deposit_message_handler(deposit_message_handler), data(deposit_message_handler->data)
+{
+}
+
+void DepositAddressWithdrawalHandler::SetNetworkNode(TeleportNetworkNode *node)
+{
+    teleport_network_node = node;
+}
 
 void DepositAddressWithdrawalHandler::HandleWithdrawalRequestMessage(WithdrawalRequestMessage message)
 {

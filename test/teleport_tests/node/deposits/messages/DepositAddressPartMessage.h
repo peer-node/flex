@@ -9,7 +9,7 @@
 #include "DepositAddressRequest.h"
 #include "AddressPartSecret.h"
 
-#define SECRETS_PER_DEPOSIT 10
+#define PARTS_PER_DEPOSIT_ADDRESS 10
 
 class DepositAddressPartMessage
 {
@@ -17,7 +17,7 @@ public:
     uint160 address_request_hash{0};
     uint160 relay_list_hash{0};
     uint32_t position{0};
-    uint160 encoding_credit_hash{0};
+    uint160 encoding_message_hash{0};
     uint160 relay_chooser{0};
     AddressPartSecret address_part_secret;
     Signature signature;
@@ -25,15 +25,15 @@ public:
     DepositAddressPartMessage() = default;
 
     DepositAddressPartMessage(uint160 address_request_hash,
-                              uint160 encoding_credit_hash,
+                              uint160 encoding_message_hash,
                               uint32_t position,
                               Data data,
                               Relay *relay):
-            encoding_credit_hash(encoding_credit_hash),
+            encoding_message_hash(encoding_message_hash),
             address_request_hash(address_request_hash),
             position(position),
-            relay_chooser((encoding_credit_hash * (1 + position)) xor address_request_hash),
-            address_part_secret(GetRequest(data).curve, encoding_credit_hash, relay_chooser, data, relay)
+            relay_chooser((encoding_message_hash * (1 + position)) xor address_request_hash),
+            address_part_secret(GetRequest(data).curve, encoding_message_hash, relay_chooser, data, relay)
     { }
 
     static string_t Type() { return string_t("deposit_part"); }
@@ -43,13 +43,24 @@ public:
             READWRITE(address_request_hash);
             READWRITE(relay_list_hash);
             READWRITE(position);
-            READWRITE(encoding_credit_hash);
+            READWRITE(encoding_message_hash);
             READWRITE(relay_chooser);
             READWRITE(address_part_secret);
             READWRITE(signature);
     );
 
     DEPENDENCIES(address_request_hash);
+    
+    bool ValidateEnclosedData()
+    {
+        return position < PARTS_PER_DEPOSIT_ADDRESS and
+                relay_chooser == ((encoding_message_hash * (1 + position)) xor address_request_hash);
+    }
+
+    uint160 EncodedRequestIdentifier()
+    {
+        return address_request_hash + encoding_message_hash;
+    }
 
     Point PubKey()
     {
@@ -78,7 +89,7 @@ public:
 
     MinedCreditMessage MinedCreditMessageInWhichRequestWasEncoded(Data data)
     {
-        return data.GetMessage(encoding_credit_hash);
+        return data.GetMessage(encoding_message_hash);
     }
 
     RelayState RelayStateFromWhichRelaysAreChosen(Data data)
@@ -90,21 +101,21 @@ public:
     std::vector<uint64_t> RelaysForAddressRequest(Data data)
     {
         auto relay_state = RelayStateFromWhichRelaysAreChosen(data);
-        return relay_state.ChooseRelaysForDepositAddressRequest(relay_chooser, SECRETS_PER_DEPOSIT);
+        return relay_state.ChooseRelaysForDepositAddressRequest(relay_chooser, PARTS_PER_DEPOSIT_ADDRESS);
     }
 
-    Relay *Sender(Data data)
+    uint64_t RelayNumber(Data data)
     {
         std::vector<uint64_t> relay_numbers = RelaysForAddressRequest(data);
-        auto relay_state = RelayStateFromWhichRelaysAreChosen(data);
-        if (position >= relay_numbers.size())
-            return NULL;
-        return relay_state.GetRelayByNumber(relay_numbers[position]);
+        if (position > relay_numbers.size())
+            return 0;
+        return relay_numbers[position];
     }
 
     Point VerificationKey(Data data)
     {
-        auto relay = Sender(data);
+        auto relay_state = RelayStateFromWhichRelaysAreChosen(data);
+        auto relay = relay_state.GetRelayByNumber(RelayNumber(data));
         if (relay == NULL)
             return Point(SECP256K1, 0);
         return relay->public_signing_key;

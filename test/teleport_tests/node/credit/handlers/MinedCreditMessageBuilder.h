@@ -14,7 +14,7 @@ class MinedCreditMessageBuilder
 public:
     TeleportConfig config;
     Data data;
-    MemoryDataStore &msgdata, &creditdata, &keydata;
+    MemoryDataStore &msgdata, &creditdata, &keydata, &depositdata;
     CreditSystem *credit_system;
     Calendar *calendar;
     BitChain *spent_chain;
@@ -22,7 +22,7 @@ public:
     std::vector<uint160> accepted_messages;
 
     MinedCreditMessageBuilder(Data data_):
-            data(data_), msgdata(data.msgdata), creditdata(data.creditdata), keydata(data.keydata)
+            data(data_), msgdata(data.msgdata), creditdata(data.creditdata), keydata(data.keydata), depositdata(depositdata)
     { }
 
     void SetConfig(TeleportConfig& config_);

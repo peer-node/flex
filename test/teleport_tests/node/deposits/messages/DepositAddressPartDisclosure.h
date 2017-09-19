@@ -10,7 +10,7 @@
 class DepositAddressPartDisclosure
 {
 public:
-    uint160 address_part_message_hash;
+    uint160 address_part_message_hash{0};
     AddressPartSecretDisclosure disclosure;
     Signature signature;
 
@@ -31,14 +31,39 @@ public:
 
     DEPENDENCIES(address_part_message_hash);
 
-    std::vector<Point> Relays()
+    std::array<std::array<uint64_t, SECRETS_PER_ADDRESS_PART>, AUDITORS_PER_SECRET> Auditors()
     {
-        return disclosure.Relays();
+        return disclosure.auditor_numbers;
+    }
+
+    uint32_t Position(Data data)
+    {
+        return GetPartMessage(data).position;
     }
 
     DepositAddressPartMessage GetPartMessage(Data data)
     {
         return data.GetMessage(address_part_message_hash);
+    }
+
+    uint160 GetEncodedRequestIdentifier(Data data)
+    {
+        auto part_message = GetPartMessage(data);
+        return part_message.EncodedRequestIdentifier();
+    }
+
+    bool CheckDisclosedSecretsAreCorrect(std::vector<uint32_t> &positions_of_bad_secrets, Data data)
+    {
+        DepositAddressPartMessage part_message = data.GetMessage(address_part_message_hash);
+        // todo
+        return true;
+    }
+
+    bool CheckSecretsFromAddressPartMessageAreCorrect(std::vector<uint32_t> &positions_of_bad_secrets, Data data)
+    {
+        DepositAddressPartMessage part_message = data.GetMessage(address_part_message_hash);
+        // todo
+        return true;
     }
 
     IMPLEMENT_SERIALIZE

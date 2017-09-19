@@ -21,6 +21,10 @@ void DepositMessageHandler::SetMinedCreditMessageBuilder(MinedCreditMessageBuild
 void DepositMessageHandler::SetNetworkNode(TeleportNetworkNode *teleport_network_node_)
 {
     teleport_network_node = teleport_network_node_;
+    address_request_handler.SetNetworkNode(teleport_network_node);
+    address_disclosure_handler.SetNetworkNode(teleport_network_node);
+    address_transfer_handler.SetNetworkNode(teleport_network_node);
+    address_withdrawal_handler.SetNetworkNode(teleport_network_node);
 }
 
 void DepositMessageHandler::SetConfig(TeleportConfig& config_)
@@ -59,7 +63,7 @@ void DepositMessageHandler::HandleDepositAddressPartComplaint(DepositAddressPart
     address_request_handler.HandleDepositAddressPartComplaint(complaint);
 }
 
-void DepositMessageHandler::AddBatchToTip(MinedCreditMessage& msg)
+void DepositMessageHandler::HandleNewTip(MinedCreditMessage &msg)
 {
     address_request_handler.HandleEncodedRequests(msg);
     address_request_handler.HandlePostEncodedRequests(msg);
@@ -149,7 +153,7 @@ void DepositMessageHandler::AddAndRemoveMyAddresses(uint160 transfer_hash)
     Point sender_key = transfer.VerificationKey(data);
     log_ << "sender_key is " << sender_key << "\n";
 
-    if (keydata[sender_key].HasProperty("privkey"))
+    if (data.keydata[sender_key].HasProperty("privkey"))
     {
         log_ << "Sent by me - removing\n";
         RemoveAddress(address, currency);
@@ -157,9 +161,9 @@ void DepositMessageHandler::AddAndRemoveMyAddresses(uint160 transfer_hash)
 
     log_ << "recipient_key_hash is " << transfer.recipient_key_hash << "\n";
 
-    log_ << "have pubkey: " << keydata[transfer.recipient_key_hash].HasProperty("pubkey") << "\n";
+    log_ << "have pubkey: " << data.keydata[transfer.recipient_key_hash].HasProperty("pubkey") << "\n";
 
-    if (keydata[transfer.recipient_key_hash].HasProperty("pubkey"))
+    if (data.keydata[transfer.recipient_key_hash].HasProperty("pubkey"))
     {
         AddAddress(address, currency);
         uint160 address_hash = KeyHash(address);
@@ -167,26 +171,25 @@ void DepositMessageHandler::AddAndRemoveMyAddresses(uint160 transfer_hash)
     }
 }
 
-std::vector<uint64_t> DepositMessageHandler::GetRelaysForAddressRequest(uint160 request_hash, uint160 encoding_credit_hash)
+std::vector<uint64_t> DepositMessageHandler::GetRelaysForAddressRequest(uint160 request_hash, uint160 encoding_message_hash)
 {
-    log_ << "GetRelaysForAddressRequest: encoding_credit_hash is "
-         << encoding_credit_hash << " and request hash is " << request_hash << "\n";
-    if (encoding_credit_hash == 0)
-        encoding_credit_hash = data.depositdata[request_hash]["encoding_credit_hash"];
+    log_ << "GetRelaysForAddressRequest: encoding_message_hash is "
+         << encoding_message_hash << " and request hash is " << request_hash << "\n";
+    if (encoding_message_hash == 0)
+        encoding_message_hash = data.depositdata[request_hash]["encoding_message_hash"];
     else
-        data.depositdata[request_hash]["encoding_credit_hash"] = encoding_credit_hash;
-    MinedCredit mined_credit = creditdata[encoding_credit_hash]["mined_credit"];
-    log_ << "GetRelaysForAddressRequest: encoding mined is " << mined_credit;
-    uint160 relay_chooser = mined_credit.GetHash160() ^ request_hash;
-    RelayState state = data.GetRelayState(mined_credit.network_state.relay_state_hash);
-    log_ << "Relay state retrieved is: " << state;
-    return state.ChooseRelaysForDepositAddressRequest(relay_chooser, SECRETS_PER_DEPOSIT);
+        data.depositdata[request_hash]["encoding_message_hash"] = encoding_message_hash;
+    MinedCreditMessage msg = data.creditdata[encoding_message_hash]["mined_credit"];
+    uint160 relay_chooser = encoding_message_hash ^ request_hash;
+    RelayState state = data.GetRelayState(msg.mined_credit.network_state.relay_state_hash);
+    log_ << "Relay state retrieved is: " << state.GetHash160() << "\n";
+    return state.ChooseRelaysForDepositAddressRequest(relay_chooser, PARTS_PER_DEPOSIT_ADDRESS);
 }
 
 std::vector<uint64_t> DepositMessageHandler::GetRelaysForAddress(Point address)
 {
     uint160 request_hash = data.depositdata[address]["deposit_request"];
     uint160 encoding_credit_hash;
-    encoding_credit_hash = data.depositdata[request_hash]["encoding_credit_hash"];
+    encoding_credit_hash = data.depositdata[request_hash]["encoding_message_hash"];
     return GetRelaysForAddressRequest(request_hash, encoding_credit_hash);
 }

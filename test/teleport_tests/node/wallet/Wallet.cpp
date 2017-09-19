@@ -5,7 +5,7 @@
 #include <src/credits/SignedTransaction.h>
 #include <src/credits/creditsign.h>
 #include "Wallet.h"
-#include "test/teleport_tests/node/credit_handler/messages/MinedCreditMessage.h"
+#include "test/teleport_tests/node/credit/messages/MinedCreditMessage.h"
 #include "test/teleport_tests/node/credit/structures/CreditSystem.h"
 
 std::vector<CreditInBatch> Wallet::GetCredits()

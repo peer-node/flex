@@ -16,7 +16,7 @@ public:
     TransferAcknowledgement(uint160 transfer_hash, Data data):
             transfer_hash(transfer_hash)
     {
-        Point deposit_address = GetTransfer().deposit_address;
+        Point deposit_address = GetTransfer(data).deposit_address;
         std::vector<std::pair<uint160, uint160> > d = data.depositdata[deposit_address]["disqualifications"];
         disqualifications = d;
     }
@@ -46,7 +46,7 @@ public:
 
     bool CheckDisqualifications(Data data)
     {
-        std::vector<Point> relays = Relays();
+        std::vector<Point> relays = Relays(data);
         for (uint32_t i = 0; i < disqualifications.size(); i++)
         {
             uint160 ack_hash1 = disqualifications[i].first;
@@ -78,7 +78,8 @@ public:
 
     std::vector<Point> Relays(Data data)
     {
-        return GetRelaysForAddress(GetDepositAddress(data));
+        //return GetRelaysForAddress(GetDepositAddress(data));
+        return std::vector<Point>{};
     }
 
     Point GetDepositAddress(Data data)
@@ -102,7 +103,7 @@ public:
     Point VerificationKey(Data data)
     {
         auto num_disqualified_relays = disqualifications.size();
-        std::vector<Point> relays = Relays();
+        std::vector<Point> relays = Relays(data);
         log_ << "VerificationKey: relays are " << relays << "\n";
         Point key = relays[num_disqualified_relays];
         log_ << "VerificationKey is " << key << "\n";

@@ -7,10 +7,10 @@
 #include <test/teleport_tests/mined_credits/MinedCredit.h>
 #include <src/credits/SignedTransaction.h>
 #include <src/credits/CreditBatch.h>
-#include <test/teleport_tests/node/data_handler/messages/DiurnFailureMessage.h>
+#include <test/teleport_tests/node/historical_data/messages/DiurnFailureMessage.h>
 #include "test/teleport_tests/node/credit/messages/MinedCreditMessage.h"
 #include "test/teleport_tests/node/calendar/Calend.h"
-#include "test/teleport_tests/node/data_handler/messages/CalendarFailureMessage.h"
+#include "test/teleport_tests/node/historical_data/messages/CalendarFailureMessage.h"
 #include "test/teleport_tests/node/calendar/Calendar.h"
 
 
