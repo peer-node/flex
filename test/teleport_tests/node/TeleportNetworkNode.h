@@ -136,6 +136,12 @@ public:
     void AttachCommunicatorNetworkToHandlers();
 
     void RecordReceiptOfMessage(std::string channel, CDataStream stream);
+
+    std::string GetTeleportAddressFromPublicKey(Point public_key);
+
+    Point GetPublicKeyFromTeleportAddress(std::string address);
+
+    std::string GetCryptoCurrencyAddressFromPublicKey(std::string currency_code, Point public_key);
 };
 
 

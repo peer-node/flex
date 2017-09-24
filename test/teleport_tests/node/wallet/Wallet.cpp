@@ -204,6 +204,12 @@ void Wallet::SwitchAcrossFork(uint160 old_tip, uint160 new_tip, CreditSystem *cr
         AddBatchToTip(msg, credit_system);
 }
 
+void Wallet::ImportPrivateKey(const CBigNum private_key)
+{
+    log_ << "Importing private key " << private_key << "\n";
+    // todo
+}
+
 uint160 GetKeyHashFromAddress(std::string address_string)
 {
     CBitcoinAddress address(address_string);
@@ -213,6 +219,7 @@ uint160 GetKeyHashFromAddress(std::string address_string)
     uint160 hash(hash_bytes);
     return hash;
 }
+
 std::string GetAddressFromPublicKey(Point public_key)
 {
     CKeyID keyID(KeyHash(public_key));

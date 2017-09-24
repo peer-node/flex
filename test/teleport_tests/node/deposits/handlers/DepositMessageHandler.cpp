@@ -106,7 +106,7 @@ void DepositMessageHandler::HandleWithdrawalComplaint(WithdrawalComplaint compla
 
 uint64_t DepositMessageHandler::GetRespondingRelay(Point deposit_address)
 {
-    vector<uint64_t> relay_numbers = GetRelaysForAddress(deposit_address);
+    vector<uint64_t> relay_numbers = GetRelaysForAddressPubkey(deposit_address);
 
     vector<pair<uint160, uint160> > disqualifications = data.depositdata[deposit_address]["disqualifications"];
 
@@ -118,12 +118,12 @@ uint64_t DepositMessageHandler::GetRespondingRelay(Point deposit_address)
 
 void DepositMessageHandler::AddAddress(Point address, vch_t currency)
 {
-    vector<Point> my_addresses = data.depositdata[currency]["addresses"];
+    vector<Point> my_addresses = data.depositdata[currency]["my_address_public_keys"];
 
     if (not VectorContainsEntry(my_addresses, address))
         my_addresses.push_back(address);
 
-    data.depositdata[currency]["addresses"] = my_addresses;
+    data.depositdata[currency]["my_address_public_keys"] = my_addresses;
 
     if (currency == TCR)
         data.keydata[KeyHash(address)]["watched"] = true;
@@ -131,12 +131,12 @@ void DepositMessageHandler::AddAddress(Point address, vch_t currency)
 
 void DepositMessageHandler::RemoveAddress(Point address, vch_t currency)
 {
-    vector<Point> my_addresses = data.depositdata[currency]["addresses"];
+    vector<Point> my_addresses = data.depositdata[currency]["my_address_public_keys"];
 
     if (VectorContainsEntry(my_addresses, address))
         EraseEntryFromVector(address, my_addresses);
 
-    data.depositdata[currency]["addresses"] = my_addresses;
+    data.depositdata[currency]["my_address_public_keys"] = my_addresses;
 }
 
 void DepositMessageHandler::AddAndRemoveMyAddresses(uint160 transfer_hash)
@@ -171,25 +171,48 @@ void DepositMessageHandler::AddAndRemoveMyAddresses(uint160 transfer_hash)
     }
 }
 
+RelayState DepositMessageHandler::GetRelayStateOfEncodingMessage(Point address_pubkey)
+{
+    uint160 request_hash = data.depositdata[address_pubkey]["deposit_request"];
+    uint160 encoded_request_identifier = data.depositdata[address_pubkey]["encoded_request_identifier"];
+    uint160 encoding_message_hash = data.depositdata[encoded_request_identifier]["encoding_message_hash"];
+    MinedCreditMessage msg = data.GetMessage(encoding_message_hash);
+    return data.GetRelayState(msg.mined_credit.network_state.relay_state_hash);
+}
+
 std::vector<uint64_t> DepositMessageHandler::GetRelaysForAddressRequest(uint160 request_hash, uint160 encoding_message_hash)
 {
     log_ << "GetRelaysForAddressRequest: encoding_message_hash is "
          << encoding_message_hash << " and request hash is " << request_hash << "\n";
-    if (encoding_message_hash == 0)
-        encoding_message_hash = data.depositdata[request_hash]["encoding_message_hash"];
-    else
-        data.depositdata[request_hash]["encoding_message_hash"] = encoding_message_hash;
-    MinedCreditMessage msg = data.creditdata[encoding_message_hash]["mined_credit"];
+    MinedCreditMessage msg = data.GetMessage(encoding_message_hash);
     uint160 relay_chooser = encoding_message_hash ^ request_hash;
     RelayState state = data.GetRelayState(msg.mined_credit.network_state.relay_state_hash);
     log_ << "Relay state retrieved is: " << state.GetHash160() << "\n";
     return state.ChooseRelaysForDepositAddressRequest(relay_chooser, PARTS_PER_DEPOSIT_ADDRESS);
 }
 
-std::vector<uint64_t> DepositMessageHandler::GetRelaysForAddress(Point address)
+std::vector<uint64_t> DepositMessageHandler::GetRelaysForAddressPubkey(Point address_pubkey)
 {
-    uint160 request_hash = data.depositdata[address]["deposit_request"];
-    uint160 encoding_credit_hash;
-    encoding_credit_hash = data.depositdata[request_hash]["encoding_message_hash"];
+    uint160 request_hash = data.depositdata[address_pubkey]["deposit_request"];
+    uint160 encoded_request_identifier = data.depositdata[address_pubkey]["encoded_request_identifier"];
+    uint160 encoding_credit_hash = data.depositdata[encoded_request_identifier]["encoding_message_hash"];
     return GetRelaysForAddressRequest(request_hash, encoding_credit_hash);
+}
+
+std::vector<Point> DepositMessageHandler::MyDepositAddressPublicKeys(std::string currency_code)
+{
+    return data.depositdata[currency_code]["my_address_public_keys"];
+}
+
+std::vector<Point> DepositMessageHandler::MyDepositAddressPoints(std::string currency_code)
+{
+    std::vector<Point> deposit_address_points;
+    auto public_keys = MyDepositAddressPublicKeys(currency_code);
+
+    for (auto public_key : public_keys)
+    {
+        Point offset = data.depositdata[public_key]["offset_point"];
+        deposit_address_points.push_back(public_key + offset);
+    }
+    return deposit_address_points;
 }

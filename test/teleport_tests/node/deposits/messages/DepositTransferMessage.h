@@ -12,6 +12,7 @@ public:
     uint160 previous_transfer_hash;
     Point sender_key;
     uint160 recipient_key_hash;
+    Point recipient_key;
     CBigNum offset_xor_shared_secret;
     Signature signature;
 

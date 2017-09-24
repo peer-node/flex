@@ -76,10 +76,8 @@ Point TeleportNetworkNode::GetNewPublicKey()
 
 uint160 TeleportNetworkNode::SendToAddress(std::string address, int64_t amount)
 {
-    uint160 key_hash = GetKeyHashFromAddress(address);
-    SignedTransaction tx = wallet->GetSignedTransaction(key_hash, (uint64_t) amount);
-    credit_message_handler->HandleSignedTransaction(tx);
-    return tx.GetHash160();
+    Point teleport_address_pubkey = GetPublicKeyFromTeleportAddress(address);
+    return SendCreditsToPublicKey(teleport_address_pubkey, (uint64_t)amount);
 }
 
 void TeleportNetworkNode::SwitchToNewCalendarAndSpentChain(Calendar new_calendar, BitChain new_spent_chain)
@@ -142,4 +140,36 @@ void TeleportNetworkNode::StopCommunicator()
 uint64_t TeleportNetworkNode::LatestBatchNumber()
 {
     return Tip().mined_credit.network_state.batch_number;
+}
+
+std::string TeleportNetworkNode::GetCryptoCurrencyAddressFromPublicKey(std::string currency_code, Point public_key)
+{
+    if (currency_code == "TCR")
+        return GetTeleportAddressFromPublicKey(public_key);
+
+    //todo
+    return "Not implemented";
+}
+
+std::string TeleportNetworkNode::GetTeleportAddressFromPublicKey(Point public_key)
+{
+    uint8_t prefix{179}; // Teleport addresses start with T
+    vch_t bytes = public_key.getvch();
+    bytes[0] = prefix; // overwrites byte which specifies curve (SECP256K1)
+    auto address_52chars = EncodeBase58Check(bytes);
+
+    // second letter is always a U, so remove it
+    return "T" + std::string(address_52chars.begin() + 2, address_52chars.end());
+}
+
+Point TeleportNetworkNode::GetPublicKeyFromTeleportAddress(std::string address)
+{
+    address = "TU" + std::string(address.begin() + 1, address.end());
+    vch_t bytes;
+    if (not DecodeBase58Check(address, bytes))
+        return Point(SECP256K1, 0);
+    Point public_key(SECP256K1, 0);
+    bytes[0] = SECP256K1;
+    public_key.setvch(bytes);
+    return public_key;
 }

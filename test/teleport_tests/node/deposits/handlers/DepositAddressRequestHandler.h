@@ -51,7 +51,7 @@ public:
 
     std::vector<uint64_t> GetRelaysForAddressRequest(uint160 request_hash, uint160 encoding_credit_hash);
 
-    std::vector<uint64_t> GetRelaysForAddress(Point address);
+    std::vector<uint64_t> GetRelaysForAddressPubkey(Point address);
 
     void SendDepositAddressPartMessages(uint160 request_hash, uint160 encoding_credit_hash);
 
@@ -87,6 +87,19 @@ public:
     RelayState RelayStateFromEncodingMessage(uint160 encoding_message_hash);
 
     void SetNetworkNode(TeleportNetworkNode *node);
+
+    void SendDepositAddressPartDisclosure(uint160 post_encoding_message_hash, uint160 part_msg_hash, Data data);
+
+    void SendDepositAddressPartDisclosures(uint160 request_hash, uint160 encoding_message_hash,
+                                           uint160 post_encoding_message_hash);
+
+    void ScheduleTimeoutChecksForPartDisclosures(uint160 encoded_request_identifier);
+
+    Point GenerateAndRecordOffsetForDepositAddress(Point address_pubkey);
+
+    std::vector<uint160> GetHashesOfAddressPartMessages(Point address_pubkey);
+
+    void RecordPointOfDepositAddress(Point deposit_address_point, std::string currency_code);
 };
 
 

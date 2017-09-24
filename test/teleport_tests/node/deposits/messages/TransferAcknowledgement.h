@@ -78,7 +78,7 @@ public:
 
     std::vector<Point> Relays(Data data)
     {
-        //return GetRelaysForAddress(GetDepositAddress(data));
+        //return GetRelaysForAddressPubkey(GetDepositAddressPubkey(data));
         return std::vector<Point>{};
     }
 

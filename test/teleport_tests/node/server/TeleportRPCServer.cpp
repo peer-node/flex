@@ -2,6 +2,7 @@
 #include <jsonrpccpp/client.h>
 #include "TeleportRPCServer.h"
 #include "TeleportLocalServer.h"
+#include "../TeleportNetworkNode.h"
 #include "test/teleport_tests/node/historical_data/handlers/TipHandler.h"
 
 #include "log.h"
@@ -14,6 +15,7 @@ using std::vector;
 void TeleportRPCServer::SetTeleportLocalServer(TeleportLocalServer *teleport_local_server_)
 {
     teleport_local_server = teleport_local_server_;
+    node = teleport_local_server->teleport_network_node;
     data = &teleport_local_server->teleport_network_node->data;
 }
 
@@ -37,17 +39,17 @@ void TeleportRPCServer::GetInfo(const Json::Value& request, Json::Value& respons
     response["balance"] = FormatMoney(teleport_local_server->Balance());
 
     uint160 latest_mined_credit_message_hash{0};
-    auto latest_mined_credit_message = teleport_local_server->teleport_network_node->Tip();
+    auto latest_mined_credit_message = node->Tip();
 
     if (latest_mined_credit_message.mined_credit.network_state.batch_number != 0)
         latest_mined_credit_message_hash = latest_mined_credit_message.GetHash160();
     response["latest_mined_credit_message_hash"] = latest_mined_credit_message_hash.ToString();
     response["batch_number"] = latest_mined_credit_message.mined_credit.network_state.batch_number;
 
-    if (teleport_local_server->teleport_network_node->relay_message_handler == NULL)
+    if (node->relay_message_handler == NULL)
         return;
 
-    RelayState &relay_state = teleport_local_server->teleport_network_node->relay_message_handler->relay_state;
+    RelayState &relay_state = node->relay_message_handler->relay_state;
     response["number_of_relays"] = (uint32_t)relay_state.relays.size();
 }
 
@@ -80,7 +82,7 @@ void TeleportRPCServer::StartMiningAsynchronously(const Json::Value &request, Js
 
 void TeleportRPCServer::SetMegabytesUsed(const Json::Value &request, Json::Value &response)
 {
-    uint32_t number_of_megabytes = (uint32_t) request[0].asUInt64();
+    auto number_of_megabytes = (uint32_t) request[0].asUInt64();
     teleport_local_server->SetNumberOfMegabytesUsedForMining(number_of_megabytes);
 }
 
@@ -190,7 +192,7 @@ void TeleportRPCServer::ListUnspent(const Json::Value &request, Json::Value &res
     std::vector<CreditInBatch> &credits = teleport_local_server->teleport_network_node->wallet->credits;
 
     Json::Value result;
-    for (auto credit : credits)
+    for (auto &credit : credits)
         result.append(GetJsonValue(credit));
 
     response = result;
@@ -208,19 +210,19 @@ void TeleportRPCServer::GetBatch(const Json::Value &request, Json::Value &respon
 {
     uint160 credit_hash(request[0].asString());
     MinedCreditMessage msg = data->creditdata[credit_hash]["msg"];
-    auto batch = teleport_local_server->teleport_network_node->credit_system->ReconstructBatch(msg);
+    auto batch = node->credit_system->ReconstructBatch(msg);
     response = GetJsonValue(batch);
 }
 
 void TeleportRPCServer::ListDepositAddresses(const Json::Value &request, Json::Value &response)
 {
     string currency_code = request[0].asString();
-    vector<Point> my_address_pubkeys = data->depositdata[currency_code]["addresses"];
+    vector<Point> my_address_points = node->deposit_message_handler->MyDepositAddressPoints(currency_code);
 
     Json::Value result;
 
-    for (auto pubkey : my_address_pubkeys)
-        result.append(pubkey.ToString());
+    for (auto &pubkey : my_address_points)
+        result.append(node->GetCryptoCurrencyAddressFromPublicKey(currency_code, pubkey));
 
     response = result;
 }
@@ -228,7 +230,15 @@ void TeleportRPCServer::ListDepositAddresses(const Json::Value &request, Json::V
 void TeleportRPCServer::RequestDepositAddress(const Json::Value &request, Json::Value &response)
 {
     string currency_code = request[0].asString();
-    auto address_request_handler = teleport_local_server->teleport_network_node->deposit_message_handler->address_request_handler;
+    auto address_request_handler = node->deposit_message_handler->address_request_handler;
     address_request_handler.SendDepositAddressRequest(currency_code);
+}
+
+void TeleportRPCServer::WithdrawDepositAddress(const Json::Value &request, Json::Value &response)
+{
+    string deposit_address = request[0].asString();
+    Point deposit_address_point = data->depositdata[deposit_address]["deposit_address_point"];
+    node->deposit_message_handler->address_withdrawal_handler.SendWithdrawalRequestMessage(deposit_address_point);
+    log_ << "sent withdrawal request for " << deposit_address << "\n";
 }
 

@@ -56,6 +56,8 @@ public:
     bool PrivateKeyIsKnown(Point public_key);
 
     void SwitchAcrossFork(uint160 old_tip, uint160 new_tip, CreditSystem *credit_system);
+
+    void ImportPrivateKey(const CBigNum private_key);
 };
 
 uint160 GetKeyHashFromAddress(std::string address_string);

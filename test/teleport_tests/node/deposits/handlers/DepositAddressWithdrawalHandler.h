@@ -35,6 +35,14 @@ public:
     void AcceptWithdrawalComplaint(WithdrawalComplaint &complaint);
 
     void SetNetworkNode(TeleportNetworkNode *node);
+
+    void SendWithdrawalRequestMessage(Point deposit_address_point);
+
+    void SendWithdrawalMessage(uint160 request_hash, uint32_t position);
+
+    void HandleCompletedWithdrawal(Point deposit_address_pubkey);
+
+    CBigNum ReconstructDepositAddressPrivateKey(Point deposit_address_pubkey);
 };
 
 

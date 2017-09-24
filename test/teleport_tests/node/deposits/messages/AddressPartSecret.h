@@ -38,21 +38,25 @@ public:
 
     void PopulateSecrets(Data data, Relay *relay)
     {
-        Point point(curve, 0);
+        Point pubkey(curve, 0);
+        CBigNum private_key{0};
         for (uint32_t i = 0; i < SECRETS_PER_ADDRESS_PART; i++)
         {
-            CBigNum private_key;
-            private_key.Randomize(point.Modulus());
-            parts_of_address[i] = Point(curve, private_key);
-            encrypted_secrets[i] = relay->EncryptSecret(private_key);
-            data.keydata[parts_of_address[i]]["privkey"] = private_key;
+            CBigNum secret;
+            secret.Randomize(pubkey.Modulus());
+            private_key += secret;
+            parts_of_address[i] = Point(curve, secret);
+            encrypted_secrets[i] = relay->EncryptSecret(secret);
+            data.keydata[parts_of_address[i]]["privkey"] = secret;
+            pubkey += parts_of_address[i];
         }
+        data.keydata[pubkey]["privkey"] = private_key;
     }
 
     Point PubKey()
     {
         Point pubkey(parts_of_address[0].curve, 0);
-        for (auto point : parts_of_address)
+        for (auto &point : parts_of_address)
             pubkey += point;
         return pubkey;
     }

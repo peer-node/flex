@@ -28,7 +28,7 @@ public:
 
     Point GetDepositAddress(Data data)
     {
-        return GetWithdraw(data).GetDepositAddress(data);
+        return GetWithdraw(data).GetDepositAddressPubkey(data);
     }
 
     WithdrawalMessage GetWithdraw(Data data)

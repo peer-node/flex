@@ -10,6 +10,7 @@
 
 
 class TeleportLocalServer;
+class TeleportNetworkNode;
 
 
 class TeleportRPCServer : public jsonrpc::AbstractServer<TeleportRPCServer>
@@ -19,6 +20,7 @@ public:
     std::map<std::string,std::string> headers;
     std::string response{"a response"};
     TeleportLocalServer *teleport_local_server{NULL};
+    TeleportNetworkNode *node{NULL};
     std::vector<std::string> methods;
     Data *data{NULL};
 
@@ -47,6 +49,7 @@ public:
 
         BindMethod("requestdepositaddress", &TeleportRPCServer::RequestDepositAddress);
         BindMethod("listdepositaddresses", &TeleportRPCServer::ListDepositAddresses);
+        BindMethod("withdrawdepositaddress", &TeleportRPCServer::WithdrawDepositAddress);
     }
 
     void SetTeleportLocalServer(TeleportLocalServer *teleport_local_server_);
@@ -95,6 +98,8 @@ public:
     void RequestDepositAddress(const Json::Value &request, Json::Value &response);
 
     void ListDepositAddresses(const Json::Value &request, Json::Value &response);
+
+    void WithdrawDepositAddress(const Json::Value &request, Json::Value &response);
 };
 
 
