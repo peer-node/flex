@@ -35,7 +35,7 @@ public:
         }
         else
         {
-            authorized_key = GetPreviousTransfer(data).recipient_key;
+            authorized_key = GetPreviousTransfer(data).recipient_pubkey;
         }
 
         log_ << "authorized_key = " << authorized_key << "\n";
@@ -79,8 +79,8 @@ public:
         {
             DepositTransferMessage previous_transfer = GetPreviousTransfer(data);
 
-            if (previous_transfer.deposit_address == deposit_address_pubkey and
-                previous_transfer.recipient_key == authorized_key)
+            if (previous_transfer.deposit_address_pubkey == deposit_address_pubkey and
+                previous_transfer.recipient_pubkey == authorized_key)
             {
                 log_ << "ok; returning authorized_key " << authorized_key << "\n";
                 return authorized_key;

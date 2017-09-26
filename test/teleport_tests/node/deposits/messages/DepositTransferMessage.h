@@ -8,74 +8,45 @@
 class DepositTransferMessage
 {
 public:
-    Point deposit_address;
+    Point deposit_address_pubkey;
     uint160 previous_transfer_hash;
-    Point sender_key;
-    uint160 recipient_key_hash;
-    Point recipient_key;
+    Point sender_pubkey;
+    Point recipient_pubkey;
     CBigNum offset_xor_shared_secret;
     Signature signature;
 
-    DepositTransferMessage() { }
+    DepositTransferMessage() = default;
 
-    DepositTransferMessage(uint160 deposit_address_hash,
-                           uint160 recipient_key_hash, Data data):
-            recipient_key_hash(recipient_key_hash)
+    DepositTransferMessage(Point &deposit_address_pubkey, Point &recipient_pubkey, Data data):
+            recipient_pubkey(recipient_pubkey),
+            deposit_address_pubkey(deposit_address_pubkey)
     {
-        deposit_address = data.depositdata[deposit_address_hash]["address"];
-
-        previous_transfer_hash = data.depositdata[deposit_address]["latest_transfer"];
-        if (previous_transfer_hash == 0)
-        {
-            sender_key = GetDepositRequest(data).depositor_key;
-        }
-        else
-        {
-            uint160 sender_key_hash = GetPreviousTransfer(data).recipient_key_hash;
-            sender_key = data.keydata[sender_key_hash]["pubkey"];
-        }
-        log_ << "DepositTransferMessage: recipient_key_hash is "
-             << recipient_key_hash << "\n";
-    }
-
-    // We need the recipient pubkey to send a secret deposit
-    DepositTransferMessage(uint160 deposit_address_hash, Point recipient_key, Data data):
-            recipient_key_hash(KeyHash(recipient_key))
-    {
-        deposit_address = data.depositdata[deposit_address_hash]["address"];
-        Point offset_point = data.depositdata[deposit_address]["offset_point"];
+        Point offset_point = data.depositdata[deposit_address_pubkey]["offset_point"];
         CBigNum offset = data.keydata[offset_point]["privkey"];
 
-        previous_transfer_hash = data.depositdata[deposit_address]["latest_transfer"];
+        previous_transfer_hash = data.depositdata[deposit_address_pubkey]["latest_transfer"];
+
         if (previous_transfer_hash == 0)
-        {
-            sender_key = GetDepositRequest(data).depositor_key;
-        }
+            sender_pubkey = GetDepositRequest(data).depositor_key;
         else
-        {
-            uint160 sender_key_hash = GetPreviousTransfer(data).recipient_key_hash;
-            sender_key = data.keydata[sender_key_hash]["pubkey"];
-        }
+            sender_pubkey = GetPreviousTransfer(data).recipient_pubkey;
 
-        CBigNum sender_privkey = data.keydata[sender_key]["privkey"];
-        CBigNum shared_secret = Hash(sender_privkey * recipient_key);
-        offset_xor_shared_secret = offset ^ shared_secret;
-
-        log_ << "DepositTransferMessage: recipient_key_hash is "
-             << recipient_key_hash << "\n";
+        CBigNum sender_privkey = data.keydata[sender_pubkey]["privkey"];
+        CBigNum shared_secret = Hash(sender_privkey * recipient_pubkey);
+        offset_xor_shared_secret = offset ^ shared_secret;;
     }
 
     static string_t Type() { return string_t("transfer"); }
 
     IMPLEMENT_SERIALIZE
     (
-    READWRITE(deposit_address);
-    READWRITE(previous_transfer_hash);
-    READWRITE(sender_key);
-    READWRITE(recipient_key_hash);
-    READWRITE(offset_xor_shared_secret);
-    READWRITE(signature);
-    )
+        READWRITE(deposit_address_pubkey);
+        READWRITE(previous_transfer_hash);
+        READWRITE(sender_pubkey);
+        READWRITE(recipient_pubkey);
+        READWRITE(offset_xor_shared_secret);
+        READWRITE(signature);
+    );
 
     std::vector<uint160> Dependencies()
     {
@@ -87,7 +58,7 @@ public:
 
     DepositAddressRequest GetDepositRequest(Data data)
     {
-        uint160 request_hash = data.depositdata[deposit_address]["deposit_request"];
+        uint160 request_hash = data.depositdata[deposit_address_pubkey]["deposit_request"];
         return data.GetMessage(request_hash);
     }
 
@@ -98,19 +69,19 @@ public:
 
     Point VerificationKey(Data data)
     {
-        if (previous_transfer_hash != 0)
+        if (previous_transfer_hash == 0)
         {
-            DepositTransferMessage previous_transfer = GetPreviousTransfer(data);
-            uint160 sender_key_hash = KeyHash(sender_key);
-
-            if (previous_transfer.deposit_address == deposit_address &&
-                sender_key_hash == previous_transfer.recipient_key_hash)
-                return sender_key;
+            Point depositor_key = data.depositdata[deposit_address_pubkey]["depositor_key"];
+            if (depositor_key == sender_pubkey)
+                return sender_pubkey;
             return Point(SECP256K1, 0);
         }
-        Point depositor_key = data.depositdata[deposit_address]["depositor_key"];
-        if (depositor_key == sender_key)
-            return sender_key;
+
+        auto previous_transfer = GetPreviousTransfer(data);
+        if (previous_transfer.deposit_address_pubkey == deposit_address_pubkey and
+                sender_pubkey == previous_transfer.recipient_pubkey)
+            return sender_pubkey;
+
         return Point(SECP256K1, 0);
     }
 

@@ -289,6 +289,7 @@ void DepositAddressRequestHandler::HandleDepositAddressParts(uint160 encoded_req
     data.depositdata[address_pubkey]["encoded_request_identifier"] = encoded_request_identifier;
     data.depositdata[address_pubkey]["deposit_request"] = request_hash;
     data.depositdata[address_pubkey]["depositor_key"] = request.depositor_key;
+    data.depositdata[address_pubkey]["relay_numbers"] = GetRelaysForAddressPubkey(address_pubkey);
 
     if (data.depositdata[request_hash]["is_mine"])
         HandleMyDepositAddressParts(address_pubkey, request, request_hash);

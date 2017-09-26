@@ -143,6 +143,12 @@ public:
     RelayState GetRelayStateOfEncodingMessage();
 
     RelayState GetRelayStateOfEncodingMessage(Point address_pubkey);
+
+    vch_t GetCurrencyCode(Point deposit_address_pubkey);
+
+    void AddAddress(Point address);
+
+    void RemoveAddress(Point address);
 };
 
 

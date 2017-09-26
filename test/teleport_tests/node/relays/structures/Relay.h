@@ -70,7 +70,7 @@ public:
         READWRITE(tasks);
     );
 
-    JSON(number, current_successor_number, previous_successors,hashes, key_quarter_holders, key_quarter_locations,
+    JSON(number, status, current_successor_number, previous_successors,hashes, key_quarter_holders, key_quarter_locations,
          previous_key_quarter_locations, public_signing_key, key_distribution_message_audited,
          join_message_was_encoded, public_key_set, number_of_complaints_sent, tasks);
 

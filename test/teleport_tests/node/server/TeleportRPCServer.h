@@ -50,6 +50,7 @@ public:
         BindMethod("requestdepositaddress", &TeleportRPCServer::RequestDepositAddress);
         BindMethod("listdepositaddresses", &TeleportRPCServer::ListDepositAddresses);
         BindMethod("withdrawdepositaddress", &TeleportRPCServer::WithdrawDepositAddress);
+        BindMethod("transferdepositaddress", &TeleportRPCServer::TransferDepositAddress);
     }
 
     void SetTeleportLocalServer(TeleportLocalServer *teleport_local_server_);
@@ -100,6 +101,8 @@ public:
     void ListDepositAddresses(const Json::Value &request, Json::Value &response);
 
     void WithdrawDepositAddress(const Json::Value &request, Json::Value &response);
+
+    void TransferDepositAddress(const Json::Value &request, Json::Value &response);
 };
 
 

@@ -3,6 +3,7 @@
 
 
 #include <src/teleportnode/schedule.h>
+#include <test/teleport_tests/node/relays/structures/Relay.h>
 #include "test/teleport_tests/node/deposits/messages/DepositTransferMessage.h"
 #include "test/teleport_tests/node/deposits/messages/TransferAcknowledgement.h"
 
@@ -26,6 +27,20 @@ public:
     void HandleTransferAcknowledgement(TransferAcknowledgement acknowledgement);
 
     void SetNetworkNode(TeleportNetworkNode *node);
+
+    void AcceptDepositTransferMessage(DepositTransferMessage &transfer);
+
+    bool ValidateDepositTransferMessage(DepositTransferMessage &transfer);
+
+    void SendDepositTransferMessage(Point deposit_address_pubkey, Point recipient_pubkey);
+
+    void SendTransferAcknowledgement(DepositTransferMessage &transfer);
+
+    Relay * GetRespondingRelay(Point deposit_address_pubkey);
+
+    bool ValidateTransferAcknowledgement(TransferAcknowledgement &acknowledgement);
+
+    void AcceptTransferAcknowledgement(TransferAcknowledgement &acknowledgement);
 };
 
 

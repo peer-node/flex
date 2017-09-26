@@ -116,59 +116,51 @@ uint64_t DepositMessageHandler::GetRespondingRelay(Point deposit_address)
     return relay_numbers[disqualifications.size()];
 }
 
+vch_t DepositMessageHandler::GetCurrencyCode(Point deposit_address_pubkey)
+{
+    Point offset_point = data.depositdata[deposit_address_pubkey]["offset_point"];
+    vch_t code = data.depositdata[deposit_address_pubkey + offset_point]["currency_code"];
+    log_ << "currency code for deposit_address_pubkey is " << std::string(code.begin(), code.end()) << "\n";
+    return data.depositdata[deposit_address_pubkey + offset_point]["currency_code"];
+}
+
+void DepositMessageHandler::AddAddress(Point address)
+{
+    return AddAddress(address, GetCurrencyCode(address));
+}
+
 void DepositMessageHandler::AddAddress(Point address, vch_t currency)
 {
     vector<Point> my_addresses = data.depositdata[currency]["my_address_public_keys"];
 
+    log_ << "adding " << address << " to " << my_addresses << "\n";
     if (not VectorContainsEntry(my_addresses, address))
         my_addresses.push_back(address);
 
     data.depositdata[currency]["my_address_public_keys"] = my_addresses;
 
+    log_ << "result is " << my_addresses << "\n";
+
     if (currency == TCR)
         data.keydata[KeyHash(address)]["watched"] = true;
+}
+
+void DepositMessageHandler::RemoveAddress(Point address)
+{
+    return RemoveAddress(address, GetCurrencyCode(address));
 }
 
 void DepositMessageHandler::RemoveAddress(Point address, vch_t currency)
 {
     vector<Point> my_addresses = data.depositdata[currency]["my_address_public_keys"];
 
+    log_ << "removing " << address << " from " << my_addresses << "\n";
     if (VectorContainsEntry(my_addresses, address))
         EraseEntryFromVector(address, my_addresses);
 
     data.depositdata[currency]["my_address_public_keys"] = my_addresses;
-}
 
-void DepositMessageHandler::AddAndRemoveMyAddresses(uint160 transfer_hash)
-{
-    log_ << "AddAndRemoveMyAddresses: " << transfer_hash << "\n";
-    DepositTransferMessage transfer = msgdata[transfer_hash]["transfer"];
-    DepositAddressRequest request = transfer.GetDepositRequest(data);
-    vch_t currency = request.currency_code;
-    log_ << "currency is " << currency << "\n";
-
-    Point address = transfer.deposit_address;
-    log_ << "address is " << address << "\n";
-
-    Point sender_key = transfer.VerificationKey(data);
-    log_ << "sender_key is " << sender_key << "\n";
-
-    if (data.keydata[sender_key].HasProperty("privkey"))
-    {
-        log_ << "Sent by me - removing\n";
-        RemoveAddress(address, currency);
-    }
-
-    log_ << "recipient_key_hash is " << transfer.recipient_key_hash << "\n";
-
-    log_ << "have pubkey: " << data.keydata[transfer.recipient_key_hash].HasProperty("pubkey") << "\n";
-
-    if (data.keydata[transfer.recipient_key_hash].HasProperty("pubkey"))
-    {
-        AddAddress(address, currency);
-        uint160 address_hash = KeyHash(address);
-        data.depositdata[address_hash]["address"] = address;
-    }
+    log_ << "result is " << my_addresses << "\n";
 }
 
 RelayState DepositMessageHandler::GetRelayStateOfEncodingMessage(Point address_pubkey)
@@ -201,6 +193,10 @@ std::vector<uint64_t> DepositMessageHandler::GetRelaysForAddressPubkey(Point add
 
 std::vector<Point> DepositMessageHandler::MyDepositAddressPublicKeys(std::string currency_code)
 {
+    log_ << "MyDepositAddressPublicKeys: " << currency_code << "\n";
+    vch_t code(currency_code.begin(), currency_code.end());
+    std::vector<Point> keys = data.depositdata[currency_code]["my_address_public_keys"];
+    log_ << "found: " << keys << "\n";
     return data.depositdata[currency_code]["my_address_public_keys"];
 }
 

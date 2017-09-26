@@ -126,7 +126,7 @@ void TeleportRPCServer::SendToPublicKey(const Json::Value &request, Json::Value 
 void TeleportRPCServer::GetNewAddress(const Json::Value &request, Json::Value &response)
 {
     Point public_key = teleport_local_server->teleport_network_node->GetNewPublicKey();
-    response = GetAddressFromPublicKey(public_key);
+    response = teleport_local_server->teleport_network_node->GetTeleportAddressFromPublicKey(public_key);
 }
 
 void TeleportRPCServer::SendToAddress(const Json::Value &request, Json::Value &response)
@@ -240,5 +240,20 @@ void TeleportRPCServer::WithdrawDepositAddress(const Json::Value &request, Json:
     Point deposit_address_point = data->depositdata[deposit_address]["deposit_address_point"];
     node->deposit_message_handler->address_withdrawal_handler.SendWithdrawalRequestMessage(deposit_address_point);
     log_ << "sent withdrawal request for " << deposit_address << "\n";
+}
+
+void TeleportRPCServer::TransferDepositAddress(const Json::Value &request, Json::Value &response)
+{
+    string deposit_address = request[0].asString();
+    string recipient_teleport_address = request[1].asString();
+
+    Point recipient_pubkey = node->GetPublicKeyFromTeleportAddress(recipient_teleport_address);
+
+    Point deposit_address_point = data->depositdata[deposit_address]["deposit_address_point"];
+    Point deposit_address_pubkey = data->depositdata[deposit_address_point]["address_pubkey"];
+
+    node->deposit_message_handler->address_transfer_handler.SendDepositTransferMessage(deposit_address_pubkey,
+                                                                                       recipient_pubkey);
+    log_ << "sent transfer for " << deposit_address_pubkey << " to " << recipient_pubkey << "\n";
 }
 
