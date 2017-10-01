@@ -16,15 +16,16 @@ using namespace std;
 class AMinedCreditMessageValidator : public Test
 {
 public:
-    MemoryDataStore msgdata, creditdata, keydata;
+    MemoryDataStore msgdata, creditdata, keydata, depositdata;
     MinedCreditMessageValidator validator;
     CreditSystem *credit_system;
     Data *data;
 
     virtual void SetUp()
     {
-        credit_system = new CreditSystem(msgdata, creditdata);
-        data = new Data(msgdata, creditdata, keydata);
+        data = new Data(msgdata, creditdata, keydata, depositdata);
+        credit_system = new CreditSystem(*data);
+
         data->cache = new RelayMemoryCache();
         validator.SetCreditSystem(credit_system);
         validator.SetData(data);
@@ -33,6 +34,7 @@ public:
     virtual void TearDown()
     {
         delete credit_system;
+        delete data;
     }
 
     MinedCreditMessage MinedCreditMessageWithAHash()

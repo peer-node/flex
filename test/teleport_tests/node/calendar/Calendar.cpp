@@ -417,12 +417,7 @@ void Calendar::FinishCurrentDiurnAndStartNext(MinedCreditMessage &msg, CreditSys
     calends.push_back(msg);
     uint160 diurn_root = calends.back().DiurnRoot();
 
-    credit_system->creditdata[diurn_root]["data_is_known"] = true;
-    credit_system->creditdata[diurn_root]["message_data_is_known"] = true;
-    credit_system->creditdata[diurn_root]["diurn_hash"] = current_diurn.GetHash160();
-
-    DiurnMessageData message_data = calends.back().GenerateDiurnMessageData(credit_system);
-    credit_system->creditdata[diurn_root]["message_data_hash"] = message_data.GetHash160();
+    credit_system->RecordEndOfDiurn(calends.back(), current_diurn);
 
     current_diurn = Diurn();
     current_diurn.previous_diurn_root = diurn_root;
@@ -461,20 +456,26 @@ bool Calendar::ValidateCreditInBatchUsingPreviousDiurn(CreditInBatch credit_in_b
 
     bool ok = VerifyBranchFromOrderedHashTree((uint32_t) credit_in_batch.position, ((Credit)credit_in_batch).getvch(),
                                               long_branch, diurn_root);
+
+    log_ << "VerifyBranchFromOrderedHashTree: " << ok << "\n";
     if (not ok)
         return false;
 
+    log_ << "ContainsDiurn: " << ContainsDiurn(diurn_root) << "\n";
     return ContainsDiurn(diurn_root);
 }
 
 bool Calendar::ValidateCreditInBatch(CreditInBatch credit_in_batch)
 {
     if (credit_in_batch.diurn_branch.size() == 0)
+    {
+        log_ << "ValidateCreditInBatchUsingCurrentDiurn: " << ValidateCreditInBatchUsingCurrentDiurn(credit_in_batch) << "\n";
         return ValidateCreditInBatchUsingCurrentDiurn(credit_in_batch);
-
+    }
     auto long_branch = credit_in_batch.branch;
     long_branch.pop_back();
     long_branch.insert(long_branch.end(), credit_in_batch.diurn_branch.begin(), credit_in_batch.diurn_branch.end());
+    log_ << "ValidateCreditInBatchUsingPreviousDiurn: " << ValidateCreditInBatchUsingPreviousDiurn(credit_in_batch, long_branch) << "\n";
     return ValidateCreditInBatchUsingPreviousDiurn(credit_in_batch, long_branch);
 }
 

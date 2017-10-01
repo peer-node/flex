@@ -126,7 +126,7 @@ public:
 
     uint64_t GetRespondingRelay(Point deposit_address);
 
-    void AddAddress(Point address, vch_t currency);
+    void AddAddress(Point address_pubkey, vch_t currency);
 
     void RemoveAddress(Point address, vch_t currency);
 
@@ -149,6 +149,17 @@ public:
     void AddAddress(Point address);
 
     void RemoveAddress(Point address);
+
+    void StoreRecipientOfDepositAddress(Point &recipient_pubkey, Point &deposit_address_pubkey);
+
+    std::vector<Point> DepositAddressPubkeysOwnedByRecipient(Point &recipient_pubkey);
+
+    void ChangeStoredRecipientOfDepositAddress(Point &old_recipient_pubkey, Point &deposit_address_pubkey,
+                                               Point &new_recipient_pubkey);
+
+    void RemoveStoredRecipientOfDepositAddress(Point &recipient_pubkey, Point &deposit_address_pubkey);
+
+    void AddDepositAddressesOwnedBySpecifiedPubKey(Point public_key);
 };
 
 

@@ -128,6 +128,9 @@ void DepositAddressWithdrawalHandler::HandleCompletedWithdrawal(Point deposit_ad
     teleport_network_node->wallet->ImportPrivateKey(deposit_address_private_key + offset_secret);
 
     deposit_message_handler->RemoveAddress(deposit_address_pubkey, currency_code);
+
+    if (currency == "TCR")
+        deposit_message_handler->AddDepositAddressesOwnedBySpecifiedPubKey(deposit_address_point);
 }
 
 CBigNum DepositAddressWithdrawalHandler::ReconstructDepositAddressPrivateKey(Point address_pubkey)

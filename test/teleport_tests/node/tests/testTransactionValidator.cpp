@@ -9,18 +9,21 @@ class ATransactionValidator : public Test
 {
 public:
     TransactionValidator transaction_validator;
-    MemoryDataStore msgdata, creditdata;
+    MemoryDataStore msgdata, creditdata, keydata, depositdata;
     CreditSystem *credit_system;
+    Data *data{NULL};
 
     virtual void SetUp()
     {
-        credit_system = new CreditSystem(msgdata, creditdata);
+        data = new Data(msgdata, creditdata, keydata, depositdata);
+        credit_system = new CreditSystem(*data);
         transaction_validator.SetCreditSystem(credit_system);
     }
 
     virtual void TearDown()
     {
         delete credit_system;
+        delete data;
     }
 
     SignedTransaction ATransactionWhoseOutputsOverflow()

@@ -134,14 +134,14 @@ void TeleportRPCServer::SendToAddress(const Json::Value &request, Json::Value &r
     int64_t amount = GetAmountFromValue(request[1]);
 
     std::string address = request[0].asString();
-    vch_t pubkey_hash_bytes;
+    Point recipient_pubkey = teleport_local_server->teleport_network_node->GetPublicKeyFromTeleportAddress(address);
 
-    if (not DecodeBase58Check(address, pubkey_hash_bytes) or pubkey_hash_bytes.size() != 21)
+    if (recipient_pubkey.curve != SECP256K1 or recipient_pubkey == Point(SECP256K1, 0))
         throw jsonrpc::JsonRpcException(-32099, "bad address");
 
     if (amount > teleport_local_server->Balance())
         throw jsonrpc::JsonRpcException(-32099, "insufficient balance");
-
+    log_ << "SendToAddress: address is " << address << "\n";
     uint160 tx_hash = teleport_local_server->teleport_network_node->SendToAddress(address, amount);
     response = tx_hash.ToString();
 }

@@ -15,7 +15,7 @@ using namespace std;
 class ARelay : public Test
 {
 public:
-    MemoryDataStore msgdata, creditdata, keydata;
+    MemoryDataStore msgdata, creditdata, keydata, depositdata;
     CreditSystem *credit_system;
     Data *data;
     Relay relay;
@@ -24,8 +24,9 @@ public:
 
     virtual void SetUp()
     {
-        credit_system = new CreditSystem(msgdata, creditdata);
-        data = new Data(msgdata, creditdata, keydata, &relay_state);
+        data = new Data(msgdata, creditdata, keydata, depositdata, &relay_state);
+        credit_system = new CreditSystem(*data);
+
         data->CreateCache();
         msg.mined_credit.keydata = Point(CBigNum(5)).getvch();
         keydata[Point(CBigNum(5))]["privkey"] = CBigNum(5);
@@ -35,8 +36,8 @@ public:
 
     virtual void TearDown()
     {
-        delete data;
         delete credit_system;
+        delete data;
     }
 };
 

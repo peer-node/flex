@@ -21,22 +21,22 @@ class CreditMessageHandler : public MessageHandlerWithOrphanage
 {
 public:
     MemoryDataStore &creditdata, &keydata;
-    CreditSystem *credit_system{NULL};
-    Calendar *calendar{NULL};
+    CreditSystem *credit_system{nullptr};
+    Calendar *calendar{nullptr};
     Mutex calendar_mutex;
-    BitChain *spent_chain{NULL};
-    Wallet *wallet{NULL};
-    TeleportNetworkNode *teleport_network_node{NULL};
+    BitChain *spent_chain{nullptr};
+    Wallet *wallet{nullptr};
+    TeleportNetworkNode *teleport_network_node{nullptr};
     TeleportConfig config;
     MinedCreditMessageValidator mined_credit_message_validator;
     TransactionValidator transaction_validator;
 
-    TipController *tip_controller{NULL};
-    MinedCreditMessageBuilder *builder{NULL};
+    TipController *tip_controller{nullptr};
+    MinedCreditMessageBuilder *builder{nullptr};
 
     bool do_spot_checks{true}, using_internal_tip_controller{true}, using_internal_builder{true};
 
-    CreditMessageHandler(Data data):
+    explicit CreditMessageHandler(Data data):
             MessageHandlerWithOrphanage(data.msgdata),
             creditdata(data.creditdata), keydata(data.keydata)
     {
@@ -48,9 +48,9 @@ public:
 
     ~CreditMessageHandler()
     {
-        if (using_internal_tip_controller and tip_controller != NULL)
+        if (using_internal_tip_controller and tip_controller != nullptr)
             delete tip_controller;
-        if (using_internal_builder and builder != NULL)
+        if (using_internal_builder and builder != nullptr)
             delete builder;
     }
 

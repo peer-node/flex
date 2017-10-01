@@ -9,6 +9,7 @@
 #include "test/teleport_tests/node/credit/handlers/CreditMessageHandler.h"
 #include "test/teleport_tests/node/historical_data/handlers/DataMessageHandler.h"
 #include <test/teleport_tests/node/deposits/handlers/DepositMessageHandler.h>
+#include "test/teleport_tests/node/credit/structures/CreditTracker.h"
 
 #include "log.h"
 #define LOG_CATEGORY "TeleportNetworkNode.h"
@@ -20,15 +21,15 @@ public:
     MemoryDataStore msgdata, creditdata, keydata, depositdata;
     Data data;
     Calendar calendar;
-    Wallet *wallet{NULL};
-    CreditMessageHandler *credit_message_handler{NULL};
-    DataMessageHandler *data_message_handler{NULL};
-    RelayMessageHandler *relay_message_handler{NULL};
-    DepositMessageHandler *deposit_message_handler{NULL};
-    CreditSystem *credit_system{NULL};
+    Wallet *wallet{nullptr};
+    CreditMessageHandler *credit_message_handler{nullptr};
+    DataMessageHandler *data_message_handler{nullptr};
+    RelayMessageHandler *relay_message_handler{nullptr};
+    DepositMessageHandler *deposit_message_handler{nullptr};
+    CreditSystem *credit_system{nullptr};
     BitChain spent_chain;
-    Communicator *communicator{NULL};
-    TeleportConfig *config{NULL};
+    Communicator *communicator{nullptr};
+    TeleportConfig *config{nullptr};
     TipController tip_controller;
     MinedCreditMessageBuilder builder;
 
@@ -37,9 +38,9 @@ public:
             tip_controller(data),
             builder(data)
     {
-        credit_system = new CreditSystem(data.msgdata, data.creditdata);
-        wallet = new Wallet(data.keydata);
+        credit_system = new CreditSystem(data);
 
+        SetUpWallet();
         SetUpCreditMessageHandler();
         SetUpDataMessageHandler();
         SetUpRelayMessageHandler();
@@ -50,6 +51,14 @@ public:
     {
         config = config_;
         deposit_message_handler->SetConfig(*config);
+    }
+
+    void SetUpWallet()
+    {
+        wallet = new Wallet(data.keydata);
+        wallet->SetCreditSystem(credit_system);
+        wallet->SetSpentChain(&spent_chain);
+        wallet->SetCalendar(&calendar);
     }
 
     void SetUpDepositMessageHandler()
@@ -91,18 +100,12 @@ public:
 
     ~TeleportNetworkNode()
     {
-        if (deposit_message_handler != NULL)
-            delete deposit_message_handler;
-        if (data_message_handler != NULL)
-            delete data_message_handler;
-        if (credit_message_handler != NULL)
-            delete credit_message_handler;
-        if (relay_message_handler != NULL)
-            delete relay_message_handler;
-        if (credit_system != NULL)
-            delete credit_system;
-        if (wallet != NULL)
-            delete wallet;
+        delete deposit_message_handler;
+        delete data_message_handler;
+        delete credit_message_handler;
+        delete relay_message_handler;
+        delete credit_system;
+        delete wallet;
     }
 
     Calendar GetCalendar();

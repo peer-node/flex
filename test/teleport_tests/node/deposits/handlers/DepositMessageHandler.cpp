@@ -118,10 +118,11 @@ uint64_t DepositMessageHandler::GetRespondingRelay(Point deposit_address)
 
 vch_t DepositMessageHandler::GetCurrencyCode(Point deposit_address_pubkey)
 {
-    Point offset_point = data.depositdata[deposit_address_pubkey]["offset_point"];
-    vch_t code = data.depositdata[deposit_address_pubkey + offset_point]["currency_code"];
+    uint160 request_hash = data.depositdata[deposit_address_pubkey]["deposit_request"];
+    DepositAddressRequest request = data.GetMessage(request_hash);
+    vch_t code = request.currency_code;
     log_ << "currency code for deposit_address_pubkey is " << std::string(code.begin(), code.end()) << "\n";
-    return data.depositdata[deposit_address_pubkey + offset_point]["currency_code"];
+    return code;
 }
 
 void DepositMessageHandler::AddAddress(Point address)
@@ -129,20 +130,26 @@ void DepositMessageHandler::AddAddress(Point address)
     return AddAddress(address, GetCurrencyCode(address));
 }
 
-void DepositMessageHandler::AddAddress(Point address, vch_t currency)
+void DepositMessageHandler::AddAddress(Point address_pubkey, vch_t currency)
 {
-    vector<Point> my_addresses = data.depositdata[currency]["my_address_public_keys"];
+    vector<Point> my_address_pubkeys = data.depositdata[currency]["my_address_public_keys"];
 
-    log_ << "adding " << address << " to " << my_addresses << "\n";
-    if (not VectorContainsEntry(my_addresses, address))
-        my_addresses.push_back(address);
+    log_ << "adding " << address_pubkey << " to " << my_address_pubkeys << "\n";
+    if (not VectorContainsEntry(my_address_pubkeys, address_pubkey))
+        my_address_pubkeys.push_back(address_pubkey);
 
-    data.depositdata[currency]["my_address_public_keys"] = my_addresses;
+    data.depositdata[currency]["my_address_public_keys"] = my_address_pubkeys;
 
-    log_ << "result is " << my_addresses << "\n";
+    log_ << "result is " << my_address_pubkeys << "\n";
 
-    if (currency == TCR)
-        data.keydata[KeyHash(address)]["watched"] = true;
+}
+
+void DepositMessageHandler::AddDepositAddressesOwnedBySpecifiedPubKey(Point public_key)
+{
+    vector<Point> addresses_sent_to_public_key = DepositAddressPubkeysOwnedByRecipient(public_key);
+    log_ << "adding deposit addresses: " << addresses_sent_to_public_key << "\n";
+    for (auto new_address_pubkey : addresses_sent_to_public_key)
+        AddAddress(new_address_pubkey);
 }
 
 void DepositMessageHandler::RemoveAddress(Point address)
@@ -161,6 +168,35 @@ void DepositMessageHandler::RemoveAddress(Point address, vch_t currency)
     data.depositdata[currency]["my_address_public_keys"] = my_addresses;
 
     log_ << "result is " << my_addresses << "\n";
+}
+
+void DepositMessageHandler::StoreRecipientOfDepositAddress(Point &recipient_pubkey, Point &deposit_address_pubkey)
+{
+    vector<Point> address_pubkeys = data.depositdata[recipient_pubkey]["address_pubkeys"];
+    if (not VectorContainsEntry(address_pubkeys, deposit_address_pubkey))
+        address_pubkeys.push_back(deposit_address_pubkey);
+    data.depositdata[recipient_pubkey]["address_pubkeys"] = address_pubkeys;
+}
+
+void DepositMessageHandler::RemoveStoredRecipientOfDepositAddress(Point &old_recipient_pubkey, Point &deposit_address_pubkey)
+{
+    vector<Point> address_pubkeys = data.depositdata[old_recipient_pubkey]["address_pubkeys"];
+    if (VectorContainsEntry(address_pubkeys, deposit_address_pubkey))
+        EraseEntryFromVector(deposit_address_pubkey, address_pubkeys);
+    data.depositdata[old_recipient_pubkey]["address_pubkeys"] = address_pubkeys;
+}
+
+void DepositMessageHandler::ChangeStoredRecipientOfDepositAddress(Point &old_recipient_pubkey,
+                                                                  Point &deposit_address_pubkey,
+                                                                  Point &new_recipient_pubkey)
+{
+    RemoveStoredRecipientOfDepositAddress(old_recipient_pubkey, deposit_address_pubkey);
+    StoreRecipientOfDepositAddress(new_recipient_pubkey, deposit_address_pubkey);
+}
+
+vector<Point> DepositMessageHandler::DepositAddressPubkeysOwnedByRecipient(Point &recipient_pubkey)
+{
+    return data.depositdata[recipient_pubkey]["address_pubkeys"];
 }
 
 RelayState DepositMessageHandler::GetRelayStateOfEncodingMessage(Point address_pubkey)

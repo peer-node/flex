@@ -33,10 +33,16 @@ public:
     std::string json()
     {
         std::string json_text("{");
-        std::stringstream ss;
-        ss << amount;
-        json_text += "\"amount\": " + ss.str();
-        json_text += ",\"keyhash\": \"" + KeyHash().ToString() + "\"";
+        std::stringstream amount_stream, keydata_stream;
+        amount_stream << amount;
+        for (auto byte : keydata)
+        {
+            char hex[3];
+            sprintf(hex, "%02x", byte);
+            keydata_stream << std::string(hex);
+        }
+        json_text += "\"amount\": " + amount_stream.str();
+        json_text += ",\"keydata\": \"" + keydata_stream.str() + "\"";
         json_text += "}";
         return json_text;
     }

@@ -65,6 +65,7 @@ void TeleportNetworkNode::HandleNewProof(NetworkSpecificProofOfWork proof)
 uint160 TeleportNetworkNode::SendCreditsToPublicKey(Point public_key, uint64_t amount)
 {
     SignedTransaction tx = wallet->GetSignedTransaction(public_key, amount);
+    log_ << "SendCreditsToPublicKey: tx is: " << PrettyPrint(tx) << "\n";
     credit_message_handler->HandleSignedTransaction(tx);
     return tx.GetHash160();
 }
@@ -76,7 +77,9 @@ Point TeleportNetworkNode::GetNewPublicKey()
 
 uint160 TeleportNetworkNode::SendToAddress(std::string address, int64_t amount)
 {
+    log_ << "SendToAddress: address is " << address << "\n";
     Point teleport_address_pubkey = GetPublicKeyFromTeleportAddress(address);
+    log_ << "public key is " << teleport_address_pubkey << "\n";
     return SendCreditsToPublicKey(teleport_address_pubkey, (uint64_t)amount);
 }
 

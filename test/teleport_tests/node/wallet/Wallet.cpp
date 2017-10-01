@@ -7,6 +7,25 @@
 #include "Wallet.h"
 #include "test/teleport_tests/node/credit/messages/MinedCreditMessage.h"
 #include "test/teleport_tests/node/credit/structures/CreditSystem.h"
+#include "test/teleport_tests/node/credit/structures/CreditTracker.h"
+
+#include "log.h"
+#define LOG_CATEGORY "Wallet.cpp"
+
+void Wallet::SetCreditSystem(CreditSystem *credit_system_)
+{
+    credit_system = credit_system_;
+}
+
+void Wallet::SetCalendar(Calendar *calendar_)
+{
+    calendar = calendar_;
+}
+
+void Wallet::SetSpentChain(BitChain *spent_chain_)
+{
+    spent_chain = spent_chain_;
+}
 
 std::vector<CreditInBatch> Wallet::GetCredits()
 {
@@ -34,11 +53,6 @@ void Wallet::HandleCreditInBatch(CreditInBatch credit_in_batch)
 
 bool Wallet::PrivateKeyIsKnown(CreditInBatch credit_in_batch)
 {
-    if (credit_in_batch.keydata.size() == 20)
-    {
-        uint160 key_hash(credit_in_batch.keydata);
-        return PrivateKeyIsKnown(key_hash);
-    }
     Point pubkey;
     pubkey.setvch(credit_in_batch.keydata);
     bool known = PrivateKeyIsKnown(pubkey);
@@ -50,14 +64,6 @@ bool Wallet::PrivateKeyIsKnown(Point public_key)
     return keydata[public_key].HasProperty("privkey");
 }
 
-bool Wallet::PrivateKeyIsKnown(uint160 key_hash)
-{
-    if (not keydata[key_hash].HasProperty("pubkey"))
-        return false;
-    Point pubkey = keydata[key_hash]["pubkey"];
-    return PrivateKeyIsKnown(pubkey);
-}
-
 bool Wallet::HaveCreditInBatchAlready(CreditInBatch credit_in_batch)
 {
     return VectorContainsEntry(credits, credit_in_batch);
@@ -65,13 +71,9 @@ bool Wallet::HaveCreditInBatchAlready(CreditInBatch credit_in_batch)
 
 SignedTransaction Wallet::GetSignedTransaction(Point pubkey, uint64_t amount)
 {
+    log_ << "getting signed transaction paying to " << pubkey << "\n";
+    log_ << "keydata is " << pubkey.getvch() << "\n";
     return SignTransaction(GetUnsignedTransaction(pubkey.getvch(), amount), keydata);
-}
-
-SignedTransaction Wallet::GetSignedTransaction(uint160 keyhash, uint64_t amount)
-{
-    vch_t key_data(keyhash.begin(), keyhash.end());
-    return SignTransaction(GetUnsignedTransaction(key_data, amount), keydata);
 }
 
 UnsignedTransaction Wallet::GetUnsignedTransaction(vch_t key_data, uint64_t amount)
@@ -81,16 +83,16 @@ UnsignedTransaction Wallet::GetUnsignedTransaction(vch_t key_data, uint64_t amou
 
     for (auto credit : credits)
     {
+        if (credit_system != NULL)
+            credit_system->AddDiurnBranchToCreditInBatch(credit);
+
         raw_tx.inputs.push_back(credit);
         amount_in += credit.amount;
-        if (credit.keydata.size() == 20)
-        {
-            uint160 key_hash(credit.keydata);
-            raw_tx.pubkeys.push_back(keydata[key_hash]["pubkey"]);
-        }
         if (amount_in >= amount)
             break;
     }
+
+    log_ << "tx inputs: " << raw_tx.inputs << "\n";
 
     if (amount > amount_in)
     {
@@ -99,6 +101,7 @@ UnsignedTransaction Wallet::GetUnsignedTransaction(vch_t key_data, uint64_t amou
     }
 
     raw_tx.AddOutput(Credit(key_data, amount));
+    log_ << "GetUnsignedTransaction: keydata of output is " << raw_tx.outputs.back().keydata << "\n";
 
     int64_t change = amount_in - amount;
     if (change > 0)
@@ -114,6 +117,11 @@ void Wallet::AddBatchToTip(MinedCreditMessage msg, CreditSystem* credit_system)
     msg.hash_list.RecoverFullHashes(credit_system->msgdata);
     RemoveTransactionInputsSpentInBatchFromCredits(msg, credit_system);
     AddNewCreditsFromBatch(msg, credit_system);
+    SortCredits();
+}
+
+void Wallet::SortCredits()
+{
     std::sort(credits.begin(), credits.end());
 }
 
@@ -123,7 +131,7 @@ void Wallet::RemoveTransactionInputsSpentInBatchFromCredits(MinedCreditMessage& 
         if (credit_system->MessageType(hash) == "tx")
         {
             SignedTransaction tx = credit_system->msgdata[hash]["tx"];
-            for (auto input : tx.rawtx.inputs)
+            for (auto &input : tx.rawtx.inputs)
             {
                 if (VectorContainsEntry(credits, input))
                 {
@@ -136,12 +144,13 @@ void Wallet::RemoveTransactionInputsSpentInBatchFromCredits(MinedCreditMessage& 
 void Wallet::AddNewCreditsFromBatch(MinedCreditMessage& msg, CreditSystem* credit_system)
 {
     CreditBatch batch = credit_system->ReconstructBatch(msg);
-    for (auto credit : batch.credits)
+    for (auto &credit : batch.credits)
     {
         auto credit_in_batch = batch.GetCreditInBatch(credit);
         if (PrivateKeyIsKnown(credit_in_batch) and not VectorContainsEntry(credits, credit_in_batch))
             credits.push_back(credit_in_batch);
     }
+    SortCredits();
 }
 
 uint64_t Wallet::Balance()
@@ -166,7 +175,7 @@ void Wallet::AddTransactionInputsSpentInRemovedBatchToCredits(MinedCreditMessage
         if (credit_system->MessageType(hash) == "tx")
         {
             SignedTransaction tx = credit_system->msgdata[hash]["tx"];
-            for (auto input : tx.rawtx.inputs)
+            for (auto &input : tx.rawtx.inputs)
                 if (PrivateKeyIsKnown(input) and not VectorContainsEntry(credits, input))
                     credits.push_back(input);
         }
@@ -175,7 +184,7 @@ void Wallet::AddTransactionInputsSpentInRemovedBatchToCredits(MinedCreditMessage
 void Wallet::RemoveCreditsFromRemovedBatch(MinedCreditMessage& msg, CreditSystem* credit_system)
 {
     CreditBatch batch = credit_system->ReconstructBatch(msg);
-    for (auto credit : batch.credits)
+    for (auto &credit : batch.credits)
     {
         auto credit_in_batch = batch.GetCreditInBatch(credit);
         if (VectorContainsEntry(credits, credit_in_batch))
@@ -200,14 +209,34 @@ void Wallet::SwitchAcrossFork(uint160 old_tip, uint160 new_tip, CreditSystem *cr
         new_tip = msg.mined_credit.network_state.previous_mined_credit_message_hash;
     }
     std::reverse(new_branch.begin(), new_branch.end());
-    for (auto msg : new_branch)
+    for (auto &msg : new_branch)
         AddBatchToTip(msg, credit_system);
 }
 
 void Wallet::ImportPrivateKey(const CBigNum private_key)
 {
-    log_ << "Importing private key " << private_key << "\n";
-    // todo
+    Point public_key(SECP256K1, private_key);
+    log_ << "Importing private key for " << public_key << "\n";
+    if (credit_system == nullptr)
+        return;
+
+    auto credits_paying_to_key = credit_system->tracker.GetCreditsPayingToRecipient(public_key);
+
+    for (auto credit : credits_paying_to_key)
+    {
+        credit_system->AddDiurnBranchToCreditInBatch(credit);
+
+        if (not calendar->ValidateCreditInBatch(credit))
+            continue;
+        if (spent_chain->Get(credit.position))
+            continue;
+        if (HaveCreditInBatchAlready(credit))
+            continue;
+
+        credits.push_back(credit);
+        log_ << "imported credit: " << credit.json() << "\n";
+    }
+    SortCredits();
 }
 
 uint160 GetKeyHashFromAddress(std::string address_string)

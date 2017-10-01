@@ -16,7 +16,7 @@ using namespace std;
 class ARelayMessageHandler : public Test
 {
 public:
-    MemoryDataStore msgdata, creditdata, keydata;
+    MemoryDataStore msgdata, creditdata, keydata, depositdata;
     CreditSystem *credit_system;
     RelayMessageHandler *relay_message_handler;
     RelayState *relay_state;
@@ -26,14 +26,13 @@ public:
 
     virtual void SetUp()
     {
-        credit_system = new CreditSystem(msgdata, creditdata);
-        relay_message_handler = new RelayMessageHandler(Data(msgdata, creditdata, keydata));
+        relay_message_handler = new RelayMessageHandler(Data(msgdata, creditdata, keydata, depositdata));
+        data = &relay_message_handler->data;
+        credit_system = new CreditSystem(*data);
         relay_message_handler->SetCreditSystem(credit_system);
         relay_message_handler->SetCalendar(&calendar);
 
         relay_message_handler->SetNetwork(peer.network);
-
-        data = &relay_message_handler->data;
 
         SetLatestMinedCreditMessageBatchNumberTo(1);
 

@@ -77,6 +77,9 @@ void TipController::AddToTip(MinedCreditMessage &msg)
     log_ << "updating accepted messages after new tip\n";
     builder->UpdateAcceptedMessagesAfterNewTip(msg);
 
+    log_ << "tracking credits\n";
+    auto batch = credit_system->ReconstructBatch(msg);
+    credit_system->tracker.StoreRecipientsOfCreditsInBatch(batch);
 }
 
 void TipController::RemoveFromMainChainAndSwitchToNewTip(uint160 msg_hash)

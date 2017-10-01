@@ -80,28 +80,19 @@ TEST_F(AWalletWithCredits, GeneratesASignedTransactionPayingToASpecifiedPublicKe
     ASSERT_THAT(tx.rawtx.outputs[0].keydata, Eq(public_key.getvch()));
 }
 
-TEST_F(AWalletWithCredits, GeneratesASignedTransactionPayingToASpecifiedPublicKeyHash)
+TEST_F(AWalletWithCredits, GeneratesASignedTransactionPayingANonIntegerAmountToASpecifiedPublicKey)
 {
     Point public_key(SECP256K1, 4);
-    uint160 keyhash = KeyHash(public_key);
-    SignedTransaction tx = wallet->GetSignedTransaction(keyhash, 2 * ONE_CREDIT);
-    ASSERT_THAT(tx.TotalInputAmount(), Ge(2 * ONE_CREDIT));
-    ASSERT_THAT(uint160(tx.rawtx.outputs[0].keydata), Eq(keyhash));
-}
-
-TEST_F(AWalletWithCredits, GeneratesASignedTransactionPayingANonIntegerAmountToASpecifiedPublicKeyHash)
-{
-    Point public_key(SECP256K1, 4);
-    uint160 keyhash = KeyHash(public_key);
-    SignedTransaction tx = wallet->GetSignedTransaction(keyhash, (uint64_t) (1.5 * ONE_CREDIT));
+    SignedTransaction tx = wallet->GetSignedTransaction(public_key, (uint64_t) (1.5 * ONE_CREDIT));
     ASSERT_THAT(tx.TotalInputAmount(), Ge(1.5 * ONE_CREDIT));
-    ASSERT_THAT(uint160(tx.rawtx.outputs[0].keydata), Eq(keyhash));
+    ASSERT_THAT(uint160(tx.rawtx.outputs[0].keydata), Eq(public_key.getvch()));
 }
 
 class AWalletWithCreditsAndAnIncomingMinedCreditMessage : public AWalletWithCredits
 {
 public:
-    MemoryDataStore creditdata, msgdata;
+    MemoryDataStore msgdata, creditdata, keydata, depositdata;
+    Data *data{NULL};
     CreditSystem *credit_system;
     SignedTransaction tx;
     MinedCreditMessage msg_containing_tx;
@@ -109,7 +100,8 @@ public:
     virtual void SetUp()
     {
         AWalletWithCredits::SetUp();
-        credit_system = new CreditSystem(msgdata, creditdata);
+        data = new Data(msgdata, creditdata, keydata, depositdata);
+        credit_system = new CreditSystem(*data);
         Point public_key = wallet->GetNewPublicKey();
         tx = wallet->GetSignedTransaction(public_key, 2 * ONE_CREDIT);
         credit_system->StoreTransaction(tx);
@@ -128,6 +120,7 @@ public:
     {
         AWalletWithCredits::TearDown();
         delete credit_system;
+        delete data;
     }
 };
 

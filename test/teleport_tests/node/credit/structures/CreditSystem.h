@@ -8,10 +8,12 @@
 #include <src/credits/SignedTransaction.h>
 #include <src/credits/CreditBatch.h>
 #include <test/teleport_tests/node/historical_data/messages/DiurnFailureMessage.h>
+#include <test/teleport_tests/node/Data.h>
 #include "test/teleport_tests/node/credit/messages/MinedCreditMessage.h"
 #include "test/teleport_tests/node/calendar/Calend.h"
 #include "test/teleport_tests/node/historical_data/messages/CalendarFailureMessage.h"
 #include "test/teleport_tests/node/calendar/Calendar.h"
+#include "CreditTracker.h"
 
 
 #define TARGET_BATCH_INTERVAL 60000000ULL // one minute
@@ -26,15 +28,18 @@ class CalendarMessage;
 class InitialDataMessage;
 class DiurnDataMessage;
 
+
 class CreditSystem
 {
 public:
+    Data data;
     MemoryDataStore &msgdata, &creditdata;
     uint160 initial_difficulty{INITIAL_DIFFICULTY};
     uint160 initial_diurnal_difficulty{INITIAL_DIURNAL_DIFFICULTY};
+    CreditTracker tracker;
 
-    CreditSystem(MemoryDataStore &msgdata, MemoryDataStore &creditdata):
-            msgdata(msgdata), creditdata(creditdata)
+    CreditSystem(Data data):
+        data(data), msgdata(data.msgdata), creditdata(data.creditdata), tracker(this)
     { }
 
     std::vector<uint160> MostWorkBatches();
@@ -70,9 +75,9 @@ public:
 
     void RemoveFromMainChain(MinedCreditMessage &msg);
 
-    bool IsInMainChain(uint160 credit_hash);
+    bool IsInMainChain(uint160 msg_hash);
 
-    bool IsCalend(uint160 credit_hash);
+    bool IsCalend(uint160 msg_hash);
 
     uint160 InitialDifficulty();
 
@@ -195,6 +200,14 @@ public:
     void SwitchMainChainToTipWithTheMostWork();
 
     uint160 CurrentTipOfMainChain();
+
+    void AddDiurnBranchToCreditInBatch(CreditInBatch &credit);
+
+    void RecordAdditionOfCalendToMainChain(MinedCreditMessage &msg);
+
+    void RecordEndOfDiurn(Calend &calend, Diurn &diurn);
+
+    Diurn GetDiurnContainingBatch(uint160 batch_root);
 };
 
 

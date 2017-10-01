@@ -303,7 +303,8 @@ BitChain CreditSystem::GetSpentChain(uint160 msg_hash)
     while (starting_hash != 0 and not creditdata[starting_hash].HasProperty("spent_chain"))
         starting_hash = PreviousMinedCreditMessageHash(starting_hash);
 
-    BitChain starting_chain = creditdata[starting_hash]["spent_chain"];
+    BitChain starting_chain;
+    starting_chain = creditdata[starting_hash]["spent_chain"];
     return GetSpentChainOnOtherProngOfFork(starting_chain, starting_hash, msg_hash);
 }
 
@@ -319,6 +320,17 @@ void CreditSystem::AddToMainChain(MinedCreditMessage &msg)
     creditdata[msg_hash].Location("main_chain") = msg.mined_credit.ReportedWork();
     creditdata[msg.mined_credit.network_state.batch_root]["msg_hash"] = msg_hash;
     AcceptMinedCreditMessageAsValidByRecordingTotalWorkAndParent(msg);
+
+    creditdata[msg.mined_credit.network_state.batch_root]["batch_encoding_msg"] = msg_hash;
+
+    if (IsCalend(msg_hash))
+        RecordAdditionOfCalendToMainChain(msg);
+}
+
+void CreditSystem::RecordAdditionOfCalendToMainChain(MinedCreditMessage &msg)
+{
+    uint160 previous_diurn_root = msg.mined_credit.network_state.previous_diurn_root;
+    creditdata[previous_diurn_root]["next_calend"] = msg.GetHash160();
 }
 
 void CreditSystem::AddMinedCreditMessageAndPredecessorsToMainChain(uint160 msg_hash)
@@ -993,7 +1005,7 @@ void CreditSystem::StoreDataFromDiurnDataMessage(DiurnDataMessage diurn_data_mes
         uint160 first_msg_hash = diurn_data_message.diurns[i].credits_in_diurn[0].GetHash160();
         creditdata[first_msg_hash]["first_in_data_message"] = true;
 
-        for (auto msg : diurn_data_message.diurns[i].credits_in_diurn)
+        for (auto &msg : diurn_data_message.diurns[i].credits_in_diurn)
             StoreMinedCreditMessage(msg);
 
         EnclosedMessageData &data = diurn_data_message.message_data[i].message_data;
@@ -1009,4 +1021,46 @@ void CreditSystem::RemoveMinedCreditMessagesDownstreamOfDiurnFailure(DiurnFailur
 {
     MinedCreditMessage msg = msgdata[diurn_failure_message.details.mined_credit_message_hash]["msg"];
     RemoveMinedCreditMessageAndThoseDownstreamFromRecordOfTotalWork(msg);
+}
+
+void CreditSystem::RecordEndOfDiurn(Calend &calend, Diurn &diurn)
+{
+    uint160 diurn_root = calend.DiurnRoot();
+    creditdata[diurn_root]["data_is_known"] = true;
+    creditdata[diurn_root]["message_data_is_known"] = true;
+    creditdata[diurn_root]["diurn_hash"] = diurn.GetHash160();
+
+    DiurnMessageData message_data = calend.GenerateDiurnMessageData(this);
+    creditdata[diurn_root]["message_data_hash"] = message_data.GetHash160();
+
+    creditdata[calend.GetHash160()]["diurn"] = diurn;
+}
+
+void CreditSystem::AddDiurnBranchToCreditInBatch(CreditInBatch &credit)
+{
+    auto batch_root = credit.branch.back();
+    log_ << "AddDiurnBranch: batch root is " << batch_root << "\n";
+    Diurn diurn_containing_batch = GetDiurnContainingBatch(batch_root);
+    log_ << "AddDiurnBranch: diurn is: " << diurn_containing_batch.json() << "\n";
+    uint160 encoding_message_hash = creditdata[batch_root]["batch_encoding_msg"];
+    log_ << "encoding message hash is " << encoding_message_hash << "\n";
+    MinedCreditMessage msg = data.GetMessage(creditdata[batch_root]["batch_encoding_msg"]);
+    credit.diurn_branch = diurn_containing_batch.Branch(msg.mined_credit.GetHash160());
+    log_ << "diurn branch is: " << credit.diurn_branch << "\n";
+}
+
+Diurn CreditSystem::GetDiurnContainingBatch(uint160 batch_root)
+{
+    uint160 msg_hash = creditdata[batch_root]["batch_encoding_msg"];
+    MinedCreditMessage msg = data.GetMessage(msg_hash);
+    uint160 previous_diurn_root;
+    if (IsCalend(msg_hash))
+    {
+        Calend calend(msg);
+        previous_diurn_root = calend.DiurnRoot();
+    }
+    else
+        previous_diurn_root = msg.mined_credit.network_state.previous_diurn_root;
+    uint160 next_calend_hash = creditdata[previous_diurn_root]["next_calend"];
+    return creditdata[next_calend_hash]["diurn"];
 }

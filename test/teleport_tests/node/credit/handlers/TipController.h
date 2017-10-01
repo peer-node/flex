@@ -12,14 +12,14 @@ class TipController
 {
 public:
     MemoryDataStore &msgdata, &creditdata, &keydata;
-    CreditSystem *credit_system;
+    CreditSystem *credit_system{NULL};
     Calendar *calendar;
     Mutex calendar_mutex;
     BitChain *spent_chain;
     Wallet *wallet{NULL};
     MinedCreditMessageBuilder *builder;
 
-    TipController(Data data):
+    explicit TipController(Data data):
             msgdata(data.msgdata), creditdata(data.creditdata), keydata(data.keydata)
     { }
 

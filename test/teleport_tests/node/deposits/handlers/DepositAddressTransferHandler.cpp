@@ -103,6 +103,10 @@ void DepositAddressTransferHandler::AcceptTransferAcknowledgement(TransferAcknow
 
     DepositTransferMessage transfer = data.GetMessage(acknowledgement.transfer_hash);
 
+    deposit_message_handler->ChangeStoredRecipientOfDepositAddress(transfer.sender_pubkey,
+                                                                   transfer.deposit_address_pubkey,
+                                                                   transfer.recipient_pubkey);
+
     if (data.keydata[transfer.sender_pubkey].HasProperty("privkey"))
     {
         log_ << "sent address with pubkey: " << deposit_address_pubkey << "\n";

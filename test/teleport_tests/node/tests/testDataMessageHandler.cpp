@@ -21,7 +21,7 @@ class ADataMessageHandler : public Test
 {
 public:
     TestPeer peer;
-    MemoryDataStore creditdata, msgdata, keydata;
+    MemoryDataStore creditdata, msgdata, keydata, depositdata;
     Data *data;
     DataMessageHandler *data_message_handler;
     CreditMessageHandler *credit_message_handler;
@@ -32,10 +32,10 @@ public:
     {
         peer.id = 1;
 
-        data = new Data(msgdata, creditdata, keydata);
+        data = new Data(msgdata, creditdata, keydata, depositdata);
         data_message_handler = new DataMessageHandler(msgdata, creditdata);
         data_message_handler->SetNetwork(peer.network);
-        credit_system = new CreditSystem(msgdata, creditdata);
+        credit_system = new CreditSystem(*data);
         data_message_handler->SetCreditSystemAndGenerateHandlers(credit_system);
         calendar = new Calendar();
         data_message_handler->SetCalendar(calendar);
@@ -67,6 +67,7 @@ public:
         delete data_message_handler;
         delete credit_system;
         delete calendar;
+        delete data;
     }
 
     void AddABatch()

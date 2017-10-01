@@ -14,7 +14,7 @@ using namespace std;
 class ARelayTipHandler : public Test
 {
 public:
-    MemoryDataStore msgdata, creditdata, keydata;
+    MemoryDataStore msgdata, creditdata, keydata, depositdata;
     CreditSystem *credit_system;
     RelayMessageHandler *relay_message_handler;
     RelayTipHandler *relay_tip_handler;
@@ -24,13 +24,12 @@ public:
 
     virtual void SetUp()
     {
-        credit_system = new CreditSystem(msgdata, creditdata);
-        relay_message_handler = new RelayMessageHandler(Data(msgdata, creditdata, keydata));
+        relay_message_handler = new RelayMessageHandler(Data(msgdata, creditdata, keydata, depositdata));
+        data = &relay_message_handler->data;
+        credit_system = new CreditSystem(*data);
         relay_message_handler->SetCreditSystem(credit_system);
         relay_message_handler->SetCalendar(&calendar);
         relay_tip_handler = &relay_message_handler->tip_handler;
-
-        data = &relay_message_handler->data;
 
         relay_message_handler->admission_handler.scheduler.running = false;
         relay_message_handler->succession_handler.scheduler.running = false;

@@ -30,17 +30,20 @@ MinedCreditMessage SucceedingMinedCreditMessage(MinedCreditMessage& given_msg)
 class ACreditSystem : public Test
 {
 public:
-    MemoryDataStore msgdata, creditdata;
+    MemoryDataStore msgdata, creditdata, keydata, depositdata;
+    Data *data{NULL};
     CreditSystem *credit_system;
 
     virtual void SetUp()
     {
-        credit_system = new CreditSystem(msgdata, creditdata);
+        data = new Data(msgdata, creditdata, keydata, depositdata);
+        credit_system = new CreditSystem(*data);
     }
 
     virtual void TearDown()
     {
         delete credit_system;
+        delete data;
     }
 
     vector<MinedCreditMessage> ChainStartingFromGivenMinedCreditMessage(MinedCreditMessage given_msg, uint64_t length)

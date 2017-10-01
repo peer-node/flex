@@ -170,8 +170,9 @@ bool KnownHistoryHandler::CheckIfDiurnDataMatchesHashes(DiurnDataMessage diurn_d
 
 bool KnownHistoryHandler::ValidateDataInDiurnDataMessage(DiurnDataMessage diurn_data_message)
 {
-    MemoryDataStore msgdata_, creditdata_;
-    CreditSystem credit_system_(msgdata_, creditdata_);
+    MemoryDataStore msgdata_, creditdata_, keydata_, depositdata_;
+    Data data_(msgdata_, creditdata_, keydata_, depositdata_);
+    CreditSystem credit_system_(data_);
 
     if (not CheckSizesInDiurnDataMessage(diurn_data_message))
     {

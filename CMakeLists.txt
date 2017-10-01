@@ -423,7 +423,7 @@ set(NEW_CREDITS_FILES
         test/teleport_tests/node/credit/handlers/TipController.cpp
         test/teleport_tests/node/credit/handlers/TipController.h
         test/teleport_tests/node/credit/handlers/MinedCreditMessageBuilder.cpp
-        test/teleport_tests/node/credit/handlers/MinedCreditMessageBuilder.h)
+        test/teleport_tests/node/credit/handlers/MinedCreditMessageBuilder.h test/teleport_tests/node/credit/structures/CreditTracker.cpp test/teleport_tests/node/credit/structures/CreditTracker.h test/teleport_tests/node/credit/structures/TimeAndRecipient.cpp test/teleport_tests/node/credit/structures/TimeAndRecipient.h)
 
 set(DATA_HANDLER_FILES
         test/teleport_tests/node/historical_data/LoadHashesIntoDataStore.h

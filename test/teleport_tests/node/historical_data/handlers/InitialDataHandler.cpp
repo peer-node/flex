@@ -193,7 +193,7 @@ bool InitialDataHandler::ValidateMinedCreditMessagesInInitialDataMessage(Initial
 {
     MemoryDataStore msgdata_, creditdata_, keydata_, depositdata_;
     Data data_(msgdata_, creditdata_, keydata_, depositdata_);
-    CreditSystem credit_system_(msgdata_, creditdata_);
+    CreditSystem credit_system_(data_);
 
     credit_system_.SetMiningParameters(data_message_handler->calendar_handler->number_of_megabytes_for_mining,
                                        initial_difficulty, initial_diurnal_difficulty);

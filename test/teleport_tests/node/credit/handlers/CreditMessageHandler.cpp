@@ -333,7 +333,7 @@ bool CreditMessageHandler::CheckInputsAreUnspentByAcceptedTransactions(SignedTra
 
 bool CreditMessageHandler::CheckInputsAreOKAccordingToCalendar(SignedTransaction tx)
 {
-    for (auto input : tx.rawtx.inputs)
+    for (auto &input : tx.rawtx.inputs)
         if (not calendar->ValidateCreditInBatch(input))
             return false;
     return true;
@@ -342,32 +342,44 @@ bool CreditMessageHandler::CheckInputsAreOKAccordingToCalendar(SignedTransaction
 void CreditMessageHandler::HandleSignedTransaction(SignedTransaction tx)
 {
     uint160 tx_hash = tx.GetHash160();
-
+    log_ << "handling signed transaction: " << tx_hash << "\n";
     if (VectorContainsEntry(builder->accepted_messages, tx_hash))
     {
+        log_ << "already accepted\n";
         return;
     }
 
     if (not VerifyTransactionSignature(tx))
     {
+        log_ << "bad signature \n";
         RejectMessage(tx_hash);
         return;
     }
 
     if (transaction_validator.OutputsOverflow(tx) or transaction_validator.ContainsRepeatedInputs(tx))
     {
+        log_ << "bad inputs\n";
         RejectMessage(tx_hash);
         return;
     }
 
     if (not CheckInputsAreUnspentAccordingToSpentChain(tx))
+    {
+        log_ << "spent inputs\n";
         return;
+    }
 
     if (not CheckInputsAreUnspentByAcceptedTransactions(tx))
+    {
+        log_ << "inputs spent by accepted txs\n";
         return;
+    }
 
     if (not CheckInputsAreOKAccordingToCalendar(tx))
+    {
+        log_ << "bad inputs according to calendar\n";
         return;
+    }
 
     AcceptTransaction(tx);
 }

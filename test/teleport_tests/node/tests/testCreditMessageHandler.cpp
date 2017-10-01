@@ -14,7 +14,7 @@ using namespace std;
 class ACreditMessageHandler : public Test
 {
 public:
-    MemoryDataStore msgdata, creditdata, keydata;
+    MemoryDataStore msgdata, creditdata, keydata, depositdata;
     Data *data;
     CreditSystem *credit_system;
     CreditMessageHandler *credit_message_handler;
@@ -27,8 +27,8 @@ public:
 
     virtual void SetUp()
     {
-        data = new Data(msgdata, creditdata, keydata);
-        credit_system = new CreditSystem(msgdata, creditdata);
+        data = new Data(msgdata, creditdata, keydata, depositdata);
+        credit_system = new CreditSystem(*data);
         credit_system->initial_difficulty = 10000;
         credit_message_handler = new CreditMessageHandler(*data);
         tip_controller = new TipController(*data);
@@ -50,6 +50,7 @@ public:
         delete tip_controller;
         delete builder;
         delete wallet;
+        delete data;
     }
 };
 

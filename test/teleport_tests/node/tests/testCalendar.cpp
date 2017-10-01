@@ -92,17 +92,20 @@ class ACalendarWithACreditSystem : public Test
 {
 public:
     Calendar calendar;
-    MemoryDataStore msgdata, creditdata;
+    MemoryDataStore msgdata, creditdata, keydata, depositdata;
+    Data *data{NULL};
     CreditSystem *credit_system;
 
     virtual void SetUp()
     {
-        credit_system = new CreditSystem(msgdata, creditdata);
+        data = new Data(msgdata, creditdata, keydata, depositdata);
+        credit_system = new CreditSystem(*data);
     }
 
     virtual void TearDown()
     {
         delete credit_system;
+        delete data;
     }
 
     virtual EncodedNetworkState SucceedingNetworkState(MinedCreditMessage msg)

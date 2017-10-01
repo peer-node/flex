@@ -11,15 +11,26 @@
 #include "test/teleport_tests/node/credit/messages/MinedCreditMessage.h"
 #include "test/teleport_tests/node/credit/structures/CreditSystem.h"
 
+class CreditTracker;
+
 class Wallet
 {
 public:
     MemoryDataStore& keydata;
     std::vector<CreditInBatch> credits;
+    CreditSystem *credit_system{nullptr};
+    Calendar *calendar{nullptr};
+    BitChain *spent_chain{nullptr};
 
-    Wallet(MemoryDataStore& keydata_):
+    explicit Wallet(MemoryDataStore& keydata_):
         keydata(keydata_)
     { }
+
+    void SetCreditSystem(CreditSystem *credit_system_);
+
+    void SetCalendar(Calendar *calendar_);
+
+    void SetSpentChain(BitChain *spent_chain_);
 
     std::vector<CreditInBatch> GetCredits();
 
@@ -32,8 +43,6 @@ public:
     bool HaveCreditInBatchAlready(CreditInBatch credit_in_batch);
 
     SignedTransaction GetSignedTransaction(Point pubkey, uint64_t amount);
-
-    SignedTransaction GetSignedTransaction(uint160 keyhash, uint64_t amount);
 
     UnsignedTransaction GetUnsignedTransaction(vch_t key_data, uint64_t amount);
 
@@ -51,13 +60,13 @@ public:
 
     void RemoveCreditsFromRemovedBatch(MinedCreditMessage &msg, CreditSystem *credit_system);
 
-    bool PrivateKeyIsKnown(uint160 key_hash);
-
     bool PrivateKeyIsKnown(Point public_key);
 
     void SwitchAcrossFork(uint160 old_tip, uint160 new_tip, CreditSystem *credit_system);
 
     void ImportPrivateKey(const CBigNum private_key);
+
+    void SortCredits();
 };
 
 uint160 GetKeyHashFromAddress(std::string address_string);
