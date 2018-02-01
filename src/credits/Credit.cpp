@@ -21,81 +21,53 @@ string_t ByteString(vch_t bytes)
  *  Credit
  */
 
-    Credit::Credit(vch_t keydata, uint64_t amount):
+    Credit::Credit(Point public_key, uint64_t amount):
         amount(amount),
-        keydata(keydata)
+        public_key(public_key)
     { }
 
     Credit::Credit(vch_t data)
     {
         memcpy(&amount, &data[0], 8);
-        keydata.resize(data.size() - 8);
-        memcpy(&keydata[0], &data[8], data.size() - 8);
+        vch_t key_bytes(data.begin() + 8, data.end());
+        public_key.setvch(key_bytes);
     }
 
-    string_t Credit::ToString() const
+    string_t Credit::ToString()
     {
         stringstream ss;
 
-        uint160 keyhash = KeyHash();
-        Point pubkey;
-
-        if (keydata.size() == 20)
-        {
-            //pubkey = ::keydata[keyhash]["pubkey"];
-        }
-        else
-        {
-            pubkey.setvch(keydata);
-        }
-
         ss << "\n============== Credit =============" << "\n"
            << "== Amount: " << amount << "\n"
-           << "== Key Data: " << ByteString(keydata) << "\n"
-           << "== " << "\n"
-           << "== Key Hash: " << keyhash.ToString() << "\n"
-           << "== Pubkey: " << pubkey.ToString() << "\n"
+           << "== Address: " << TeleportAddress() << "\n"
            << "============ End Credit ===========" << "\n";
         return ss.str();
     }
 
     uint160 Credit::KeyHash() const
     {
-        uint160 keyhash;
-        Point pubkey;
-
-        if (keydata.size() == 20)
-        {
-            keyhash = uint160(keydata);
-        }
-        else
-        {
-            pubkey.setvch(keydata);
-            keyhash = ::KeyHash(pubkey);
-        }
-        return keyhash;
+        return ::KeyHash(public_key);
     }
 
     vch_t Credit::getvch() const
     {
         vch_t output;
-        output.resize(keydata.size() + 8);
+        output.resize(8);
         memcpy(&output[0], &amount, 8);
-        memcpy(&output[8], &keydata[0], keydata.size());
+        vch_t key_bytes = public_key.getvch();
+        output.insert(output.end(), key_bytes.begin(), key_bytes.end());
         return output;
     }
 
     bool Credit::operator==(const Credit& other_credit) const
     {
-        return amount == other_credit.amount
-                && keydata == other_credit.keydata;
+        return amount == other_credit.amount and public_key == other_credit.public_key;
     }
 
     bool Credit::operator<(const Credit& other_credit) const
     {
         return amount < other_credit.amount
-                || (amount == other_credit.amount &&
-                    keydata < other_credit.keydata);
+                or (amount == other_credit.amount and public_key.getvch() < other_credit.public_key.getvch());
     }
 
 /*

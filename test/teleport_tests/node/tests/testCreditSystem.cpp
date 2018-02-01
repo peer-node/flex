@@ -103,8 +103,7 @@ MinedCredit ExampleMinedCredit()
 {
     MinedCredit credit;
     credit.amount = ONE_CREDIT;
-    Point pubkey(SECP256K1, 2);
-    credit.keydata = pubkey.getvch();
+    credit.public_key = Point(SECP256K1, 2);
     credit.network_state = ExampleNetworkState();
     return credit;
 }
@@ -369,7 +368,7 @@ public:
         second_network_state.timestamp = msg1.mined_credit.network_state.timestamp + 59 * 1000 * 1000;
 
         msg2.mined_credit.amount = ONE_CREDIT;
-        msg2.mined_credit.keydata = Point(SECP256K1, 2).getvch();
+        msg2.mined_credit.public_key = Point(SECP256K1, 2);
         msg2.mined_credit.network_state = second_network_state;
         credit_system->StoreMinedCreditMessage(msg2);
     }
@@ -400,7 +399,7 @@ public:
         second_network_state = credit_system->SucceedingNetworkState(msg1);
         second_network_state.timestamp = msg1.mined_credit.network_state.timestamp + 61 * 1000 * 1000;
         msg2.mined_credit.amount = ONE_CREDIT;
-        msg2.mined_credit.keydata = Point(SECP256K1, 2).getvch();
+        msg2.mined_credit.public_key = Point(SECP256K1, 2);
         msg2.mined_credit.network_state = second_network_state;
         credit_system->StoreMinedCredit(msg2.mined_credit);
     }

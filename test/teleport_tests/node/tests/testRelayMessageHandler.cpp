@@ -96,7 +96,7 @@ MinedCreditMessage ARelayMessageHandler::AMinedCreditMessageWithNonZeroTotalWork
     MinedCreditMessage msg;
     msg.mined_credit.network_state.difficulty = 10;
     msg.mined_credit.network_state.batch_number = 1;
-    msg.mined_credit.keydata = Point(SECP256K1, 5).getvch();
+    msg.mined_credit.public_key = Point(SECP256K1, 5);
     keydata[Point(SECP256K1, 5)]["privkey"] = CBigNum(5);
     return msg;
 }
@@ -130,9 +130,8 @@ RelayJoinMessage ARelayMessageHandler::ARelayJoinMessageWithAValidSignature()
 void ARelayMessageHandler::CorruptStoredPublicKeyOfMinedCreditMessage(uint160 mined_credit_message_hash)
 {
     MinedCreditMessage msg = msgdata[mined_credit_message_hash]["msg"];
-    Point public_key;
-    public_key.setvch(msg.mined_credit.keydata);
-    msg.mined_credit.keydata = (public_key + Point(SECP256K1, 1)).getvch();
+    Point public_key = msg.mined_credit.public_key;
+    msg.mined_credit.public_key = (public_key + Point(SECP256K1, 1));
     msgdata[mined_credit_message_hash]["msg"] = msg;
 }
 
@@ -339,7 +338,7 @@ public:
     {
         MinedCreditMessage msg;
         msg.mined_credit.network_state.previous_total_work = 100;
-        msg.mined_credit.keydata = Point(SECP256K1, 2).getvch();
+        msg.mined_credit.public_key = Point(SECP256K1, 2);
         keydata[Point(SECP256K1, 2)]["privkey"] = CBigNum(2);
         credit_system->StoreMinedCreditMessage(msg);
         return msg;
@@ -418,7 +417,7 @@ public:
         MinedCreditMessage last_msg = calendar.LastMinedCreditMessage();
         MinedCreditMessage msg;
         msg.mined_credit.network_state = credit_system->SucceedingNetworkState(last_msg);
-        msg.mined_credit.keydata = Point(SECP256K1, 2).getvch();
+        msg.mined_credit.public_key = Point(SECP256K1, 2);
         keydata[Point(SECP256K1, 2)]["privkey"] = CBigNum(2);
         uint160 msg_hash = msg.GetHash160();
         credit_system->StoreMinedCreditMessage(msg);

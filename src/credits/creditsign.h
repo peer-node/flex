@@ -95,20 +95,9 @@ inline Point GetTransactionVerificationKey(UnsignedTransaction &unsigned_tx)
 
     for (uint32_t i = 0; i < unsigned_tx.inputs.size(); i++)
     {
-        Point pubkey;
         CreditInBatch batch_credit = unsigned_tx.inputs[i];
-        
-        if (unsigned_tx.inputs[i].keydata.size() == 34)
-        {
-            pubkey.setvch(unsigned_tx.inputs[i].keydata);
-        }
-        else
-        {
-            pubkey = unsigned_tx.pubkeys[n];
-            n++;
-        }
         hash = Hash(BEGIN(hash), END(hash));
-        key = key + pubkey * (CBigNum(hash) % key.Modulus());
+        key = key + batch_credit.public_key * (CBigNum(hash) % key.Modulus());
     }
     return key;
 }
@@ -123,21 +112,7 @@ inline Signature SignTx(UnsignedTransaction unsigned_tx, MemoryDataStore& keydat
     hash_ = hash;
     for (uint32_t i = 0; i < unsigned_tx.inputs.size(); i++)
     {
-        CBigNum privkey;
-        if (unsigned_tx.inputs[i].keydata.size() == 20)
-        {
-            uint160 keyhash(unsigned_tx.inputs[i].keydata);
-            Point pubkey = keydata[keyhash]["pubkey"];
-            CBigNum privkey_ = keydata[pubkey]["privkey"];
-            privkey = privkey_;
-        }
-        else
-        {
-            Point pubkey;
-            pubkey.setvch(unsigned_tx.inputs[i].keydata);
-            CBigNum privkey_ = keydata[pubkey]["privkey"];
-            privkey = privkey_;
-        }
+        CBigNum privkey = keydata[unsigned_tx.inputs[i].public_key]["privkey"];
         hash_ = Hash(BEGIN(hash_), END(hash_));
         signing_key = (signing_key + ((CBigNum(hash_) % modulus)) * privkey) % modulus;
     }
@@ -157,49 +132,16 @@ inline SignedTransaction SignTransaction(UnsignedTransaction unsigned_tx, Memory
     return tx;
 }
 
-inline bool CheckKeyHashes(UnsignedTransaction rawtx)
-{
-    uint32_t n = 0;
-
-    for (uint32_t i = 0; i < rawtx.inputs.size(); i++)
-    {
-        if (rawtx.inputs[i].keydata.size() == 20)
-        {
-            if (n >= rawtx.pubkeys.size())
-            {
-                log_ << "CheckKeyHashes(): " << rawtx.pubkeys.size()
-                     << " pubkeys but " << n + 1 << " 20-byte keys!\n";
-                return false;
-            }
-            if (KeyHash(rawtx.pubkeys[n]) != uint160(rawtx.inputs[i].keydata))
-            {
-                log_ << "CheckKeyHashes(): "
-                     << KeyHash(rawtx.pubkeys[n]) << " vs "
-                     << uint160(rawtx.inputs[i].keydata) << "\n";
-                return false;
-            }
-            n++;
-        }
-    }
-    return true;
-}
-
-inline bool VerifyCreditTransferSignature(UnsignedTransaction unsigned_tx,
-                                          Signature signature)
+inline bool VerifyCreditTransferSignature(UnsignedTransaction unsigned_tx, Signature signature)
 {
     Point verification_key = GetTransactionVerificationKey(unsigned_tx);
     uint256 hash = unsigned_tx.GetHash();
     
     return VerifySignatureOfHash(signature, hash, verification_key);
-
 }
 
 inline bool VerifyTransactionSignature(SignedTransaction tx)
 {
-    if (!CheckKeyHashes(tx.rawtx))
-    {
-        return false;
-    }
     return VerifyCreditTransferSignature(tx.rawtx, tx.signature);
 }
 

@@ -10,27 +10,26 @@
 class CreditInBatch : public Credit
 {
 public:
-    uint64_t position;
+    uint64_t position{0};
     std::vector<uint160> branch;
     std::vector<uint160> diurn_branch;
 
-    CreditInBatch() {}
+    CreditInBatch() = default;
 
-    CreditInBatch(Credit credit, uint64_t position,
-                  std::vector<uint160> branch);
+    CreditInBatch(Credit credit, uint64_t position, std::vector<uint160> branch);
 
     string_t ToString() const;
 
     IMPLEMENT_SERIALIZE
     (
         READWRITE(amount);
-        READWRITE(keydata);
+        READWRITE(public_key);
         READWRITE(position);
         READWRITE(branch);
         READWRITE(diurn_branch);
     )
 
-    JSON(amount, keydata, position, branch, diurn_branch);
+    JSON(amount, public_key, position, branch, diurn_branch);
 
     vch_t getvch();
 

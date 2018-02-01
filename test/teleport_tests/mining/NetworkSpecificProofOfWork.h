@@ -26,12 +26,15 @@ public:
         return branch == other.branch && proof.GetHash() == other.proof.GetHash();
     }
 
-    IMPLEMENT_SERIALIZE(
+    IMPLEMENT_SERIALIZE
+    (
         READWRITE(branch);
         READWRITE(proof);
     )
     
     JSON(branch, proof);
+
+    HASH160();
 
     bool IsValid();
 

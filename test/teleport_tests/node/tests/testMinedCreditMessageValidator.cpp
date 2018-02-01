@@ -49,7 +49,7 @@ public:
     {
         MinedCreditMessage msg;
         SignedTransaction tx;
-        tx.rawtx.outputs.push_back(Credit(Point(SECP256K1, 2).getvch(), 1));
+        tx.rawtx.outputs.push_back(Credit(Point(SECP256K1, 2), 1));
         keydata[Point(SECP256K1, 2)]["privkey"] = CBigNum(2);
         credit_system->StoreTransaction(tx);
         msg.hash_list.full_hashes.push_back(tx.GetHash160());
@@ -59,7 +59,7 @@ public:
         msg.mined_credit.network_state.batch_number = 1;
         msg.mined_credit.network_state.batch_root = batch.Root();
         msg.mined_credit.network_state.difficulty = credit_system->initial_difficulty;
-        msg.mined_credit.keydata = Point(SECP256K1, 2).getvch();
+        msg.mined_credit.public_key = Point(SECP256K1, 2);
         return msg;
     }
 

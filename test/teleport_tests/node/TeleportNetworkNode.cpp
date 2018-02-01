@@ -1,3 +1,4 @@
+#include <test/teleport_tests/currency/CryptoCurrencyAddress.h>
 #include "TeleportNetworkNode.h"
 
 #include "log.h"
@@ -150,19 +151,12 @@ std::string TeleportNetworkNode::GetCryptoCurrencyAddressFromPublicKey(std::stri
     if (currency_code == "TCR")
         return GetTeleportAddressFromPublicKey(public_key);
 
-    //todo
-    return "Not implemented";
+    return CryptoCurrencyAddress(currency_code, public_key).ToString();
 }
 
 std::string TeleportNetworkNode::GetTeleportAddressFromPublicKey(Point public_key)
 {
-    uint8_t prefix{179}; // Teleport addresses start with T
-    vch_t bytes = public_key.getvch();
-    bytes[0] = prefix; // overwrites byte which specifies curve (SECP256K1)
-    auto address_52chars = EncodeBase58Check(bytes);
-
-    // second letter is always a U, so remove it
-    return "T" + std::string(address_52chars.begin() + 2, address_52chars.end());
+    return Credit::GetTeleportAddressFromPublicKey(public_key);
 }
 
 Point TeleportNetworkNode::GetPublicKeyFromTeleportAddress(std::string address)
@@ -175,4 +169,18 @@ Point TeleportNetworkNode::GetPublicKeyFromTeleportAddress(std::string address)
     bytes[0] = SECP256K1;
     public_key.setvch(bytes);
     return public_key;
+}
+
+
+uint64_t TeleportNetworkNode::GetKnownPubKeyBalance(Point &pubkey)
+{
+    uint64_t balance = 0;
+    std::vector<CreditInBatch> credits = credit_system->tracker.GetCreditsPayingToRecipient(pubkey);
+
+    for (auto &credit : credits)
+    {
+            if (not spent_chain.Get(credit.position))
+        balance += credit.amount;
+    }
+    return balance;
 }

@@ -558,7 +558,7 @@ set(CONFIG_FILES
         test/teleport_tests/node/config/TeleportConfig.h
         test/teleport_tests/node/config/TeleportConfigDefaults.h
         test/teleport_tests/node/config/ConfigParser.cpp
-        test/teleport_tests/node/config/ConfigParser.h)
+        test/teleport_tests/node/config/ConfigParser.h test/teleport_tests/currency/CryptoCurrencyAddress.cpp test/teleport_tests/currency/CryptoCurrencyAddress.h test/teleport_tests/currency/CryptoCurrencyPrivateKey.cpp test/teleport_tests/currency/CryptoCurrencyPrivateKey.h)
 
 set(CURRENCY_FILES
         test/teleport_tests/node/server/HttpAuthServer.cpp

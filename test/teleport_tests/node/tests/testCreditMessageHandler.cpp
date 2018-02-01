@@ -92,7 +92,7 @@ MinedCreditMessage ValidFirstMinedCreditMessage(CreditSystem* credit_system)
 {
     MinedCreditMessage msg;
     msg.mined_credit.amount = ONE_CREDIT;
-    msg.mined_credit.keydata = Point(SECP256K1, 2).getvch();
+    msg.mined_credit.public_key = Point(SECP256K1, 2);
     msg.mined_credit.network_state = ValidFirstNetworkState();
     credit_system->creditdata[msg.GetHash160()]["quickcheck_ok"] = true;
     credit_system->StoreMinedCreditMessage(msg);
@@ -255,7 +255,7 @@ MinedCreditMessage ValidSecondMinedCreditMessage(CreditSystem* credit_system, Mi
     MinedCreditMessage msg;
 
     msg.mined_credit.amount = ONE_CREDIT;
-    msg.mined_credit.keydata = Point(SECP256K1, 3).getvch();
+    msg.mined_credit.public_key = Point(SECP256K1, 3);
 
     credit_system->StoreMinedCreditMessage(prev_msg);
     msg.mined_credit.network_state = credit_system->SucceedingNetworkState(prev_msg);
@@ -496,7 +496,7 @@ public:
         msg.hash_list.GenerateShortHashes();
         msg.mined_credit.network_state = credit_system->SucceedingNetworkState(prev_msg);
 
-        msg.mined_credit.keydata = GetNextPubKey().getvch();
+        msg.mined_credit.public_key = GetNextPubKey();
 
         credit_system->SetBatchRootAndSizeAndMessageListHashAndSpentChainHash(msg);
         credit_system->StoreMinedCreditMessage(msg);
@@ -517,7 +517,7 @@ public:
     SignedTransaction GetDoubleSpendTransactionUsingMinedCreditAsInput(MinedCreditMessage msg)
     {
         auto tx = GetTransactionUsingMinedCreditAsInput(msg);
-        Credit output(GetNextPubKey().getvch(), ONE_CREDIT);
+        Credit output(GetNextPubKey(), ONE_CREDIT);
         tx.rawtx.outputs.push_back(output);
         return SignTransaction(tx.rawtx, keydata);
     }

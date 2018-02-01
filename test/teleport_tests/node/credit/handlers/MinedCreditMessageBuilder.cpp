@@ -143,7 +143,7 @@ MinedCreditMessage MinedCreditMessageBuilder::GenerateMinedCreditMessageWithoutP
     MinedCreditMessage msg, current_tip = Tip();
 
     msg.mined_credit.network_state = credit_system->SucceedingNetworkState(current_tip);
-    msg.mined_credit.keydata = GetNewPublicKey(keydata).getvch();
+    msg.mined_credit.public_key = GetNewPublicKey(keydata);
 
     if (msg.mined_credit.network_state.batch_number > 1)
         msg.hash_list.full_hashes.push_back(msg.mined_credit.network_state.previous_mined_credit_message_hash);

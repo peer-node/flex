@@ -130,8 +130,6 @@ public:
 
     void RemoveAddress(Point address, vch_t currency);
 
-    void AddAndRemoveMyAddresses(uint160 transfer_hash);
-
     std::vector<Point> MyDepositAddressPublicKeys(std::string currency_code);
 
     std::vector<uint64_t> GetRelaysForAddressRequest(uint160 request_hash, uint160 encoding_message_hash);
@@ -139,8 +137,6 @@ public:
     std::vector<uint64_t> GetRelaysForAddressPubkey(Point address_pubkey);
 
     std::vector<Point> MyDepositAddressPoints(std::string currency_code);
-
-    RelayState GetRelayStateOfEncodingMessage();
 
     RelayState GetRelayStateOfEncodingMessage(Point address_pubkey);
 

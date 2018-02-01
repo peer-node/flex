@@ -7,6 +7,7 @@
 #include <test/teleport_tests/node/historical_data/messages/InitialDataMessage.h>
 #include <test/teleport_tests/node/historical_data/messages/DiurnDataMessage.h>
 #include <test/teleport_tests/node/historical_data/messages/DiurnFailureMessage.h>
+#include <test/teleport_tests/node/relays/structures/RelayState.h>
 #include "CreditSystem.h"
 #include "test/teleport_tests/node/credit/messages/MinedCreditMessage.h"
 #include "test/teleport_tests/node/calendar/Calend.h"
@@ -158,9 +159,13 @@ CreditBatch CreditSystem::ReconstructBatch(MinedCreditMessage &msg)
 
     msg.hash_list.RecoverFullHashes(msgdata);
 
+    MinedCreditMessage previous_msg = data.GetMessage(state.previous_mined_credit_message_hash);
+    RelayState relay_state = data.GetRelayState(previous_msg.mined_credit.network_state.relay_state_hash);
+
     for (auto message_hash : msg.hash_list.full_hashes)
     {
         string type = msgdata[message_hash]["type"];
+        log_ << "message type is: " << type << "\n";
         if (type == "tx")
         {
             SignedTransaction tx;
@@ -172,8 +177,30 @@ CreditBatch CreditSystem::ReconstructBatch(MinedCreditMessage &msg)
             MinedCreditMessage msg_ = msgdata[message_hash]["msg"];
             batch.Add(msg_.mined_credit);
         }
+        else if (type == "relay_join")
+        {
+            log_ << "handling join when reconstructing batch\n";
+            RelayJoinMessage join = data.GetMessage(message_hash);
+            UpdateBatchAndRelayStateByProcessingJoinMessage(batch, relay_state, join);
+        }
     }
     return batch;
+}
+
+void CreditSystem::UpdateBatchAndRelayStateByProcessingJoinMessage(CreditBatch &batch, RelayState &state, RelayJoinMessage &join)
+{
+    if (state.relays.size() == MAX_RELAYS_IN_STATE)
+    {
+        auto &relay = state.relays[0];
+        if (relay.status == ALIVE)
+        {
+            MinedCreditMessage relays_msg = data.GetMessage(relay.hashes.mined_credit_message_hash);
+            Point payout_pubkey = relays_msg.mined_credit.public_key;
+            batch.Add(Credit(payout_pubkey, ONE_CREDIT));
+        }
+        EraseEntryFromVector(relay, state.relays);
+    }
+    state.ProcessRelayJoinMessage(join);
 }
 
 bool CreditSystem::IsCalend(uint160 msg_hash)

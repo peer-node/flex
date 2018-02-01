@@ -32,8 +32,10 @@ void run_server(int port, string ssl_key_file, string ssl_cert_file)
     if (mining_rpc_server.StartListening())
     {
         cout << "Listening on port " << port << endl;
-        cout << "Press enter to terminate."  << endl;
-        getchar();
+        //cout << "Press enter to terminate."  << endl;
+        //getchar();
+        while (true)
+            MilliSleep(200);
     }
     else
     {

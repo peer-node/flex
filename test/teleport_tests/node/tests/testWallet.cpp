@@ -77,7 +77,7 @@ TEST_F(AWalletWithCredits, GeneratesASignedTransactionPayingToASpecifiedPublicKe
     Point public_key(SECP256K1, 4);
     SignedTransaction tx = wallet->GetSignedTransaction(public_key, 2 * ONE_CREDIT);
     ASSERT_THAT(tx.TotalInputAmount(), Ge(2 * ONE_CREDIT));
-    ASSERT_THAT(tx.rawtx.outputs[0].keydata, Eq(public_key.getvch()));
+    ASSERT_THAT(tx.rawtx.outputs[0].public_key, Eq(public_key));
 }
 
 TEST_F(AWalletWithCredits, GeneratesASignedTransactionPayingANonIntegerAmountToASpecifiedPublicKey)
@@ -85,7 +85,7 @@ TEST_F(AWalletWithCredits, GeneratesASignedTransactionPayingANonIntegerAmountToA
     Point public_key(SECP256K1, 4);
     SignedTransaction tx = wallet->GetSignedTransaction(public_key, (uint64_t) (1.5 * ONE_CREDIT));
     ASSERT_THAT(tx.TotalInputAmount(), Ge(1.5 * ONE_CREDIT));
-    ASSERT_THAT(uint160(tx.rawtx.outputs[0].keydata), Eq(public_key.getvch()));
+    ASSERT_THAT(uint160(tx.rawtx.outputs[0].public_key), Eq(public_key));
 }
 
 class AWalletWithCreditsAndAnIncomingMinedCreditMessage : public AWalletWithCredits

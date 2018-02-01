@@ -67,6 +67,8 @@ public:
     void ImportPrivateKey(const CBigNum private_key);
 
     void SortCredits();
+
+    UnsignedTransaction GetUnsignedTransaction(Point pubkey, uint64_t amount);
 };
 
 uint160 GetKeyHashFromAddress(std::string address_string);

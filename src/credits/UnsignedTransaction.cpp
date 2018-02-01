@@ -33,21 +33,10 @@
         return ss.str();
     }
 
-    void UnsignedTransaction::AddInput(CreditInBatch batch_credit,
-                                       bool is_keyhash)
+    void UnsignedTransaction::AddInput(CreditInBatch batch_credit, bool is_keyhash)
     {
-        log_ << "UnsignedTransaction::AddInput: is keyhash: "
-             << is_keyhash << "\n";
         inputs.push_back(batch_credit);
         up_to_date = false;
-        if (is_keyhash)
-        {
-            uint160 keyhash(batch_credit.keydata);
-            log_ << "keyhash is " << keyhash << "\n";
-            Point pubkey;// = keydata[keyhash]["pubkey"];
-            pubkeys.push_back(pubkey);
-            log_ << "added pubkey: " << pubkey << "\n";
-        }
     }
 
     bool UnsignedTransaction::AddOutput(Credit credit)

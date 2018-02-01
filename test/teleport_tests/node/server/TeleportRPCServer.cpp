@@ -1,5 +1,7 @@
 #include <src/base/util_hex.h>
 #include <jsonrpccpp/client.h>
+#include <test/teleport_tests/currency/CryptoCurrencyAddress.h>
+#include <test/teleport_tests/currency/CryptoCurrencyPrivateKey.h>
 #include "TeleportRPCServer.h"
 #include "TeleportLocalServer.h"
 #include "../TeleportNetworkNode.h"
@@ -27,7 +29,7 @@ void TeleportRPCServer::BindMethod(const char* method_name, void (TeleportRPCSer
 
 void TeleportRPCServer::Help(const Json::Value& request, Json::Value& response)
 {
-    for (auto method : methods)
+    for (auto &method : methods)
         response.append(method);
 }
 
@@ -62,7 +64,9 @@ void TeleportRPCServer::SetNetworkID(const Json::Value& request, Json::Value& re
 
 void TeleportRPCServer::NewProof(const Json::Value &request, Json::Value &response)
 {
+    log_ << "processing new proof\n";
     teleport_local_server->HandleNewProof(NetworkSpecificProofOfWork(request["proof_base64"].asString()));
+    log_ << "finished processing new proof\n";
 }
 
 void TeleportRPCServer::Balance(const Json::Value &request, Json::Value &response)
@@ -78,6 +82,11 @@ void TeleportRPCServer::StartMining(const Json::Value &request, Json::Value &res
 void TeleportRPCServer::StartMiningAsynchronously(const Json::Value &request, Json::Value &response)
 {
     teleport_local_server->StartMiningAsynchronously();
+}
+
+void TeleportRPCServer::KeepMiningAsynchronously(const Json::Value &request, Json::Value &response)
+{
+    teleport_local_server->KeepMiningAsynchronously();
 }
 
 void TeleportRPCServer::SetMegabytesUsed(const Json::Value &request, Json::Value &response)
@@ -237,6 +246,9 @@ void TeleportRPCServer::RequestDepositAddress(const Json::Value &request, Json::
 void TeleportRPCServer::WithdrawDepositAddress(const Json::Value &request, Json::Value &response)
 {
     string deposit_address = request[0].asString();
+    if (not data->depositdata[deposit_address].HasProperty("deposit_address_point"))
+        throw jsonrpc::JsonRpcException(-32099, "No such deposit address");
+
     Point deposit_address_point = data->depositdata[deposit_address]["deposit_address_point"];
     node->deposit_message_handler->address_withdrawal_handler.SendWithdrawalRequestMessage(deposit_address_point);
     log_ << "sent withdrawal request for " << deposit_address << "\n";
@@ -257,3 +269,83 @@ void TeleportRPCServer::TransferDepositAddress(const Json::Value &request, Json:
     log_ << "sent transfer for " << deposit_address_pubkey << " to " << recipient_pubkey << "\n";
 }
 
+void TeleportRPCServer::GetKnownAddressBalance(const Json::Value &request, Json::Value &response)
+{
+    string address = request[0].asString();
+    Point pubkey = node->GetPublicKeyFromTeleportAddress(address);
+    uint64_t balance = node->GetKnownPubKeyBalance(pubkey);
+    response = balance * (1.0 / ONE_CREDIT);
+}
+
+void TeleportRPCServer::ListWithdrawals(const Json::Value &request, Json::Value &response)
+{
+    string currency = request[0].asString();
+    vector<Point> deposit_address_points = data->depositdata[currency]["withdrawals"];
+    log_ << "withdrawals for " << currency << " are " << deposit_address_points << "\n";
+
+    for (auto &deposit_address_point : deposit_address_points)
+    {
+        string deposit_address = CryptoCurrencyAddress(currency, deposit_address_point).ToString();
+        CBigNum private_key = data->keydata[deposit_address_point]["privkey"];
+        string currency_secret = CryptoCurrencyPrivateKey(currency, private_key).ToString();
+        response[deposit_address] = currency_secret;
+        log_ << deposit_address << " -> " << currency_secret << "\n";
+    }
+}
+
+void TeleportRPCServer::GetCurrencySecretFromPrivateKey(const Json::Value &request, Json::Value &response)
+{
+    string currency = request[0].asString();
+    string private_key_string = request[1].asString();
+
+    CBigNum private_key;
+    private_key.SetHex(private_key_string);
+
+    response = CryptoCurrencyPrivateKey(currency, private_key).ToString();
+}
+
+void TeleportRPCServer::GetPrivateKeyFromCurrencySecret(const Json::Value &request, Json::Value &response)
+{
+    string currency_secret = request[0].asString();
+
+    CBigNum private_key = CryptoCurrencyPrivateKey::CurrencySecretToPrivateKey(currency_secret);
+
+    response = private_key.GetHex();
+}
+
+void TeleportRPCServer::GetCurrencyAddressFromPrivateKey(const Json::Value &request, Json::Value &response)
+{
+    string currency = request[0].asString();
+    string private_key_string = request[1].asString();
+
+    CBigNum private_key;
+    private_key.SetHex(private_key_string);
+
+    Point public_key(SECP256K1, private_key);
+
+    response = CryptoCurrencyAddress(currency, public_key).ToString();
+}
+
+void TeleportRPCServer::StopMining(const Json::Value &request, Json::Value &response)
+{
+    teleport_local_server->keep_mining = false;
+}
+
+void TeleportRPCServer::GetUnspentCreditsFromStubs(const Json::Value &request, Json::Value &response)
+{
+    std::vector<uint32_t> stubs;
+    for (auto stub : request)
+        stubs.push_back((uint32_t)stub.asUInt64());
+
+    auto credits = node->credit_system->tracker.GetCreditsPayingToRecipient(stubs, 0);
+
+    for (auto credit : credits)
+        if (not node->spent_chain.Get(credit.position))
+            response.append(GetJsonValue(credit));
+}
+
+void TeleportRPCServer::ListCurrencies(const Json::Value &request, Json::Value &response)
+{
+    response.append("TCR");
+    response.append("BTC");
+}

@@ -14,12 +14,13 @@ class RelayAdmissionHandler
 {
 public:
     Data data;
-    CreditSystem *credit_system{NULL};
-    Calendar *calendar{NULL};
-    RelayState *relay_state{NULL};
+    CreditSystem *credit_system{nullptr};
+    Calendar *calendar{nullptr};
+    RelayState *relay_state{nullptr};
     RelayMessageHandler *relay_message_handler;
     Scheduler scheduler;
     bool send_key_distribution_complaints{true};
+    std::map<uint64_t, Point> relays_eligible_for_reward;
 
     RelayAdmissionHandler(Data data, CreditSystem *credit_system, Calendar *calendar, RelayMessageHandler *handler);
 

@@ -1,6 +1,8 @@
 #ifndef TELEPORT_CREDIT_H
 #define TELEPORT_CREDIT_H
 
+#include <src/crypto/point.h>
+#include <src/base/base58.h>
 #include "crypto/uint256.h"
 #include "base/serialize.h"
 #include "define.h"
@@ -14,40 +16,32 @@ class Credit
 {
 public:
     uint64_t amount{ONE_CREDIT};
-    vch_t keydata;
+    Point public_key{SECP256K1, 0};
 
-    Credit() { }
+    Credit() = default;
 
-    Credit(vch_t keydata, uint64_t amount);
+    Credit(Point public_key, uint64_t amount);
 
-    Credit(vch_t data);
-
-    ~Credit() { }
+    explicit Credit(vch_t data);
 
     IMPLEMENT_SERIALIZE
     (
         READWRITE(amount);
-        READWRITE(keydata);
+        READWRITE(public_key);
     )
 
     std::string json()
     {
         std::string json_text("{");
-        std::stringstream amount_stream, keydata_stream;
+        std::stringstream amount_stream;
         amount_stream << amount;
-        for (auto byte : keydata)
-        {
-            char hex[3];
-            sprintf(hex, "%02x", byte);
-            keydata_stream << std::string(hex);
-        }
         json_text += "\"amount\": " + amount_stream.str();
-        json_text += ",\"keydata\": \"" + keydata_stream.str() + "\"";
+        json_text += ",\"address\": \"" + GetTeleportAddressFromPublicKey(public_key) + "\"";
         json_text += "}";
         return json_text;
     }
 
-    virtual string_t ToString() const;
+    virtual string_t ToString();
 
     uint160 KeyHash() const;
 
@@ -56,6 +50,22 @@ public:
     bool operator==(const Credit& other_credit) const;
 
     bool operator<(const Credit& other_credit) const;
+
+    std::string TeleportAddress()
+    {
+        return GetTeleportAddressFromPublicKey(public_key);
+    }
+
+    static std::string GetTeleportAddressFromPublicKey(Point &pubkey)
+    {
+        uint8_t prefix{179}; // Teleport addresses start with T
+        vch_t bytes = pubkey.getvch();
+        bytes[0] = prefix; // overwrites byte which specifies curve (SECP256K1)
+        auto address_52chars = EncodeBase58Check(bytes);
+
+        // second letter is always a U, so remove it
+        return "T" + std::string(address_52chars.begin() + 2, address_52chars.end());
+    }
 };
 
 

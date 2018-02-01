@@ -16,11 +16,11 @@ public:
     IMPLEMENT_SERIALIZE
     (
         READWRITE(amount);
-        READWRITE(keydata);
+        READWRITE(public_key);
         READWRITE(network_state);
     )
 
-    JSON(amount, keydata, network_state);
+    JSON(amount, public_key, network_state);
 
     uint160 BranchBridge()
     {
@@ -48,18 +48,12 @@ public:
 
     Point PublicKey()
     {
-        if (keydata.size() == 34)
-        {
-            Point public_key;
-            public_key.setvch(keydata);
-            return public_key;
-        }
-        return Point();
+        return public_key;
     }
 
     bool operator==(const MinedCredit& other) const
     {
-        return amount == other.amount and keydata == other.keydata and network_state == other.network_state;
+        return amount == other.amount and public_key == other.public_key and network_state == other.network_state;
     }
 
     bool operator!=(const MinedCredit& other) const

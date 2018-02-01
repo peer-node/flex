@@ -14,6 +14,8 @@
 #include "test/teleport_tests/node/relays/messages/SuccessionCompletedAuditComplaint.h"
 #include <test/teleport_tests/node/relays/structures/KeyDistributionAuditorSelection.h>
 
+#define MAX_RELAYS_IN_STATE 20
+
 
 class RelayState
 {

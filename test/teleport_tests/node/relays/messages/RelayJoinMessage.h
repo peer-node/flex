@@ -47,10 +47,8 @@ public:
 
     Point VerificationKey(Data data)
     {
-        MinedCreditMessage msg = data.msgdata[mined_credit_message_hash]["msg"];
-        Point pubkey;
-        pubkey.setvch(msg.mined_credit.keydata);
-        return pubkey;
+        MinedCreditMessage msg = data.GetMessage(mined_credit_message_hash);
+        return msg.mined_credit.public_key;
     }
 
     void PopulatePublicKeySet(MemoryDataStore &keydata)

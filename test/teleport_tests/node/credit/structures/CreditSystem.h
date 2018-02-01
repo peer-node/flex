@@ -9,6 +9,7 @@
 #include <src/credits/CreditBatch.h>
 #include <test/teleport_tests/node/historical_data/messages/DiurnFailureMessage.h>
 #include <test/teleport_tests/node/Data.h>
+#include <test/teleport_tests/node/relays/messages/RelayJoinMessage.h>
 #include "test/teleport_tests/node/credit/messages/MinedCreditMessage.h"
 #include "test/teleport_tests/node/calendar/Calend.h"
 #include "test/teleport_tests/node/historical_data/messages/CalendarFailureMessage.h"
@@ -208,6 +209,8 @@ public:
     void RecordEndOfDiurn(Calend &calend, Diurn &diurn);
 
     Diurn GetDiurnContainingBatch(uint160 batch_root);
+
+    void UpdateBatchAndRelayStateByProcessingJoinMessage(CreditBatch &batch, RelayState &state, RelayJoinMessage &join);
 };
 
 

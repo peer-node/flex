@@ -18,6 +18,9 @@ void RelayState::ProcessRelayJoinMessage(RelayJoinMessage relay_join_message)
     relays.push_back(relay);
     AssignNewKeyQuarterHoldersAndSuccessorsAfterNewRelayHasJoined(&relay);
 
+    if (relays.size() == MAX_RELAYS_IN_STATE + 1)
+        EraseEntryFromVector(relays[0], relays);
+
     maps_are_up_to_date = false;
 }
 

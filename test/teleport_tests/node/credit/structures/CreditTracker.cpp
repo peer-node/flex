@@ -44,11 +44,9 @@ void CreditTracker::StoreRecipientsOfCreditsInBatch(CreditBatch &batch)
     for (auto credit : batch.credits)
     {
         uint64_t now = GetTimeMicros();
-        log_ << "credit.keydata is " << credit.keydata << "\n";
-        Point recipient_pubkey;
-        recipient_pubkey.setvch(credit.keydata);
-        uint160 key_hash = KeyHashFromKeyData(credit.keydata);
-        log_ << key_hash << " is key_hash for " << recipient_pubkey << "\n";
+        log_ << "credit.public_key is " << credit.public_key << "\n";
+        uint160 key_hash = KeyHash(credit.public_key);
+        log_ << key_hash << " is key_hash for " << credit.public_key << "\n";
         std::pair<uint160, uint64_t> batch_entry(batch_root, n);
         uint32_t stub = GetStub(key_hash);
         log_ << stub << " is stub for " << key_hash << "\n";
@@ -104,7 +102,7 @@ std::vector<CreditInBatch> CreditTracker::GetCreditsPayingToRecipient(uint160 ke
     for (auto credit : recorded_credits)
     {
         log_ << "considering credit: " << credit << "\n";
-        uint160 recipient_key_hash = KeyHashFromKeyData(credit.keydata);
+        uint160 recipient_key_hash = KeyHash(credit.public_key);
         log_ << "recipient key_hash is " << recipient_key_hash << "\n";
         if (recipient_key_hash == key_hash)
             credits.push_back(credit);
@@ -115,22 +113,6 @@ std::vector<CreditInBatch> CreditTracker::GetCreditsPayingToRecipient(uint160 ke
 std::vector<CreditInBatch> CreditTracker::GetCreditsPayingToRecipient(Point &pubkey)
 {
     return GetCreditsPayingToRecipient(KeyHash(pubkey));
-}
-
-uint64_t CreditTracker::GetKnownPubKeyBalance(Point &pubkey)
-{
-    uint64_t balance = 0;
-    uint32_t stub = GetStub(KeyHash(pubkey));
-    std::vector<uint32_t> stubs;
-    stubs.push_back(stub);
-    std::vector<CreditInBatch> credits = GetCreditsPayingToRecipient(stubs, 0);
-
-    for (auto &credit : credits)
-    {
-//            if (not teleport_network_node.spent_chain.Get(credit.position))
-            balance += credit.amount;
-    }
-    return balance;
 }
 
 void CreditTracker::RemoveCreditsOlderThan(uint64_t time_, uint32_t stub)

@@ -28,7 +28,7 @@ public:
         credit_system = new CreditSystem(*data);
 
         data->CreateCache();
-        msg.mined_credit.keydata = Point(CBigNum(5)).getvch();
+        msg.mined_credit.public_key = Point(CBigNum(5));
         keydata[Point(CBigNum(5))]["privkey"] = CBigNum(5);
         msg.mined_credit.network_state.batch_number = 1;
         credit_system->StoreMinedCreditMessage(msg);

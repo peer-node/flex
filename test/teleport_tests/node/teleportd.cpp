@@ -16,16 +16,22 @@ void run_server(int argc, const char** argv)
     teleport_local_server.LoadConfig(argc, argv);
     teleport_local_server.SetNetworkNode(&teleport_network_node);
     teleport_local_server.teleport_network_node->StartCommunicator();
+    teleport_local_server.StartProofHandlerThread();
 
     if (teleport_local_server.StartRPCServer())
     {
-        cout << "Press enter to terminate."  << endl;
-        getchar();
+        cout << "Started Teleport server."  << endl;
+        // getchar();
+        while (true)
+        {
+            MilliSleep(200);
+        }
     }
     else
     {
         cout << "Failed to start server." << endl;
     }
+    teleport_local_server.StopProofHandlerThread();
     teleport_local_server.teleport_network_node->StopCommunicator();
 }
 

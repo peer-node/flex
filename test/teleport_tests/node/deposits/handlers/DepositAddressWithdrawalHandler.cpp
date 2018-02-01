@@ -2,6 +2,7 @@
 #include "test/teleport_tests/node/TeleportNetworkNode.h"
 
 using std::vector;
+using std::string;
 
 #include "log.h"
 #define LOG_CATEGORY "DepositAddressWithdrawalHandler"
@@ -115,22 +116,35 @@ void DepositAddressWithdrawalHandler::HandleCompletedWithdrawal(Point deposit_ad
     CBigNum deposit_address_private_key = ReconstructDepositAddressPrivateKey(deposit_address_pubkey);
     Point offset_point = data.depositdata[deposit_address_pubkey]["offset_point"];
     CBigNum offset_secret = data.keydata[offset_point]["privkey"];
-    auto private_key = deposit_address_private_key + offset_secret;
+    auto private_key = (deposit_address_private_key + offset_secret) % offset_point.Modulus();
     auto deposit_address_point = deposit_address_pubkey + offset_point;
 
     data.keydata[deposit_address_point]["privkey"] = private_key;
 
-    vch_t currency_code = data.depositdata[deposit_address_point]["currency_code"];
-    std::string currency(currency_code.begin(), currency_code.end());
+    vch_t currency_code = deposit_message_handler->GetCurrencyCode(deposit_address_pubkey);
+    string currency(currency_code.begin(), currency_code.end());
+    log_ << "currency is " << currency << "\n";
 
-    log_ << "Importing private key " << private_key << " for address "
-         << teleport_network_node->GetCryptoCurrencyAddressFromPublicKey(currency, deposit_address_point) << "\n";
-    teleport_network_node->wallet->ImportPrivateKey(deposit_address_private_key + offset_secret);
-
-    deposit_message_handler->RemoveAddress(deposit_address_pubkey, currency_code);
+    RecordWithdrawal(deposit_address_point, currency);
 
     if (currency == "TCR")
+    {
+        log_ << "Importing private key " << private_key << " for address "
+             << teleport_network_node->GetCryptoCurrencyAddressFromPublicKey(currency, deposit_address_point) << "\n";
+        teleport_network_node->wallet->ImportPrivateKey(private_key);
         deposit_message_handler->AddDepositAddressesOwnedBySpecifiedPubKey(deposit_address_point);
+    }
+
+    deposit_message_handler->RemoveAddress(deposit_address_pubkey, currency_code);
+}
+
+void DepositAddressWithdrawalHandler::RecordWithdrawal(Point deposit_address_point, std::string currency)
+{
+    vector<Point> withdrawn_deposit_address_points = data.depositdata[currency]["withdrawals"];
+    if (not VectorContainsEntry(withdrawn_deposit_address_points, deposit_address_point))
+        withdrawn_deposit_address_points.push_back(deposit_address_point);
+    data.depositdata[currency]["withdrawals"] = withdrawn_deposit_address_points;
+    log_ << "withdrawals for " << currency << " are " << withdrawn_deposit_address_points << "\n";
 }
 
 CBigNum DepositAddressWithdrawalHandler::ReconstructDepositAddressPrivateKey(Point address_pubkey)
@@ -144,7 +158,7 @@ CBigNum DepositAddressWithdrawalHandler::ReconstructDepositAddressPrivateKey(Poi
         CBigNum secret_part = data.keydata[part_msg.PubKey()]["privkey"];
         private_key += secret_part;
     }
-    return private_key;
+    return private_key % address_pubkey.Modulus();
 }
 
 void DepositAddressWithdrawalHandler::HandleWithdrawalComplaint(WithdrawalComplaint complaint)

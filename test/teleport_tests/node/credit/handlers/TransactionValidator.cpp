@@ -31,7 +31,7 @@ bool TransactionValidator::CheckIfCreditInBatchIsInTheMainChain(CreditInBatch &c
 
 bool TransactionValidator::CheckBranchOfCreditInBatch(CreditInBatch credit_in_batch)
 {
-    Credit raw_credit(credit_in_batch.keydata, credit_in_batch.amount);
+    Credit raw_credit(credit_in_batch.public_key, credit_in_batch.amount);
     uint160 batch_root = credit_in_batch.branch.back();
     vch_t raw_credit_data = raw_credit.getvch();
 

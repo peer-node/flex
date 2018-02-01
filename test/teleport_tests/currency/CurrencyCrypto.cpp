@@ -118,7 +118,7 @@ string CurrencyCrypto::PrivKeyToCurrencySecret(CBigNum privkey)
 {
     auto bytes = privkey_prefix;
 
-    log_ << "PrivKeyToCurrencySecret: prefix is " << bytes[0] << "\n";
+    log_ << "PrivateKeyToCurrencySecret: prefix is " << bytes[0] << "\n";
     vch_t privkey_bytes = privkey.getvch32();
 
     reverse(privkey_bytes.begin(), privkey_bytes.end());

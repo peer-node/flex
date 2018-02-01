@@ -124,6 +124,12 @@ void TeleportLocalServer::StartMiningAsynchronously()
     MakeRequestToMiningRPCServer("start_mining_asynchronously", parameters);
 }
 
+void TeleportLocalServer::KeepMiningAsynchronously()
+{
+    keep_mining = true;
+    StartMiningAsynchronously();
+}
+
 void TeleportLocalServer::SetNumberOfMegabytesUsedForMining(uint32_t number_of_megabytes)
 {
     Json::Value request;
@@ -151,21 +157,55 @@ uint64_t TeleportLocalServer::Balance()
     return teleport_network_node->Balance();
 }
 
-void TeleportLocalServer::HandleNewProof(NetworkSpecificProofOfWork proof)
-{
-    latest_proof_of_work = proof;
-    if (teleport_network_node != NULL)
-        teleport_network_node->HandleNewProof(proof);
-}
-
 uint160 TeleportLocalServer::SendToPublicKey(Point public_key, int64_t amount)
 {
     uint160 tx_hash = teleport_network_node->SendCreditsToPublicKey(public_key, (uint64_t) amount);
     return tx_hash;
 }
 
+void TeleportLocalServer::StartProofHandlerThread()
+{
+    proof_handler_thread = new boost::thread(&TeleportLocalServer::RunProofHandlerThread, this);
+}
 
+void TeleportLocalServer::RunProofHandlerThread()
+{
+    while (keep_handling_proofs)
+    {
+        if (teleport_network_node != NULL and not latest_proof_was_handled)
+        {
+            log_ << "ProofHandlerThread: handling proof\n";
+            uint160 proof_hash = latest_proof_of_work.GetHash160();
+            if (teleport_network_node->data.creditdata[proof_hash]["handled"])
+            {
+                log_ << "already handled this proof\n";
+                return;
+            }
+            teleport_network_node->HandleNewProof(latest_proof_of_work);
+            latest_proof_was_handled = true;
+            teleport_network_node->data.creditdata[proof_hash]["handled"] = true;
 
+            if (keep_mining)
+                StartMiningAsynchronously();
+            log_ << "ProofHandlerThread: finished handling proof\n";
+        }
+
+        boost::this_thread::sleep(boost::posix_time::milliseconds(20));
+        boost::this_thread::interruption_point();
+    }
+}
+
+void TeleportLocalServer::StopProofHandlerThread()
+{
+    keep_handling_proofs = false;
+    proof_handler_thread->join();
+}
+
+void TeleportLocalServer::HandleNewProof(NetworkSpecificProofOfWork proof)
+{
+    latest_proof_of_work = proof;
+    latest_proof_was_handled = false;
+}
 
 
 

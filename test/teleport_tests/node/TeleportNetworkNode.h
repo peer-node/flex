@@ -145,6 +145,8 @@ public:
     Point GetPublicKeyFromTeleportAddress(std::string address);
 
     std::string GetCryptoCurrencyAddressFromPublicKey(std::string currency_code, Point public_key);
+
+    uint64_t GetKnownPubKeyBalance(Point &pubkey);
 };
 
 

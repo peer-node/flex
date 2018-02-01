@@ -43,6 +43,10 @@ public:
     void HandleCompletedWithdrawal(Point deposit_address_pubkey);
 
     CBigNum ReconstructDepositAddressPrivateKey(Point deposit_address_pubkey);
+
+    void RecordWithdrawal(Point deposit_address_point);
+
+    void RecordWithdrawal(Point deposit_address_point, std::string currency_code);
 };
 
 

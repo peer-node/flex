@@ -54,8 +54,7 @@ extern string_t ByteString(vch_t bytes);
            << "== Credits:" << "\n";
         for (auto credit : credits)
         {
-            ss << "== " << ByteString(credit.keydata) << " "
-               << credit.amount << "\n";
+            ss << "== " <<  credit.TeleportAddress() << " " << credit.amount << "\n";
         }
         ss << "== " << "\n"
             << "== Root: " << root.ToString() << "\n"
@@ -115,7 +114,7 @@ extern string_t ByteString(vch_t bytes);
     std::vector<uint160> CreditBatch::Branch(Credit credit)
     {
         std::vector<uint160> branch = tree.Branch(Position(credit));
-        Credit raw_credit(credit.keydata, credit.amount);
+        Credit raw_credit(credit.public_key, credit.amount);
         vch_t raw_credit_data = raw_credit.getvch();
 
         uint160 hash = OrderedDataElement(Position(credit), raw_credit_data).Hash();

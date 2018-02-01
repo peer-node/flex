@@ -37,8 +37,6 @@ public:
 
     std::vector<CreditInBatch> GetCreditsPayingToRecipient(Point &pubkey);
 
-    uint64_t GetKnownPubKeyBalance(Point &pubkey);
-
     void RemoveCreditsOlderThan(uint64_t time_, uint32_t stub);
 };
 

@@ -19,12 +19,12 @@ public:
     uint256 network_id;
     std::map<std::string,std::string> headers;
     std::string response{"a response"};
-    TeleportLocalServer *teleport_local_server{NULL};
-    TeleportNetworkNode *node{NULL};
+    TeleportLocalServer *teleport_local_server{nullptr};
+    TeleportNetworkNode *node{nullptr};
     std::vector<std::string> methods;
-    Data *data{NULL};
+    Data *data{nullptr};
 
-    TeleportRPCServer(jsonrpc::HttpAuthServer &server) :
+    explicit TeleportRPCServer(jsonrpc::HttpAuthServer &server) :
             jsonrpc::AbstractServer<TeleportRPCServer>(server)
     {
         BindMethod("help", &TeleportRPCServer::Help);
@@ -34,10 +34,13 @@ public:
         BindMethod("new_proof", &TeleportRPCServer::NewProof);
         BindMethod("balance", &TeleportRPCServer::Balance);
         BindMethod("start_mining", &TeleportRPCServer::StartMining);
+        BindMethod("stop_mining", &TeleportRPCServer::StopMining);
         BindMethod("start_mining_asynchronously", &TeleportRPCServer::StartMiningAsynchronously);
+        BindMethod("keep_mining_asynchronously", &TeleportRPCServer::KeepMiningAsynchronously);
         BindMethod("sendtopublickey", &TeleportRPCServer::SendToPublicKey);
         BindMethod("getnewaddress", &TeleportRPCServer::GetNewAddress);
         BindMethod("sendtoaddress", &TeleportRPCServer::SendToAddress);
+        BindMethod("getknownaddressbalance", &TeleportRPCServer::GetKnownAddressBalance);
         BindMethod("addnode", &TeleportRPCServer::AddNode);
         BindMethod("requesttips", &TeleportRPCServer::RequestTips);
         BindMethod("getcalendar", &TeleportRPCServer::GetCalendar);
@@ -51,6 +54,16 @@ public:
         BindMethod("listdepositaddresses", &TeleportRPCServer::ListDepositAddresses);
         BindMethod("withdrawdepositaddress", &TeleportRPCServer::WithdrawDepositAddress);
         BindMethod("transferdepositaddress", &TeleportRPCServer::TransferDepositAddress);
+
+        BindMethod("listwithdrawals", &TeleportRPCServer::ListWithdrawals);
+
+        BindMethod("getunspentcreditsfromstubs", &TeleportRPCServer::GetUnspentCreditsFromStubs);
+
+        BindMethod("getprivatekeyfromcurrencysecret", &TeleportRPCServer::GetPrivateKeyFromCurrencySecret);
+        BindMethod("getcurrencysecretfromprivatekey", &TeleportRPCServer::GetCurrencySecretFromPrivateKey);
+        BindMethod("getcurrencyaddressfromprivatekey", &TeleportRPCServer::GetCurrencyAddressFromPrivateKey);
+
+        BindMethod("listcurrencies", &TeleportRPCServer::ListCurrencies);
     }
 
     void SetTeleportLocalServer(TeleportLocalServer *teleport_local_server_);
@@ -69,7 +82,11 @@ public:
 
     void StartMining(const Json::Value& request, Json::Value& response);
 
+    void StopMining(const Json::Value& request, Json::Value& response);
+
     void StartMiningAsynchronously(const Json::Value& request, Json::Value& response);
+
+    void KeepMiningAsynchronously(const Json::Value& request, Json::Value& response);
 
     void BindMethod(const char* method_name,
                     void (TeleportRPCServer::*method)(const Json::Value &,Json::Value &));
@@ -79,6 +96,8 @@ public:
     void GetNewAddress(const Json::Value &request, Json::Value &response);
 
     void SendToAddress(const Json::Value &request, Json::Value &response);
+
+    void GetKnownAddressBalance(const Json::Value &request, Json::Value &response);
 
     void AddNode(const Json::Value &request, Json::Value &response);
 
@@ -103,6 +122,18 @@ public:
     void WithdrawDepositAddress(const Json::Value &request, Json::Value &response);
 
     void TransferDepositAddress(const Json::Value &request, Json::Value &response);
+
+    void ListWithdrawals(const Json::Value &request, Json::Value &response);
+
+    void GetUnspentCreditsFromStubs(const Json::Value &request, Json::Value &response);
+
+    void GetCurrencySecretFromPrivateKey(const Json::Value &request, Json::Value &response);
+
+    void GetPrivateKeyFromCurrencySecret(const Json::Value &request, Json::Value &response);
+
+    void GetCurrencyAddressFromPrivateKey(const Json::Value &request, Json::Value &response);
+
+    void ListCurrencies(const Json::Value &request, Json::Value &response);
 };
 
 

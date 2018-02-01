@@ -76,7 +76,19 @@ void TeleportMiner::InformNetworkOfProofOfWork(NetworkMiningInfo info)
     HttpClient http_client(url);
     Client client(http_client);
 
-    client.CallMethod("new_proof", params);
+    try
+    {
+        client.CallMethod("new_proof", params);
+    }
+    catch (JsonRpcException e)
+    {
+        std::cerr << "failed to send proof to server: " << e.GetMessage() << "\n";
+        std::cerr << "trying again in 5 seconds\n";
+        sleep(5);
+        client.CallMethod("new_proof", params);
+    }
+
+
 }
 
 TwistWorkProof TeleportMiner::GetProof()

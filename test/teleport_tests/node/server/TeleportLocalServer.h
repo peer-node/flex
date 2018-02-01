@@ -17,13 +17,23 @@ public:
     jsonrpc::HttpAuthServer *http_server{NULL};
     TeleportNetworkNode *teleport_network_node{NULL};
     NetworkSpecificProofOfWork latest_proof_of_work;
+    boost::thread *proof_handler_thread{NULL};
 
+    bool keep_mining{false};
+    bool keep_handling_proofs{true};
+    bool latest_proof_was_handled{true};
+
+    void StartProofHandlerThread();
+
+    void StopProofHandlerThread();
+
+    void RunProofHandlerThread();
 
     bool StartRPCServer();
 
-    void ThrowUsernamePasswordException();
-
     void StopRPCServer();
+
+    void ThrowUsernamePasswordException();
 
     void LoadConfig(int argc, const char *argv[]);
 
@@ -58,6 +68,8 @@ public:
     void StartMiningAsynchronously();
 
     uint160 SendToPublicKey(Point public_key, int64_t amount);
+
+    void KeepMiningAsynchronously();
 };
 
 

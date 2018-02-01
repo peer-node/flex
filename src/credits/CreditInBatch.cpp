@@ -19,7 +19,7 @@ using namespace std;
         position(position),
         branch(branch)
     {
-        keydata = credit.keydata;
+        public_key = credit.public_key;
         amount = credit.amount;
     }
 
@@ -27,33 +27,33 @@ using namespace std;
     {
         stringstream ss;
         ss << "\n============== CreditInBatch =============" << "\n"
-        << "== Position: " << position << "\n"
-        << "== \n"
-        << "== Branch:\n";
-                foreach_(uint160 hash, branch)
-                        ss << "== " << hash.ToString() << "\n";
+           << "== Position: " << position << "\n"
+           << "== \n"
+           << "== Branch:\n";
+        for (auto hash : branch)
+        ss << "== " << hash.ToString() << "\n";
         ss << "== \n"
-        << "== Diurn Branch:\n";
-                foreach_(uint160 hash, diurn_branch)
-                        ss << "== " << hash.ToString() << "\n";
+           << "== Diurn Branch:\n";
+        for (auto hash : diurn_branch)
+        ss << "== " << hash.ToString() << "\n";
         ss << "==" << "\n"
-        << "== Credit: " << Credit(keydata, amount).ToString() << "\n"
-        << "============ End CreditInBatch ===========" << "\n";
+           << "== Credit: " << Credit(public_key, amount).ToString() << "\n"
+           << "============ End CreditInBatch ===========" << "\n";
         return ss.str();
     }
 
-    vch_t CreditInBatch::getvch()
-    {
-        vch_t result;
-        result.resize(12 + keydata.size() + 20 * branch.size());
-
-        memcpy(&result[0], &amount, 8);
-        memcpy(&result[8], &keydata[0], keydata.size());
-        memcpy(&result[8 + keydata.size()], &position, 4);
-        memcpy(&result[12 + keydata.size()], &branch[0], 20 * branch.size());
-
-        return result;
-    }
+//    vch_t CreditInBatch::getvch()
+//    {
+//        vch_t result;
+//        result.resize(12 + keydata.size() + 20 * branch.size());
+//
+//        memcpy(&result[0], &amount, 8);
+//        memcpy(&result[8], &keydata[0], keydata.size());
+//        memcpy(&result[8 + keydata.size()], &position, 4);
+//        memcpy(&result[12 + keydata.size()], &branch[0], 20 * branch.size());
+//
+//        return result;
+//    }
 
     bool CreditInBatch::operator==(const CreditInBatch& other) const
     {

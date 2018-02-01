@@ -53,10 +53,7 @@ void Wallet::HandleCreditInBatch(CreditInBatch credit_in_batch)
 
 bool Wallet::PrivateKeyIsKnown(CreditInBatch credit_in_batch)
 {
-    Point pubkey;
-    pubkey.setvch(credit_in_batch.keydata);
-    bool known = PrivateKeyIsKnown(pubkey);
-    return known;
+    return PrivateKeyIsKnown(credit_in_batch.public_key);
 }
 
 bool Wallet::PrivateKeyIsKnown(Point public_key)
@@ -72,11 +69,10 @@ bool Wallet::HaveCreditInBatchAlready(CreditInBatch credit_in_batch)
 SignedTransaction Wallet::GetSignedTransaction(Point pubkey, uint64_t amount)
 {
     log_ << "getting signed transaction paying to " << pubkey << "\n";
-    log_ << "keydata is " << pubkey.getvch() << "\n";
-    return SignTransaction(GetUnsignedTransaction(pubkey.getvch(), amount), keydata);
+    return SignTransaction(GetUnsignedTransaction(pubkey, amount), keydata);
 }
 
-UnsignedTransaction Wallet::GetUnsignedTransaction(vch_t key_data, uint64_t amount)
+UnsignedTransaction Wallet::GetUnsignedTransaction(Point pubkey, uint64_t amount)
 {
     UnsignedTransaction raw_tx;
     uint64_t amount_in = 0;
@@ -100,14 +96,14 @@ UnsignedTransaction Wallet::GetUnsignedTransaction(vch_t key_data, uint64_t amou
         return raw_tx;
     }
 
-    raw_tx.AddOutput(Credit(key_data, amount));
-    log_ << "GetUnsignedTransaction: keydata of output is " << raw_tx.outputs.back().keydata << "\n";
+    raw_tx.AddOutput(Credit(pubkey, amount));
+    log_ << "GetUnsignedTransaction: pubkey of output is " << raw_tx.outputs.back().public_key << "\n";
 
     int64_t change = amount_in - amount;
     if (change > 0)
     {
         Point change_pubkey = GetNewPublicKey();
-        raw_tx.outputs.push_back(Credit(change_pubkey.getvch(), (uint64_t) change));
+        raw_tx.outputs.push_back(Credit(change_pubkey, (uint64_t) change));
     }
     return raw_tx;
 }
@@ -144,11 +140,15 @@ void Wallet::RemoveTransactionInputsSpentInBatchFromCredits(MinedCreditMessage& 
 void Wallet::AddNewCreditsFromBatch(MinedCreditMessage& msg, CreditSystem* credit_system)
 {
     CreditBatch batch = credit_system->ReconstructBatch(msg);
+    log_ << "credit batch is " << PrettyPrint(batch) << "\n";
     for (auto &credit : batch.credits)
     {
         auto credit_in_batch = batch.GetCreditInBatch(credit);
         if (PrivateKeyIsKnown(credit_in_batch) and not VectorContainsEntry(credits, credit_in_batch))
+        {
+            log_ << "adding " << PrettyPrint(credit_in_batch) << "\n";
             credits.push_back(credit_in_batch);
+        }
     }
     SortCredits();
 }
