@@ -1,0 +1,5 @@
+{% if not data.mining %}
+    <a href="{{ url_for('start_mining') }}">Start Mining</a>
+{% else %}
+    <a href="{{ url_for('stop_mining') }}">Stop Mining</a>
+{% endif %}

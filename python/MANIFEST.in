@@ -1,6 +1,1 @@
-recursive-include explorer/templates *
-recursive-include explorer/static *
-recursive-include configuration/templates *
-recursive-include configuration/static *
-recursive-include interactive_payment_processor/templates *
-recursive-include interactive_payment_processor/static *
+recursive-include gui/templates *

@@ -1,0 +1,154 @@
+#!/usr/bin/env python
+
+from teleport import (teleport_directory, get_client, get_config, random_string, set_config_value, get_config_file, set_config)
+from os.path import join, expanduser, exists
+from distutils.spawn import find_executable
+from subprocess import Popen, PIPE
+from shutil import rmtree, move
+from datetime import datetime
+from sys import argv, exit
+from time import sleep
+import signal
+import sys
+import os
+
+processes = []
+
+log = None
+
+def get_pidfilename():
+    return join(teleport_directory(), "teleport.pids")
+
+
+def write_pids():
+    pidfile = open(get_pidfilename(), "w")
+    for process in processes:
+        pidfile.write(str(process.pid) + "\n")
+    pidfile.close()
+
+
+def start_teleport(config):
+    if not find_executable("teleportd"):
+        raise Exception("Can't find teleportd in $PATH.")
+    global log
+    if log is None:
+        log = open(join(teleport_directory(), "teleport_control.log"), "a+")
+    print "starting teleport"
+    sleep(1)
+    process = Popen(["teleportd", "-debug"], stdout=log, stderr=log, stdin=sys.stdin)
+    print process.pid
+    processes.append(process)
+
+
+def start_miner(config):
+    if not find_executable("minerd"):
+        raise Exception("Can't find minerd in $PATH.")
+    global log
+    if log is None:
+        log = open(join(teleport_directory(), "teleport_control.log"), "a+")
+    print "starting miner"
+    process = Popen(["minerd"], stdout=log, stderr=log, stdin=sys.stdin)
+    print process.pid
+    processes.append(process)
+
+
+def start_gui(config):
+    print "starting gui"
+    process = Popen(["teleport_gui"], stdout=log, stderr=log)
+    print process.pid
+    processes.append(process)
+
+
+def configure(key, value):
+    set_config_value(key, value)
+
+
+def autoconfigure():
+    config_file = get_config_file()
+    if exists(config_file):
+        move(config_file, config_file + datetime.now().strftime("%Y%m%d-%H:%M:%S"))
+    initial_config = {'port': 8733,
+                      'rpcport': 8732,
+                      'rpcuser': random_string(15),
+                      'rpcpassword': random_string(15),
+                      'walletpassword': random_string(15)}
+    set_config(initial_config)
+    os.chmod(config_file, 0600)
+
+
+def do_cleanup():
+    dbdir = join(teleport_directory(), "db")
+    if os.path.exists(dbdir):
+        rmtree(dbdir)
+    debuglog = join(teleport_directory(), "debug.log")
+    if os.path.exists(debuglog):
+        os.unlink(debuglog)
+
+
+def check_already_running():
+    if os.path.exists(get_pidfilename()):
+        pids = open(get_pidfilename()).readlines()
+        for pid in pids:
+            try:
+                os.kill(int(pid), 0)
+                return True
+            except:
+                pass
+    return False
+
+
+def do_startup():
+    if check_already_running():
+        print "already running"
+        sys.exit()
+    print "starting"
+    if len(argv) > 2 and 'clean' in argv:
+        do_cleanup()
+    config = get_config()
+    start_teleport(config)
+    start_miner(config)
+    start_gui(config)
+
+
+def do_shutdown():
+    pidfile = get_pidfilename()
+    if not os.path.exists(pidfile):
+        return
+    pids = open(pidfile).readlines()
+    for pid in pids:
+        print "killing", pid
+        try:
+            os.kill(int(pid), signal.SIGTERM)
+        except:
+            print "Couldn't kill process", pid
+    os.unlink(pidfile)
+
+    
+if __name__ == '__main__':
+    def usage():
+        print "Usage: %s < start [clean] | stop | configure <key> <value> >" % argv[0]
+        exit()
+
+    if len(argv) == 1 or argv[1] not in ('start', 'stop', 'configure', 'autoconfigure'):
+        usage()
+
+    old_stdout = sys.stdout
+    if not os.path.exists(teleport_directory()):
+        os.mkdir(teleport_directory())
+    log = open(join(teleport_directory(), "teleport_control.log"), "a+")
+    sys.stdout = log
+
+    if argv[1] == 'start':
+        do_startup()
+        write_pids()
+    elif argv[1] == 'stop':
+        do_shutdown()
+    elif argv[1] == 'configure':
+        if len(argv) != 4:
+            usage()
+        configure(argv[2], argv[3])
+    elif argv[1] == 'autoconfigure':
+        autoconfigure()
+
+    sys.stdout = old_stdout
+    log.close()
