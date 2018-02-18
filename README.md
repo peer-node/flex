@@ -69,7 +69,7 @@ It may take a long time to compile if you don't have many cores.
 
 Then install the python files:
 
-    cd python
+    cd ../python
     python setup.py install
 
 Then you'll need to configure the installation:
