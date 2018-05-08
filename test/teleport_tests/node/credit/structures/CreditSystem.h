@@ -7,7 +7,6 @@
 #include <test/teleport_tests/mined_credits/MinedCredit.h>
 #include <src/credits/SignedTransaction.h>
 #include <src/credits/CreditBatch.h>
-#include <test/teleport_tests/node/historical_data/messages/DiurnFailureMessage.h>
 #include <test/teleport_tests/node/Data.h>
 #include <test/teleport_tests/node/relays/messages/RelayJoinMessage.h>
 #include "test/teleport_tests/node/credit/messages/MinedCreditMessage.h"
@@ -94,8 +93,6 @@ public:
 
     bool CheckHashesSeedsAndThresholdsInMinedCreditMessageProofOfWork(MinedCreditMessage &msg);
 
-    bool ProofHasCorrectNumberOfSeedsAndLinks(TwistWorkProof proof);
-
     void SetChildBatch(uint160 parent_hash, uint160 child_hash);
 
     void RemoveFromMainChain(uint160 credit_hash);
@@ -148,17 +145,9 @@ public:
 
     bool CalendHasReportedFailure(uint160 calend_hash);
 
-    bool ReportedFailedCalendHasBeenReceived(CalendarFailureMessage message);
-
-    void RecordReportedFailureOfCalend(CalendarFailureMessage message);
-
     bool CalendarContainsAKnownBadCalend(Calendar &calendar);
 
-    void MarkCalendAndSucceedingCalendsAsInvalid(CalendarFailureMessage message);
-
     void StoreCalendsFromCalendar(Calendar &calendar_);
-
-    void RemoveReportedTotalWorkOfMinedCreditsSucceedingInvalidCalend(CalendarFailureMessage message);
 
     void AcceptMinedCreditMessageAsValidByRecordingTotalWorkAndParent(MinedCreditMessage msg);
 
@@ -193,8 +182,6 @@ public:
     void MarkMinedCreditMessageAsHandled(uint160 msg_hash);
 
     bool MinedCreditMessageWasHandled(uint160 msg_hash);
-
-    void RemoveMinedCreditMessagesDownstreamOfDiurnFailure(DiurnFailureMessage diurn_failure_message);
 
     void RemoveMinedCreditMessageAndThoseDownstreamFromRecordOfTotalWork(MinedCreditMessage msg);
 

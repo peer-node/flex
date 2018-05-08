@@ -62,14 +62,12 @@ public:
         HANDLESTREAM(TipMessage);
         HANDLESTREAM(CalendarRequestMessage);
         HANDLESTREAM(CalendarMessage);
-        HANDLESTREAM(CalendarFailureMessage);
         HANDLESTREAM(InitialDataRequestMessage);
         HANDLESTREAM(InitialDataMessage);
         HANDLESTREAM(KnownHistoryRequest);
         HANDLESTREAM(KnownHistoryMessage);
         HANDLESTREAM(DiurnDataRequest);
         HANDLESTREAM(DiurnDataMessage);
-        HANDLESTREAM(DiurnFailureMessage);
     }
 
     void HandleMessage(uint160 message_hash)
@@ -78,36 +76,30 @@ public:
         HANDLEHASH(TipMessage);
         HANDLEHASH(CalendarRequestMessage);
         HANDLEHASH(CalendarMessage);
-        HANDLEHASH(CalendarFailureMessage);
         HANDLEHASH(InitialDataRequestMessage);
         HANDLEHASH(InitialDataMessage);
         HANDLEHASH(KnownHistoryMessage);
         HANDLEHASH(KnownHistoryRequest);
         HANDLEHASH(DiurnDataRequest);
         HANDLEHASH(DiurnDataMessage);
-        HANDLEHASH(DiurnFailureMessage);
     }
 
     HANDLECLASS(TipRequestMessage);
     HANDLECLASS(TipMessage);
     HANDLECLASS(CalendarRequestMessage);
     HANDLECLASS(CalendarMessage);
-    HANDLECLASS(CalendarFailureMessage);
     HANDLECLASS(InitialDataRequestMessage);
     HANDLECLASS(InitialDataMessage);
     HANDLECLASS(KnownHistoryMessage);
     HANDLECLASS(KnownHistoryRequest);
     HANDLECLASS(DiurnDataRequest);
     HANDLECLASS(DiurnDataMessage);
-    HANDLECLASS(DiurnFailureMessage);
 
     void HandleTipRequestMessage(TipRequestMessage request);
 
     void HandleTipMessage(TipMessage message);
 
     void HandleCalendarRequestMessage(CalendarRequestMessage request);
-
-    void HandleCalendarFailureMessage(CalendarFailureMessage message);
 
     void HandleInitialDataRequestMessage(InitialDataRequestMessage request);
 
@@ -123,7 +115,6 @@ public:
 
     void HandleDiurnDataMessage(DiurnDataMessage diurn_data_message);
 
-    void HandleDiurnFailureMessage(DiurnFailureMessage diurn_failure_message);
 };
 
 

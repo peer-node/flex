@@ -4,6 +4,8 @@
 #include "crypto/uint256.h"
 #include "crypto/hashtrees.h"
 
+uint160 u256tou160(uint256 n);
+
 class MiningHashTree
 {
 public:

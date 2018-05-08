@@ -5,7 +5,6 @@
 #include <src/credits/CreditInBatch.h>
 #include "Calend.h"
 #include "Diurn.h"
-#include "test/teleport_tests/node/historical_data/messages/CalendarFailureDetails.h"
 
 class CreditSystem;
 
@@ -102,8 +101,6 @@ public:
     bool CheckDifficulties(CreditSystem *credit_system);
 
     bool CheckRootsAndDifficulties(CreditSystem *credit_system);
-
-    bool SpotCheckWork(CalendarFailureDetails &details);
 
     std::vector<uint160> GetCalendHashes();
 

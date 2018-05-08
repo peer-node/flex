@@ -132,7 +132,7 @@ TEST_F(ACreditSystem, RecordsTheTypeAsMinedCreditWhenItStoresAMinedCredit)
 SignedTransaction ExampleTransaction()
 {
     SignedTransaction tx;
-    tx.rawtx.outputs.push_back(Credit(Point(SECP256K1, 2).getvch(), 1000));
+    tx.rawtx.outputs.push_back(Credit(Point(SECP256K1, 2), 1000));
     return tx;
 }
 
@@ -190,9 +190,8 @@ MinedCreditMessage MessageWithAValidProofOfWork()
     NetworkSpecificProofOfWork enclosed_proof;
     enclosed_proof.branch.push_back(msg.mined_credit.GetHash());
     enclosed_proof.branch.push_back(2);
-    uint256 memory_seed = MiningHashTree::EvaluateBranch(enclosed_proof.branch);
-    uint64_t memory_factor = MemoryFactorFromNumberOfMegabytes(1);
-    TwistWorkProof proof(memory_seed, memory_factor, msg.mined_credit.network_state.difficulty);
+    auto seed = MiningHashTree::EvaluateBranch(enclosed_proof.branch);
+    SimpleWorkProof proof(seed, msg.mined_credit.network_state.difficulty);
     uint8_t keep_working = 1;
     proof.DoWork(&keep_working);
     enclosed_proof.proof = proof;
@@ -203,7 +202,6 @@ MinedCreditMessage MessageWithAValidProofOfWork()
 TEST_F(ACreditSystem, ChecksTheProofOfWorkInAMinedCreditMessage)
 {
     auto msg = MessageWithAValidProofOfWork();
-    credit_system->SetExpectedNumberOfMegabytesInMinedCreditProofsOfWork(1);
     bool ok = credit_system->QuickCheckProofOfWorkInMinedCreditMessage(msg);
     ASSERT_THAT(ok, Eq(true));
     msg.proof_of_work.branch[1] += 1;
@@ -214,7 +212,6 @@ TEST_F(ACreditSystem, ChecksTheProofOfWorkInAMinedCreditMessage)
 TEST_F(ACreditSystem, CachesTheResultOfAProofOfWorkCheck)
 {
     auto msg = MessageWithAValidProofOfWork();
-    credit_system->SetExpectedNumberOfMegabytesInMinedCreditProofsOfWork(1);
     bool ok = credit_system->QuickCheckProofOfWorkInMinedCreditMessage(msg);
     bool cached_result = creditdata[msg.GetHash160()]["quickcheck_ok"];
     ASSERT_THAT(cached_result, Eq(true));
@@ -227,7 +224,6 @@ TEST_F(ACreditSystem, CachesTheResultOfAProofOfWorkCheck)
 TEST_F(ACreditSystem, UsesTheCachedResultOfAProofOfWorkCheck)
 {
     auto msg = MessageWithAValidProofOfWork();
-    credit_system->SetExpectedNumberOfMegabytesInMinedCreditProofsOfWork(1);
     creditdata[msg.GetHash160()]["quickcheck_bad"] = true;
     bool ok = credit_system->QuickCheckProofOfWorkInMinedCreditMessage(msg);
     ASSERT_THAT(ok, Eq(false));
@@ -705,7 +701,7 @@ public:
     {
         ACreditSystem::SetUp();
         msg = ExampleMinedCreditMessage();
-        tx.rawtx.outputs.push_back(Credit(Point(SECP256K1, 3).getvch(), ONE_CREDIT));
+        tx.rawtx.outputs.push_back(Credit(Point(SECP256K1, 3), ONE_CREDIT));
         credit_system->StoreMinedCreditMessage(msg);
         credit_system->StoreTransaction(tx);
     }

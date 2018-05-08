@@ -130,15 +130,6 @@ void TeleportLocalServer::KeepMiningAsynchronously()
     StartMiningAsynchronously();
 }
 
-void TeleportLocalServer::SetNumberOfMegabytesUsedForMining(uint32_t number_of_megabytes)
-{
-    Json::Value request;
-    request["megabytes_used"] = number_of_megabytes;
-    MakeRequestToMiningRPCServer("set_megabytes_used", request);
-    if (teleport_network_node != NULL)
-        teleport_network_node->credit_system->SetExpectedNumberOfMegabytesInMinedCreditProofsOfWork(number_of_megabytes);
-}
-
 NetworkSpecificProofOfWork TeleportLocalServer::GetLatestProofOfWork()
 {
     return latest_proof_of_work;
@@ -170,6 +161,7 @@ void TeleportLocalServer::StartProofHandlerThread()
 
 void TeleportLocalServer::RunProofHandlerThread()
 {
+    log_ << "proof handler thread running\n";
     while (keep_handling_proofs)
     {
         if (teleport_network_node != NULL and not latest_proof_was_handled)
@@ -193,6 +185,7 @@ void TeleportLocalServer::RunProofHandlerThread()
         boost::this_thread::sleep(boost::posix_time::milliseconds(20));
         boost::this_thread::interruption_point();
     }
+    log_ << "proof handler thread finishing\n";
 }
 
 void TeleportLocalServer::StopProofHandlerThread()

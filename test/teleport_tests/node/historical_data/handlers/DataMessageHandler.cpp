@@ -85,11 +85,6 @@ void DataMessageHandler::SetNetworkNode(TeleportNetworkNode *teleport_network_no
     teleport_network_node = teleport_network_node_;
 }
 
-void DataMessageHandler::HandleCalendarFailureMessage(CalendarFailureMessage message)
-{
-    calendar_handler->HandleCalendarFailureMessage(message);
-}
-
 void DataMessageHandler::HandleKnownHistoryMessage(KnownHistoryMessage known_history_message)
 {
     known_history_handler->HandleKnownHistoryMessage(known_history_message);
@@ -108,9 +103,4 @@ void DataMessageHandler::HandleDiurnDataRequest(DiurnDataRequest request)
 void DataMessageHandler::HandleDiurnDataMessage(DiurnDataMessage diurn_data_message)
 {
     known_history_handler->HandleDiurnDataMessage(diurn_data_message);
-}
-
-void DataMessageHandler::HandleDiurnFailureMessage(DiurnFailureMessage diurn_failure_message)
-{
-    known_history_handler->HandleDiurnFailureMessage(diurn_failure_message);
 }

@@ -43,10 +43,9 @@ uint160 TeleportMiner::GetMaxDifficulty()
 
 void TeleportMiner::StartMining()
 {
-    uint256 memory_seed = MiningRoot();
+    auto seed = MiningRoot();
     uint160 difficulty = GetMaxDifficulty();
-    uint64_t memory_factor = MemoryFactorFromNumberOfMegabytes(megabytes_used);
-    proof = TwistWorkProof(memory_seed, memory_factor, difficulty);
+    proof = SimpleWorkProof(seed, difficulty);
     uint8_t working = 1;
     proof.DoWork(&working);
     InformNetworksOfProofOfWork();
@@ -91,12 +90,7 @@ void TeleportMiner::InformNetworkOfProofOfWork(NetworkMiningInfo info)
 
 }
 
-TwistWorkProof TeleportMiner::GetProof()
+SimpleWorkProof TeleportMiner::GetProof()
 {
     return proof;
-}
-
-void TeleportMiner::SetMemoryUsageInMegabytes(uint32_t number_of_megabytes)
-{
-    megabytes_used = number_of_megabytes;
 }

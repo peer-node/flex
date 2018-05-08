@@ -41,8 +41,6 @@ public:
 
     void SetMiningNetworkInfo();
 
-    void SetNumberOfMegabytesUsedForMining(uint32_t number_of_megabytes);
-
     Json::Value MakeRequestToMiningRPCServer(std::string method, Json::Value &request);
 
     std::string MiningAuthorization();

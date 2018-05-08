@@ -4,9 +4,9 @@
 #include "test/teleport_tests/node/TeleportNetworkNode.h"
 #include "test/teleport_tests/node/TestPeer.h"
 #include "test/teleport_tests/node/TestPeerWithNetworkNode.h"
-#include "test/teleport_tests/node/data/handlers/TipHandler.h"
-#include "test/teleport_tests/node/data/handlers/CalendarHandler.h"
-#include "test/teleport_tests/node/data/handlers/InitialDataHandler.h"
+#include "test/teleport_tests/node/historical_data/handlers/TipHandler.h"
+#include "test/teleport_tests/node/historical_data/handlers/CalendarHandler.h"
+#include "test/teleport_tests/node/historical_data/handlers/InitialDataHandler.h"
 
 using namespace ::testing;
 using namespace std;
@@ -35,6 +35,7 @@ public:
     virtual void SetUp()
     {
         teleport_network_node.credit_message_handler->do_spot_checks = false;
+        teleport_network_node.relay_message_handler->mode = BLOCK_VALIDATION;
     }
 
     void MarkProofAsValid(MinedCreditMessage msg)
@@ -157,6 +158,8 @@ public:
     {
         node1.credit_message_handler->do_spot_checks = false;
         node2.credit_message_handler->do_spot_checks = false;
+        node1.credit_message_handler->send_join_messages = false;
+        node2.credit_message_handler->send_join_messages = false;
 
         ConnectNodesViaPeers();
     }
@@ -247,15 +250,15 @@ public:
 
     void SetMiningPreferences(TeleportNetworkNode &node)
     {
-        node.credit_system->SetExpectedNumberOfMegabytesInMinedCreditProofsOfWork(1);
         node.credit_system->initial_difficulty = 100;
         node.credit_system->initial_diurnal_difficulty = 500;
-        node.data_message_handler->initial_data_handler->SetMiningParametersForInitialDataMessageValidation(1, 100, 500);
-        node.data_message_handler->calendar_handler->calendar_scrutiny_time = 1 * 10000;
     }
 
     virtual void SetUp()
     {
+        node1.credit_message_handler->send_join_messages = false;
+        node2.credit_message_handler->send_join_messages = false;
+
         SetMiningPreferences(node1);
         SetMiningPreferences(node2);
 
@@ -279,15 +282,17 @@ public:
 
 void WaitForCalendarSwitch(TeleportNetworkNode &node, uint160 last_tip = 0, uint32_t millisecond_timeout=15000)
 {
-    if (last_tip == 0)
-        last_tip = node.calendar.LastMinedCreditMessageHash();
     int64_t start_time = GetTimeMillis();
+    log_ << "------------------- stating to wait for calendar to switch from " << last_tip << "\n";
     while (node.calendar.LastMinedCreditMessageHash() == last_tip)
     {
         MilliSleep(10);
         LOCK(node.credit_message_handler->calendar_mutex);
         if (GetTimeMillis() - start_time > millisecond_timeout)
+        {
+            log_ << "timed out waiting for calendar switch\n";
             return;
+        }
     }
 }
 
@@ -295,22 +300,26 @@ TEST_F(TwoTeleportNetworkNodesWithValidProofsOfWorkConnectedViaPeers, AreSynchro
 {
     auto original_node2_tip = node2.calendar.LastMinedCreditMessageHash();
 
+
     AddABatchToTheTip(&node1);
+    log_ << "going to wait for node 2 calendar to switch from " << original_node2_tip << "\n";
     WaitForCalendarSwitch(node2, original_node2_tip);
 
     auto intermediate_node2_tip = node2.calendar.LastMinedCreditMessageHash();
     AddABatchToTheTip(&node1);
+    log_ << "going to wait for node 2 calendar to switch from " << intermediate_node2_tip << "\n";
     WaitForCalendarSwitch(node2, intermediate_node2_tip);
 
 
     auto intermediate_node1_tip = node1.calendar.LastMinedCreditMessageHash();
     AddABatchToTheTip(&node2);
+    log_ << "going to wait for node 1 calendar to switch from " << intermediate_node1_tip << "\n";
     WaitForCalendarSwitch(node1, intermediate_node1_tip);
 
     ASSERT_THAT(node1.calendar.LastMinedCreditMessageHash(), Eq(node2.calendar.LastMinedCreditMessageHash()));
 
-    MinedCreditMessage msg = node1.calendar.LastMinedCreditMessage();
-    ASSERT_THAT(msg.mined_credit.network_state.batch_number, Eq(3));
+//    MinedCreditMessage msg = node1.calendar.LastMinedCreditMessage();
+//    ASSERT_THAT(msg.mined_credit.network_state.batch_number, Eq(3));
 }
 
 
@@ -493,11 +502,8 @@ public:
 
     void SetMiningPreferences(TeleportNetworkNode &node)
     {
-        node.credit_system->SetExpectedNumberOfMegabytesInMinedCreditProofsOfWork(1);
         node.credit_system->initial_difficulty = 100;
         node.credit_system->initial_diurnal_difficulty = 500;
-        node.data_message_handler->initial_data_handler->SetMiningParametersForInitialDataMessageValidation(1, 100, 500);
-        node.data_message_handler->calendar_handler->calendar_scrutiny_time = 1 * 10000;
     }
 
     void CompleteProofOfWork(MinedCreditMessage& msg)
@@ -542,176 +548,5 @@ TEST_F(TwoTeleportNetworkNodesConnectedViaCommunicators, SendAndReceiveMessages)
     AddABatchToTheTip(&node1);
     WaitForCalendarSwitch(node2); // wait for node2 to synchronize with node1
     ASSERT_THAT(node1.calendar.LastMinedCreditMessageHash(), Eq(node2.calendar.LastMinedCreditMessageHash()));
-}
-
-
-class TwoTeleportNetworkNodesConnectedViaCommunicatorsAfterOneHasBuiltACalendarWithAFailure :
-        public TwoTeleportNetworkNodesWithCommunicators
-{
-public:
-    uint64_t bad_batch_number;
-
-    virtual void SetUp()
-    {
-        TwoTeleportNetworkNodesWithCommunicators::SetUp();
-        SetMiningPreferences(node1);
-        SetMiningPreferences(node2);
-
-        BuildACalendarWithAFailure(node1);
-        node1.communicator->network.AddNode("127.0.0.1:" + PrintToString(port2));
-
-        node1.communicator->network.vNodes[0]->WaitForVersion();
-        node2.communicator->network.vNodes[0]->WaitForVersion();
-    }
-
-    void BuildACalendarWithAFailure(TeleportNetworkNode &node)
-    {
-        while (node.calendar.calends.size() < 2)
-            AddABatchToTheTip(&node);
-
-        MinedCreditMessage calend = node.calendar.calends.back();
-        node.calendar.RemoveLast(node.credit_system);
-
-        node.credit_system->RemoveFromMainChainAndDeleteRecordOfTotalWork(calend);
-
-        calend.proof_of_work.proof.link_lengths[2] += 1;
-        node.credit_system->AcceptMinedCreditMessageAsValidByRecordingTotalWorkAndParent(calend);
-        node.creditdata[calend.GetHash160()]["passed_verification"] = true;
-        node.creditdata[calend.GetHash160()]["is_calend"] = true;
-        node.tip_controller.AddToTip(calend);
-        bad_batch_number = calend.mined_credit.network_state.batch_number;
-
-        while (node.calendar.calends.size() < 5)
-            AddABatchToTheTip(&node);
-    }
-
-    virtual void TearDown()
-    {
-        TwoTeleportNetworkNodesWithCommunicators::TearDown();
-    }
-};
-
-TEST_F(TwoTeleportNetworkNodesConnectedViaCommunicatorsAfterOneHasBuiltACalendarWithAFailure, HaveDifferentCalendars)
-{
-    ASSERT_THAT(node1.calendar, Ne(node2.calendar));
-}
-
-TEST_F(TwoTeleportNetworkNodesConnectedViaCommunicatorsAfterOneHasBuiltACalendarWithAFailure, HaveACalendarWithAFailure)
-{
-    bool ok = true;
-    CalendarFailureDetails details;
-    while (ok)
-        ok = node1.calendar.SpotCheckWork(details);
-    ASSERT_THAT(ok, Eq(false));
-}
-
-TEST_F(TwoTeleportNetworkNodesConnectedViaCommunicatorsAfterOneHasBuiltACalendarWithAFailure,
-       SynchronizeToTheLastGoodMinedCreditIfTheFailureIsDetected)
-{
-    Calendar original_calendar = node1.calendar;
-    node2.data_message_handler->calendar_handler->calendar_scrutiny_time = 100 * CALENDAR_SCRUTINY_TIME; // error will be found
-    node2.data_message_handler->tip_handler->RequestTips(); // node2 should inform node1 of the error
-
-    WaitForCalendarSwitch(node1, original_calendar.LastMinedCreditMessageHash());
-
-    ASSERT_THAT(node1.calendar, Ne(original_calendar));
-    ASSERT_THAT(node1.calendar.calends.size(), Eq(1));
-    ASSERT_THAT(node1.calendar.LastMinedCreditMessage().mined_credit.network_state.batch_number, Eq(bad_batch_number - 1));
-}
-
-
-
-class TwoTeleportNetworkNodesConnectedViaPeersAfterOneHasBuiltACalendarWithAFailure :
-        public TwoTeleportNetworkNodesConnectedViaCommunicatorsAfterOneHasBuiltACalendarWithAFailure
-{
-public:
-    TestPeerWithNetworkNode peer1, peer2;
-
-    virtual void SetUp()
-    {
-        TwoTeleportNetworkNodesWithCommunicators::SetUp();
-        SetMiningPreferences(node1);
-        SetMiningPreferences(node2);
-
-        BuildACalendarWithAFailure(node1);
-        ConnectNodesViaPeers();
-    }
-
-    void ConnectNodesViaPeers()
-    {
-        peer1.id = 1;
-        peer2.id = 2;
-
-        peer1.SetNetworkNode(&node1);
-        peer2.SetNetworkNode(&node2);
-        peer1.network.vNodes.push_back(&peer2);
-        peer2.network.vNodes.push_back(&peer1);
-
-        node1.credit_message_handler->SetNetwork(peer1.network);
-        node2.credit_message_handler->SetNetwork(peer2.network);
-        node1.data_message_handler->SetNetwork(peer1.network);
-        node2.data_message_handler->SetNetwork(peer2.network);
-    }
-
-    virtual void TearDown()
-    {
-        peer1.StopGettingMessages();
-        peer2.StopGettingMessages();
-        node1.StopCommunicator();
-        node2.StopCommunicator();
-
-        MilliSleep(150);
-    }
-};
-
-TEST_F(TwoTeleportNetworkNodesConnectedViaPeersAfterOneHasBuiltACalendarWithAFailure,
-       SynchronizeToTheLastGoodMinedCreditIfTheFailureIsDetected)
-{
-    Calendar original_calendar = node1.calendar;
-    node2.data_message_handler->calendar_handler->calendar_scrutiny_time = 100 * CALENDAR_SCRUTINY_TIME; // error will be found
-    node2.data_message_handler->tip_handler->RequestTips(); // node2 should inform node1 of the error
-
-    WaitForCalendarSwitch(node1, original_calendar.LastMinedCreditMessageHash());
-
-    ASSERT_THAT(node1.calendar, Ne(original_calendar));
-    ASSERT_THAT(node1.calendar.calends.size(), Eq(1));
-    ASSERT_THAT(node1.calendar.LastMinedCreditMessage().mined_credit.network_state.batch_number,
-                Eq(bad_batch_number - 1));
-}
-
-
-class TwoTeleportNetworkNodesWhoHaveDetectedAFailureInACalendar :
-        public TwoTeleportNetworkNodesConnectedViaPeersAfterOneHasBuiltACalendarWithAFailure
-{
-public:
-    Calendar original_calendar;
-
-    virtual void SetUp()
-    {
-        TwoTeleportNetworkNodesConnectedViaPeersAfterOneHasBuiltACalendarWithAFailure::SetUp();
-
-        original_calendar = node1.calendar;
-        node2.data_message_handler->calendar_handler->calendar_scrutiny_time = 100 * CALENDAR_SCRUTINY_TIME; // error will be found
-        node2.data_message_handler->tip_handler->RequestTips(); // node2 should inform node1 of the error
-
-        WaitForCalendarSwitch(node1, original_calendar.LastMinedCreditMessageHash());
-    }
-
-};
-
-TEST_F(TwoTeleportNetworkNodesWhoHaveDetectedAFailureInACalendar,
-       SendCalendarFailureMessagesInResponseToCalendarsWhichContainTheBadCalend)
-{
-    auto calendar_with_failure = original_calendar;
-    calendar_with_failure.RemoveLast(node1.credit_system);
-
-    CalendarRequestMessage request(calendar_with_failure.LastMinedCreditMessage());
-    node2.msgdata[request.GetHash160()]["is_calendar_request"] = true;
-    CalendarMessage calendar_message(request, node1.credit_system);
-    node2.data_message_handler->HandleMessage(GetDataStream("data", calendar_message), &peer1);
-    MilliSleep(3000);
-    CalendarFailureDetails details = node2.data_message_handler->calendar_handler->GetCalendarFailureDetails(calendar_with_failure);
-
-    ASSERT_TRUE(peer1.HasBeenInformedAbout("data", "calendar_failure", CalendarFailureMessage(details)));
 }
 

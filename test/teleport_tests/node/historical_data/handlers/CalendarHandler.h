@@ -24,29 +24,17 @@ public:
 
     void HandleCalendarRequestMessage(CalendarRequestMessage request);
 
-    void HandleCalendarFailureMessage(CalendarFailureMessage message);
-
     void HandleCalendarMessage(CalendarMessage calendar_message);
 
     bool ScrutinizeCalendarWithTheMostWork();
 
     bool CheckDifficultiesRootsAndProofsOfWork(Calendar &calendar);
 
-    bool Scrutinize(Calendar calendar, uint64_t scrutiny_time, CalendarFailureDetails &details);
-
     void HandleIncomingCalendar(CalendarMessage incoming_calendar);
 
     void RequestInitialDataMessage(CalendarMessage calendar_message);
 
     bool ValidateCalendarMessage(CalendarMessage calendar_message);
-
-    bool ValidateCalendarFailureMessage(CalendarFailureMessage message);
-
-    void MarkCalendarsAsInvalidAndSwitchToNewCalendar(CalendarFailureMessage message);
-
-    void SendCalendarFailureMessageInResponseToCalendarMessage(CalendarMessage calendar_message);
-
-    CalendarFailureDetails GetCalendarFailureDetails(Calendar &calendar_);
 
 };
 

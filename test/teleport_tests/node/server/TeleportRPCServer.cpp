@@ -89,12 +89,6 @@ void TeleportRPCServer::KeepMiningAsynchronously(const Json::Value &request, Jso
     teleport_local_server->KeepMiningAsynchronously();
 }
 
-void TeleportRPCServer::SetMegabytesUsed(const Json::Value &request, Json::Value &response)
-{
-    auto number_of_megabytes = (uint32_t) request[0].asUInt64();
-    teleport_local_server->SetNumberOfMegabytesUsedForMining(number_of_megabytes);
-}
-
 int64_t GetAmountFromValue(const Json::Value &value)
 {
     int64_t amount = 0;

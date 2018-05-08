@@ -31,10 +31,17 @@ void TipController::SwitchToNewTipIfAppropriate()
 
     uint160 current_tip = calendar->LastMinedCreditMessageHash();
     if (VectorContainsEntry(batches_with_the_most_work, current_tip))
+    {
+        log_ << "============= Not switching - current tip " << current_tip << " has more work\n";
+        log_ << current_tip << " has work " << calendar->LastMinedCreditMessage().mined_credit.ReportedWork() << "\n";
         return;
+    }
 
     if (batches_with_the_most_work.size() == 0)
+    {
+        log_ << "============= Not switching - zero batches have the most work\n";
         return;
+    }
 
     uint160 new_tip = batches_with_the_most_work[0];
     SwitchToTip(new_tip);
@@ -42,6 +49,7 @@ void TipController::SwitchToNewTipIfAppropriate()
 
 void TipController::SwitchToTip(uint160 msg_hash_of_new_tip)
 {
+    log_ << "switching to new tip: " << msg_hash_of_new_tip << "\n";
     MinedCreditMessage msg_at_new_tip = msgdata[msg_hash_of_new_tip]["msg"];
     uint160 current_tip = calendar->LastMinedCreditMessageHash();
 
@@ -53,6 +61,7 @@ void TipController::SwitchToTip(uint160 msg_hash_of_new_tip)
 
 void TipController::SwitchToTipViaFork(uint160 new_tip)
 {
+    log_ << "switching via fork\n";
     uint160 old_tip = calendar->LastMinedCreditMessageHash();
     uint160 current_tip = calendar->LastMinedCreditMessageHash();
     *spent_chain = credit_system->GetSpentChainOnOtherProngOfFork(*spent_chain, current_tip, new_tip);
@@ -65,13 +74,16 @@ void TipController::SwitchToTipViaFork(uint160 new_tip)
 
 void TipController::AddToTip(MinedCreditMessage &msg)
 {
+    log_ << "adding tip to end of current chain\n";
     credit_system->StoreMinedCreditMessage(msg);
     log_ << "storing mined credit message " << msg.GetHash160() << "\n";
     credit_system->AddToMainChain(msg);
     *spent_chain = credit_system->GetSpentChainOnOtherProngOfFork(*spent_chain,
                                                                   calendar->LastMinedCreditMessageHash(),
                                                                   msg.GetHash160());
+    log_ << "====  getting calendar to add to tip. previous calendar tip was: " << calendar->LastMinedCreditMessageHash() << "\n";
     calendar->AddToTip(msg, credit_system);
+    log_ << "====  new calendar tip is: " << calendar->LastMinedCreditMessageHash() << "\n";
     if (wallet != NULL)
         wallet->AddBatchToTip(msg, credit_system);
     log_ << "updating accepted messages after new tip\n";

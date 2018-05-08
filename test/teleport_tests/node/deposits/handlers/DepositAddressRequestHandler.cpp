@@ -425,15 +425,7 @@ void DepositAddressRequestHandler::SendDepositAddressPartDisclosure(uint160 post
 
 void DepositAddressRequestHandler::SendDepositAddressRequest(std::string currency_code)
 {
-    uint8_t curve;
-
-    if (currency_code == "TCR")
-        curve = SECP256K1;
-    else
-    {
-        Currency currency(currency_code, deposit_message_handler->config);
-        curve = (uint8_t)(deposit_message_handler->config.Uint64(currency_code + "-curve", SECP256K1));
-    }
+    uint8_t curve = SECP256K1;
 
     vch_t code(currency_code.begin(), currency_code.end());
     DepositAddressRequest request(curve, code, data);

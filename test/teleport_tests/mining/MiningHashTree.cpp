@@ -4,6 +4,13 @@
 
 using std::vector;
 
+uint160 u256tou160(uint256 n)
+{
+    uint160 result;
+    memcpy(result.begin(), n.begin(), 20);
+    return result;
+}
+
 vector<uint256> GenerateNextLayerOfHashes(vector<uint256> previous_layer);
 
 uint256 MiningHashTree::Root()

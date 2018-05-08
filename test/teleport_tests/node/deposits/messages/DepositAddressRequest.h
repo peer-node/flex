@@ -8,11 +8,8 @@
 #include <test/teleport_tests/node/Data.h>
 #include <src/crypto/secp256k1point.h>
 
-#define DEPOSIT_MEMORY_FACTOR 16  // 0.5 Gb
-#define DEPOSIT_NUM_SEGMENTS 64   // 8 Mb
-#define DEPOSIT_PROOF_LINKS 32
 #define DEPOSIT_NUM_RELAYS 5
-#define DEPOSIT_LOG_TARGET 109
+#define DEPOSIT_DIFFICULTY 100000
 
 
 class DepositAddressRequest
@@ -21,7 +18,7 @@ public:
     Point depositor_key;
     uint8_t curve;
     vch_t currency_code;
-    TwistWorkProof proof_of_work;
+    SimpleWorkProof proof_of_work;
     Signature signature;
 
     DepositAddressRequest() { }
@@ -47,26 +44,14 @@ public:
 
     uint256 PreWorkHash()
     {
-        TwistWorkProof original_proof = proof_of_work;
+        SimpleWorkProof original_proof = proof_of_work;
         Signature original_signature = signature;
         signature = Signature();
-        proof_of_work = TwistWorkProof();
+        proof_of_work = SimpleWorkProof();
         uint256 hash = GetHash();
         proof_of_work = original_proof;
         signature = original_signature;
         return hash;
-    }
-
-    uint160 Target()
-    {
-        uint160 target(1);
-        return target << DEPOSIT_LOG_TARGET;
-    }
-
-    uint160 LinkThreshold()
-    {
-        uint160 link_threshold(DEPOSIT_PROOF_LINKS);
-        return link_threshold << DEPOSIT_LOG_TARGET;
     }
 
     void DoWork(Data data)
@@ -74,10 +59,10 @@ public:
         bool done = false;
         while (!done)
         {
-            proof_of_work = TwistWorkProof(PreWorkHash(), DEPOSIT_MEMORY_FACTOR, Target(), LinkThreshold(), DEPOSIT_NUM_SEGMENTS);
+            proof_of_work = SimpleWorkProof(PreWorkHash(), DEPOSIT_DIFFICULTY);
             uint8_t keep_working = 1;
             proof_of_work.DoWork(&keep_working);
-            if (proof_of_work.DifficultyAchieved() > 0)
+            if (proof_of_work.WorkDone() > 0)
                 done = true;
             else
                 SetDepositorKey(data);
@@ -86,12 +71,8 @@ public:
 
     bool CheckWork()
     {
-        return proof_of_work.memory_seed == PreWorkHash() and
-               proof_of_work.memory_factor == DEPOSIT_MEMORY_FACTOR and
-               proof_of_work.target == Target() and
-               proof_of_work.link_threshold == LinkThreshold() and
-               proof_of_work.DifficultyAchieved() != 0 and
-               proof_of_work.SpotCheck().Valid();
+        return proof_of_work.target == SimpleWorkProof::TargetFromDifficulty(DEPOSIT_DIFFICULTY) 
+               and proof_of_work.IsValidProofOfWork();
     }
 
     IMPLEMENT_SERIALIZE

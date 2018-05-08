@@ -16,12 +16,12 @@ class ARelayState : public Test
 public:
     RelayState relay_state;
     RelayJoinMessage relay_join_message;
-    MemoryDataStore keydata, creditdata, msgdata;
+    MemoryDataStore keydata, creditdata, msgdata, depositdata;
     Data *data;
 
     virtual void SetUp()
     {
-        data = new Data(msgdata, creditdata, keydata, &relay_state);
+        data = new Data(msgdata, creditdata, keydata, depositdata, &relay_state);
         data->CreateCache();
     }
     virtual void TearDown()
@@ -78,12 +78,14 @@ public:
             reference_test_relay_state = relay_state;
             reference_test_keydata = keydata;
             reference_msgdata = msgdata;
+            log_ << "set up relay state for first time: number of relays is " << relay_state.relays.size() << "\n";
         }
         else
         {
             relay_state = reference_test_relay_state;
             keydata = reference_test_keydata;
             msgdata = reference_msgdata;
+            log_ << "used stored relays state: number of relays is " << relay_state.relays.size() << "\n";
         }
     }
 
@@ -112,8 +114,10 @@ TEST_F(ARelayStateWith53Relays, AssignsKeyQuarterHoldersToEachRelayWithARelayWho
 
 TEST_F(ARelayStateWith53Relays, AssignsKeyQuarterHoldersAutomatically)
 {
+    sleep(10);
     for (auto &relay : relay_state.relays)
     {
+        log_ << "checking holders assigned for " << relay.number << "\n";
         bool holders_assigned = relay.HasFourKeyQuarterHolders();
         ASSERT_THAT(holders_assigned, Eq(relay.number <= 52)) << "failed at " << relay.number;
     }

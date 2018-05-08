@@ -34,7 +34,7 @@ public:
         amount1 -= 1;
         amount2 = 2;
 
-        vch_t key = Point(SECP256K1, 2).getvch();
+        auto key = Point(SECP256K1, 2);
         tx.rawtx.outputs.push_back(Credit(key, amount1));
         tx.rawtx.outputs.push_back(Credit(key, amount2));
 
@@ -43,7 +43,7 @@ public:
 
     CreditInBatch InputFromABatchInTheMainChain()
     {
-        Credit credit(Point(SECP256K1, 2).getvch(), 1);
+        Credit credit(Point(SECP256K1, 2), 1);
         SignedTransaction tx;
         tx.rawtx.outputs.push_back(credit);
         credit_system->StoreTransaction(tx);

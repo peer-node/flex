@@ -218,13 +218,13 @@ bool MinedCreditMessageValidator::CheckPreviousCalendHash(MinedCreditMessage msg
 
 bool MinedCreditMessageValidator::CheckRelayStateHash(MinedCreditMessage &msg)
 {
-    log_ << "checking relay state hash\n";
     uint160 previous_msg_hash = msg.mined_credit.network_state.previous_mined_credit_message_hash;
     MinedCreditMessage previous_msg = credit_system->msgdata[previous_msg_hash]["msg"];
 
     RelayMessageHandler handler(*data);
     handler.mode = BLOCK_VALIDATION;
     handler.relay_state = data->GetRelayState(previous_msg.mined_credit.network_state.relay_state_hash);
+
     handler.SetCreditSystem(credit_system);
     handler.relay_state.latest_mined_credit_message_hash = previous_msg_hash;
 
@@ -237,7 +237,10 @@ bool MinedCreditMessageValidator::CheckRelayStateHash(MinedCreditMessage &msg)
             return false;
         handler.HandleMessage(message_hash);
     }
-    log_ << "returning " << (handler.relay_state.GetHash160() == msg.mined_credit.network_state.relay_state_hash) << "\n";
+    if (handler.relay_state.GetHash160() != msg.mined_credit.network_state.relay_state_hash)
+    {
+        log_ << "relay state hashes don't match. validation failed\n";
+    }
     return handler.relay_state.GetHash160() == msg.mined_credit.network_state.relay_state_hash;
 }
 

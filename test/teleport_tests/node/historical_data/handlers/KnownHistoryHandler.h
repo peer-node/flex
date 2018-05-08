@@ -52,31 +52,7 @@ public:
 
     bool CheckHashesInDiurnDataMessage(DiurnDataMessage diurn_data_message);
 
-    void ScrutinizeDiurnsAndSendAFailureMessageIfABadBatchIsFound(DiurnDataMessage diurn_data_message);
-
-    bool CheckForFailuresInProofsOfWorkInDiurnDataMessage(DiurnDataMessage &diurn_data_message,
-                                                          DiurnFailureDetails &failure_details, uint64_t &bad_diurn,
-                                                          uint64_t scrutiny_time);
-
-    void HandleDiurnFailureMessage(DiurnFailureMessage diurn_failure_message);
-
-    bool CheckForFailuresInMinedCreditMessageFromDiurnDataMessage(DiurnDataMessage &diurn_data_message,
-                                                                  DiurnFailureDetails &failure_details, uint64_t &bad_diurn,
-                                                                  uint64_t diurn_to_check, uint64_t msg_to_check);
-
-    bool CheckForFailuresInProofsOfWorkInDiurnDataMessage(DiurnDataMessage &diurn_data_message,
-                                                          DiurnFailureDetails &failure_details, uint32_t &bad_diurn,
-                                                          uint64_t scrutiny_time);
-
-    bool CheckForFailuresInMinedCreditMessageFromDiurnDataMessage(DiurnDataMessage &diurn_data_message,
-                                                                  DiurnFailureDetails &failure_details, uint32_t &bad_diurn,
-                                                                  uint32_t diurn_to_check, uint32_t msg_to_check);
-
-    bool ValidateDiurnFailureMessage(DiurnFailureMessage diurn_failure_message);
-
     bool CheckHashesInDiurn(Diurn &diurn);
-
-    bool VerifyFailureInDiurnFailureMessage(DiurnFailureMessage diurn_failure_message);
 
     bool ValidateDataInDiurn(Diurn &diurn, CreditSystem *credit_system_, BitChain &initial_spent_chain);
 };

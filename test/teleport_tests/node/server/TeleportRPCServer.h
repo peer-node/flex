@@ -30,7 +30,6 @@ public:
         BindMethod("help", &TeleportRPCServer::Help);
         BindMethod("getinfo", &TeleportRPCServer::GetInfo);
         BindMethod("setnetworkid", &TeleportRPCServer::SetNetworkID);
-        BindMethod("set_megabytes_used", &TeleportRPCServer::SetMegabytesUsed);
         BindMethod("new_proof", &TeleportRPCServer::NewProof);
         BindMethod("balance", &TeleportRPCServer::Balance);
         BindMethod("start_mining", &TeleportRPCServer::StartMining);
@@ -73,8 +72,6 @@ public:
     void GetInfo(const Json::Value& request, Json::Value& response);
 
     void SetNetworkID(const Json::Value& request, Json::Value& response);
-
-    void SetMegabytesUsed(const Json::Value& request, Json::Value& response);
 
     void NewProof(const Json::Value& request, Json::Value& response);
 

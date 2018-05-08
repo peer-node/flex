@@ -115,26 +115,6 @@ void KnownHistoryHandler::HandleDiurnDataMessage(DiurnDataMessage diurn_data_mes
         return;
     }
     credit_system->StoreDataFromDiurnDataMessage(diurn_data_message);
-    ScrutinizeDiurnsAndSendAFailureMessageIfABadBatchIsFound(diurn_data_message);
-}
-
-void KnownHistoryHandler::ScrutinizeDiurnsAndSendAFailureMessageIfABadBatchIsFound(DiurnDataMessage diurn_data_message)
-{
-    DiurnFailureDetails details;
-    uint32_t bad_diurn;
-    bool ok = CheckForFailuresInProofsOfWorkInDiurnDataMessage(diurn_data_message,
-                                                               details, bad_diurn, diurn_scrutiny_time);
-    if (not ok)
-    {
-        log_ << "sending diurn failure message\n";
-        DiurnFailureMessage diurn_failure_message;
-        diurn_failure_message.details = details;
-        diurn_failure_message.diurn = diurn_data_message.diurns[bad_diurn];
-        msgdata[diurn_data_message.GetHash160()]["failure_message_hash"] = diurn_failure_message.GetHash160();
-        msgdata[diurn_failure_message.GetHash160()]["diurn_failure"] = diurn_failure_message;
-        data_message_handler->Broadcast(diurn_failure_message);
-        HandleDiurnFailureMessage(diurn_failure_message);
-    }
 }
 
 void KnownHistoryHandler::HandlerDiurnDataRequest(DiurnDataRequest request)
@@ -250,47 +230,6 @@ bool KnownHistoryHandler::CheckSizesInDiurnDataMessage(DiurnDataMessage diurn_da
            diurn_data_message.calends.size() == number_of_diurns;
 }
 
-bool KnownHistoryHandler::CheckForFailuresInProofsOfWorkInDiurnDataMessage(DiurnDataMessage &diurn_data_message,
-                                                                           DiurnFailureDetails &failure_details,
-                                                                           uint32_t &bad_diurn,
-                                                                           uint64_t scrutiny_time)
-{
-    uint64_t start_time = GetTimeMicros();
-    auto diurns = diurn_data_message.diurns;
-
-    while (GetTimeMicros() - start_time < scrutiny_time)
-    {
-        uint32_t selected_diurn = (uint32_t) GetRand(diurns.size());
-        uint32_t selected_msg = (uint32_t) GetRand(diurns[selected_diurn].Size());
-        bool ok = CheckForFailuresInMinedCreditMessageFromDiurnDataMessage(diurn_data_message, failure_details,
-                                                                           bad_diurn, selected_diurn, selected_msg);
-        if (not ok)
-            return false;
-    }
-    return true;
-}
-
-bool KnownHistoryHandler::CheckForFailuresInMinedCreditMessageFromDiurnDataMessage(DiurnDataMessage &diurn_data_message,
-                                                                                   DiurnFailureDetails &failure_details,
-                                                                                   uint32_t &bad_diurn,
-                                                                                   uint32_t diurn_to_check,
-                                                                                   uint32_t msg_to_check)
-{
-    Diurn &diurn = diurn_data_message.diurns[diurn_to_check];
-    MinedCreditMessage &msg = diurn.credits_in_diurn[msg_to_check];
-    auto check = msg.proof_of_work.proof.SpotCheck();
-    if (not check.valid)
-    {
-        bad_diurn = diurn_to_check;
-        failure_details.check = check;
-        failure_details.mined_credit_message_hash = msg.GetHash160();
-        failure_details.preceding_calend_hash = diurn.credits_in_diurn.front().GetHash160();
-        failure_details.succeeding_calend_hash = diurn_data_message.calends[diurn_to_check].GetHash160();
-        return false;
-    }
-    return true;
-}
-
 bool KnownHistoryHandler::CheckHashesInDiurnDataMessage(DiurnDataMessage diurn_data_message)
 {
     for (uint64_t diurn_number = 0; diurn_number < diurn_data_message.diurns.size(); diurn_number++)
@@ -325,59 +264,4 @@ bool KnownHistoryHandler::CheckHashesInDiurn(Diurn &diurn)
         previous_msg_hash = msg.GetHash160();
     }
     return true;
-}
-
-void KnownHistoryHandler::HandleDiurnFailureMessage(DiurnFailureMessage diurn_failure_message)
-{
-    if (not ValidateDiurnFailureMessage(diurn_failure_message))
-    {
-        data_message_handler->RejectMessage(diurn_failure_message.GetHash160());
-        return;
-    }
-    credit_system->RemoveMinedCreditMessagesDownstreamOfDiurnFailure(diurn_failure_message);
-    if (data_message_handler->teleport_network_node != NULL and
-            data_message_handler->teleport_network_node->credit_message_handler != NULL)
-        data_message_handler->teleport_network_node->tip_controller.SwitchToNewTipIfAppropriate();
-}
-
-bool KnownHistoryHandler::ValidateDiurnFailureMessage(DiurnFailureMessage diurn_failure_message)
-{
-    Calend calend_succeeding_diurn = msgdata[diurn_failure_message.details.succeeding_calend_hash]["msg"];
-    Diurn &diurn = diurn_failure_message.diurn;
-    if (calend_succeeding_diurn.DiurnRoot() != diurn.Root())
-    {
-        log_ << "bad diurn root\n";
-        return false;
-    }
-    if (not CheckHashesInDiurn(diurn))
-    {
-        log_ << "bad hashes in diurn\n";
-        return false;
-    }
-    if (diurn.credits_in_diurn[0].GetHash160() != diurn_failure_message.details.preceding_calend_hash)
-    {
-        log_ << "preceding calend doesn't match\n";
-        return false;
-    }
-    if (not VerifyFailureInDiurnFailureMessage(diurn_failure_message))
-    {
-        log_ << "report of failure is false\n";
-        return false;
-    }
-    return true;
-}
-
-bool KnownHistoryHandler::VerifyFailureInDiurnFailureMessage(DiurnFailureMessage diurn_failure_message)
-{
-    MinedCreditMessage bad_message;
-    for (auto msg : diurn_failure_message.diurn.credits_in_diurn)
-    {
-        if (msg.GetHash160() == diurn_failure_message.details.mined_credit_message_hash)
-            bad_message = msg;
-    }
-    if (bad_message.mined_credit.network_state.batch_number == 0)
-        return false;
-
-    TwistWorkProof &proof = bad_message.proof_of_work.proof;
-    return (bool) diurn_failure_message.details.check.VerifyInvalid(proof);
 }

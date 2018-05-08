@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.3)
 project(teleport)
 
-set(CMAKE_CXX_FLAGS "-O3 ${CMAKE_CXX_FLAGS} -std=c++11 -lboost_system -DSCRYPT_SALSA64 -DSCRYPT_BLAKE512 -lssl -lboost_thread -pthread")
+set(CMAKE_CXX_FLAGS "-O3 ${CMAKE_CXX_FLAGS} -std=c++11 -lboost_system -lssl -lboost_thread -pthread")
 
 add_subdirectory(test)
 add_subdirectory(test/teleport_tests)
@@ -325,48 +325,7 @@ set(CRYPTO_FILES
 
 set(WORK_FILES
         src/mining/work.cpp
-        src/mining/work.h
-        src/twist/code/scrypt-conf.h
-        src/twist/code/scrypt-jane-chacha.h
-        src/twist/code/scrypt-jane-hash.h
-        src/twist/code/scrypt-jane-hash_blake256.h
-        src/twist/code/scrypt-jane-hash_blake512.h
-        src/twist/code/scrypt-jane-hash_keccak.h
-        src/twist/code/scrypt-jane-hash_sha256.h
-        src/twist/code/scrypt-jane-hash_sha512.h
-        src/twist/code/scrypt-jane-hash_skein512.h
-        src/twist/code/scrypt-jane-mix_chacha-avx.h
-        src/twist/code/scrypt-jane-mix_chacha-sse2.h
-        src/twist/code/scrypt-jane-mix_chacha-ssse3.h
-        src/twist/code/scrypt-jane-mix_chacha-xop.h
-        src/twist/code/scrypt-jane-mix_chacha.h
-        src/twist/code/scrypt-jane-mix_salsa-avx.h
-        src/twist/code/scrypt-jane-mix_salsa-sse2.h
-        src/twist/code/scrypt-jane-mix_salsa-xop.h
-        src/twist/code/scrypt-jane-mix_salsa.h
-        src/twist/code/scrypt-jane-mix_salsa64-avx.h
-        src/twist/code/scrypt-jane-mix_salsa64-avx2.h
-        src/twist/code/scrypt-jane-mix_salsa64-sse2.h
-        src/twist/code/scrypt-jane-mix_salsa64-ssse3.h
-        src/twist/code/scrypt-jane-mix_salsa64-xop.h
-        src/twist/code/scrypt-jane-mix_salsa64.h
-        src/twist/code/scrypt-jane-pbkdf2.h
-        src/twist/code/scrypt-jane-portable-x86.h
-        src/twist/code/scrypt-jane-portable.h
-        src/twist/code/scrypt-jane-romix-basic.h
-        src/twist/code/scrypt-jane-romix.h
-        src/twist/code/scrypt-jane-salsa.h
-        src/twist/code/scrypt-jane-salsa64.h
-        src/twist/code/scrypt-jane-test-vectors.h
-        src/twist/code/twist-romix.h
-        src/twist/code/twist-salsa64.h
-        src/twist/code/twist-template.h
-        src/twist/alloc.h
-        src/twist/scrypt-jane-twist.h
-        src/twist/twist-jane.h
-        src/twist/twist.h
-        src/twist/twistcpp.h)
-
+        src/mining/work.h)
 
 set(CREDITS_FILES
         ${WORK_FILES}
@@ -381,7 +340,9 @@ set(CREDITS_FILES
         src/vector_tools.h
         src/credits/SignedTransaction.cpp
         src/credits/SignedTransaction.h
-        src/credits/creditsign.h test/teleport_tests/node/deposits/messages/DepositAddressRequest.cpp test/teleport_tests/node/deposits/messages/DepositAddressRequest.h)
+        src/credits/creditsign.h
+        test/teleport_tests/node/deposits/messages/DepositAddressRequest.cpp
+        test/teleport_tests/node/deposits/messages/DepositAddressRequest.h)
 
 set(NEW_CREDITS_FILES
         ${WORK_FILES}
@@ -482,7 +443,7 @@ add_executable(runTwistWorkProofTests
         ${DATABASE_FILES}
         ${WORK_FILES}
         test/teleport_tests/test_main.cpp
-        test/teleport_tests/mining/testTwistWorkProof.cpp)
+        test/teleport_tests/mining/testSimpleWorkProof.cpp)
 
 add_executable(runNetworkSpecificProofOfWorkTests
         ${REMAINING_BASE_FILES}
@@ -810,6 +771,7 @@ add_executable(runNodeTests
         ${NODE_TEST_FILES}
         ${DATA_HANDLER_FILES}
         ${RELAY_FILES}
+        ${DEPOSIT_FILES}
         test/teleport_tests/node/MessageHandlerWithOrphanage.cpp
         test/teleport_tests/node/MessageHandlerWithOrphanage.h
         test/teleport_tests/test_main.cpp
@@ -858,7 +820,6 @@ add_executable(teleportd
         ${DATA_HANDLER_FILES}
         ${RELAY_FILES}
         ${DEPOSIT_FILES}
-        ${CURRENCY_FILES}
         ${DATABASE_FILES}
         test/teleport_tests/node/teleportd.cpp)
 

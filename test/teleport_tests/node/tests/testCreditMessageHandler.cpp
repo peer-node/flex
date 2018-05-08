@@ -11,6 +11,9 @@ using namespace std;
 #include "log.h"
 #define LOG_CATEGORY "test"
 
+std::string tcr_string{"TCR"};
+std::vector<unsigned char> TCR{tcr_string.begin(), tcr_string.end()};
+
 class ACreditMessageHandler : public Test
 {
 public:
@@ -174,24 +177,13 @@ TEST_F(ACreditMessageHandler, RequiresAMinedCreditMessageWithABatchNumberOfZeroT
     ASSERT_THAT(rejected, Eq(true));
 }
 
-TEST_F(ACreditMessageHandler, DoesAQuickCheckOfTheProofOfWork)
-{
-    auto msg = ValidFirstMinedCreditMessage(credit_system);
-    credit_system->creditdata[msg.GetHash160()]["quickcheck_ok"] = false;
-    credit_system->creditdata[msg.GetHash160()]["quickcheck_bad"] = true;
-    credit_message_handler->HandleMessage(GetDataStream(msg), &peer);
-    bool rejected = msgdata[msg.GetHash160()]["rejected"];
-    ASSERT_THAT(rejected, Eq(true));
-}
-
 MinedCreditMessage AddValidProofOfWork(MinedCreditMessage& msg)
 {
     NetworkSpecificProofOfWork enclosed_proof;
     enclosed_proof.branch.push_back(msg.mined_credit.GetHash());
     enclosed_proof.branch.push_back(2);
-    uint256 memory_seed = MiningHashTree::EvaluateBranch(enclosed_proof.branch);
-    uint64_t memory_factor = MemoryFactorFromNumberOfMegabytes(1);
-    TwistWorkProof proof(memory_seed, memory_factor, msg.mined_credit.network_state.difficulty);
+    auto seed = MiningHashTree::EvaluateBranch(enclosed_proof.branch);
+    SimpleWorkProof proof(seed, msg.mined_credit.network_state.difficulty);
     uint8_t keep_working = 1;
     proof.DoWork(&keep_working);
     enclosed_proof.proof = proof;
@@ -204,42 +196,6 @@ MinedCreditMessage MessageWithAValidProofOfWork(CreditSystem* credit_system)
     MinedCreditMessage msg = ValidFirstMinedCreditMessage(credit_system);
     msg = AddValidProofOfWork(msg);
     return msg;
-}
-
-TEST_F(ACreditMessageHandler, DoesASpotCheckOfTheProofOfWork)
-{
-    auto msg = MessageWithAValidProofOfWork(credit_system);
-    bool ok = credit_message_handler->ProofOfWorkPassesSpotCheck(msg);
-    ASSERT_THAT(ok, Eq(true));
-}
-
-MinedCreditMessage MessageWithAProofOfWorkThatFailsSpotChecks(CreditSystem* credit_system)
-{
-    auto msg = MessageWithAValidProofOfWork(credit_system);
-    for (int i = 0; i < msg.proof_of_work.proof.links.size(); i++)
-        msg.proof_of_work.proof.links[i] += 1;
-    credit_system->creditdata[msg.GetHash160()]["quickcheck_ok"] = true;
-    return msg;
-}
-
-TEST_F(ACreditMessageHandler, FailsASpotCheckOfTheProofOfWorkIfTheProofIsInvalid)
-{
-    auto msg = MessageWithAProofOfWorkThatFailsSpotChecks(credit_system);
-    bool ok{true};
-    while (ok)
-        ok = credit_message_handler->ProofOfWorkPassesSpotCheck(msg);
-    ASSERT_THAT(ok, Eq(false));
-}
-
-TEST_F(ACreditMessageHandler, GeneratesABadBatchMessageForAnInvalidProofOfWork)
-{
-    auto msg = MessageWithAProofOfWorkThatFailsSpotChecks(credit_system);
-    bool ok{true};
-    while (ok)
-        ok = credit_message_handler->ProofOfWorkPassesSpotCheck(msg);
-    BadBatchMessage bad_batch_message = credit_message_handler->GetBadBatchMessage(msg.GetHash160());
-    ASSERT_THAT(bad_batch_message.mined_credit_message_hash, Eq(msg.GetHash160()));
-    ASSERT_THAT(bad_batch_message.check.VerifyInvalid(msg.proof_of_work.proof), Eq(true));
 }
 
 TEST_F(ACreditMessageHandler, AddsAValidMinedCreditMessageToTheTipOfTheCalendar)
@@ -311,7 +267,7 @@ SignedTransaction ValidTransaction(CreditSystem *credit_system, MinedCreditMessa
 
     UnsignedTransaction rawtx;
     rawtx.inputs.push_back(credit_in_batch);
-    Credit output = Credit(Point(SECP256K1, 5).getvch(), ONE_CREDIT * 0.5);
+    Credit output = Credit(Point(SECP256K1, 5), ONE_CREDIT * 0.5);
     rawtx.outputs.push_back(output);
 
     MemoryDataStore keydata;
@@ -342,7 +298,7 @@ MinedCreditMessage ValidThirdMinedCreditMessageWithATransaction(CreditSystem* cr
     MinedCreditMessage msg;
 
     msg.mined_credit.amount = ONE_CREDIT;
-    msg.mined_credit.keydata = Point(SECP256K1, 4).getvch();
+    msg.mined_credit.public_key = Point(SECP256K1, 4);
 
     credit_system->StoreMinedCreditMessage(prev_msg);
     msg.mined_credit.network_state = credit_system->SucceedingNetworkState(prev_msg);
@@ -385,10 +341,9 @@ MinedCreditMessage ValidThirdMinedCreditMessageWithATransactionAndProof(CreditSy
     return msg;
 }
 
-void MakeProofOfWorkInvalid(TwistWorkProof& proof)
+void MakeProofOfWorkInvalid(SimpleWorkProof& proof)
 {
-    for (int i = 0; i < proof.links.size(); i++)
-        proof.links[i] += 1;
+    proof.nonce += 1;
 }
 
 void AddThreeMinedCreditMessagesToTheTip(CreditMessageHandler* credit_message_handler)
@@ -407,20 +362,6 @@ void AddThreeMinedCreditMessagesToTheTip(CreditMessageHandler* credit_message_ha
     MakeProofOfWorkInvalid(third_msg.proof_of_work.proof);
     credit_system->AcceptMinedCreditMessageAsValidByRecordingTotalWorkAndParent(third_msg);
     credit_message_handler->tip_controller->AddToTip(third_msg);
-}
-
-TEST_F(ACreditMessageHandler, RemovesBatchesFromMainChainAndSwitchesToANewTipInResponseToAValidBadBatchMessage)
-{
-    AddThreeMinedCreditMessagesToTheTip(credit_message_handler);
-    auto third_msg = credit_message_handler->calendar->current_diurn.credits_in_diurn.back();
-    uint160 second_msg_hash = third_msg.mined_credit.network_state.previous_mined_credit_message_hash;
-
-    while (credit_message_handler->ProofOfWorkPassesSpotCheck(third_msg)) { }
-
-    auto bad_batch_message = credit_message_handler->GetBadBatchMessage(third_msg.GetHash160());
-
-    credit_message_handler->HandleBadBatchMessage(bad_batch_message);
-    ASSERT_THAT(credit_message_handler->calendar->LastMinedCreditMessageHash(), Eq(second_msg_hash));
 }
 
 
@@ -461,17 +402,6 @@ TEST_F(ACreditMessageHandlerWithTwoPeers, RelaysAValidTransaction)
     credit_message_handler->HandleMessage(GetDataStream(tx), &peer);
 
     ASSERT_TRUE(other_peer.HasBeenInformedAbout("credit", "tx", tx));
-}
-
-TEST_F(ACreditMessageHandlerWithTwoPeers, RelaysABadBatchMessage)
-{
-    auto msg = MessageWithAProofOfWorkThatFailsSpotChecks(credit_system);
-    bool ok{true};
-    while (ok)
-        ok = credit_message_handler->ProofOfWorkPassesSpotCheck(msg);
-    BadBatchMessage bad_batch_message = credit_message_handler->GetBadBatchMessage(msg.GetHash160());
-    credit_message_handler->HandleMessage(GetDataStream(msg), &peer);
-    ASSERT_TRUE(other_peer.HasBeenInformedAbout("credit", "bad_batch", bad_batch_message));
 }
 
 

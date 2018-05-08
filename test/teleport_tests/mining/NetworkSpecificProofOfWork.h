@@ -12,10 +12,10 @@ class NetworkSpecificProofOfWork
 {
 public:
     std::vector<uint256> branch;
-    TwistWorkProof proof;
+    SimpleWorkProof proof;
 
     NetworkSpecificProofOfWork() { }
-    NetworkSpecificProofOfWork(std::vector<uint256> branch, TwistWorkProof proof);
+    NetworkSpecificProofOfWork(std::vector<uint256> branch, SimpleWorkProof proof);
 
     NetworkSpecificProofOfWork(std::string base64_string);
 
@@ -38,10 +38,6 @@ public:
 
     bool IsValid();
 
-    uint64_t MegabytesUsed()
-    {
-        return proof.MegabytesUsed();
-    }
 };
 
 

@@ -3,7 +3,6 @@
 #include <boost/range/adaptor/reversed.hpp>
 
 #include "log.h"
-#include "test/teleport_tests/node/historical_data/messages/CalendarFailureDetails.h"
 
 #define LOG_CATEGORY "Calendar.cpp"
 
@@ -479,20 +478,3 @@ bool Calendar::ValidateCreditInBatch(CreditInBatch credit_in_batch)
     return ValidateCreditInBatchUsingPreviousDiurn(credit_in_batch, long_branch);
 }
 
-bool Calendar::SpotCheckWork(CalendarFailureDetails &details)
-{
-    for (uint32_t i = 0; i < calends.size(); i++)
-    {
-        TwistWorkCheck check = calends[i].proof_of_work.proof.SpotCheck();
-
-        if (!check.Valid())
-        {
-            uint160 diurn_root = calends[i].DiurnRoot();
-            details.diurn_root = diurn_root;
-            details.mined_credit_message_hash = calends[i].GetHash160();
-            details.check = check;
-            return false;
-        }
-    }
-    return true;
-}

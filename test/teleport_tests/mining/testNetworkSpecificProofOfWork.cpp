@@ -20,8 +20,8 @@ TEST_F(ANetworkSpecificProofOfWork, HasNoBranchInitially)
 
 TEST_F(ANetworkSpecificProofOfWork, HasNoProofInitially)
 {
-    TwistWorkProof twist_work_proof = proof.proof;
-    ASSERT_THAT(twist_work_proof.Length(), Eq(0));
+    SimpleWorkProof simple_work_proof = proof.proof;
+    ASSERT_THAT(simple_work_proof.IsValidProofOfWork(), Eq(false));
 }
 
 class ANetworkSpecificProofOfWorkWithData : public ANetworkSpecificProofOfWork
@@ -30,15 +30,15 @@ public:
     virtual void SetUp()
     {
         std::vector<uint256> branch{1};
-        TwistWorkProof twist_work_proof(branch[0], 8, 100);
-        proof = NetworkSpecificProofOfWork(branch, twist_work_proof);
+        SimpleWorkProof simple_work_proof(branch[0], 100);
+        proof = NetworkSpecificProofOfWork(branch, simple_work_proof);
     }
 };
 
 TEST_F(ANetworkSpecificProofOfWorkWithData, RetainsItsData)
 {
     ASSERT_THAT(proof.branch[0], Eq(1));
-    ASSERT_THAT(proof.proof.memory_seed, Eq(1));
+    ASSERT_THAT(proof.proof.seed, Eq(1));
 }
 
 TEST_F(ANetworkSpecificProofOfWorkWithData, CanBeSerializedIntoABase64EncodedString)

@@ -108,13 +108,6 @@ public:
     }
 };
 
-TEST_F(ATeleportLocalServerWithAMiningRPCServer, SetsTheNumberOfMegabytesUsed)
-{
-    teleport_local_server.SetNumberOfMegabytesUsedForMining(1);
-    auto result = mining_client->CallMethod("get_megabytes_used", Json::Value());
-    ASSERT_THAT(result.asInt64(), Eq(1));
-}
-
 TEST_F(ATeleportLocalServerWithAMiningRPCServer, SetsTheNetworkInfo)
 {
     teleport_local_server.SetMiningNetworkInfo();
@@ -124,13 +117,11 @@ TEST_F(ATeleportLocalServerWithAMiningRPCServer, SetsTheNetworkInfo)
 
 TEST_F(ATeleportLocalServerWithAMiningRPCServer, ReceivesTheNewProofNotificationFromTheMiner)
 {
-    teleport_local_server.SetNumberOfMegabytesUsedForMining(1);
     teleport_local_server.SetMiningNetworkInfo();
     teleport_local_server.StartRPCServer();
     mining_client->CallMethod("start_mining", Json::Value());
     teleport_local_server.StopRPCServer();
     NetworkSpecificProofOfWork proof = teleport_local_server.GetLatestProofOfWork();
-    ASSERT_THAT(proof.MegabytesUsed(), Eq(1));
     ASSERT_TRUE(proof.IsValid());
 }
 
@@ -190,9 +181,9 @@ public:
     virtual void SetUp()
     {
         ATeleportLocalServerWithAMiningRPCServer::SetUp();
-        teleport_local_server.SetNumberOfMegabytesUsedForMining(1);
         teleport_local_server.SetMiningNetworkInfo();
         teleport_local_server.StartRPCServer();
+        teleport_local_server.StartProofHandlerThread();
 
         http_client = new HttpClient("http://localhost:8383");
         http_client->AddHeader("Authorization", "Basic teleportuser:abcd123");
@@ -201,6 +192,7 @@ public:
 
     virtual void TearDown()
     {
+        teleport_local_server.StopProofHandlerThread();
         ATeleportLocalServerWithAMiningRPCServer::TearDown();
         delete client;
         delete http_client;
@@ -212,7 +204,6 @@ TEST_F(ATeleportLocalServerWithAMiningRPCServerAndATeleportNetworkNode, StartsMi
 {
     client->CallMethod("start_mining", Json::Value());
     NetworkSpecificProofOfWork proof = teleport_local_server.GetLatestProofOfWork();
-    ASSERT_THAT(proof.MegabytesUsed(), Eq(1));
     ASSERT_TRUE(proof.IsValid());
 }
 
@@ -220,6 +211,9 @@ TEST_F(ATeleportLocalServerWithAMiningRPCServerAndATeleportNetworkNode, AddsAMin
 {
     client->CallMethod("start_mining", Json::Value());
     NetworkSpecificProofOfWork proof = teleport_local_server.GetLatestProofOfWork();
+    ASSERT_TRUE(proof.IsValid());
+    while (not teleport_local_server.latest_proof_was_handled)
+        sleep(1);
     MinedCreditMessage tip = teleport_local_server.teleport_network_node->Tip();
     ASSERT_THAT(tip.proof_of_work, Eq(proof));
     ASSERT_THAT(proof.branch[0], Eq(tip.mined_credit.GetHash()));

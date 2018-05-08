@@ -31,7 +31,9 @@ void RelayState::AssignNewKeyQuarterHoldersAndSuccessorsAfterNewRelayHasJoined(R
     for (auto &relay : relays)
     {
         if (not relay.HasFourKeyQuarterHolders() and RelayIsASuitableQuarterHolder(new_relay, (int64_t)relay.number))
+        {
             AssignKeyQuarterHoldersToRelay(relay);
+        }
         if (relay.current_successor_number == 0 and SuccessorToRelayIsSuitable(new_relay, &relay))
             AssignSuccessorToRelay(&relay);
     }
@@ -149,7 +151,9 @@ bool RelayState::ThereAreEnoughRelaysToAssignKeyQuarterHolders(Relay &relay)
 bool RelayState::AssignKeyQuarterHoldersToRelay(Relay &relay)
 {
     if (not ThereAreEnoughRelaysToAssignKeyQuarterHolders(relay))
+    {
         return false;
+    }
     AssignKeyQuarterHolderWhoJoinedLater(relay);
     AssignRemainingKeyQuarterHoldersToRelay(relay);
     return true;
@@ -435,6 +439,8 @@ void RelayState::ProcessSecretRecoveryMessage(SecretRecoveryMessage secret_recov
 
 void RelayState::AssignCompleteSuccessionTaskIfSuccessionAttemptHasFourMessages(Relay *dead_relay, Relay *successor)
 {
+    if (successor == NULL)
+        return;
     auto &attempt = dead_relay->succession_attempts[successor->number];
 
     if (attempt.HasFourRecoveryMessages())

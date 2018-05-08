@@ -34,7 +34,8 @@ public:
     TipController *tip_controller{nullptr};
     MinedCreditMessageBuilder *builder{nullptr};
 
-    bool do_spot_checks{true}, using_internal_tip_controller{true}, using_internal_builder{true};
+    bool do_spot_checks{true}, using_internal_tip_controller{true},
+            using_internal_builder{true}, send_join_messages{true};
 
     explicit CreditMessageHandler(Data data):
             MessageHandlerWithOrphanage(data.msgdata),
@@ -72,7 +73,6 @@ public:
     {
         HANDLESTREAM(MinedCreditMessage);
         HANDLESTREAM(SignedTransaction);
-        HANDLESTREAM(BadBatchMessage);
         HANDLESTREAM(ListExpansionRequestMessage);
         HANDLESTREAM(ListExpansionMessage);
     }
@@ -81,22 +81,18 @@ public:
     {
         HANDLEHASH(MinedCreditMessage);
         HANDLEHASH(SignedTransaction);
-        HANDLEHASH(BadBatchMessage);
         HANDLEHASH(ListExpansionRequestMessage);
         HANDLEHASH(ListExpansionMessage);
     }
 
     HANDLECLASS(MinedCreditMessage);
     HANDLECLASS(SignedTransaction);
-    HANDLECLASS(BadBatchMessage);
     HANDLECLASS(ListExpansionRequestMessage);
     HANDLECLASS(ListExpansionMessage);
 
     void HandleMinedCreditMessage(MinedCreditMessage msg);
 
     void HandleSignedTransaction(SignedTransaction tx);
-
-    void HandleBadBatchMessage(BadBatchMessage bad_batch_message);
 
     void HandleListExpansionRequestMessage(ListExpansionRequestMessage request);
 
@@ -113,8 +109,6 @@ public:
     void AcceptTransaction(SignedTransaction tx);
 
     bool ProofOfWorkPassesSpotCheck(MinedCreditMessage &msg);
-
-    BadBatchMessage GetBadBatchMessage(uint160 msg_hash);
 
     void HandleValidMinedCreditMessage(MinedCreditMessage &msg);
 

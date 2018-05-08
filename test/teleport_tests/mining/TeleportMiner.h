@@ -15,7 +15,7 @@ class TeleportMiner
 public:
     std::map<uint256, NetworkMiningInfo> network_id_to_mining_info;
     MiningHashTree tree;
-    TwistWorkProof proof;
+    SimpleWorkProof proof;
     uint32_t megabytes_used;
 
     TeleportMiner(): megabytes_used(TELEPORT_WORK_NUMBER_OF_MEGABYTES) { }
@@ -30,11 +30,9 @@ public:
 
     void StartMining();
 
-    TwistWorkProof GetProof();
+    SimpleWorkProof GetProof();
 
     uint160 GetMaxDifficulty();
-
-    void SetMemoryUsageInMegabytes(uint32_t number_of_megabytes);
 
     void InformNetworksOfProofOfWork();
 

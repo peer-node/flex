@@ -70,8 +70,13 @@ void CreditMessageHandler::SetNetworkNode(TeleportNetworkNode *teleport_network_
 
 void CreditMessageHandler::HandleMinedCreditMessage(MinedCreditMessage msg)
 {
+    log_ << "handling new message: " << msg.GetHash160() << "\n";
+    log_ << "current tip is " << Tip().GetHash160() << "\n";
     if (MinedCreditMessageWasRegardedAsValidAndHandled(msg))
+    {
+        log_ << "already received this message\n";
         return;
+    }
 
     credit_system->StoreMinedCreditMessage(msg);
 
@@ -96,16 +101,13 @@ void CreditMessageHandler::HandleMinedCreditMessage(MinedCreditMessage msg)
         return;
     }
 
+    LOCK(calendar_mutex);
+    HandleValidMinedCreditMessage(msg);
+    HandleQueuedMinedCreditMessages(msg);
+
+    log_ << "-=-=- Finished handling " << msg.GetHash160() << " -- informing other nodes about it\n";
     Broadcast(msg);
 
-    if (do_spot_checks and not ProofOfWorkPassesSpotCheck(msg))
-        Broadcast(GetBadBatchMessage(msg.GetHash160()));
-    else
-    {
-        LOCK(calendar_mutex);
-        HandleValidMinedCreditMessage(msg);
-        HandleQueuedMinedCreditMessages(msg);
-    }
 }
 
 bool CreditMessageHandler::MinedCreditMessageWasRegardedAsValidAndHandled(MinedCreditMessage& msg)
@@ -193,6 +195,8 @@ bool CreditMessageHandler::MinedCreditMessagePassesVerification(MinedCreditMessa
 
 void CreditMessageHandler::HandleValidMinedCreditMessage(MinedCreditMessage& msg)
 {
+    log_ << "HANDLING VALID MSG: reported work: " << msg.mined_credit.ReportedWork() << " for " << msg.GetHash160() << "\n";
+    log_ << "current tip is " << Tip().GetHash160() << "\n";
     credit_system->AcceptMinedCreditMessageAsValidByRecordingTotalWorkAndParent(msg);
     tip_controller->SwitchToNewTipIfAppropriate();
     credit_system->MarkMinedCreditMessageAsHandled(msg.GetHash160());
@@ -201,15 +205,16 @@ void CreditMessageHandler::HandleValidMinedCreditMessage(MinedCreditMessage& msg
 
 void CreditMessageHandler::InformOtherMessageHandlersOfNewTip(MinedCreditMessage &msg)
 {
-    log_ << "informing other message handlers of " << msg.GetHash160() << "\n";
-    log_ << msg.hash_list.short_hashes.size() << " enclosed messages\n";
+    if (teleport_network_node == NULL)
+        return;
     Point public_key = msg.mined_credit.PublicKey();
     if (keydata[public_key].HasProperty("privkey"))
     {
         if (teleport_network_node->relay_message_handler != NULL)
         {
             teleport_network_node->relay_message_handler->HandleNewTip(msg);
-            teleport_network_node->relay_message_handler->SendRelayJoinMessage(msg);
+            if (send_join_messages)
+                teleport_network_node->relay_message_handler->SendRelayJoinMessage(msg);
         }
     }
     if (teleport_network_node->deposit_message_handler != NULL)
@@ -230,6 +235,7 @@ void CreditMessageHandler::FetchFailedListExpansion(MinedCreditMessage msg)
         return;
     ListExpansionRequestMessage request(msg);
     uint160 request_hash = request.GetHash160();
+    log_ << "sending list expansion request for " << msg.GetHash160() << "\n";
     msgdata[request_hash]["is_expansion_request"] = true;
     msgdata[request_hash]["list_expansion_request"] = request;
     peer->PushMessage("credit", "list_expansion_request", request);
@@ -394,40 +400,5 @@ void CreditMessageHandler::AcceptTransaction(SignedTransaction tx)
 
 bool CreditMessageHandler::ProofOfWorkPassesSpotCheck(MinedCreditMessage &msg)
 {
-    if (not credit_system->ProofHasCorrectNumberOfSeedsAndLinks(msg.proof_of_work.proof))
-        return false;
-    uint160 msg_hash = msg.GetHash160();
-    if (creditdata[msg_hash].HasProperty("spot_check_failure"))
-        return false;
-
-    TwistWorkCheck check = msg.proof_of_work.proof.SpotCheck();
-    if (check.Valid())
-        return true;
-
-    creditdata[msg_hash]["spot_check_failure"] = check;
-    return false;
-}
-
-BadBatchMessage CreditMessageHandler::GetBadBatchMessage(uint160 msg_hash)
-{
-    BadBatchMessage bad_batch_message;
-    bad_batch_message.mined_credit_message_hash = msg_hash;
-    bad_batch_message.check = creditdata[msg_hash]["spot_check_failure"];
-    return bad_batch_message;
-}
-
-void CreditMessageHandler::HandleBadBatchMessage(BadBatchMessage bad_batch_message)
-{
-    uint160 msg_hash = bad_batch_message.mined_credit_message_hash;
-    MinedCreditMessage msg = msgdata[msg_hash]["msg"];
-    if (not bad_batch_message.check.VerifyInvalid(msg.proof_of_work.proof))
-    {
-        RejectMessage(bad_batch_message.GetHash160());
-        return;
-    }
-
-    creditdata[msg_hash]["spot_check_failure"] = bad_batch_message.check;
-
-    if (credit_system->IsInMainChain(msg_hash))
-        tip_controller->RemoveFromMainChainAndSwitchToNewTip(msg_hash);
+    return true;
 }

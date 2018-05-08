@@ -66,11 +66,10 @@ TEST_F(ATeleportMinerWithMiningInfo, ReturnsAValidBranchForTheMiningInfo)
 
 TEST_F(ATeleportMinerWithMiningInfo, CompletesAProofOfWorkUsingTheMiningRoot)
 {
-    miner.SetMemoryUsageInMegabytes(1);
     miner.StartMining();
-    TwistWorkProof proof = miner.GetProof();
-    ASSERT_THAT(proof.memory_seed, Eq(miner.MiningRoot()));
-    ASSERT_THAT(proof.DifficultyAchieved(), Gt(0));
+    SimpleWorkProof proof = miner.GetProof();
+    ASSERT_THAT(proof.seed, Eq(miner.MiningRoot()));
+    ASSERT_THAT(proof.WorkDone(), Gt(0));
 }
 
 
@@ -115,7 +114,6 @@ public:
 
         network_mining_info.network_port = 8387;
         miner.AddNetworkMiningInfo(network_mining_info);
-        miner.SetMemoryUsageInMegabytes(8);
     }
 
     virtual void TearDown()
@@ -163,7 +161,7 @@ TEST_F(AMiningHashTree, HasNoHashesInitially)
 
 TEST_F(AMiningHashTree, HasZeroRootInitially)
 {
-    uint256 root = tree.Root();
+    auto root = tree.Root();
     ASSERT_THAT(root, Eq(0));
 }
 
@@ -211,7 +209,7 @@ public:
 
 TEST_F(AMiningHashTreeWithAHash, HasARootEqualToTheHash)
 {
-    uint256 root = tree.Root();
+    auto root = tree.Root();
     ASSERT_THAT(root, Eq(hash1));
 }
 

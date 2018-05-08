@@ -4,8 +4,8 @@
 #include "test/teleport_tests/node/TeleportNetworkNode.h"
 #include "test/teleport_tests/node/server/TeleportLocalServer.h"
 #include "test/teleport_tests/node/TestPeer.h"
-#include "test/teleport_tests/node/data/handlers/CalendarHandler.h"
-#include "test/teleport_tests/node/data/handlers/InitialDataHandler.h"
+#include "test/teleport_tests/node/historical_data/handlers/CalendarHandler.h"
+#include "test/teleport_tests/node/historical_data/handlers/InitialDataHandler.h"
 
 #include <jsonrpccpp/client.h>
 
@@ -368,11 +368,8 @@ public:
 
     void SetMiningPreferences(TeleportNetworkNode &node)
     {
-        node.credit_system->SetExpectedNumberOfMegabytesInMinedCreditProofsOfWork(1);
         node.credit_system->initial_difficulty = 100;
         node.credit_system->initial_diurnal_difficulty = 500;
-        node.data_message_handler->initial_data_handler->SetMiningParametersForInitialDataMessageValidation(1, 100, 500);
-        node.data_message_handler->calendar_handler->calendar_scrutiny_time = 1 * 10000;
     }
 
     void CompleteProofOfWork(MinedCreditMessage& msg)

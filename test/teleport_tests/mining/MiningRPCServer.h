@@ -4,6 +4,7 @@
 #include <jsonrpccpp/server.h>
 #include <jsonrpccpp/server/connectors/httpserver.h>
 #include <test/teleport_tests/node/server/HttpAuthServer.h>
+#include <vector>
 
 #include "TeleportMiner.h"
 #include "NetworkSpecificProofOfWork.h"
@@ -26,8 +27,6 @@ public:
         BindMethod("start_mining", &MiningRPCServer::StartMining);
         BindMethod("start_mining_asynchronously", &MiningRPCServer::StartMiningASynchronously);
         BindMethod("get_proof_of_work", &MiningRPCServer::GetProofOfWork);
-        BindMethod("set_megabytes_used", &MiningRPCServer::SetMegabytesUsed);
-        BindMethod("get_megabytes_used", &MiningRPCServer::GetMegabytesUsed);
     }
 
     void StartMining(const Json::Value& request, Json::Value& response)
@@ -38,17 +37,6 @@ public:
     void StartMiningASynchronously(const Json::Value& request, Json::Value& response)
     {
         boost::thread t(&TeleportMiner::StartMining, &miner);
-    }
-
-    void SetMegabytesUsed(const Json::Value& request, Json::Value& response)
-    {
-        uint32_t megabytes_used = (uint32_t) request["megabytes_used"].asInt();
-        miner.SetMemoryUsageInMegabytes(megabytes_used);
-    }
-
-    void GetMegabytesUsed(const Json::Value& request, Json::Value& response)
-    {
-        response = miner.megabytes_used;
     }
 
     void GetProofOfWork(const Json::Value& request, Json::Value& response)

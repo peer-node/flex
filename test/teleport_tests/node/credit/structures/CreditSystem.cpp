@@ -6,7 +6,6 @@
 #include <src/base/util_time.h>
 #include <test/teleport_tests/node/historical_data/messages/InitialDataMessage.h>
 #include <test/teleport_tests/node/historical_data/messages/DiurnDataMessage.h>
-#include <test/teleport_tests/node/historical_data/messages/DiurnFailureMessage.h>
 #include <test/teleport_tests/node/relays/structures/RelayState.h>
 #include "CreditSystem.h"
 #include "test/teleport_tests/node/credit/messages/MinedCreditMessage.h"
@@ -214,7 +213,7 @@ bool CreditSystem::IsCalend(uint160 msg_hash)
     MinedCreditMessage msg = msgdata[msg_hash]["msg"];
     if (msg.mined_credit.network_state.diurnal_difficulty == 0)
         is_calend = false;
-    else if (msg.proof_of_work.proof.DifficultyAchieved() >= msg.mined_credit.network_state.diurnal_difficulty)
+    else if (msg.proof_of_work.proof.WorkDone() >= msg.mined_credit.network_state.diurnal_difficulty)
     {
         creditdata[msg_hash]["is_calend"] = true;
         is_calend = true;
@@ -590,17 +589,10 @@ BitChain CreditSystem::ConstructSpentChainFromPreviousSpentChainAndContentsOfMin
     return spent_chain;
 }
 
-void CreditSystem::SetExpectedNumberOfMegabytesInMinedCreditProofsOfWork(uint64_t number_of_megabytes)
-{
-    uint64_t memory_factor = MemoryFactorFromNumberOfMegabytes(number_of_megabytes);
-    expected_memory_factor_for_mined_credit_proofs_of_work = memory_factor;
-}
-
 void CreditSystem::SetMiningParameters(uint64_t number_of_megabytes_,
                                        uint160 initial_difficulty_,
                                        uint160 initial_diurnal_difficulty_)
 {
-    SetExpectedNumberOfMegabytesInMinedCreditProofsOfWork(number_of_megabytes_);
     initial_difficulty = initial_difficulty_;
     initial_diurnal_difficulty = initial_diurnal_difficulty_;
 }
@@ -609,17 +601,11 @@ bool CreditSystem::CheckHashesSeedsAndThresholdsInMinedCreditMessageProofOfWork(
 {
     bool ok = true;
     auto branch = msg.proof_of_work.branch;
-    TwistWorkProof& proof = msg.proof_of_work.proof;
+    SimpleWorkProof& proof = msg.proof_of_work.proof;
 
     if (branch.size() == 0 or branch[0] != msg.mined_credit.GetHash())
         ok = false;
-    if (MiningHashTree::EvaluateBranch(branch) != msg.proof_of_work.proof.memory_seed)
-        ok = false;
-    if (proof.memory_factor != expected_memory_factor_for_mined_credit_proofs_of_work)
-        ok = false;
-    if (proof.seeds.size() != TELEPORT_WORK_NUMBER_OF_SEGMENTS)
-        ok = false;
-    if (proof.link_threshold != proof.target * TELEPORT_WORK_NUMBER_OF_LINKS)
+    if (MiningHashTree::EvaluateBranch(branch) != msg.proof_of_work.proof.seed)
         ok = false;
 
     return ok;
@@ -633,14 +619,14 @@ bool CreditSystem::QuickCheckProofOfWorkInMinedCreditMessage(MinedCreditMessage 
 
     bool ok = true;
     auto branch = msg.proof_of_work.branch;
-    TwistWorkProof& proof = msg.proof_of_work.proof;
+    SimpleWorkProof& proof = msg.proof_of_work.proof;
 
     if (not CheckHashesSeedsAndThresholdsInMinedCreditMessageProofOfWork(msg))
     {
         ok = false;
     }
 
-    if (ok and msg.proof_of_work.proof.DifficultyAchieved() < msg.mined_credit.network_state.difficulty)
+    if (ok and msg.proof_of_work.proof.WorkDone() < msg.mined_credit.network_state.difficulty)
         ok = false;
 
     if (ok) creditdata[msg_hash]["quickcheck_ok"] = true;
@@ -658,7 +644,7 @@ bool CreditSystem::QuickCheckProofOfWorkInCalend(Calend calend)
     bool ok = true;
     if (not QuickCheckProofOfWorkInMinedCreditMessage(calend))
         ok = false;
-    if (calend.proof_of_work.proof.DifficultyAchieved() < calend.mined_credit.network_state.diurnal_difficulty)
+    if (calend.proof_of_work.proof.WorkDone() < calend.mined_credit.network_state.diurnal_difficulty)
         ok = false;
 
     if (ok) creditdata[msg_hash]["quickcalendcheck_ok"] = true;
@@ -730,13 +716,6 @@ bool CreditSystem::DataIsPresentFromMinedCreditToPrecedingCalendOrStart(MinedCre
     return false;
 }
 
-bool CreditSystem::ProofHasCorrectNumberOfSeedsAndLinks(TwistWorkProof proof)
-{
-    return proof.seeds.size() == TELEPORT_WORK_NUMBER_OF_SEGMENTS and
-            proof.links.size() == proof.link_lengths.size() and
-            proof.links.size() >= 10;
-}
-
 void CreditSystem::GetMessagesOnOldAndNewBranchesOfFork(uint160 old_tip, uint160 new_tip,
                                                         std::vector<uint160>& messages_on_old_branch,
                                                         std::vector<uint160>& messages_on_new_branch)
@@ -774,9 +753,8 @@ void CreditSystem::AddIncompleteProofOfWork(MinedCreditMessage& msg)
 {
     NetworkSpecificProofOfWork enclosed_proof;
     enclosed_proof.branch.push_back(msg.mined_credit.GetHash());
-    uint256 memory_seed = MiningHashTree::EvaluateBranch(enclosed_proof.branch);
-    uint64_t memory_factor = expected_memory_factor_for_mined_credit_proofs_of_work;
-    TwistWorkProof proof(memory_seed, memory_factor, msg.mined_credit.network_state.difficulty);
+    auto seed = MiningHashTree::EvaluateBranch(enclosed_proof.branch);
+    SimpleWorkProof proof(seed, msg.mined_credit.network_state.difficulty);
     enclosed_proof.proof = proof;
     msg.proof_of_work = enclosed_proof;
 }
@@ -837,54 +815,6 @@ CalendarMessage CreditSystem::CalendarMessageWithMaximumScrutinizedWork()
 
     CalendarMessage calendar_message = msgdata[calendar_message_hashes[0]]["calendar"];
     return calendar_message;
-}
-
-void CreditSystem::MarkCalendAndSucceedingCalendsAsInvalid(CalendarFailureMessage message)
-{
-    uint160 calend_hash = message.details.mined_credit_message_hash;
-    uint160 failure_message_hash = message.GetHash160();
-    MarkCalendAndSucceedingCalendsAsInvalid(calend_hash, failure_message_hash);
-}
-
-void CreditSystem::MarkCalendAndSucceedingCalendsAsInvalid(uint160 calend_hash, uint160 failure_message_hash)
-{
-    creditdata[calend_hash]["invalid"] = true;
-    creditdata[calend_hash]["failure_message_hash"] = failure_message_hash;
-
-    vector<uint160> succeeding_calends = creditdata[calend_hash]["succeeding_calends"];
-    for (auto succeeding_calend_hash : succeeding_calends)
-        MarkCalendAndSucceedingCalendsAsInvalid(succeeding_calend_hash, failure_message_hash);
-}
-
-bool CreditSystem::CalendHasReportedFailure(uint160 calend_hash)
-{
-    vector<uint160> reported_failure_message_hashes = creditdata[calend_hash]["reported_failures"];
-    return reported_failure_message_hashes.size() > 0;
-}
-
-void CreditSystem::RecordReportedFailureOfCalend(CalendarFailureMessage message)
-{
-    uint160 failure_message_hash = message.GetHash160();
-    uint160 calend_hash = message.details.mined_credit_message_hash;
-
-    AddToHashes(calend_hash, "reported_failures", failure_message_hash, creditdata);
-}
-
-bool CreditSystem::ReportedFailedCalendHasBeenReceived(CalendarFailureMessage message)
-{
-    uint160 calend_hash = message.details.mined_credit_message_hash;
-    MinedCreditMessage msg = msgdata[calend_hash]["msg"];
-    return IsCalend(msg.GetHash160());
-}
-
-bool CreditSystem::CalendarContainsAKnownBadCalend(Calendar &calendar_)
-{
-    for (auto calend : calendar_.calends)
-    {
-        if (creditdata[calend.GetHash160()].HasProperty("failure_details"))
-            return true;
-    }
-    return false;
 }
 
 void CreditSystem::StoreCalendsFromCalendar(Calendar &calendar_)
@@ -986,13 +916,6 @@ void CreditSystem::RemoveMinedCreditMessageAndThoseDownstreamFromRecordOfTotalWo
     }
 }
 
-void CreditSystem::RemoveReportedTotalWorkOfMinedCreditsSucceedingInvalidCalend(CalendarFailureMessage message)
-{
-    uint160 calend_hash = message.details.mined_credit_message_hash;
-    MinedCreditMessage calend = msgdata[calend_hash]["msg"];
-    RemoveMinedCreditMessageAndThoseDownstreamFromRecordOfTotalWork(calend);
-}
-
 Diurn CreditSystem::PopulateDiurn(uint160 msg_hash)
 {
     Diurn diurn;
@@ -1044,11 +967,6 @@ void CreditSystem::StoreDataFromDiurnDataMessage(DiurnDataMessage diurn_data_mes
     }
 }
 
-void CreditSystem::RemoveMinedCreditMessagesDownstreamOfDiurnFailure(DiurnFailureMessage diurn_failure_message)
-{
-    MinedCreditMessage msg = msgdata[diurn_failure_message.details.mined_credit_message_hash]["msg"];
-    RemoveMinedCreditMessageAndThoseDownstreamFromRecordOfTotalWork(msg);
-}
 
 void CreditSystem::RecordEndOfDiurn(Calend &calend, Diurn &diurn)
 {

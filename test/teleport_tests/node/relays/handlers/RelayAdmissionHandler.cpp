@@ -79,6 +79,7 @@ void RelayAdmissionHandler::HandleKeyDistributionMessage(KeyDistributionMessage 
         relay_message_handler->RejectMessage(key_distribution_message.GetHash160());
         return;
     }
+
     AcceptKeyDistributionMessage(key_distribution_message);
 }
 
