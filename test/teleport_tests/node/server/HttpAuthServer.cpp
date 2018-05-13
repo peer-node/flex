@@ -82,7 +82,7 @@ bool HttpAuthServer::StopListening()
 bool HttpAuthServer::SendResponse(const string& response, void* addInfo)
 {
     struct mhd_coninfo* client_connection = static_cast<struct mhd_coninfo*>(addInfo);
-    struct MHD_Response *result = MHD_create_response_from_data(response.size(),(void *) response.c_str(), 0, 1);
+    struct MHD_Response *result = MHD_create_response_from_buffer(response.size(),(void *) response.c_str(), MHD_RESPMEM_MUST_COPY);
 
     MHD_add_response_header(result, "Content-Type", "application/json");
     MHD_add_response_header(result, "Access-Control-Allow-Origin", "*");
@@ -95,7 +95,7 @@ bool HttpAuthServer::SendResponse(const string& response, void* addInfo)
 bool HttpAuthServer::SendOptionsResponse(void* addInfo)
 {
     struct mhd_coninfo* client_connection = static_cast<struct mhd_coninfo*>(addInfo);
-    struct MHD_Response *result = MHD_create_response_from_data(0, NULL, 0, 1);
+    struct MHD_Response *result = MHD_create_response_from_buffer(0, NULL, MHD_RESPMEM_PERSISTENT);
 
     MHD_add_response_header(result, "Allow", "POST, OPTIONS");
     MHD_add_response_header(result, "Access-Control-Allow-Origin", "*");

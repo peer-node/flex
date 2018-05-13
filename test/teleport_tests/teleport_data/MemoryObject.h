@@ -42,7 +42,7 @@ public:
             delete dimensions;
     }
 
-    MemoryObject* operator=(const MemoryObject& other)
+    MemoryObject& operator=(const MemoryObject& other)
     {
         if (using_internal_dimensions)
             delete dimensions;
@@ -59,6 +59,7 @@ public:
         {
             dimensions = other.dimensions;
         }
+        return *this;
     }
 
     MemoryObject(vch_t serialized_name, std::map<vch_t, MemoryDimension> *dimensions):

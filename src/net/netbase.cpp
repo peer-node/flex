@@ -1126,23 +1126,6 @@ void CService::SetPort(unsigned short portIn)
     port = portIn;
 }
 
-#ifdef WIN32
-std::string NetworkErrorString(int err)
-{
-    char buf[256];
-    buf[0] = 0;
-    if(FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK,
-            NULL, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-            buf, sizeof(buf), NULL))
-    {
-        return strprintf("%s (%d)", buf, err);
-    }
-    else
-    {
-        return strprintf("Unknown error (%d)", err);
-    }
-}
-#else
 std::string NetworkErrorString(int err)
 {
     char buf[256];
@@ -1150,7 +1133,7 @@ std::string NetworkErrorString(int err)
     buf[0] = 0;
     /* Too bad there are two incompatible implementations of the
      * thread-safe strerror. */
-    s = strerror_r(err, buf, sizeof(buf));
+    auto s_ = strerror_r(err, buf, sizeof(buf));
 #ifdef STRERROR_R_CHAR_P /* GNU variant can return a pointer outside the passed buffer */
 
 #else /* POSIX variant always returns message in buffer */
@@ -1158,5 +1141,3 @@ std::string NetworkErrorString(int err)
 #endif
     return strprintf("%s (%d)", s, err);
 }
-#endif
-

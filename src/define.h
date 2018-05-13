@@ -240,11 +240,8 @@ typedef std::string string_t;
 
 template<typename T> std::string PrettyPrint(T item)
 {
-    Json::Reader reader;
-    Json::Value value;
-    reader.parse(item.json(), value, false);
     std::stringstream ss;
-    ss << value;
+    ss << item.json();
     return ss.str();
 }
 

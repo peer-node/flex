@@ -829,34 +829,34 @@ add_executable(teleportd
         test/teleport_tests/node/teleportd.cpp)
 
 target_link_libraries(runRPCTests gmock gmock_main ssl crypto boost_system boost_program_options
-        boost_filesystem boost_thread jsoncpp microhttpd jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client)
+        boost_filesystem boost_thread microhttpd jsoncpp jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client)
 
 target_link_libraries(runNodeTests gmock gmock_main ssl crypto boost_system boost_program_options
-        boost_filesystem boost_thread jsoncpp microhttpd jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
+        boost_filesystem boost_thread microhttpd jsoncpp jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
         curl curl)
 
 target_link_libraries(runRelayTests gmock gmock_main ssl crypto boost_system boost_program_options
-        boost_filesystem boost_thread jsoncpp microhttpd jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
+        boost_filesystem boost_thread microhttpd jsoncpp jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
         curl curl)
 
 target_link_libraries(runDepositTests gmock gmock_main ssl crypto boost_system boost_program_options
-        boost_filesystem boost_thread jsoncpp microhttpd jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
+        boost_filesystem boost_thread microhttpd jsoncpp jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
         curl curl)
 
 target_link_libraries(teleportd gmock gmock_main ssl crypto boost_system boost_program_options
-        boost_filesystem boost_thread jsoncpp microhttpd jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
+        boost_filesystem boost_thread microhttpd jsoncpp jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
         curl curl)
 
 target_link_libraries(runCurrencyTests gmock gmock_main ssl crypto boost_system boost_program_options
-        boost_filesystem boost_thread jsoncpp microhttpd jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
+        boost_filesystem boost_thread microhttpd jsoncpp jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
         curl curl)
 
 target_link_libraries(runMiningTests gmock gmock_main ssl crypto boost_system boost_program_options
-        boost_filesystem boost_thread jsoncpp microhttpd jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
+        boost_filesystem boost_thread microhttpd jsoncpp jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
         curl curl)
 
 target_link_libraries(minerd ssl crypto boost_system boost_program_options
-        boost_filesystem boost_thread jsoncpp microhttpd jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client)
+        boost_filesystem boost_thread microhttpd jsoncpp jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client)
 
 target_link_libraries(runCryptoTests gmock gmock_main ssl crypto boost_system boost_program_options
         boost_filesystem boost_thread)
