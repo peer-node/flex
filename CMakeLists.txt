@@ -1,12 +1,15 @@
 cmake_minimum_required(VERSION 3.3)
 project(teleport)
 
-set(CMAKE_CXX_FLAGS "-O3 ${CMAKE_CXX_FLAGS} -std=c++11 -lboost_system -lssl -lboost_thread -pthread")
+set(BOOST_THREAD boost_thread)
 
 # Mac OS X
 if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -L/usr/local/opt/openssl/lib -I/usr/local/opt/openssl/include")
+    set(BOOST_THREAD boost_thread-mt)
 endif(CMAKE_SYSTEM_NAME STREQUAL Darwin)
+
+set(CMAKE_CXX_FLAGS "-O3 ${CMAKE_CXX_FLAGS} -std=c++11 -lboost_system -lssl -l${BOOST_THREAD} -pthread -v")
 
 add_subdirectory(test)
 add_subdirectory(test/teleport_tests)
@@ -829,46 +832,46 @@ add_executable(teleportd
         test/teleport_tests/node/teleportd.cpp)
 
 target_link_libraries(runRPCTests gmock gmock_main ssl crypto boost_system boost_program_options
-        boost_filesystem boost_thread microhttpd jsoncpp jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client)
+        boost_filesystem ${BOOST_THREAD} microhttpd jsoncpp jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client)
 
 target_link_libraries(runNodeTests gmock gmock_main ssl crypto boost_system boost_program_options
-        boost_filesystem boost_thread microhttpd jsoncpp jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
+        boost_filesystem ${BOOST_THREAD} microhttpd jsoncpp jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
         curl curl)
 
 target_link_libraries(runRelayTests gmock gmock_main ssl crypto boost_system boost_program_options
-        boost_filesystem boost_thread microhttpd jsoncpp jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
+        boost_filesystem ${BOOST_THREAD} microhttpd jsoncpp jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
         curl curl)
 
 target_link_libraries(runDepositTests gmock gmock_main ssl crypto boost_system boost_program_options
-        boost_filesystem boost_thread microhttpd jsoncpp jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
+        boost_filesystem ${BOOST_THREAD} microhttpd jsoncpp jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
         curl curl)
 
 target_link_libraries(teleportd gmock gmock_main ssl crypto boost_system boost_program_options
-        boost_filesystem boost_thread microhttpd jsoncpp jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
+        boost_filesystem ${BOOST_THREAD} microhttpd jsoncpp jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
         curl curl)
 
 target_link_libraries(runCurrencyTests gmock gmock_main ssl crypto boost_system boost_program_options
-        boost_filesystem boost_thread microhttpd jsoncpp jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
+        boost_filesystem ${BOOST_THREAD} microhttpd jsoncpp jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
         curl curl)
 
 target_link_libraries(runMiningTests gmock gmock_main ssl crypto boost_system boost_program_options
-        boost_filesystem boost_thread microhttpd jsoncpp jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
+        boost_filesystem ${BOOST_THREAD} microhttpd jsoncpp jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
         curl curl)
 
 target_link_libraries(minerd ssl crypto boost_system boost_program_options
-        boost_filesystem boost_thread microhttpd jsoncpp jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client)
+        boost_filesystem ${BOOST_THREAD} microhttpd jsoncpp jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client)
 
 target_link_libraries(runCryptoTests gmock gmock_main ssl crypto boost_system boost_program_options
-        boost_filesystem boost_thread)
+        boost_filesystem ${BOOST_THREAD})
 
 target_link_libraries(runNetworkSpecificProofOfWorkTests gmock gmock_main ssl crypto boost_system boost_program_options
-        boost_filesystem boost_thread)
+        boost_filesystem ${BOOST_THREAD})
 
 target_link_libraries(runTwistWorkProofTests gmock gmock_main ssl crypto boost_system boost_program_options
-        boost_filesystem boost_thread)
+        boost_filesystem ${BOOST_THREAD})
 
 target_link_libraries(runSchedulerTests gmock gmock_main ssl crypto boost_system boost_program_options
-        boost_filesystem boost_thread)
+        boost_filesystem ${BOOST_THREAD})
 
 target_link_libraries(runDataTests gmock gmock_main ssl crypto boost_system boost_program_options
-        boost_filesystem boost_thread)
+        boost_filesystem ${BOOST_THREAD})
