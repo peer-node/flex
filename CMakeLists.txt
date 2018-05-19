@@ -5,11 +5,11 @@ set(BOOST_THREAD boost_thread)
 
 # Mac OS X
 if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -L/usr/local/opt/openssl/lib -I/usr/local/opt/openssl/include")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Qunused-arguments -L/usr/local/opt/openssl/lib -I/usr/local/opt/openssl/include")
     set(BOOST_THREAD boost_thread-mt)
 endif(CMAKE_SYSTEM_NAME STREQUAL Darwin)
 
-set(CMAKE_CXX_FLAGS "-O3 ${CMAKE_CXX_FLAGS} -std=c++11 -lboost_system -lssl -l${BOOST_THREAD} -pthread")
+set(CMAKE_CXX_FLAGS "-O3 ${CMAKE_CXX_FLAGS} -L/usr/local/opt/openssl/lib -std=c++11 -lboost_system -lssl -l${BOOST_THREAD} -pthread")
 
 add_subdirectory(test)
 add_subdirectory(test/teleport_tests)
