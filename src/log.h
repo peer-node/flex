@@ -15,17 +15,30 @@
 class Logger
 {
 public:
-    Logger& operator<<(uint64_t n)
+    Logger& operator<<(unsigned long n)
     {
         char buffer[BUFSIZ];
         sprintf(buffer, "%lu", n);
         return *this << std::string(buffer);
     }
 
-    Logger& operator<<(int64_t n)
+    Logger& operator<<(unsigned long long n)
+    {
+        char buffer[BUFSIZ];
+        sprintf(buffer, "%llu", n);
+        return *this << std::string(buffer);
+    }
+    Logger& operator<<(long n)
     {
         char buffer[BUFSIZ];
         sprintf(buffer, "%ld", n);
+        return *this << std::string(buffer);
+    }
+
+    Logger& operator<<(long long n)
+    {
+        char buffer[BUFSIZ];
+        sprintf(buffer, "%lld", n);
         return *this << std::string(buffer);
     }
 
@@ -36,14 +49,14 @@ public:
         return *this << std::string(buffer);
     }
 
-    Logger& operator<<(uint32_t n)
+    Logger& operator<<(unsigned int n)
     {
         char buffer[BUFSIZ];
         sprintf(buffer, "%u", n);
         return *this << std::string(buffer);
     }
 
-    Logger& operator<<(int32_t n)
+    Logger& operator<<(int n)
     {
         char buffer[BUFSIZ];
         sprintf(buffer, "%d", n);

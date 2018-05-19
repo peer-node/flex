@@ -9,7 +9,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
     set(BOOST_THREAD boost_thread-mt)
 endif(CMAKE_SYSTEM_NAME STREQUAL Darwin)
 
-set(CMAKE_CXX_FLAGS "-O3 ${CMAKE_CXX_FLAGS} -std=c++11 -lboost_system -lssl -l${BOOST_THREAD} -pthread -v")
+set(CMAKE_CXX_FLAGS "-O3 ${CMAKE_CXX_FLAGS} -std=c++11 -lboost_system -lssl -l${BOOST_THREAD} -pthread")
 
 add_subdirectory(test)
 add_subdirectory(test/teleport_tests)
@@ -280,33 +280,6 @@ SET(REMAINING_BASE_FILES
         src/base/util_compare.h)
 
 set(MINCRYPTO_FILES
-        src/crypto/25519/curve25519-donna-32bit.h
-        src/crypto/25519/curve25519-donna-64bit.h
-        src/crypto/25519/curve25519-donna-helpers.h
-        src/crypto/25519/curve25519-donna-sse2.h
-        src/crypto/25519/ed25519-donna-32bit-sse2.h
-        src/crypto/25519/ed25519-donna-32bit-tables.h
-        src/crypto/25519/ed25519-donna-64bit-sse2.h
-        src/crypto/25519/ed25519-donna-64bit-tables.h
-        src/crypto/25519/ed25519-donna-64bit-x86-32bit.h
-        src/crypto/25519/ed25519-donna-64bit-x86.h
-        src/crypto/25519/ed25519-donna-basepoint-table.h
-        src/crypto/25519/ed25519-donna-batchverify.h
-        src/crypto/25519/ed25519-donna-impl-base.h
-        src/crypto/25519/ed25519-donna-impl-sse2.h
-        src/crypto/25519/ed25519-donna-portable-identify.h
-        src/crypto/25519/ed25519-donna-portable.h
-        src/crypto/25519/ed25519-donna.h
-        src/crypto/25519/ed25519-hash-custom.h
-        src/crypto/25519/ed25519-hash.h
-        src/crypto/25519/ed25519-randombytes-custom.h
-        src/crypto/25519/ed25519-randombytes.h
-        src/crypto/25519/ed25519.cpp
-        src/crypto/25519/ed25519.h
-        src/crypto/25519/modm-donna-32bit.h
-        src/crypto/25519/modm-donna-64bit.h
-        src/crypto/25519/regression.h
-        src/crypto/25519points.h
         src/crypto/bignum.h
         src/crypto/hash.cpp
         src/crypto/hash.h

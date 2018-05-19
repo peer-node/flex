@@ -10,20 +10,14 @@
 
 #define FIAT 0
 #define SECP256K1 1
-#define CURVE25519 2
-#define ED25519 3
 
 class Secp256k1Point;
-class Curve25519Point;
-class Ed25519Point;
 
 class Point
 {
 public:
     uint8_t curve;
     Secp256k1Point *s_point;
-    Curve25519Point *c_point;
-    Ed25519Point *e_point;
 
     Point();
 
