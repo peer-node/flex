@@ -5,7 +5,7 @@ set(BOOST_THREAD boost_thread)
 
 # Mac OS X
 if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Qunused-arguments -L/usr/local/opt/openssl/lib -I/usr/local/opt/openssl/include")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DOS_MACOSX -Qunused-arguments -L/usr/local/opt/openssl/lib -I/usr/local/opt/openssl/include")
     set(BOOST_THREAD boost_thread-mt)
 endif(CMAKE_SYSTEM_NAME STREQUAL Darwin)
 

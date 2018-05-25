@@ -22,7 +22,7 @@ public:
     std::vector<uint160> accepted_messages;
 
     MinedCreditMessageBuilder(Data data_):
-            data(data_), msgdata(data.msgdata), creditdata(data.creditdata), keydata(data.keydata), depositdata(depositdata)
+            data(data_), msgdata(data.msgdata), creditdata(data.creditdata), keydata(data.keydata), depositdata(data.depositdata)
     { }
 
     void SetConfig(TeleportConfig& config_);

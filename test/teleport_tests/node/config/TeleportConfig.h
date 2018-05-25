@@ -10,7 +10,7 @@
 class TeleportConfig
 {
 public:
-    unsigned long size();
+    uint64_t size();
     std::string& operator[](std::string key);
 
     std::map<std::string, std::string> settings{default_settings};
