@@ -104,7 +104,7 @@ public:
 
     CBigNum& operator=(const uint64_t n)
     {
-        setuint64(n);
+        setulonglong(n);
         return (*this);
     }
 
@@ -136,8 +136,8 @@ public:
     CBigNum(unsigned char n)    { BN_init(this); setulong(n); }
     CBigNum(unsigned short n)   { BN_init(this); setulong(n); }
     CBigNum(unsigned int n)     { BN_init(this); setulong(n); }
-    //CBigNum(unsigned long n)    { BN_init(this); setulong(n); }
-    CBigNum(uint64_t n)           { BN_init(this); setuint64(n); }
+    CBigNum(unsigned long n)    { BN_init(this); setulong(n); }
+    CBigNum(unsigned long long n)           { BN_init(this); setulonglong(n); }
     explicit CBigNum(uint256 n) { BN_init(this); setuint256(n); }
     explicit CBigNum(uint160 n) { BN_init(this); setuint160(n); }
 
@@ -217,7 +217,7 @@ public:
         BN_mpi2bn(pch, p - pch, this);
     }
 
-    void setuint64(uint64_t n)
+    void setulonglong(uint64_t n)
     {
         unsigned char pch[sizeof(n) + 6];
         unsigned char* p = pch + 4;
