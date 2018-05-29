@@ -8,7 +8,9 @@
 #include <string>
 #include <sstream>
 #include <stdexcept>
+# define JSONCPP_DEPRECATED(message)
 #include <jsoncpp/json/json.h>
+# define JSONCPP_DEPRECATED(message)
 #include "base/version.h"
 #include "crypto/hash.h"
 
