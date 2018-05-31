@@ -370,7 +370,7 @@ bool Network::StartListening(string& strError)
 {
     struct in_addr inaddr_any;
     inaddr_any.s_addr = INADDR_ANY;
-    BindListenPort(CService(inaddr_any, GetListenPort()), strError);
+    return BindListenPort(CService(inaddr_any, GetListenPort()), strError);
 }
 
 bool Network::BindListenPort(const CService &addrBind, string& strError)
