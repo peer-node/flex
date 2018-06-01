@@ -4,6 +4,7 @@
 #include <src/crypto/uint256.h>
 #include <src/base/serialize.h>
 #include <src/define.h>
+#include <array>
 
 
 class EncryptedKeyQuarter
