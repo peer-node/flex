@@ -4,6 +4,7 @@
 #include <src/crypto/uint256.h>
 #include <src/base/serialize.h>
 #include "define.h"
+#include <array>
 
 class FourSecretRecoveryMessages
 {

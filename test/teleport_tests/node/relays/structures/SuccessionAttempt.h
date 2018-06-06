@@ -6,7 +6,7 @@
 #include <src/base/serialize.h>
 #include "test/teleport_tests/node/relays/messages/FourSecretRecoveryMessages.h"
 #include "RecoveryFailureAudit.h"
-
+#include <array>
 
 
 class SuccessionAttempt
