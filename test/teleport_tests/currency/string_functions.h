@@ -91,7 +91,31 @@ inline std::string GetStringBetweenQuotes(std::string text)
     return text;
 }
 
-inline std::string AmountToString(uint64_t amount, uint32_t decimal_places)
+inline std::string AmountToString(unsigned long long amount, uint32_t decimal_places)
+{
+    char char_amount[50];
+    if (decimal_places == 0)
+    {
+        sprintf(char_amount, "%llu", amount);
+        return std::string(char_amount);
+    }
+
+    std::string string_amount = AmountToString(amount, 0);
+    while (string_amount.size() < decimal_places)
+        string_amount = "0" + string_amount;
+
+    auto l = string_amount.size();
+    string_amount = string_amount.substr(0, l - decimal_places)
+                    + "." +
+                    string_amount.substr(l - decimal_places, decimal_places);
+
+    if (string_amount.substr(0, 1) == ".")
+        string_amount = "0" + string_amount;
+
+    return string_amount;
+}
+
+inline std::string AmountToString(unsigned long amount, uint32_t decimal_places)
 {
     char char_amount[50];
     if (decimal_places == 0)
