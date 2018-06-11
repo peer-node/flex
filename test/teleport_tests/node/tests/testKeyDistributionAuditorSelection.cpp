@@ -17,12 +17,12 @@ class AKeyDistributionAuditorSelection : public Test
 public:
     RelayState state;
     Data *data;
-    MemoryDataStore msgdata, creditdata, keydata;
+    MemoryDataStore msgdata, creditdata, keydata, depositdata;
     KeyDistributionAuditorSelection auditor_selection;
 
     virtual void SetUp()
     {
-        data = new Data(msgdata, creditdata, keydata);
+        data = new Data(msgdata, creditdata, keydata, depositdata);
         AssignValuesToAuditorSelection();
         PopulateRelayState();
     }

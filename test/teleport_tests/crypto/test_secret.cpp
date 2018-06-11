@@ -100,7 +100,7 @@ TEST_F(AnEncryptedSecret, CanBeAuditedUsingSecret)
 {
     ASSERT_TRUE(encrypted_secret.Audit(secret, recipient));
     ASSERT_FALSE(encrypted_secret.Audit(secret + 1, recipient));
-    ASSERT_FALSE(encrypted_secret.Audit(secret, 2 * recipient));
+    ASSERT_FALSE(encrypted_secret.Audit(secret, CBigNum(2) * recipient));
 }
 
 TEST_F(AnEncryptedSecret, FailsAuditIfPointDoesNotMatchSecret)

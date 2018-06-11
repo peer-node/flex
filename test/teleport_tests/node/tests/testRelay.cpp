@@ -5,6 +5,9 @@
 #include "test/teleport_tests/node/relays/structures/RelayMemoryCache.h"
 
 
+std::string tcr_string{"TCR"};
+std::vector<unsigned char> TCR{tcr_string.begin(), tcr_string.end()};
+
 using namespace ::testing;
 using namespace std;
 

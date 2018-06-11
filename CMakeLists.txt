@@ -705,6 +705,7 @@ set(DEPOSIT_FILES
         test/teleport_tests/node/deposits/handlers/DepositAddressWithdrawalHandler.h)
 
 add_executable(runRelayTests
+        ${MESSAGING_FILES}
         ${RELAY_FILES}
         ${NEW_CREDITS_FILES}
         ${REMAINING_BASE_FILES}
@@ -712,6 +713,11 @@ add_executable(runRelayTests
         ${DATABASE_FILES}
         ${CONFIG_FILES}
         ${NET_FILES}
+        ${DEPOSIT_FILES}
+        src/teleportnode/main.cpp
+        src/teleportnode/main.h
+        test/teleport_tests/node/TeleportNetworkNode.cpp
+        test/teleport_tests/node/TeleportNetworkNode.h
         test/teleport_tests/node/MessageHandlerWithOrphanage.cpp
         test/teleport_tests/node/MessageHandlerWithOrphanage.h
         test/teleport_tests/mining/MiningHashTree.cpp
@@ -765,8 +771,6 @@ add_executable(runNodeTests
         test/teleport_tests/node/tests/testHttpAuthServer.cpp
         test/teleport_tests/node/tests/testTeleportConfig.cpp
         test/teleport_tests/node/tests/testTeleportRPCServer.cpp
-        test/teleport_tests/node/tests/testRelayState.cpp
-        test/teleport_tests/node/tests/testRelay.cpp
         test/teleport_tests/node/tests/testRelayMessageHandler.cpp
         test/teleport_tests/node/tests/testRelayJoinMessage.cpp
         test/teleport_tests/node/Data.h
@@ -783,15 +787,6 @@ add_executable(runNodeTests
         test/teleport_tests/node/tests/testMinedCreditMessageValidator.cpp
         test/teleport_tests/node/tests/testTransactionValidator.cpp
         test/teleport_tests/node/tests/testRelayTipHandler.cpp)
-
-add_executable(runDepositTests
-        ${NODE_TEST_FILES}
-        ${DATA_HANDLER_FILES}
-        ${RELAY_FILES}
-        ${MESSAGE_HANDLER_WITH_ORPHANAGE_FILES}
-        ${DEPOSIT_FILES}
-        ${CURRENCY_FILES}
-        test/teleport_tests/node/tests/testDepositHandler.cpp)
 
 add_executable(teleportd
         test/teleport_tests/teleport_data/TestData.h
@@ -812,10 +807,6 @@ target_link_libraries(runNodeTests gmock gmock_main ssl crypto boost_system boos
         curl curl)
 
 target_link_libraries(runRelayTests gmock gmock_main ssl crypto boost_system boost_program_options
-        boost_filesystem ${BOOST_THREAD} microhttpd jsoncpp jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
-        curl curl)
-
-target_link_libraries(runDepositTests gmock gmock_main ssl crypto boost_system boost_program_options
         boost_filesystem ${BOOST_THREAD} microhttpd jsoncpp jsonrpccpp-common jsonrpccpp-server jsonrpccpp-client
         curl curl)
 
