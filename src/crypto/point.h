@@ -16,7 +16,7 @@ class Secp256k1Point;
 class Point
 {
 public:
-    uint8_t curve;
+    uint8_t curve{SECP256K1};
     Secp256k1Point *s_point;
 
     Point();

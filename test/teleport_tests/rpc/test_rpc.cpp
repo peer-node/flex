@@ -27,6 +27,13 @@ public:
     }
 };
 
+std::string strip(std::string input)
+{
+    std::string output = input;
+    if (output.size() > 0 and output[output.size() - 1] == '\n')
+        output.pop_back();
+    return output;
+}
 
 TEST(AnRpcConnection, HandlesRequestsCorrectly)
 {
@@ -43,7 +50,7 @@ TEST(AnRpcConnection, HandlesRequestsCorrectly)
     stringstream output;
     output << client.CallMethod("sayHello", params);
 
-    ASSERT_THAT(output.str(), Eq("\"Hello: Peter\"\n"));
+    ASSERT_THAT(strip(output.str()), Eq("\"Hello: Peter\""));
 
     server.StopListening();
 }

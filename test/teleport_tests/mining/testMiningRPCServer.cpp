@@ -62,15 +62,6 @@ TEST_F(AMiningRPCServer, ListsSeeds)
     ASSERT_THAT(result.size(), Eq(0));
 }
 
-TEST_F(AMiningRPCServer, SetsAndGetsTheMemoryUsage)
-{
-    params["megabytes_used"] = 8;
-    client->CallMethod("set_megabytes_used", params);
-    auto result = client->CallMethod("get_megabytes_used", params);
-    ASSERT_THAT(result.asInt64(), Eq(8));
-}
-
-
 class AMiningRPCServerWithMiningInformation : public AMiningRPCServer
 {
 public:
@@ -113,8 +104,6 @@ TEST_F(AMiningRPCServerWithMiningInformation, ProvidesAMiningRoot)
 
 TEST_F(AMiningRPCServerWithMiningInformation, MinesAProofOfWork)
 {
-    params["megabytes_used"] = 8;
-    client->CallMethod("set_megabytes_used", params);
     client->CallMethod("start_mining", params);
 
     result = client->CallMethod("get_proof_of_work", params);
@@ -169,9 +158,6 @@ public:
 
         params["network_port"] = 8387;
         result = client->CallMethod("set_mining_information", params);
-
-        params["megabytes_used"] = 8;
-        result = client->CallMethod("set_megabytes_used", params);
     }
 
     virtual TestRPCProofListener *GetListener()

@@ -194,7 +194,7 @@ void MinedCreditMessageBuilder::SetRelayStateHashFromPreviousStateHashAndEnclose
 
 void MinedCreditMessageBuilder::AddToAcceptedMessages(uint160 message_hash)
 {
-    log_ << "adding " << message_hash << " to builder\n";
+    log_ << "adding message " << message_hash << " of type " << data.MessageType(message_hash) << " to builder\n";
     if (not VectorContainsEntry(accepted_messages, message_hash))
         accepted_messages.push_back(message_hash);
 }

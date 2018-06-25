@@ -33,8 +33,14 @@ void EnclosedMessageData::AddMessagesContainedInMinedCreditMessage(MinedCreditMe
         {
             AddTransaction(hash, credit_system);
         }
-        if (type == "msg" and credit_system->IsCalend(msg.GetHash160()))
+        else if (type == "msg" and credit_system->IsCalend(msg.GetHash160()))
             AddMinedCreditMessage(hash, credit_system);
+        else if (type == "relay_join")
+            AddRelayJoinMessage(hash, credit_system);
+        else if (type != "msg")
+        {
+            log_ << "No implementation for message type " << type << "\n";
+        }
     }
 }
 
@@ -50,4 +56,11 @@ void EnclosedMessageData::AddMinedCreditMessage(uint160 msg_hash, CreditSystem *
     MinedCreditMessage msg = credit_system->msgdata[msg_hash]["msg"];
     enclosed_message_types.push_back("msg");
     enclosed_message_contents.push_back(Serialize(msg));
+}
+
+void EnclosedMessageData::AddRelayJoinMessage(uint160 join_hash, CreditSystem *credit_system)
+{
+    RelayJoinMessage join = credit_system->msgdata[join_hash]["msg"];
+    enclosed_message_types.push_back("relay_join");
+    enclosed_message_contents.push_back(Serialize(join));
 }

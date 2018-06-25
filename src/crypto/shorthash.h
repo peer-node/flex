@@ -104,6 +104,25 @@ public:
 
     JSON(short_hashes, disambiguator);
 
+    std::string HexShortHashes()
+    {
+        std::string result;
+        char buffer[BUFSIZ];
+
+        for (auto short_hash : short_hashes)
+        {
+            result = "," + result;
+            for (uint32_t i = 0; i < 4; i++)
+            {
+                auto byte = (uint8_t)(short_hash % 256);
+                short_hash /= 256;
+                sprintf(buffer, "%02x",  byte);
+                result = std::string(buffer) + result;
+            }
+        }
+        return result;
+    }
+
     HASH160();
 
     template <typename HASH2>

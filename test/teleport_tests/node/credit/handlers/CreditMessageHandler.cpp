@@ -235,6 +235,11 @@ void CreditMessageHandler::FetchFailedListExpansion(MinedCreditMessage msg)
         return;
     ListExpansionRequestMessage request(msg);
     uint160 request_hash = request.GetHash160();
+    if (msgdata[request_hash]["is_expansion_request"])
+    {
+        log_ << "already sent list expansion request " << request_hash << " for " << msg.GetHash160() << "\n";
+        return;
+    }
     log_ << "sending list expansion request for " << msg.GetHash160() << "\n";
     msgdata[request_hash]["is_expansion_request"] = true;
     msgdata[request_hash]["list_expansion_request"] = request;
@@ -305,16 +310,29 @@ void CreditMessageHandler::HandleMessageWithSpecifiedTypeAndContent(std::string 
 bool CreditMessageHandler::ValidateListExpansionMessage(ListExpansionMessage list_expansion_message)
 {
     if (not msgdata[list_expansion_message.request_hash]["is_expansion_request"])
+    {
+        log_ << "this was not a requested list expansion\n";
         return false;
+    }
     if (list_expansion_message.message_types.size() != list_expansion_message.message_contents.size())
+    {
+        log_ << "ValidateListExpansionMessage: number of types doesn't match number of messages\n";
         return false;
+    }
     MemoryDataStore hashdata;
     LoadHashesIntoDataStoreFromMessageTypesAndContents(hashdata,
                                                        list_expansion_message.message_types,
                                                        list_expansion_message.message_contents, credit_system);
     ListExpansionRequestMessage request = msgdata[list_expansion_message.request_hash]["list_expansion_request"];
     MinedCreditMessage msg = msgdata[request.mined_credit_message_hash]["msg"];
-    return msg.hash_list.RecoverFullHashes(hashdata);
+    if (not msg.hash_list.RecoverFullHashes(hashdata))
+    {
+        log_ << "Failed to recover hashes from list:" << msg.hash_list.HexShortHashes() << "\n";
+        log_ << "matches are: " << msg.hash_list.PossibleMatches(hashdata) << "\n";
+        log_ << "list expansion message is " << list_expansion_message.json() << "\n";
+        return false;
+    }
+    return true;
 }
 
 bool CreditMessageHandler::CheckInputsAreUnspentAccordingToSpentChain(SignedTransaction tx)

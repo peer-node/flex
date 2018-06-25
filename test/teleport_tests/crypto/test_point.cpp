@@ -10,9 +10,9 @@ public:
 
 };
 
-TEST_F(APoint, HasNoCurveWhenCreatedWithDefaultConstructor)
+TEST_F(APoint, HasSecp256K1CurveWhenCreatedWithDefaultConstructor)
 {
-    ASSERT_THAT(p.curve, Eq(0));
+    ASSERT_THAT(p.curve, Eq(SECP256K1));
 }
 
 TEST_F(APoint, HasSpecifiedCurveWhenInitializedWithCurveSpecifier)
