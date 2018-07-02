@@ -23,6 +23,7 @@ pip install oslo.concurrency
 Clone repo
 -----
 
+Make sure `git` is installed: 
 ```
 brew install git # also installs osxkeychain helper
 ```
