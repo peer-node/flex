@@ -52,7 +52,7 @@ Install web interface
 ------
 
 ```
-cd ../python
+cd ../webapp
 python setup.py install
 ```
 
