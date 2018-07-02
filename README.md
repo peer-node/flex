@@ -41,6 +41,9 @@ use testnet coins or coins with negligible value.
 
 Quick Start
 -----------
+
+[Mac OS](mac_os.md)
+
 On Ubuntu 14.04, install the dependencies:
 
     sudo apt-get install git libssl-dev openssl libdb6.0++-dev \
