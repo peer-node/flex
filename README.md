@@ -66,7 +66,7 @@ by doing:
     > client.help()
 
 
-Configuring the web interface
+Using the web interface
 ------------------
 
 Using your web browser, navigate to http://localhost:5000 .
