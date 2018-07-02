@@ -39,7 +39,7 @@ been completed. There is a significant probability that you will lose
 any coins that you try to trade while the software is still unstable, so
 use testnet coins or coins with negligible value.
 
-Quick Start
+Installation instructions
 -----------
 
 [Mac OS](mac_os.md)
