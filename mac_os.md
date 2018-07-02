@@ -46,13 +46,28 @@ mkdir build && cd build && cmake .. && make -j `sysctl -n hw.physicalcpu`
 export BINDIR=`echo $PATH | sed "s/:.*//g"`
 cp minerd teleportd $BINDIR
 ```
+It may take a long time to compile if you don't have many cores.
 
-Set up the web interface 
------
+Install web interface
+------
 
 ```
-cd ../webapp 
+cd ../python
 python setup.py install
+```
+
+Configure the installation:
+
+```
 teleport_control autoconfigure
+```
+
+Then start the binaries and the python server:
+```
+teleport_control start clean
+```
+You can subsequently stop the binaries and server by doing:
+```
+teleport_control stop
 ```
 
