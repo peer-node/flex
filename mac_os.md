@@ -1,3 +1,6 @@
+Installation instructions for Mac OS X 
+-----
+
 brew install git # also installs osxkeychain helper
 git config --global credential.helper osxkeychain
 
