@@ -17,7 +17,6 @@ Install [Anaconda](https://www.continuum.io/downloads) and use it to install the
 conda create -n teleport python=2
 source activate teleport
 conda install setuptools make automake pycrypto pkg-config autoconf ecdsa
-
 pip install oslo.concurrency
 ```
 
