@@ -11,7 +11,7 @@ ln -s /usr/local/include/json /usr/local/include/jsoncpp # use full paths
 Python Dependencies
 -----
 
-install Anaconda: https://www.continuum.io/downloads
+Install [Anaconda](https://www.continuum.io/downloads) and then install the following packages:
 
 ```
 conda create -n teleport python=2
