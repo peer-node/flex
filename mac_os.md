@@ -1,7 +1,7 @@
 Installation instructions for Mac OS X 
 -----
 
-brew install git # also installs osxkeychain helper
+  brew install git # also installs osxkeychain helper
 git config --global credential.helper osxkeychain
 
 brew install berkeley-db
