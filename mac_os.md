@@ -3,17 +3,9 @@
 ## C++ Dependencies
 
 ```
-brew install berkeley-db
-
-brew install jsoncpp
+brew install berkeley-db jsoncpp libjson-rpc-cpp openssl boost
 mkdir /usr/local/include/jsoncpp
 ln -s /usr/local/include/json /usr/local/include/jsoncpp # use full paths
-
-brew install libjson-rpc-cpp
-
-brew install openssl
-brew install boost
-
 ```
 
 Python Dependencies
