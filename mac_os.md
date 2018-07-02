@@ -1,9 +1,6 @@
-Installation instructions for Mac OS X 
------
------
+# Installation instructions for Mac OS X 
 
-C++ Dependencies
------
+## C++ Dependencies
 
 ```
 brew install berkeley-db
