@@ -1,0 +1,7 @@
+Flask_Babel
+python-jsonrpc
+Flask
+sh
+ecdsa
+lockfile
+requests
