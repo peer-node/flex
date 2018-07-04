@@ -1,11 +1,8 @@
 #include "gmock/gmock.h"
 #include "test/teleport_tests/node/server/TeleportRPCServer.h"
-#include "test/teleport_tests/node/server/HttpAuthServer.h"
 #include "test/teleport_tests/node/TeleportNetworkNode.h"
 #include "test/teleport_tests/node/server/TeleportLocalServer.h"
 #include "test/teleport_tests/node/TestPeer.h"
-#include "test/teleport_tests/node/historical_data/handlers/CalendarHandler.h"
-#include "test/teleport_tests/node/historical_data/handlers/InitialDataHandler.h"
 
 #include <jsonrpccpp/client.h>
 
@@ -64,6 +61,14 @@ public:
         return ss;
     }
 };
+
+std::string strip(std::string input)
+{
+    std::string output = input;
+    if (output.size() > 0 and output[output.size() - 1] == '\n')
+        output.pop_back();
+    return output;
+}
 
 TEST_F(ATeleportRPCServer, ProvidesHelp)
 {
@@ -219,7 +224,7 @@ TEST_F(ATeleportRPCServerWithATeleportNetworkNodeAndABalance, GetsANewAddress)
 {
     auto result = client->CallMethod("getnewaddress", parameters);
     uint64_t address_length = result.asString().size();
-    bool length_ok = address_length == 34 or address_length == 33;
+    bool length_ok = address_length == 51;
     ASSERT_TRUE(length_ok);
 }
 
@@ -398,6 +403,9 @@ TEST_F(ATeleportRPCServerConnectedToARemoteTeleportNetworkNode, SynchronizesWith
 
     for (int i = 0; i < 4; i++)
         AddABatchToTheTip(&remote_network_node); // remote node builds a blockchain while disconnected from local node
+
+    log_ << "remote node initial difficulty is " << remote_network_node.credit_system->initial_difficulty << "\n";
+    log_ << "local node initial difficulty is " << teleport_network_node.credit_system->initial_difficulty << "\n";
 
     teleport_network_node.StartCommunicator();
     parameters.append(std::string("127.0.0.1:" + PrintToString(remote_node_port)));

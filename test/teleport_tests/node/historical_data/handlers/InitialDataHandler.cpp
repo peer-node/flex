@@ -88,6 +88,7 @@ MemoryDataStore InitialDataHandler::GetEnclosedMessageHashes(InitialDataMessage 
     MemoryDataStore hashdata;
     for (auto mined_credit_message : message.mined_credit_messages_in_current_diurn)
     {
+        log_ << "GetEnclosedMessageHashes: storing " << mined_credit_message.GetHash160() << " from current diurn\n";
         credit_system->StoreHash(mined_credit_message.GetHash160(), hashdata);
     }
     LoadHashesIntoDataStoreFromMessageTypesAndContents(hashdata,
@@ -103,7 +104,11 @@ bool InitialDataHandler::EnclosedMessagesArePresentInInitialDataMessage(InitialD
     for (auto mined_credit_message : message.mined_credit_messages_in_current_diurn)
     {
         if (not mined_credit_message.hash_list.RecoverFullHashes(enclosed_message_hashes))
+        {
+            log_ << "failed to recover full hashes from " << mined_credit_message.GetHash160()
+                 << " specifically " << mined_credit_message.hash_list.HexShortHashes() << "\n";
             return false;
+        }
     }
     return true;
 }
@@ -184,9 +189,6 @@ void InitialDataHandler::SetMiningParametersForInitialDataMessageValidation(uint
                                                                             uint160 initial_difficulty_,
                                                                             uint160 initial_diurnal_difficulty_)
 {
-    data_message_handler->calendar_handler->number_of_megabytes_for_mining = number_of_megabytes_;
-    initial_difficulty = initial_difficulty_;
-    initial_diurnal_difficulty = initial_diurnal_difficulty_;
 }
 
 bool InitialDataHandler::ValidateMinedCreditMessagesInInitialDataMessage(InitialDataMessage initial_data_message)
@@ -195,8 +197,7 @@ bool InitialDataHandler::ValidateMinedCreditMessagesInInitialDataMessage(Initial
     Data data_(msgdata_, creditdata_, keydata_, depositdata_);
     CreditSystem credit_system_(data_);
 
-    credit_system_.SetMiningParameters(data_message_handler->calendar_handler->number_of_megabytes_for_mining,
-                                       initial_difficulty, initial_diurnal_difficulty);
+    credit_system_.SetMiningParameters(credit_system->initial_difficulty, credit_system->initial_diurnal_difficulty);
     StoreDataFromInitialDataMessageInCreditSystem(initial_data_message, credit_system_);
 
     CreditMessageHandler credit_message_handler(data_);
@@ -210,7 +211,11 @@ bool InitialDataHandler::ValidateMinedCreditMessagesInInitialDataMessage(Initial
     credit_message_handler.SetCalendar(validation_calendar);
 
     for (auto mined_credit_message : initial_data_message.mined_credit_messages_in_current_diurn)
+    {
+        log_ << "trying to validate msg: " << mined_credit_message.GetHash160() << "\n";
+        log_ << "enclosed messages are present: " << mined_credit_message.hash_list.RecoverFullHashes(msgdata_) << "\n";
         credit_message_handler.Handle(mined_credit_message, NULL);
+    }
 
     return TipOfCalendarMatchesTipOfInitialDataMessage(validation_calendar, initial_data_message);
 }

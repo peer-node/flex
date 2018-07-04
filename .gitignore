@@ -89,3 +89,6 @@ qa/pull-tester/run-flexd-for-test.sh
 qa/pull-tester/build-tests.sh
 
 !src/leveldb*/Makefile
+
+*/dist/
+**/*.egg-info/

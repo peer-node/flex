@@ -29,6 +29,7 @@ void EnclosedMessageData::AddMessagesContainedInMinedCreditMessage(MinedCreditMe
     for (auto hash : msg.hash_list.full_hashes)
     {
         std::string type = credit_system->MessageType(hash);
+        log_ << "AddMessagesContainedInMinedCreditMessage: adding " <<  hash << " of type " << type << "\n";
         if (type == "tx")
         {
             AddTransaction(hash, credit_system);
@@ -60,7 +61,7 @@ void EnclosedMessageData::AddMinedCreditMessage(uint160 msg_hash, CreditSystem *
 
 void EnclosedMessageData::AddRelayJoinMessage(uint160 join_hash, CreditSystem *credit_system)
 {
-    RelayJoinMessage join = credit_system->msgdata[join_hash]["msg"];
+    RelayJoinMessage join = credit_system->msgdata[join_hash]["relay_join"];
     enclosed_message_types.push_back("relay_join");
     enclosed_message_contents.push_back(Serialize(join));
 }

@@ -83,10 +83,6 @@ public:
 
     void SetBatchRootAndSizeAndMessageListHashAndSpentChainHash(MinedCreditMessage &msg);
 
-    void SetExpectedNumberOfMegabytesInMinedCreditProofsOfWork(uint64_t number_of_megabytes);
-
-    uint64_t expected_memory_factor_for_mined_credit_proofs_of_work{MEMORY_FACTOR};
-
     bool QuickCheckProofOfWorkInMinedCreditMessage(MinedCreditMessage &msg);
 
     bool QuickCheckProofOfWorkInCalend(Calend calend);
@@ -134,8 +130,7 @@ public:
 
     void StoreHash(uint160 hash, MemoryDataStore &hashdata);
 
-    void
-    SetMiningParameters(uint64_t number_of_megabytes_, uint160 initial_difficulty_, uint160 initial_diurnal_difficulty_);
+    void SetMiningParameters(uint160 initial_difficulty_, uint160 initial_diurnal_difficulty_);
 
     bool MinedCreditWasRecordedToHaveTotalWork(uint160 credit_hash, uint160 total_work);
 
@@ -198,6 +193,8 @@ public:
     Diurn GetDiurnContainingBatch(uint160 batch_root);
 
     void UpdateBatchAndRelayStateByProcessingJoinMessage(CreditBatch &batch, RelayState &state, RelayJoinMessage &join);
+
+    void StoreRelayJoinMessage(RelayJoinMessage join);
 };
 
 

@@ -4,6 +4,7 @@
 #include <src/vector_tools.h>
 #include <src/credits/SignedTransaction.h>
 #include <src/credits/creditsign.h>
+#include <test/teleport_tests/currency/CryptoCurrencyAddress.h>
 #include "Wallet.h"
 #include "test/teleport_tests/node/credit/messages/MinedCreditMessage.h"
 #include "test/teleport_tests/node/credit/structures/CreditSystem.h"
@@ -251,6 +252,6 @@ uint160 GetKeyHashFromAddress(std::string address_string)
 
 std::string GetAddressFromPublicKey(Point public_key)
 {
-    CKeyID keyID(KeyHash(public_key));
-    return CBitcoinAddress(keyID).ToString();
+    std::string currency("TCR");
+    return CryptoCurrencyAddress(currency, public_key).ToString();
 }
