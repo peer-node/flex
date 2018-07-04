@@ -82,9 +82,13 @@ void CreditMessageHandler::HandleMinedCreditMessage(MinedCreditMessage msg)
 
     if (msg.mined_credit.network_state.batch_number > 1 and not PreviousMinedCreditMessageWasHandled(msg))
     {
+        log_ << "cannot process msg " << msg.GetHash160() << " yet - predecessor "
+             << msg.mined_credit.network_state.previous_mined_credit_message_hash << " was not handled\n";
         QueueMinedCreditMessageBehindPrevious(msg);
+        log_ << "queued msg behind predecessor\n";
         if (not EnclosedMessagesArePresent(msg))
         {
+            log_ << "messages enclosed in " << msg.GetHash160() << " are not present - fetching list expansion\n";
             FetchFailedListExpansion(msg);
             return;
         }
@@ -92,12 +96,15 @@ void CreditMessageHandler::HandleMinedCreditMessage(MinedCreditMessage msg)
 
     if (not EnclosedMessagesArePresent(msg))
     {
+        log_ << "messages enclosed in " << msg.GetHash160() << " are not present - fetching list expansion\n";
+        log_ << "specified messages are: " << msg.hash_list.HexShortHashes() << "\n";
         FetchFailedListExpansion(msg);
         return;
     }
 
     if (not MinedCreditMessagePassesVerification(msg))
     {
+        log_ << msg.GetHash160() << " failed verification\n";
         return;
     }
 

@@ -121,6 +121,14 @@ void CreditSystem::StoreTransaction(SignedTransaction tx)
     msgdata[hash]["tx"] = tx;
 }
 
+void CreditSystem::StoreRelayJoinMessage(RelayJoinMessage join)
+{
+    uint160 hash = join.GetHash160();
+    StoreHash(hash);
+    msgdata[hash]["type"] = "relay_join";
+    msgdata[hash]["relay_join"] = join;
+}
+
 void CreditSystem::StoreHash(uint160 hash)
 {
     StoreHash(hash, msgdata);
@@ -589,8 +597,7 @@ BitChain CreditSystem::ConstructSpentChainFromPreviousSpentChainAndContentsOfMin
     return spent_chain;
 }
 
-void CreditSystem::SetMiningParameters(uint64_t number_of_megabytes_,
-                                       uint160 initial_difficulty_,
+void CreditSystem::SetMiningParameters(uint160 initial_difficulty_,
                                        uint160 initial_diurnal_difficulty_)
 {
     initial_difficulty = initial_difficulty_;
@@ -840,6 +847,13 @@ void CreditSystem::StoreMessageWithSpecificTypeAndContent(std::string type, vch_
         SignedTransaction tx;
         ss >> tx;
         StoreTransaction(tx);
+    }
+    else if (type == "relay_join")
+    {
+        CDataStream ss(content, SER_NETWORK, CLIENT_VERSION);
+        RelayJoinMessage join;
+        ss >> join;
+        StoreRelayJoinMessage(join);
     }
 }
 

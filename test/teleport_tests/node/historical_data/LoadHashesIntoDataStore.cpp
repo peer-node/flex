@@ -1,5 +1,8 @@
 #include "LoadHashesIntoDataStore.h"
 
+#include "log.h"
+#define LOG_CATEGORY "LoadHashesIntoDataStore.cpp"
+
 void LoadHashesIntoDataStoreFromMessageTypesAndContents(MemoryDataStore &hashdata,
                                                         std::vector<std::string> &types,
                                                         std::vector<vch_t> &contents,
@@ -17,6 +20,7 @@ void LoadHashesIntoDataStoreFromMessageTypesAndContents(MemoryDataStore &hashdat
             ss >> msg;
             enclosed_message_hash = msg.GetHash160();
         }
+        log_ << "LoadHashesIntoDataStoreFromMessageTypesAndContents: storing " << enclosed_message_hash << "\n";
         credit_system->StoreHash(enclosed_message_hash, hashdata);
     }
 }

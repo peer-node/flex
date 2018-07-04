@@ -89,6 +89,9 @@ bool MinedCreditMessageValidator::CheckDifficulty(MinedCreditMessage &msg)
 {
     auto previous_msg = GetPreviousMinedCreditMessage(msg);
     uint160 difficulty = msg.mined_credit.network_state.difficulty;
+    log_ << "CheckDifficulty: specified difficulty is " << difficulty << "\n";
+    log_ << "previous difficulty was " << previous_msg.mined_credit.network_state.difficulty << "\n";
+    log_ << "difficulty after that should be: " << credit_system->GetNextDifficulty(previous_msg) << "\n";
     return difficulty == credit_system->GetNextDifficulty(previous_msg);
 }
 
@@ -120,6 +123,8 @@ bool MinedCreditMessageValidator::ValidateNetworkState(MinedCreditMessage &msg)
 {
     bool ok = true;
 
+    log_ << "ValidateNetworkState: msg is " << msg.json() << "\n";
+    log_ << "initial difficulty is " << credit_system->initial_difficulty << "\n";
     ok &= CheckBatchNumber(msg);
 
     ok &= CheckPreviousTotalWork(msg);

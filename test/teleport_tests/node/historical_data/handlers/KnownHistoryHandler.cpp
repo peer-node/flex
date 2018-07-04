@@ -171,8 +171,7 @@ bool KnownHistoryHandler::ValidateDataInDiurnDataMessage(DiurnDataMessage diurn_
 
     credit_system_.StoreDataFromDiurnDataMessage(diurn_data_message);
 
-    credit_system_.SetMiningParameters(data_message_handler->calendar_handler->number_of_megabytes_for_mining,
-                                       credit_system->initial_difficulty,
+    credit_system_.SetMiningParameters(credit_system->initial_difficulty,
                                        credit_system->initial_diurnal_difficulty);
 
     for (uint32_t i = 0; i < diurn_data_message.diurns.size(); i++)

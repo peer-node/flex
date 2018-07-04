@@ -11,9 +11,6 @@ public:
     DataMessageHandler *data_message_handler;
     CreditSystem *credit_system;
 
-    uint160 initial_difficulty{INITIAL_DIFFICULTY};
-    uint160 initial_diurnal_difficulty{INITIAL_DIURNAL_DIFFICULTY};
-
     InitialDataHandler(DataMessageHandler *data_message_handler_) :
         data_message_handler(data_message_handler_),
         msgdata(data_message_handler_->msgdata),
