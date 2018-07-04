@@ -43,7 +43,7 @@ Compile the binaries
 
 ```
 mkdir build && cd build && cmake .. && make -j `sysctl -n hw.physicalcpu`
-export BINDIR=`echo $PATH | sed "s/:.*//g"`
+export BINDIR=`echo $PATH | sed "s/:.*//g"` # before issuing this command, make sure custom conda environment is activated
 cp minerd teleportd $BINDIR
 ```
 It may take a long time to compile if you don't have many cores.
