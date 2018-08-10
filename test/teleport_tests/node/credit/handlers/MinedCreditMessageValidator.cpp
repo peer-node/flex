@@ -50,6 +50,8 @@ bool MinedCreditMessageValidator::CheckSpentChainHash(MinedCreditMessage &msg)
     if (not credit_system->msgdata[msg_hash].HasProperty("msg"))
         credit_system->StoreMinedCreditMessage(msg);
     BitChain spent_chain = credit_system->GetSpentChain(msg_hash);
+    log_ << "retrieved spent chain is:" << spent_chain.ToString() << "\n";
+    log_ << "retrieved spent chain has hash:" << spent_chain.GetHash160() << "\n";
     return spent_chain.GetHash160() == msg.mined_credit.network_state.spent_chain_hash;
 }
 
@@ -149,28 +151,50 @@ bool MinedCreditMessageValidator::ValidateNetworkState(MinedCreditMessage &msg)
 
     ok &= CheckBatchOffset(msg);
 
+    log_ << "checked batch offset, ok so far: " << ok << "\n";
+
     ok &= CheckTimeStampIsNotInFuture(msg);
+
+    log_ << "checked time stamp, ok so far: " << ok << "\n";
 
     ok &= CheckPreviousDiurnRoot(msg);
 
+    log_ << "checked previous diurn root, ok so far: " << ok << "\n";
+
     ok &= CheckPreviousCalendHash(msg);
+
+    log_ << "checked previous calend hash, ok so far: " << ok << "\n";
 
     ok &= CheckTimeStampSucceedsPreviousTimestamp(msg);
 
+    log_ << "checked TimeStampSucceedsPreviousTimestamp, ok so far: " << ok << "\n";
+
     ok &= CheckBatchRoot(msg);
 
+    log_ << "checked batch root, ok so far: " << ok << "\n";
+
     ok &= CheckBatchSize(msg);
+
+    log_ << "checked batch size, ok so far: " << ok << "\n";
 
     if (DataRequiredToCalculateDiurnalBlockRootIsPresent(msg))
     {
         ok &= CheckDiurnalBlockRoot(msg);
+        log_ << "checked diurnal block root, ok so far: " << ok << "\n";
     }
 
     ok &= CheckSpentChainHash(msg);
 
+    log_ << "checked spent chain hash, ok so far: " << ok << "\n";
+    log_ << "spent chain hash is " << msg.mined_credit.network_state.spent_chain_hash << "\n";
+
     ok &= CheckMessageListHash(msg);
 
+    log_ << "checked message list hash, ok so far: " << ok << "\n";
+
     ok &= CheckMessageListContainsPreviousMinedCreditHash(msg);
+
+    log_ << "checked message list contains previous mined credit message hash, ok so far: " << ok << "\n";
 
     return ok;
 }

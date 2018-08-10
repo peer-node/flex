@@ -313,6 +313,7 @@ bool CreditSystem::GetSpentAndUnspentWhenSwitchingAcrossFork(uint160 from_msg_ha
 BitChain CreditSystem::GetSpentChainOnOtherProngOfFork(BitChain &spent_chain, uint160 from_msg_hash,
                                                        uint160 to_msg_hash)
 {
+    log_ << "calculating spent chain starting from " << spent_chain.ToString() << "\n";
     set<uint64_t> spent, unspent;
     if (not GetSpentAndUnspentWhenSwitchingAcrossFork(from_msg_hash, to_msg_hash, spent, unspent))
     {
@@ -323,10 +324,18 @@ BitChain CreditSystem::GetSpentChainOnOtherProngOfFork(BitChain &spent_chain, ui
     uint64_t length = to_msg.mined_credit.network_state.batch_offset + to_msg.mined_credit.network_state.batch_size;
     BitChain resulting_chain = spent_chain;
     resulting_chain.SetLength(length);
+    log_ << "set length to: " << length << "\n";
     for (auto position : unspent)
+    {
+        log_ << "clearing position " << position << "\n";
         resulting_chain.Clear(position);
+    }
     for (auto position : spent)
+    {
+        log_ << "setting position " << position << "\n";
         resulting_chain.Set(position);
+    }
+    log_ << "resulting spent chain is " << resulting_chain.ToString() << "\n";
     return resulting_chain;
 }
 

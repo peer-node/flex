@@ -280,11 +280,13 @@ public:
     }
 };
 
-void WaitForCalendarSwitch(TeleportNetworkNode &node, uint160 last_tip = 0, uint32_t millisecond_timeout=15000)
+void WaitForCalendarSwitch(TeleportNetworkNode &node, uint160 last_tip=0, uint32_t millisecond_timeout=15000,
+                           uint160 tip_to_wait_for=0)
 {
     int64_t start_time = GetTimeMillis();
     log_ << "------------------- stating to wait for calendar to switch from " << last_tip << "\n";
-    while (node.calendar.LastMinedCreditMessageHash() == last_tip)
+    while (node.calendar.LastMinedCreditMessageHash() == last_tip
+            or (tip_to_wait_for != 0 and node.calendar.LastMinedCreditMessageHash() != tip_to_wait_for))
     {
         MilliSleep(10);
         LOCK(node.credit_message_handler->calendar_mutex);
@@ -294,6 +296,10 @@ void WaitForCalendarSwitch(TeleportNetworkNode &node, uint160 last_tip = 0, uint
             return;
         }
     }
+    log_ << "condition to stop waiting satisfied: " << (not (node.calendar.LastMinedCreditMessageHash() == last_tip
+            or (tip_to_wait_for != 0 and node.calendar.LastMinedCreditMessageHash() != tip_to_wait_for))) << "\n";
+    log_ << "tip to wait for: " << tip_to_wait_for << "\n";
+    log_ << "tip: " << node.calendar.LastMinedCreditMessageHash() << "\n";
 }
 
 TEST_F(TwoTeleportNetworkNodesWithValidProofsOfWorkConnectedViaPeers, AreSynchronized)
@@ -385,7 +391,8 @@ public:
 TEST_F(TwoTeleportNetworkNodesConnectedAfterBatchesWithTransactionsAreAdded, SynchronizeThroughSharingMinedCreditMessages)
 {
     AddABatchToTheTip(&node1);
-    WaitForCalendarSwitch(node2); // wait for node2 to synchronize with node1
+    uint160 tip_to_wait_for = node1.calendar.LastMinedCreditMessageHash();
+    WaitForCalendarSwitch(node2, 0, 15000, tip_to_wait_for); // wait for node2 to synchronize with node1
 
     ASSERT_THAT(node1.calendar.LastMinedCreditMessageHash(), Eq(node2.calendar.LastMinedCreditMessageHash()));
     ASSERT_THAT(node1.Balance(), Eq(ONE_CREDIT)); // mined two credits, spent 1
@@ -394,10 +401,12 @@ TEST_F(TwoTeleportNetworkNodesConnectedAfterBatchesWithTransactionsAreAdded, Syn
 
 TEST_F(TwoTeleportNetworkNodesConnectedAfterBatchesWithTransactionsAreAdded, SynchronizeThroughAnInitialDataMessage)
 {
+    log_ << "######################### getting node2 to request tips\n";
+    uint160 tip_to_wait_for = node1.calendar.LastMinedCreditMessageHash();
     node2.data_message_handler->tip_handler->RequestTips();
-    WaitForCalendarSwitch(node2); // wait for node2 to synchronize with node1
+    WaitForCalendarSwitch(node2, 0, 15000, tip_to_wait_for); // wait for node2 to synchronize with node1
 
-    ASSERT_THAT(node1.calendar.LastMinedCreditMessageHash(), Eq(node2.calendar.LastMinedCreditMessageHash()));
+    ASSERT_THAT(node2.calendar.LastMinedCreditMessageHash(), Eq(node1.calendar.LastMinedCreditMessageHash()));
 }
 
 class TwoTeleportNetworkNodesConnectedAfterBatchesWithTransactionsAreAddedFollowedByCalends :
@@ -430,17 +439,20 @@ public:
 TEST_F(TwoTeleportNetworkNodesConnectedAfterBatchesWithTransactionsAreAddedFollowedByCalends, SynchronizeThroughSharingMinedCreditMessages)
 {
     AddABatchToTheTip(&node1);
-    WaitForCalendarSwitch(node2); // wait for node2 to synchronize with node1
+    uint160 tip_to_wait_for = node1.calendar.LastMinedCreditMessageHash();
+    WaitForCalendarSwitch(node2, 0, 15000, tip_to_wait_for); // wait for node2 to synchronize with node1
 
-    ASSERT_THAT(node1.calendar.LastMinedCreditMessageHash(), Eq(node2.calendar.LastMinedCreditMessageHash()));
+    ASSERT_THAT(node2.calendar.LastMinedCreditMessageHash(), Eq(tip_to_wait_for));
 }
 
 TEST_F(TwoTeleportNetworkNodesConnectedAfterBatchesWithTransactionsAreAddedFollowedByCalends, SynchronizeThroughAnInitialDataMessage)
 {
+    log_ << "######################## getting node2 to request tips\n";
+    uint160 tip_to_wait_for = node1.calendar.LastMinedCreditMessageHash();
     node2.data_message_handler->tip_handler->RequestTips();
-    WaitForCalendarSwitch(node2); // wait for node2 to synchronize with node1
+    WaitForCalendarSwitch(node2, 0, 15000, tip_to_wait_for); // wait for node2 to synchronize with node1
 
-    ASSERT_THAT(node1.calendar.LastMinedCreditMessageHash(), Eq(node2.calendar.LastMinedCreditMessageHash()));
+    ASSERT_THAT(node2.calendar.LastMinedCreditMessageHash(), Eq(tip_to_wait_for));
 }
 
 

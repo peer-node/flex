@@ -189,16 +189,19 @@ bool KnownHistoryHandler::ValidateDataInDiurn(Diurn &diurn, CreditSystem *credit
     Data data_(credit_system_->msgdata, credit_system_->creditdata, keydata_, depositdata_);
     CreditMessageHandler credit_message_handler(data_);
     credit_message_handler.SetCreditSystem(credit_system_);
-    credit_message_handler.do_spot_checks = false;
 
     credit_message_handler.SetSpentChain(initial_spent_chain);
+    credit_system_->creditdata[diurn.credits_in_diurn[0].GetHash160()]["spent_chain"] = initial_spent_chain;
 
     Calendar calendar_(diurn.credits_in_diurn[0].GetHash160(), credit_system_);
     TrimLastDiurnFromCalendar(calendar_, credit_system_);
     credit_message_handler.SetCalendar(calendar_);
 
     for (auto mined_credit_message : diurn.credits_in_diurn)
+    {
+        credit_system_->creditdata[mined_credit_message.mined_credit.network_state.previous_mined_credit_message_hash]["handled"] = true;
         credit_message_handler.Handle(mined_credit_message, NULL);
+    }
 
     if (calendar_.LastMinedCreditMessageHash() != diurn.credits_in_diurn.back().GetHash160())
     {

@@ -2,6 +2,7 @@
 #include <src/crypto/secp256k1point.h>
 #include "CreditMessageHandler.h"
 #include "test/teleport_tests/node/historical_data/handlers/DataMessageHandler.h"
+#include "test/teleport_tests/node/historical_data/handlers/TipHandler.h"
 #include "test/teleport_tests/node/historical_data/LoadHashesIntoDataStore.h"
 #include "test/teleport_tests/node/TeleportNetworkNode.h"
 
@@ -85,13 +86,17 @@ void CreditMessageHandler::HandleMinedCreditMessage(MinedCreditMessage msg)
         log_ << "cannot process msg " << msg.GetHash160() << " yet - predecessor "
              << msg.mined_credit.network_state.previous_mined_credit_message_hash << " was not handled\n";
         QueueMinedCreditMessageBehindPrevious(msg);
-        log_ << "queued msg behind predecessor\n";
-        if (not EnclosedMessagesArePresent(msg))
+        if (msg.mined_credit.ReportedWork() > calendar->TotalWork())
         {
-            log_ << "messages enclosed in " << msg.GetHash160() << " are not present - fetching list expansion\n";
-            FetchFailedListExpansion(msg);
-            return;
+            log_ << "node claims to have longer chain than ours -> attempt synchronization\n";
+            if (teleport_network_node != NULL)
+                teleport_network_node->data_message_handler->tip_handler->RequestTips();
+            else
+            {
+                log_ << "no node is attached - can't communicate\n";
+            }
         }
+        return;
     }
 
     if (not EnclosedMessagesArePresent(msg))
@@ -206,6 +211,10 @@ void CreditMessageHandler::HandleValidMinedCreditMessage(MinedCreditMessage& msg
     log_ << "current tip is " << Tip().GetHash160() << "\n";
     credit_system->AcceptMinedCreditMessageAsValidByRecordingTotalWorkAndParent(msg);
     tip_controller->SwitchToNewTipIfAppropriate();
+    if (credit_system->IsCalend(Tip().GetHash160()))
+    {
+        creditdata[Tip().GetHash160()]["spent_chain"] = *spent_chain;
+    }
     credit_system->MarkMinedCreditMessageAsHandled(msg.GetHash160());
     InformOtherMessageHandlersOfNewTip(msg);
 }

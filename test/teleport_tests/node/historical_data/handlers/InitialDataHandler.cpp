@@ -205,6 +205,9 @@ bool InitialDataHandler::ValidateMinedCreditMessagesInInitialDataMessage(Initial
 
     BitChain spent_chain = initial_data_message.spent_chain;
     credit_message_handler.SetSpentChain(spent_chain);
+    log_ << "set spent chain to that of initial data message. hash = " << spent_chain.GetHash160() << "\n";
+    log_ << "initial dta message has spent chain: " << spent_chain.ToString() << "n";
+    creditdata_[initial_data_message.GetLastCalend().GetHash160()]["spent_chain"] = spent_chain;
 
     Calendar validation_calendar = credit_system->GetRequestedCalendar(initial_data_message);
     TrimLastDiurnFromCalendar(validation_calendar, &credit_system_);
@@ -214,6 +217,7 @@ bool InitialDataHandler::ValidateMinedCreditMessagesInInitialDataMessage(Initial
     {
         log_ << "trying to validate msg: " << mined_credit_message.GetHash160() << "\n";
         log_ << "enclosed messages are present: " << mined_credit_message.hash_list.RecoverFullHashes(msgdata_) << "\n";
+        credit_system_.MarkMinedCreditMessageAsHandled(mined_credit_message.mined_credit.network_state.previous_mined_credit_message_hash);
         credit_message_handler.Handle(mined_credit_message, NULL);
     }
 
