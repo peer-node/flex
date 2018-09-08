@@ -48,26 +48,27 @@ cp minerd teleportd $BINDIR
 ```
 It may take a long time to compile if you don't have many cores.
 
-Install web interface
+Install and run web app 
 ------
 
-```
-cd ../webapp
-python setup.py install
-```
+The web app is composed of 
+a vue.js frontend development server that 
+controls the teleport and mining C++ binaries via 
+REST API calls to 
+a python backend server. 
 
-Configure the installation:
+To install and run the backend, do: 
+```
+cd ../webapp/backend
+```
+and follow the 
+[backend instructions](webapp/backend/README.md).
+
+To install and run the frontend, do: 
 
 ```
-teleport_control autoconfigure
+cd ../frontend
 ```
-
-Then start the binaries and the python server:
-```
-teleport_control start clean
-```
-You can subsequently stop the binaries and server by doing:
-```
-teleport_control stop
-```
-
+and follow the
+[frontend instructions](webapp/frontend/README.md).
+ 

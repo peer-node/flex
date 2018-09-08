@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% block head %}
+    <link rel="stylesheet" href="style.css" />
+    <title>{% block title %}{% endblock %}</title>
+    {% endblock %}
+</head>
+<body>
+    <div id="content">{% block teleport_address %}{% endblock %}</div>
+    <div id="content">{% block credits %}{% endblock %}</div>
+    <div id="content">{% block deposits %}{% endblock %}</div>
+    <div id="content">{% block withdrawals %}{% endblock %}</div>
+    <div id="content">{% block mining %}{% endblock %}</div>
+    <div id="content">{% block network %}{% endblock %}</div>
+    <div id="footer">{% block settings %}{% endblock %}</div>
+</body>
+</html>

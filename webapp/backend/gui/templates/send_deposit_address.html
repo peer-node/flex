@@ -1,0 +1,36 @@
+<label for="currency">Deposits</label>
+
+<table>
+    {% for currency in data.deposit_addresses %}
+        {% for deposit_address in data.deposit_addresses[currency] %}
+            <tr>
+                <td>{{ currency }}</td>
+                <td>{{ deposit_address }}</td>
+                <td>
+                    {% if deposit_address == selected_deposit_address %}
+                    <form action="{{ url_for('send_deposit_address_complete') }}" method="post">
+                        <input type="hidden" name="deposit_address" value="{{ deposit_address }}">
+                        <input type="submit" value="Send to">
+                        <input type="text" name="destination_address" title="destination_address">
+                    </form>
+                </td>
+                <td>
+                    &nbsp;
+                    {% else %}
+                </td>
+                <td>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+    {% endfor %}
+</table>
+
+<form action="{{ url_for('request_deposit_address') }}" method="post">
+    <select name="currency" id="currency">
+        {% for currency in data.currencies %}
+            <option value="{{ currency }}">{{ currency }}</option>
+        {% endfor %}
+    </select>
+    <input type="submit" value="Request Deposit Address">
+</form>
