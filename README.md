@@ -39,49 +39,26 @@ been completed. There is a significant probability that you will lose
 any coins that you try to trade while the software is still unstable, so
 use testnet coins or coins with negligible value.
 
-Installation instructions
+Installation instructions 
 -----------
 
 [Mac OS](mac_os.md)
 
 [Ubuntu](ubuntu.md)
 
-Configuring the web interface
---------------------------
-
-At this point, you can optionally reduce the amount of memory used during
-mining (default is 4 Gb) by doing (within python):
-
-    > from teleport import get_client
-    > client = get_client()
-    > client.set_megabytes_used(1)
-
-If your machine (or virtual machine) has less than 5 gigabytes of ram,
-you will need to do this or else you will run out of memory during
-mining.
-
-You can get a list of commands available through the python interface
-by doing:
-
-    > client.help()
-
-
-Using the web interface
+Using the web app
 ------------------
 
-Using your web browser, navigate to http://localhost:5000 .
-
-You should see a simple interface which shows a few buttons. There should
-be a teleport address starting with T visible, and you should have 0.0
-credits.
-
-You can start mining by clicking on "Start Mining"; you will need to have
+You can start mining by clicking on the toggle button in the 
+"Mining" panel. 
+You will need to have
 mined 10 or more credits before you can request a deposit address.
 
 You can refresh the interface to see how many credits have been mined
-while it is mining by clicking on "Get New Address" or by going to
-http://localhost:5000 again.
+while it is mining by clicking on the "refresh" button in the 
+"Mining" panel. 
 
+#### To Do:
 When you have 10 or more credits, you can request a deposit address
 for a specific currency. It will take a few blocks before the deposit
 address you requested becomes available, so it won't be visible on

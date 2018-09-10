@@ -1,0 +1,7 @@
+Credits: {{ data.info.balance }}
+
+<form action="{{ url_for('main_send_credits_complete') }}" method="post">
+    Address: <input type="text" name="destination_address">
+    Amount: <input type="text" name="amount">
+    <input type="submit" value="Send Credits">
+</form>

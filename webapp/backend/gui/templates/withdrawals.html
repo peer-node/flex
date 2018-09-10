@@ -1,0 +1,15 @@
+Withdrawals
+
+<table>
+    {% for currency in data.withdrawn_addresses %}
+        {% for address in data.withdrawn_addresses[currency] %}
+            <tr>
+                <td>{{ currency }}</td>
+                <td>{{ address }}</td>
+                <td>
+                    {{ data.withdrawn_addresses[currency][address] }}
+                </td>
+            </tr>
+        {% endfor %}
+    {% endfor %}
+</table>

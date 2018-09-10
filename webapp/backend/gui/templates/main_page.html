@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Teleport{% endblock %}
+{% block head %}
+    {{ super() }}
+    <style type="text/css">
+        .important { color: #336699; }
+    </style>
+{% endblock %}
+
+{% block settings %}{% include 'settings.html' %}{% endblock %}
+
+{% block network %}{% include 'network.html' %}{% endblock %}
+
+{% block teleport_address %}{% include 'teleport_address.html' %}{% endblock %}
+
+{% block credits %}{% include 'credits.html' %}{% endblock %}
+
+{% block deposits %}{% include 'deposits.html' %}{% endblock %}
+
+{% block withdrawals %}{% include 'withdrawals.html' %}{% endblock %}
+
+{% block mining %}{% include 'mining.html' %}{% endblock %}
