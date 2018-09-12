@@ -24,12 +24,28 @@ and `which npm` which should yield something like
 `~/.nvm/versions/node/v10.8.0/bin/node` and 
 `~/.nvm/versions/node/v10.8.0/bin/npm` respectively.
 
+### Install node modules 
+
+Issue 
+
+```
+npm install
+```
+This will use the 
+`package.json` and `package-lock.json` files
+to create a directory called `node_modules`
+that contains an exact replica of the 
+dependencies used by the developers. 
 
 # Spinning up the frontend server
 This is as simple as: 
 ```
 npm run serve
 ```
+This runs the [vue-cli-service binary](https://cli.vuejs.org/guide/cli-service.html#cli-service) 
+that was installed in the 
+`node_modules` directory. 
+
 Navigate to the indicated URL.
 
 
@@ -49,23 +65,18 @@ which should yield something like
 `~/.nvm/versions/node/v10.8.0/bin/vue`
 and `3.0.0` respectively.
 
-The frontend was created from within the `webapp` 
+The frontend was created from within the `UI` 
 directory using 
 ```
 vue create frontend
-```
-accepting the default options that the vue CLI 
-presented. I then 
- did `cd frontend` followed by
-```
+cd frontend
 vue add vuetify
 ```
-electing to use a 'pre-made template'. 
 
 To connect the front-end Vue app with 
 the back-end Flask app, 
-I sent AJAX requests using 
-the axios library: 
+ AJAX requests are sent using 
+the axios library, which was installed via: 
 
 ```
 npm install axios
@@ -73,7 +84,7 @@ npm install axios
 
 
 To serve the Vue app and 
-hot-reload any changes to the source 
+hot-load any changes to the source 
 code, I used `npm run serve`.
 
 

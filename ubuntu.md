@@ -17,7 +17,6 @@ Then clone the github repository and switch to the tdd branch:
 
     git clone https://github.com/peer-node/teleport.git
     cd teleport
-    git checkout tdd
 
 Then compile the binaries and install them into the virtualenv's bin directory:
     
@@ -29,7 +28,7 @@ It may take a long time to compile if you don't have many cores.
 
 Then install the python files:
 
-    cd ../webapp
+    cd ../UI
     python setup.py install
 
 Then you'll need to configure the installation:
