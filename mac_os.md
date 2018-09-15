@@ -61,7 +61,7 @@ To install and run the backend, do:
 cd ../UI/backend
 ```
 and follow the 
-[backend instructions](webapp/backend/README.md).
+[backend instructions](UI/backend/README.md).
 
 To install and run the frontend, do: 
 
@@ -69,5 +69,5 @@ To install and run the frontend, do:
 cd ../frontend
 ```
 and follow the
-[frontend instructions](webapp/frontend/README.md).
+[frontend instructions](UI/frontend/README.md).
  

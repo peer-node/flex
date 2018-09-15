@@ -8,8 +8,8 @@
         <v-list-tile-action>
           <!--https://github.com/vuetifyjs/vuetify/issues/3554-->
           <v-switch
-              :label="mining ? `on` : `off`"
-              v-model="mining"
+              :label="switch_state ? `On` : `Off`"
+              v-model="switch_state"
               @change="toggle_mining"
           ></v-switch>
         </v-list-tile-action>
@@ -20,53 +20,40 @@
           <v-list-tile-sub-title>{{ data.info.balance }}</v-list-tile-sub-title>
         </v-list-tile-content>
         <v-list-tile-action>
-          <v-btn icon @click="fetch_data">
+          <v-btn icon @click="$emit('get-data')">
             <v-icon>refresh</v-icon>
           </v-btn>
         </v-list-tile-action>
       </v-list-tile>
     </v-list>
+    <p> switch_state: {{ switch_state }} </p>
+    <p> typeof(switch_state): {{ typeof(switch_state) }} </p>
+    <p> typeof(data.mining): {{ typeof(data.mining) }} </p>
+    <p> data.mining: {{ data.mining }}</p>
+    <p> data.mining===true: {{ data.mining === true }} </p>
+    <p> data.mining===false: {{ data.mining === false }} </p>
   </div>
 </template>
 
 <script>
-  import axios from 'axios'
-
   export default {
     name: 'Mining',
-    data: () => ({
-      mining: false
-    }),
-    methods: {
-      // TODO: put this in Panels.vue
-      fetch_data () {
-        const path = `http://localhost:5000/api/v1.0`
-        axios
-        .get(path)
-        .then(response => {
-          this.data = response.data
-        })
-        .catch(error => {
-          alert(error)
-        })
-      },
-      toggle_mining () {
-        const path_suffix = this.mining ? 'start_mining' : 'stop_mining'
-        const path = `http://localhost:5000/api/v1.0/${path_suffix}`
-        axios
-        .get(path)
-        .then(response => {
-          // TODO: "emit" updated data to other components
-          this.data = response.data
-        })
-        .catch(error => {
-          alert(error)
-        })
+    props: ['data'],
+    data () {
+      alert(`initializing switch_state with the value of this.data.mining: ${this.data.mining}`)
+      return {
+        // v-switch requires a variable (switch_state) to maintain its state
+        switch_state: this.data.mining
       }
     },
-    props: {
-      data: Object
-    }
+    methods: {
+      toggle_mining () {
+        alert(`this.switch_state in toggle_mining: ${this.switch_state}`)
+        const action = this.switch_state ? 'start_mining' : 'stop_mining'
+        alert(`action in toggle_mining is: ${action}`)
+        this.$emit('toggle-mining', action)
+      }
+    },
   }
 </script>
 
