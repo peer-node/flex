@@ -46,7 +46,7 @@ Installation instructions
 
 [Ubuntu](ubuntu.md)
 
-Using the web app
+Using the User Interface
 ------------------
 
 You can start mining by clicking on the toggle button in the 

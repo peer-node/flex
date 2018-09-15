@@ -35,7 +35,6 @@ Then clone the repo:
 ```
 git clone https://github.com/peer-node/teleport.git
 cd teleport
-git checkout tdd
 ```
 
 Compile the binaries
@@ -48,10 +47,10 @@ cp minerd teleportd $BINDIR
 ```
 It may take a long time to compile if you don't have many cores.
 
-Install and run web app 
+Install and run User Interface 
 ------
 
-The web app is composed of 
+The User Interface is composed of 
 a vue.js frontend development server that 
 controls the teleport and mining C++ binaries via 
 REST API calls to 
@@ -59,10 +58,10 @@ a python backend server.
 
 To install and run the backend, do: 
 ```
-cd ../webapp/backend
+cd ../UI/backend
 ```
 and follow the 
-[backend instructions](webapp/backend/README.md).
+[backend instructions](UI/backend/README.md).
 
 To install and run the frontend, do: 
 
@@ -70,5 +69,5 @@ To install and run the frontend, do:
 cd ../frontend
 ```
 and follow the
-[frontend instructions](webapp/frontend/README.md).
+[frontend instructions](UI/frontend/README.md).
  

@@ -10,7 +10,7 @@
 </template>
 
 <script>
-  import Panels from '@/views/Panels'
+  import Panels from '@/components/Panels'
 
   export default {
     name: 'App',
