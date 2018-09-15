@@ -40,7 +40,6 @@
     name: 'Mining',
     props: ['data'],
     data () {
-      alert(`initializing switch_state with the value of this.data.mining: ${this.data.mining}`)
       return {
         // v-switch requires a variable (switch_state) to maintain its state
         switch_state: this.data.mining
@@ -48,9 +47,7 @@
     },
     methods: {
       toggle_mining () {
-        alert(`this.switch_state in toggle_mining: ${this.switch_state}`)
         const action = this.switch_state ? 'start_mining' : 'stop_mining'
-        alert(`action in toggle_mining is: ${action}`)
         this.$emit('toggle-mining', action)
       }
     },
