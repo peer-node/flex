@@ -39,12 +39,37 @@ been completed. There is a significant probability that you will lose
 any coins that you try to trade while the software is still unstable, so
 use testnet coins or coins with negligible value.
 
-Installation instructions 
+Platform-specific installation instructions 
 -----------
 
 [Mac OS](mac_os.md)
 
 [Ubuntu](ubuntu.md)
+
+Install and run User Interface 
+------
+
+The User Interface is composed of 
+a vue.js frontend development server that 
+controls the teleport and mining C++ binaries via 
+REST API calls to 
+a python backend server. 
+
+To install and run the backend, do: 
+```
+cd ../UI/backend
+```
+and follow the 
+[backend instructions](UI/backend/README.md).
+
+To install and run the frontend, do: 
+
+```
+cd ../frontend
+```
+and follow the
+[frontend instructions](UI/frontend/README.md).
+ 
 
 Using the User Interface
 ------------------

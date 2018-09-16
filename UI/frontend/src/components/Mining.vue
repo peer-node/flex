@@ -26,12 +26,6 @@
         </v-list-tile-action>
       </v-list-tile>
     </v-list>
-    <p> switch_state: {{ switch_state }} </p>
-    <p> typeof(switch_state): {{ typeof(switch_state) }} </p>
-    <p> typeof(data.mining): {{ typeof(data.mining) }} </p>
-    <p> data.mining: {{ data.mining }}</p>
-    <p> data.mining===true: {{ data.mining === true }} </p>
-    <p> data.mining===false: {{ data.mining === false }} </p>
   </div>
 </template>
 

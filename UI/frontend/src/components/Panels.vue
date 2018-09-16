@@ -17,7 +17,6 @@
           <v-flex>
             <v-card color="indigo" dark>
               <v-card-text>{{ lorem.slice(0, 700) }}</v-card-text>
-              <v-card-text>{{ data }}</v-card-text>
             </v-card>
           </v-flex>
           <v-flex d-flex>
