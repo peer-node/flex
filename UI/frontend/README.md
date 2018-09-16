@@ -46,7 +46,16 @@ This runs the [vue-cli-service binary](https://cli.vuejs.org/guide/cli-service.h
 that was installed in the 
 `node_modules` directory. 
 
-Navigate to the indicated URL.
+Navigate to `localhost:8080` 
+NOT any of the following: 
+* the loopback address `127.0.0.1:8080` 
+* the LAN address `192.168.0.7:8080` 
+* `0.0.0.0:8080` (a placeholder for all IPv4 addresses 
+on the local machine)
+
+as all of the above will lead to a network error.
+
+
 
 
 # Development

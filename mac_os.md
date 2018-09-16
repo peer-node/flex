@@ -47,27 +47,3 @@ cp minerd teleportd $BINDIR
 ```
 It may take a long time to compile if you don't have many cores.
 
-Install and run User Interface 
-------
-
-The User Interface is composed of 
-a vue.js frontend development server that 
-controls the teleport and mining C++ binaries via 
-REST API calls to 
-a python backend server. 
-
-To install and run the backend, do: 
-```
-cd ../UI/backend
-```
-and follow the 
-[backend instructions](UI/backend/README.md).
-
-To install and run the frontend, do: 
-
-```
-cd ../frontend
-```
-and follow the
-[frontend instructions](UI/frontend/README.md).
- 
