@@ -8,10 +8,13 @@
 #include "log.h"
 #define LOG_CATEGORY "MessageHandlerWithOrphanage.h"
 
+class TeleportNetworkNode;
+
 class MessageHandlerWithOrphanage
 {
 public:
     MemoryDataStore& msgdata;
+    TeleportNetworkNode *teleport_network_node{NULL};
     Network *network{NULL};
     std::string channel{""};
 
@@ -28,6 +31,11 @@ public:
     }
 
     MessageHandlerWithOrphanage(MemoryDataStore &msgdata);
+
+    void SetTeleportNetworkNode(TeleportNetworkNode *node)
+    {
+        teleport_network_node = node;
+    }
 
     template<typename T>
     bool CheckDependenciesWereReceived(T message)
@@ -101,11 +109,17 @@ public:
         msgdata[message_hash]["new_non_orphans"] = new_non_orphans;
     }
 
+    void HandleOrphan(uint160 message_hash);
+
     void HandleOrphans(uint160 message_hash)
     {
         std::set<uint160> new_non_orphans = msgdata[message_hash]["new_non_orphans"];
         for (auto non_orphan : new_non_orphans)
-            HandleMessage(non_orphan);
+        {
+            std::string type = msgdata[non_orphan]["type"];
+            log_ << "handling non-orphan message " << non_orphan << " of type " << type << "\n";
+            HandleOrphan(non_orphan);
+        }
 
         new_non_orphans.clear();
         msgdata[message_hash]["new_non_orphans"] = new_non_orphans;
@@ -120,6 +134,7 @@ public:
         std::string type;
         ss >> type;
         ss >> type;
+        msgdata[type]["channel"] = channel;
         return type;
     }
 
@@ -135,7 +150,7 @@ public:
     virtual void HandleMessage(uint160 message_hash)
     {
         // populate with HANDLEHASH
-
+        log_ << "virtual HandleMessage called for " << message_hash << "\n";
         msgdata[message_hash]["handled"] = true;
     }
 
@@ -145,7 +160,7 @@ public:
     }
 
 
-    // put one HANDLECLASS here for each message type
+    // put one HANDLECLASSS here for each message type
     // and implement void HandleMyMessage(MyMessage message)
 
     CNode *GetPeer(uint160 message_hash)
@@ -198,6 +213,44 @@ public:
             Handle ## ClassName ## Hash(message_hash);                              \
     }
 
+#define HANDLECLASSS(ClassName)                                                      \
+    void Handle ## ClassName ## Hash(uint160 message_hash)                          \
+    {                                                                               \
+        ClassName object;                                                           \
+        object = msgdata[message_hash][object.Type()];                              \
+        CNode *peer = GetPeer(message_hash);                                        \
+        Handle(object, peer);                                                       \
+    }                                                                               \
+    void Handle ## ClassName ## Stream(CDataStream ss, CNode *peer)                 \
+    {                                                                               \
+        ClassName object = Get ## ClassName ## FromStream(ss);                      \
+        RegisterIncomingMessage(object, peer);                                      \
+        uint160 hash = object.GetHash160();                                         \
+        if (HasRejectedDependencies(object))                                        \
+        {                                                                           \
+            msgdata[hash]["rejected"] = true;                                       \
+            return;                                                                 \
+        }                                                                           \
+        if (not IsOrphan(hash))                                                     \
+            Handle(object, peer);                                                   \
+        else                                                                        \
+            peer->FetchDependencies(msgdata[hash]["missing_dependencies"]);         \
+    }                                                                               \
+    ClassName Get ## ClassName ## FromStream(CDataStream ss)                        \
+    {                                                                               \
+        ClassName object;                                                           \
+        ss >> object;                                                               \
+        return object;                                                              \
+    }                                                                               \
+    void Handle(ClassName instance, CNode *peer)                                    \
+    {                                                                               \
+        Handle ## ClassName(instance);                                              \
+        uint160 message_hash = instance.GetHash160();                               \
+        if (not msgdata[message_hash]["rejected"])                                  \
+            HandleOrphans(message_hash);                                            \
+        msgdata[message_hash]["handled"] = true;                                    \
+    }
+ 
 #define HANDLECLASS(ClassName)                                                      \
     void Handle ## ClassName ## Hash(uint160 message_hash)                          \
     {                                                                               \
@@ -231,6 +284,7 @@ public:
     {                                                                               \
         Handle ## ClassName(instance);                                              \
         uint160 message_hash = instance.GetHash160();                               \
+        data.StoreMessage(instance);                                                \
         if (not msgdata[message_hash]["rejected"])                                  \
             HandleOrphans(message_hash);                                            \
         msgdata[message_hash]["handled"] = true;                                    \

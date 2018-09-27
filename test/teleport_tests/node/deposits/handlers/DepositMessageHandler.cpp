@@ -244,6 +244,7 @@ std::vector<Point> DepositMessageHandler::MyDepositAddressPoints(std::string cur
     for (auto public_key : public_keys)
     {
         Point offset = data.depositdata[public_key]["offset_point"];
+        log_ << "public key = " << public_key << " and offset = " << offset << "\n";
         deposit_address_points.push_back(public_key + offset);
     }
     return deposit_address_points;

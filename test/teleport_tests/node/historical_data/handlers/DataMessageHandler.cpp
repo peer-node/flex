@@ -14,8 +14,9 @@ using std::vector;
 
 
 
-DataMessageHandler::DataMessageHandler(MemoryDataStore &msgdata_, MemoryDataStore &creditdata_):
-    MessageHandlerWithOrphanage(msgdata_), msgdata(msgdata_), creditdata(creditdata_)
+DataMessageHandler::DataMessageHandler(Data data):
+    data(data),
+    MessageHandlerWithOrphanage(data.msgdata), msgdata(data.msgdata), creditdata(data.creditdata)
 {
     channel = std::string("data");
 }

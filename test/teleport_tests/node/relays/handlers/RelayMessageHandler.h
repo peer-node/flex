@@ -76,6 +76,7 @@ public:
 
     void HandleMessage(uint160 message_hash)
     {
+        log_ << "RelayMessageHandler::HandleMessage: " << message_hash << "\n";
         HANDLEHASH(RelayJoinMessage);
         HANDLEHASH(KeyDistributionMessage);
         HANDLEHASH(KeyDistributionComplaint);

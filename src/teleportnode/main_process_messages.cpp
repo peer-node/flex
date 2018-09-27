@@ -426,15 +426,18 @@ bool MainRoutine::ProcessMessage(CNode* pfrom, string strCommand, CDataStream& v
     else
     {
         std::string channel = strCommand;
+        log_ << "channel is " << channel << "\n";
         CDataStream ss(SER_NETWORK, CLIENT_VERSION);
         if (strCommand != "general")
             ss << strCommand;
         else
         {
             vRecv >> channel;
+            log_ << "inner channel is " << channel << "\n";
             ss << channel;
         }
         ss = ss + vRecv;
+        log_ << "handling message on channel " << channel << "\n";
         teleport_network_node->HandleMessage(channel, ss, pfrom);
     }
 

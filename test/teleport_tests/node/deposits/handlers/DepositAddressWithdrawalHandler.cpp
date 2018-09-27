@@ -40,6 +40,7 @@ void DepositAddressWithdrawalHandler::HandleWithdrawalRequestMessage(WithdrawalR
         return;
     }
     AcceptWithdrawalRequestMessage(message);
+    deposit_message_handler->Broadcast(message);
 }
 
 bool DepositAddressWithdrawalHandler::ValidateWithdrawalRequestMessage(WithdrawalRequestMessage &message)

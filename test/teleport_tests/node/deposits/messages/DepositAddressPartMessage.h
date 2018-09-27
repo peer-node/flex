@@ -49,6 +49,9 @@ public:
             READWRITE(signature);
     );
 
+    JSON(address_request_hash, relay_list_hash, position, encoding_message_hash,
+         relay_chooser, address_part_secret, signature);
+
     DEPENDENCIES(address_request_hash);
     
     bool ValidateEnclosedData()
@@ -89,6 +92,7 @@ public:
 
     MinedCreditMessage MinedCreditMessageInWhichRequestWasEncoded(Data data)
     {
+        log_ << "MinedCreditMessageInWhichRequestWasEncoded: " << encoding_message_hash << "\n";
         return data.GetMessage(encoding_message_hash);
     }
 
@@ -114,8 +118,12 @@ public:
 
     Point VerificationKey(Data data)
     {
+        log_ << "VerificationKey()\n";
         auto relay_state = RelayStateFromWhichRelaysAreChosen(data);
+        log_ << "relay state size is " << relay_state.relays.size() << "\n";
+        log_ << "relay number is " << RelayNumber(data) << "\n";
         auto relay = relay_state.GetRelayByNumber(RelayNumber(data));
+        log_ << "null relay: " << (relay == NULL) << "\n";
         if (relay == NULL)
             return Point(SECP256K1, 0);
         return relay->public_signing_key;

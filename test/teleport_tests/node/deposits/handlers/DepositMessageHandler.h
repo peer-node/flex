@@ -26,7 +26,6 @@ class MinedCreditMessageBuilder;
 class DepositMessageHandler : public MessageHandlerWithOrphanage
 {
 public:
-    std::string channel{"deposit"};
     uint8_t mode{LIVE};
 
     CreditSystem *credit_system{NULL};
@@ -50,7 +49,9 @@ public:
         address_disclosure_handler(this),
         address_transfer_handler(this),
         address_withdrawal_handler(this)
-    { }
+    {
+        channel = std::string("deposit");
+    }
 
     void SetConfig(TeleportConfig& config_);
 

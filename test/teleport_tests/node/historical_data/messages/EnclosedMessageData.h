@@ -51,6 +51,8 @@ public:
     JSON(enclosed_message_types, enclosed_message_contents);
 
     void AddRelayJoinMessage(uint160 join_hash, CreditSystem *credit_system);
+
+    void AddDepositAddressRequest(uint160 request_hash, CreditSystem *credit_system);
 };
 
 

@@ -19,12 +19,21 @@ RelayAdmissionHandler::RelayAdmissionHandler(Data data_, CreditSystem *credit_sy
 
 void RelayAdmissionHandler::HandleRelayJoinMessage(RelayJoinMessage relay_join_message)
 {
+    log_ << "RelayAdmissionHandler::HandleRelayJoinMessage\n";
     if (not ValidateRelayJoinMessage(relay_join_message))
     {
         log_ << "join message " << relay_join_message.GetHash160() << " failed validation\n";
         relay_message_handler->RejectMessage(relay_join_message.GetHash160());
         return;
     }
+
+    if (relay_message_handler->mode != BLOCK_VALIDATION and not MinedCreditMessageHashIsInMainChain(relay_join_message))
+    {
+        log_ << "mined credit message hash is not in main chain\n";
+        QueueJoinMessageBehindMinedCreditMessageHash(relay_join_message);
+        return;
+    }
+    log_ << "accepting join " << relay_join_message.GetHash160() << "\n";
     AcceptRelayJoinMessage(relay_join_message);
 }
 
@@ -38,8 +47,6 @@ bool RelayAdmissionHandler::ValidateRelayJoinMessage(RelayJoinMessage relay_join
 {
     if (not relay_join_message.ValidateSizes())
         return Fail("bad sizes");
-    if (not MinedCreditMessageHashIsInMainChain(relay_join_message))
-        return Fail("mined credit message hash is not in main chain");
     if (relay_state->MinedCreditMessageHashIsAlreadyBeingUsed(relay_join_message.mined_credit_message_hash))
         return Fail("mined credit message hash already being used");
     if (not relay_join_message.VerifySignature(data))
@@ -207,4 +214,9 @@ RelayAdmissionHandler::ValidateDurationWithoutResponseAfterKeyDistributionMessag
     if (key_sharer == NULL)
         return false;
     return key_sharer->hashes.key_distribution_complaint_hashes.size() == 0;
+}
+
+void RelayAdmissionHandler::QueueJoinMessageBehindMinedCreditMessageHash(RelayJoinMessage relay_join_message)
+{
+    data.msgdata[relay_join_message.mined_credit_message_hash]["queued_join"] = relay_join_message.GetHash160();
 }

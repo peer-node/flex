@@ -119,7 +119,7 @@ void CreditMessageHandler::HandleMinedCreditMessage(MinedCreditMessage msg)
 
     log_ << "-=-=- Finished handling " << msg.GetHash160() << " -- informing other nodes about it\n";
     Broadcast(msg);
-
+    InformOtherMessageHandlersOfNewTip(msg);
 }
 
 bool CreditMessageHandler::MinedCreditMessageWasRegardedAsValidAndHandled(MinedCreditMessage& msg)
@@ -216,21 +216,28 @@ void CreditMessageHandler::HandleValidMinedCreditMessage(MinedCreditMessage& msg
         creditdata[Tip().GetHash160()]["spent_chain"] = *spent_chain;
     }
     credit_system->MarkMinedCreditMessageAsHandled(msg.GetHash160());
-    InformOtherMessageHandlersOfNewTip(msg);
 }
 
 void CreditMessageHandler::InformOtherMessageHandlersOfNewTip(MinedCreditMessage &msg)
 {
     if (teleport_network_node == NULL)
+    {
+        log_ << "no network node attached\n";
         return;
+    }
+
+    if (teleport_network_node->relay_message_handler != NULL)
+    {
+        log_ << "passing new tip to relay message handler\n";
+        teleport_network_node->relay_message_handler->HandleNewTip(msg);
+    }
+
     Point public_key = msg.mined_credit.PublicKey();
     if (keydata[public_key].HasProperty("privkey"))
     {
-        if (teleport_network_node->relay_message_handler != NULL)
+        if (send_join_messages and teleport_network_node->relay_message_handler != NULL)
         {
-            teleport_network_node->relay_message_handler->HandleNewTip(msg);
-            if (send_join_messages)
-                teleport_network_node->relay_message_handler->SendRelayJoinMessage(msg);
+            teleport_network_node->relay_message_handler->SendRelayJoinMessage(msg);
         }
     }
     if (teleport_network_node->deposit_message_handler != NULL)

@@ -36,6 +36,9 @@ class KnownHistoryHandler;
 class DataMessageHandler : public MessageHandlerWithOrphanage
 {
 public:
+    DataMessageHandler(Data data);
+
+    Data data;
     MemoryDataStore &msgdata, &creditdata;
     CreditSystem *credit_system{NULL};
     Calendar *calendar{NULL};

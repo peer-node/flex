@@ -52,6 +52,8 @@ void DepositAddressRequestHandler::HandleDepositAddressRequest(DepositAddressReq
         return;
     }
     AcceptDepositAddressRequest(request);
+    log_ << "broadcasting deposit address request " << request_hash << "\n";
+    deposit_message_handler->Broadcast(request);
 }
 
 bool DepositAddressRequestHandler::ValidateDepositAddressRequest(DepositAddressRequest &request)
@@ -239,25 +241,34 @@ void DepositAddressRequestHandler::HandleDepositAddressPartMessage(DepositAddres
     }
 
     AcceptDepositAddressPartMessage(part_message);
+    deposit_message_handler->Broadcast(part_message);
 }
 
 bool DepositAddressRequestHandler::ValidateDepositAddressPartMessage(DepositAddressPartMessage &part_message)
 {
+    log_ << "ValidateDepositAddressPartMessage: ValidateEnclosedData: " << part_message.ValidateEnclosedData() << "\n";
+    log_ << "ValidateDepositAddressPartMessage: VerifySignature: " << part_message.VerifySignature(data) << "\n";
+    log_ << "depositaddresspartmessage is " << part_message.json() << "\n";
     return part_message.ValidateEnclosedData() and part_message.VerifySignature(data);
 }
 
 void DepositAddressRequestHandler::AcceptDepositAddressPartMessage(DepositAddressPartMessage &part_message)
 {
+    log_ << "AcceptDepositAddressPartMessage\n";
     uint160 part_msg_hash = part_message.GetHash160();
+    log_ << "part_msg_hash = " << part_msg_hash << "\n";
     uint160 encoded_request_identifier = part_message.EncodedRequestIdentifier();
+    log_ << "encoded_request_identifier = " << encoded_request_identifier << "\n";
 
     data.depositdata[part_msg_hash]["processed"] = true;
+    log_ << part_msg_hash << " marked as processed\n";
 
     vector<uint160> part_hashes = data.depositdata[encoded_request_identifier]["parts"];
     part_hashes.resize(PARTS_PER_DEPOSIT_ADDRESS);
     part_hashes[part_message.position] = part_msg_hash;
     data.depositdata[encoded_request_identifier]["parts"] = part_hashes;
 
+    log_ << "registered receipt of part\n";
     if (NumberOfReceivedMessageParts(part_hashes) == PARTS_PER_DEPOSIT_ADDRESS)
         HandleDepositAddressParts(encoded_request_identifier, part_message.address_request_hash, part_hashes);
 }

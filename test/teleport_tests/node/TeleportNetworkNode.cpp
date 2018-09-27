@@ -25,11 +25,23 @@ void TeleportNetworkNode::HandleMessage(std::string channel, CDataStream stream,
         data_message_handler->HandleMessage(stream, peer);
 
     if (channel == "relay" and relay_message_handler != NULL)
+    {
+        log_ << "TeleportNetworkNode::HandleMessage on channel relay\n";
         relay_message_handler->HandleMessage(stream, peer);
+    }
 
     if (channel == "deposit" and deposit_message_handler != NULL)
         deposit_message_handler->HandleMessage(stream, peer);
 }
+
+void TeleportNetworkNode::HandleMessage(uint160 message_hash)
+{
+    credit_message_handler->HandleMessage(message_hash);
+    data_message_handler->HandleMessage(message_hash);
+    relay_message_handler->HandleMessage(message_hash);
+    deposit_message_handler->HandleMessage(message_hash);
+}
+
 
 void TeleportNetworkNode::RecordReceiptOfMessage(std::string channel, CDataStream stream)
 {
@@ -84,7 +96,7 @@ uint160 TeleportNetworkNode::SendToAddress(std::string address, int64_t amount)
     return SendCreditsToPublicKey(teleport_address_pubkey, (uint64_t)amount);
 }
 
-void TeleportNetworkNode::SwitchToNewCalendarAndSpentChain(Calendar new_calendar, BitChain new_spent_chain)
+void TeleportNetworkNode::SwitchToNewCalendarSpentChainAndRelayState(Calendar new_calendar, BitChain new_spent_chain, RelayState &state)
 {
     uint160 old_tip_message_hash = calendar.LastMinedCreditMessageHash();
     uint160 new_tip_message_hash = new_calendar.LastMinedCreditMessageHash();
@@ -98,6 +110,7 @@ void TeleportNetworkNode::SwitchToNewCalendarAndSpentChain(Calendar new_calendar
     calendar = new_calendar;
     spent_chain = new_spent_chain;
 
+    relay_message_handler->relay_state = state;
     if (wallet != NULL)
         wallet->SwitchAcrossFork(old_tip_message_hash, new_tip_message_hash, credit_system);
 }
@@ -184,3 +197,4 @@ uint64_t TeleportNetworkNode::GetKnownPubKeyBalance(Point &pubkey)
     }
     return balance;
 }
+

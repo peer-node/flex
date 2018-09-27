@@ -36,6 +36,22 @@ public:
         offset_xor_shared_secret = offset ^ shared_secret;;
     }
 
+    CBigNum Offset(Data data)
+    {
+        CBigNum shared_secret = 0;
+        if (data.keydata[sender_pubkey].HasProperty("privkey"))
+        {
+            CBigNum sender_privkey = data.keydata[sender_pubkey]["privkey"];
+            shared_secret = Hash(sender_privkey * recipient_pubkey);
+        }
+        else if (data.keydata[recipient_pubkey].HasProperty("privkey"))
+        {
+            CBigNum recipient_privkey = data.keydata[recipient_pubkey]["privkey"];
+            shared_secret = Hash(sender_pubkey * recipient_privkey);
+        }
+        return offset_xor_shared_secret ^ shared_secret;
+    }
+
     static string_t Type() { return string_t("transfer"); }
 
     IMPLEMENT_SERIALIZE

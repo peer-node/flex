@@ -1,3 +1,4 @@
+#include <test/teleport_tests/node/deposits/messages/DepositAddressRequest.h>
 #include "EnclosedMessageData.h"
 #include "test/teleport_tests/node/credit/structures/CreditSystem.h"
 
@@ -38,6 +39,8 @@ void EnclosedMessageData::AddMessagesContainedInMinedCreditMessage(MinedCreditMe
             AddMinedCreditMessage(hash, credit_system);
         else if (type == "relay_join")
             AddRelayJoinMessage(hash, credit_system);
+        else if (type == "deposit_request")
+            AddDepositAddressRequest(hash, credit_system);
         else if (type != "msg")
         {
             log_ << "No implementation for message type " << type << "\n";
@@ -64,4 +67,11 @@ void EnclosedMessageData::AddRelayJoinMessage(uint160 join_hash, CreditSystem *c
     RelayJoinMessage join = credit_system->msgdata[join_hash]["relay_join"];
     enclosed_message_types.push_back("relay_join");
     enclosed_message_contents.push_back(Serialize(join));
+}
+
+void EnclosedMessageData::AddDepositAddressRequest(uint160 request_hash, CreditSystem *credit_system)
+{
+    DepositAddressRequest request = credit_system->msgdata[request_hash]["deposit_request"];
+    enclosed_message_types.push_back("deposit_request");
+    enclosed_message_contents.push_back(Serialize(request));
 }

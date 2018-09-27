@@ -20,6 +20,7 @@ class TeleportNetworkNode;
 class CreditMessageHandler : public MessageHandlerWithOrphanage
 {
 public:
+    Data data;
     MemoryDataStore &creditdata, &keydata;
     CreditSystem *credit_system{nullptr};
     Calendar *calendar{nullptr};
@@ -38,6 +39,7 @@ public:
             using_internal_builder{true}, send_join_messages{true};
 
     explicit CreditMessageHandler(Data data):
+            data(data),
             MessageHandlerWithOrphanage(data.msgdata),
             creditdata(data.creditdata), keydata(data.keydata)
     {
@@ -79,6 +81,7 @@ public:
 
     void HandleMessage(uint160 message_hash)
     {
+        log_ << "CreditMessageHandler::HandleMessage " << message_hash << "\n";
         HANDLEHASH(MinedCreditMessage);
         HANDLEHASH(SignedTransaction);
         HANDLEHASH(ListExpansionRequestMessage);

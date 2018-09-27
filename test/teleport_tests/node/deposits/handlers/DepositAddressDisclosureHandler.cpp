@@ -33,6 +33,7 @@ void DepositAddressDisclosureHandler::HandleDepositAddressPartDisclosure(Deposit
         return;
 
     RecordDepositAddressPartDisclosure(disclosure);
+    deposit_message_handler->Broadcast(disclosure);
 
     uint160 encoded_request_identifier = disclosure.GetEncodedRequestIdentifier(data);
 

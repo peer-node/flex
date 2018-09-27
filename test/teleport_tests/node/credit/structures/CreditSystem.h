@@ -9,6 +9,7 @@
 #include <src/credits/CreditBatch.h>
 #include <test/teleport_tests/node/Data.h>
 #include <test/teleport_tests/node/relays/messages/RelayJoinMessage.h>
+#include <test/teleport_tests/node/deposits/messages/DepositAddressRequest.h>
 #include "test/teleport_tests/node/credit/messages/MinedCreditMessage.h"
 #include "test/teleport_tests/node/calendar/Calend.h"
 #include "test/teleport_tests/node/historical_data/messages/CalendarFailureMessage.h"
@@ -195,6 +196,8 @@ public:
     void UpdateBatchAndRelayStateByProcessingJoinMessage(CreditBatch &batch, RelayState &state, RelayJoinMessage &join);
 
     void StoreRelayJoinMessage(RelayJoinMessage join);
+
+    void StoreDepositAddressRequest(DepositAddressRequest request);
 };
 
 

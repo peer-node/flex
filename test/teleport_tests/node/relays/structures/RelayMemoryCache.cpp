@@ -4,10 +4,11 @@
 using std::vector;
 
 #include "log.h"
-#define LOG_CATEGORY "RelayDataStore.cpp"
+#define LOG_CATEGORY "RelayMemoryCache.cpp"
 
 RelayMemoryCache& RelayMemoryCache::operator=(RelayMemoryCache &other)
 {
+    log_ << "copying cache from other\n";
     relay_hashes = other.relay_hashes;
     relay_hash_positions = other.relay_hash_positions;
     relay_hash_occurrences = other.relay_hash_occurrences;

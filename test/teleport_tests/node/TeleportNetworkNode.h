@@ -68,6 +68,7 @@ public:
         deposit_message_handler->SetSpentChain(spent_chain);
         deposit_message_handler->SetMinedCreditMessageBuilder(&builder);
         deposit_message_handler->SetNetworkNode(this);
+        deposit_message_handler->SetTeleportNetworkNode(this);
     }
 
     void SetUpRelayMessageHandler()
@@ -76,6 +77,7 @@ public:
         relay_message_handler->SetCreditSystem(credit_system);
         relay_message_handler->SetCalendar(&calendar);
         relay_message_handler->SetMinedCreditMessageBuilder(&builder);
+        relay_message_handler->SetTeleportNetworkNode(this);
     }
 
     void SetUpCreditMessageHandler()
@@ -88,14 +90,16 @@ public:
         credit_message_handler->SetSpentChain(spent_chain);
         credit_message_handler->SetWallet(*wallet);
         credit_message_handler->SetNetworkNode(this);
+        credit_message_handler->SetTeleportNetworkNode(this);
     }
 
     void SetUpDataMessageHandler()
     {
-        data_message_handler = new DataMessageHandler(msgdata, creditdata);
+        data_message_handler = new DataMessageHandler(data);
         data_message_handler->SetCreditSystemAndGenerateHandlers(credit_system);
         data_message_handler->SetCalendar(&calendar);
         data_message_handler->SetNetworkNode(this);
+        data_message_handler->SetTeleportNetworkNode(this);
     }
 
     ~TeleportNetworkNode()
@@ -134,7 +138,7 @@ public:
 
     uint160 SendToAddress(std::string address, int64_t amount);
 
-    void SwitchToNewCalendarAndSpentChain(Calendar new_calendar, BitChain spent_chain);
+    void SwitchToNewCalendarSpentChainAndRelayState(Calendar new_calendar, BitChain spent_chain);
 
     void AttachCommunicatorNetworkToHandlers();
 
@@ -147,6 +151,10 @@ public:
     std::string GetCryptoCurrencyAddressFromPublicKey(std::string currency_code, Point public_key);
 
     uint64_t GetKnownPubKeyBalance(Point &pubkey);
+
+    void HandleMessage(uint160 message_hash);
+
+    void SwitchToNewCalendarSpentChainAndRelayState(Calendar new_calendar, BitChain new_spent_chain, RelayState &state);
 };
 
 

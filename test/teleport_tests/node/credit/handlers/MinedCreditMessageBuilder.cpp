@@ -141,6 +141,7 @@ Point GetNewPublicKey(MemoryDataStore& keydata)
 MinedCreditMessage MinedCreditMessageBuilder::GenerateMinedCreditMessageWithoutProofOfWork()
 {
     MinedCreditMessage msg, current_tip = Tip();
+    log_ << "GenerateMinedCreditMessageWithoutProofOfWork: tip is " << current_tip.json() << "\n";
 
     msg.mined_credit.network_state = credit_system->SucceedingNetworkState(current_tip);
     msg.mined_credit.public_key = GetNewPublicKey(keydata);

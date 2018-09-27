@@ -36,6 +36,8 @@ public:
         READWRITE(parts_of_address);
     );
 
+    JSON(curve, encrypted_secrets, parts_of_address);
+
     void PopulateSecrets(Data data, Relay *relay)
     {
         Point pubkey(curve, 0);

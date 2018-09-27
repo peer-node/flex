@@ -37,6 +37,10 @@ void DepositAddressTransferHandler::HandleDepositTransferMessage(DepositTransfer
         return;
     }
     AcceptDepositTransferMessage(transfer);
+    log_ << "broadcasting transfer: " << transfer.deposit_address_pubkey << " to "
+         << transfer.recipient_pubkey << "\n";
+    log_ << "with hash " << transfer.GetHash160() << "\n";
+    deposit_message_handler->Broadcast(transfer);
 }
 
 bool DepositAddressTransferHandler::ValidateDepositTransferMessage(DepositTransferMessage &transfer)
@@ -116,5 +120,10 @@ void DepositAddressTransferHandler::AcceptTransferAcknowledgement(TransferAcknow
     {
         log_ << "received address with pubkey: " << deposit_address_pubkey << "\n";
         deposit_message_handler->AddAddress(deposit_address_pubkey);
+        CBigNum offset = transfer.Offset(data);
+        Point offset_point(offset);
+        data.keydata[offset_point]["privkey"] = offset;
+        data.depositdata[deposit_address_pubkey]["offset_point"] = offset_point;
+        data.depositdata[deposit_address_pubkey + offset_point]["address_pubkey"] = deposit_address_pubkey;
     }
 }

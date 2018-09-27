@@ -15,6 +15,7 @@ public:
     void SetCreditSystem(CreditSystem *credit_system_)
     {
         credit_system = credit_system_;
+        SetData(&credit_system_->data);
     }
 
     void SetData(Data *data_)

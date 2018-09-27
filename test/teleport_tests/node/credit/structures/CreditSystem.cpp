@@ -7,6 +7,7 @@
 #include <test/teleport_tests/node/historical_data/messages/InitialDataMessage.h>
 #include <test/teleport_tests/node/historical_data/messages/DiurnDataMessage.h>
 #include <test/teleport_tests/node/relays/structures/RelayState.h>
+#include <test/teleport_tests/node/deposits/messages/DepositAddressRequest.h>
 #include "CreditSystem.h"
 #include "test/teleport_tests/node/credit/messages/MinedCreditMessage.h"
 #include "test/teleport_tests/node/calendar/Calend.h"
@@ -127,6 +128,14 @@ void CreditSystem::StoreRelayJoinMessage(RelayJoinMessage join)
     StoreHash(hash);
     msgdata[hash]["type"] = "relay_join";
     msgdata[hash]["relay_join"] = join;
+}
+
+void CreditSystem::StoreDepositAddressRequest(DepositAddressRequest request)
+{
+    uint160 hash = request.GetHash160();
+    StoreHash(hash);
+    msgdata[hash]["type"] = "deposit_request";
+    msgdata[hash]["relay_join"] = request;
 }
 
 void CreditSystem::StoreHash(uint160 hash)
@@ -381,6 +390,7 @@ void CreditSystem::AddMinedCreditMessageAndPredecessorsToMainChain(uint160 msg_h
     MinedCreditMessage msg = msgdata[msg_hash]["msg"];
     while (not IsInMainChain(msg_hash) and msg_hash != 0)
     {
+        MarkMinedCreditMessageAsHandled(msg_hash);
         AddToMainChain(msg);
         msg_hash = msg.mined_credit.network_state.previous_mined_credit_message_hash;
         msg = msgdata[msg_hash]["msg"];
@@ -863,6 +873,13 @@ void CreditSystem::StoreMessageWithSpecificTypeAndContent(std::string type, vch_
         RelayJoinMessage join;
         ss >> join;
         StoreRelayJoinMessage(join);
+    }
+    else if (type == "deposit_request")
+    {
+        CDataStream ss(content, SER_NETWORK, CLIENT_VERSION);
+        DepositAddressRequest request;
+        ss >> request;
+        StoreDepositAddressRequest(request);
     }
 }
 

@@ -28,6 +28,7 @@ void RelayMessageHandler::SetMinedCreditMessageBuilder(MinedCreditMessageBuilder
 
 void RelayMessageHandler::HandleRelayJoinMessage(RelayJoinMessage relay_join_message)
 {
+    log_ << "RelayMessageHandler::HandleRelayJoinMessage\n";
     admission_handler.HandleRelayJoinMessage(relay_join_message);
 }
 
@@ -195,6 +196,7 @@ void RelayMessageHandler::HandleSuccessionCompletedMessage(SuccessionCompletedMe
 
 void RelayMessageHandler::HandleNewTip(MinedCreditMessage new_tip)
 {
+    log_ << "passing new tip to tip handler\n";
     tip_handler.HandleNewTip(new_tip);
 }
 

@@ -196,6 +196,10 @@ bool MinedCreditMessageValidator::ValidateNetworkState(MinedCreditMessage &msg)
 
     log_ << "checked message list contains previous mined credit message hash, ok so far: " << ok << "\n";
 
+    ok &= CheckRelayStateHash(msg);
+
+    log_ << "checked relay state hash. ok: " << ok << "\n";
+
     return ok;
 }
 
@@ -248,11 +252,14 @@ bool MinedCreditMessageValidator::CheckPreviousCalendHash(MinedCreditMessage msg
 bool MinedCreditMessageValidator::CheckRelayStateHash(MinedCreditMessage &msg)
 {
     uint160 previous_msg_hash = msg.mined_credit.network_state.previous_mined_credit_message_hash;
+    log_ << "CheckRelayStateHash: from " <<  previous_msg_hash << " to " << msg.GetHash160() << "\n";
     MinedCreditMessage previous_msg = credit_system->msgdata[previous_msg_hash]["msg"];
 
     RelayMessageHandler handler(*data);
     handler.mode = BLOCK_VALIDATION;
+    log_ << "previous relay state hash: " << previous_msg.mined_credit.network_state.relay_state_hash << "\n";
     handler.relay_state = data->GetRelayState(previous_msg.mined_credit.network_state.relay_state_hash);
+    log_ << "previous relay state size: " << handler.relay_state.relays.size() << "\n";
 
     handler.SetCreditSystem(credit_system);
     handler.relay_state.latest_mined_credit_message_hash = previous_msg_hash;
@@ -264,11 +271,15 @@ bool MinedCreditMessageValidator::CheckRelayStateHash(MinedCreditMessage &msg)
     {
         if (not handler.ValidateMessage(message_hash))
             return false;
+        log_ << "passing message with hash: " << message_hash << " to handler\n";
         handler.HandleMessage(message_hash);
     }
+    log_ << "handled all messages\n";
+    log_ << "relay state size is now: " << handler.relay_state.relays.size() << "\n";
     if (handler.relay_state.GetHash160() != msg.mined_credit.network_state.relay_state_hash)
     {
         log_ << "relay state hashes don't match. validation failed\n";
+        log_ << handler.relay_state.GetHash160() << " vs " << msg.mined_credit.network_state.relay_state_hash << "\n";
     }
     return handler.relay_state.GetHash160() == msg.mined_credit.network_state.relay_state_hash;
 }

@@ -23,6 +23,8 @@ public:
     void RemoveEncodedEventFromUnencodedObservedHistory(uint160 encoded_event_hash);
 
     bool EncodedEventMatchesObservedEvent(uint160 encoded_event_hash, uint160 observed_event_hash);
+
+    void HandleQueuedJoin(uint160 msg_hash);
 };
 
 

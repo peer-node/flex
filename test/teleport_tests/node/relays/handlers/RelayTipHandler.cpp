@@ -36,6 +36,16 @@ void RelayTipHandler::HandleNewTip(MinedCreditMessage &new_tip)
     relay_state->latest_mined_credit_message_hash = new_tip.GetHash160();
     RemoveEncodedEventsFromUnencodedObservedHistory(new_tip.hash_list.full_hashes);
     relay_message_handler->mode = LIVE;
+    HandleQueuedJoin(new_tip.GetHash160());
+}
+
+void RelayTipHandler::HandleQueuedJoin(uint160 msg_hash)
+{
+    uint160 join_hash = data.msgdata[msg_hash]["queued_join"];
+    if (join_hash == 0)
+        return;
+    log_ << "handling queued join: " << join_hash << "\n";
+    relay_message_handler->HandleMessage(join_hash);
 }
 
 void RelayTipHandler::RemoveEncodedEventsFromUnencodedObservedHistory(std::vector<uint160> encoded_events)

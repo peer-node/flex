@@ -1,7 +1,7 @@
 #include "InitialDataHandler.h"
-#include "test/teleport_tests/node/TeleportNetworkNode.h"
 #include "CalendarHandler.h"
 #include "test/teleport_tests/node/historical_data/LoadHashesIntoDataStore.h"
+#include "test/teleport_tests/node/TeleportNetworkNode.h"
 
 #include "log.h"
 #define LOG_CATEGORY "InitialDataHandler.cpp"
@@ -36,7 +36,14 @@ void InitialDataHandler::UseInitialDataMessageAndCalendar(InitialDataMessage ini
 {
     StoreDataFromInitialDataMessageInCreditSystem(initial_data_message, *credit_system);
     MarkMinedCreditMessagesInInitialDataMessageAsValidated(initial_data_message);
-    data_message_handler->teleport_network_node->SwitchToNewCalendarAndSpentChain(new_calendar, initial_data_message.spent_chain);
+    auto tip = initial_data_message.mined_credit_messages_in_current_diurn.back();
+
+    RelayState state = data_message_handler->data.GetRelayState(tip.mined_credit.network_state.relay_state_hash);
+    state.latest_mined_credit_message_hash = tip.GetHash160();
+
+    data_message_handler->teleport_network_node->SwitchToNewCalendarSpentChainAndRelayState(new_calendar,
+                                                                                            initial_data_message.spent_chain,
+                                                                                            state);
 }
 
 void InitialDataHandler::MarkMinedCreditMessagesInInitialDataMessageAsValidated(InitialDataMessage initial_data_message)
@@ -193,35 +200,36 @@ void InitialDataHandler::SetMiningParametersForInitialDataMessageValidation(uint
 
 bool InitialDataHandler::ValidateMinedCreditMessagesInInitialDataMessage(InitialDataMessage initial_data_message)
 {
-    MemoryDataStore msgdata_, creditdata_, keydata_, depositdata_;
-    Data data_(msgdata_, creditdata_, keydata_, depositdata_);
-    CreditSystem credit_system_(data_);
+    TeleportNetworkNode validation_node;
+    validation_node.credit_system->SetMiningParameters(credit_system->initial_difficulty,
+                                                       credit_system->initial_diurnal_difficulty);
+    StoreDataFromInitialDataMessageInCreditSystem(initial_data_message, *validation_node.credit_system);
 
-    credit_system_.SetMiningParameters(credit_system->initial_difficulty, credit_system->initial_diurnal_difficulty);
-    StoreDataFromInitialDataMessageInCreditSystem(initial_data_message, credit_system_);
+    validation_node.spent_chain = initial_data_message.spent_chain;
+    log_ << "set spent chain to that of initial data message. hash = " << validation_node.spent_chain.GetHash160() << "\n";
+    log_ << "initial dta message has spent chain: " << validation_node.spent_chain.ToString() << "n";
+    validation_node.data.creditdata[initial_data_message.GetLastCalend().GetHash160()]["spent_chain"] = validation_node.spent_chain;
 
-    CreditMessageHandler credit_message_handler(data_);
-    credit_message_handler.SetCreditSystem(&credit_system_);
-
-    BitChain spent_chain = initial_data_message.spent_chain;
-    credit_message_handler.SetSpentChain(spent_chain);
-    log_ << "set spent chain to that of initial data message. hash = " << spent_chain.GetHash160() << "\n";
-    log_ << "initial dta message has spent chain: " << spent_chain.ToString() << "n";
-    creditdata_[initial_data_message.GetLastCalend().GetHash160()]["spent_chain"] = spent_chain;
-
-    Calendar validation_calendar = credit_system->GetRequestedCalendar(initial_data_message);
-    TrimLastDiurnFromCalendar(validation_calendar, &credit_system_);
-    credit_message_handler.SetCalendar(validation_calendar);
+    validation_node.calendar = credit_system->GetRequestedCalendar(initial_data_message);
+    TrimLastDiurnFromCalendar(validation_node.calendar, validation_node.credit_system);
+    validation_node.credit_message_handler->SetCalendar(validation_node.calendar);
 
     for (auto mined_credit_message : initial_data_message.mined_credit_messages_in_current_diurn)
     {
-        log_ << "trying to validate msg: " << mined_credit_message.GetHash160() << "\n";
-        log_ << "enclosed messages are present: " << mined_credit_message.hash_list.RecoverFullHashes(msgdata_) << "\n";
-        credit_system_.MarkMinedCreditMessageAsHandled(mined_credit_message.mined_credit.network_state.previous_mined_credit_message_hash);
-        credit_message_handler.Handle(mined_credit_message, NULL);
+        auto msg_hash = mined_credit_message.GetHash160();
+        log_ << "trying to validate msg: " << msg_hash << "\n";
+        log_ << "enclosed messages are present: "
+             << mined_credit_message.hash_list.RecoverFullHashes(validation_node.data.msgdata) << "\n";
+        validation_node.credit_system->MarkMinedCreditMessageAsHandled(mined_credit_message.mined_credit.network_state.previous_mined_credit_message_hash);
+        validation_node.HandleMessage(msg_hash);
+        if (validation_node.Tip().GetHash160() == msg_hash)
+        {
+            RelayState state = validation_node.data.GetRelayState(mined_credit_message.mined_credit.network_state.relay_state_hash);
+            data_message_handler->data.StoreRelayState(&state);
+        }
     }
 
-    return TipOfCalendarMatchesTipOfInitialDataMessage(validation_calendar, initial_data_message);
+    return TipOfCalendarMatchesTipOfInitialDataMessage(validation_node.calendar, initial_data_message);
 }
 
 bool InitialDataHandler::TipOfCalendarMatchesTipOfInitialDataMessage(Calendar &calendar, InitialDataMessage &message)

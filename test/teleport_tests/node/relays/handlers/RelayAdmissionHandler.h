@@ -65,6 +65,8 @@ public:
     void RecoverSecretsAndSendKeyDistributionComplaints(Relay *relay, std::vector<uint64_t> recipients,
                                                         uint160 key_distribution_message_hash,
                                                         std::array<uint256, 24> encrypted_secrets);
+
+    void QueueJoinMessageBehindMinedCreditMessageHash(RelayJoinMessage relay_join_message);
 };
 
 
