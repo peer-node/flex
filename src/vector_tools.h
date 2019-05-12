@@ -2,6 +2,7 @@
 #define TELEPORT_VECTOR_TOOLS_H
 
 #include <vector>
+#include <array>
 #include <algorithm>
 
 template <typename T>
