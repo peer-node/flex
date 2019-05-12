@@ -1,3 +1,4 @@
+#include <test/teleport_tests/currency/Currency.h>
 #include "DepositAddressTransferHandler.h"
 #include "DepositMessageHandler.h"
 #include "test/teleport_tests/node/TeleportNetworkNode.h"
@@ -125,5 +126,10 @@ void DepositAddressTransferHandler::AcceptTransferAcknowledgement(TransferAcknow
         data.keydata[offset_point]["privkey"] = offset;
         data.depositdata[deposit_address_pubkey]["offset_point"] = offset_point;
         data.depositdata[deposit_address_pubkey + offset_point]["address_pubkey"] = deposit_address_pubkey;
+        vch_t currency_code = transfer.GetDepositRequest(data).currency_code;
+        string currency_code_string(currency_code.begin(), currency_code.end());
+        deposit_message_handler->address_request_handler.RecordPointOfDepositAddress(deposit_address_pubkey + offset_point,
+                                                                                     currency_code_string);
+
     }
 }
